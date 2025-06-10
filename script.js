@@ -90,8 +90,10 @@ function preprocessData(activities) {
 
 // En script.js, reemplaza esta función
 
+// En script.js, reemplaza la función renderGeneralTab por completo
+
 function renderGeneralTab() {
-    // --- 1. Renderizar Tarjetas de Resumen (esto es seguro llamarlo varias veces) ---
+    // --- 1. Renderizar Tarjetas de Resumen (esto es seguro y rápido) ---
     const totalRuns = allActivities.filter(a => a.type === 'Run').length;
     const totalRides = allActivities.filter(a => a.type === 'Ride').length;
     const totalSwims = allActivities.filter(a => a.type === 'Swim').length;
@@ -99,65 +101,52 @@ function renderGeneralTab() {
 
     const summaryCardsContainer = document.getElementById('summary-cards');
     summaryCardsContainer.innerHTML = `
-        <div class="card">
-            <h3>Distancia Total</h3>
-            <p>${totalDistance.toFixed(0)} km</p>
-        </div>
-        <div class="card">
-            <h3>Carreras</h3>
-            <p>${totalRuns}</p>
-        </div>
-        <div class="card">
-            <h3>Salidas en Bici</h3>
-            <p>${totalRides}</p>
-        </div>
-        <div class="card">
-            <h3>Sesiones de Natación</h3>
-            <p>${totalSwims}</p>
-        </div>
+        <div class="card"><h3>Distancia Total</h3><p>${totalDistance.toFixed(0)} km</p></div>
+        <div class="card"><h3>Carreras</h3><p>${totalRuns}</p></div>
+        <div class="card"><h3>Salidas en Bici</h3><p>${totalRides}</p></div>
+        <div class="card"><h3>Sesiones de Natación</h3><p>${totalSwims}</p></div>
     `;
 
-    // --- 2. Renderizar Gráfico de Tarta (LÓGICA MEJORADA) ---
-    const canvas = document.getElementById('activity-pie-chart');
-    
-    // Si el gráfico ya existe, no hacemos nada más.
-    // Esto previene el bucle de re-renderizado.
-    if (Chart.getChart(canvas)) {
-        return; 
-    }
-    
+    // --- 2. Renderizar o Actualizar el Gráfico de Tarta ---
     const activityCounts = allActivities.reduce((acc, act) => {
         acc[act.type] = (acc[act.type] || 0) + 1;
         return acc;
     }, {});
-
-    const ctx = canvas.getContext('2d');
     
-    // Guardamos la instancia del gráfico en una variable global para poder gestionarla
-    activityPieChart = new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: Object.keys(activityCounts),
-            datasets: [{
-                label: 'Número de Actividades',
-                data: Object.values(activityCounts),
-                backgroundColor: [
-                    'rgba(252, 82, 0, 0.8)',
-                    'rgba(0, 128, 255, 0.8)',
-                    'rgba(54, 162, 235, 0.8)',
-                    'rgba(255, 206, 86, 0.8)',
-                    'rgba(75, 192, 192, 0.8)',
-                    'rgba(153, 102, 255, 0.8)',
-                ],
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-        }
-    });
-}
+    const labels = Object.keys(activityCounts);
+    const data = Object.values(activityCounts);
 
+    // Comprobamos si la INSTANCIA del gráfico ya existe en nuestra variable global
+    if (activityPieChart) {
+        // Si existe, solo actualizamos sus datos. No creamos uno nuevo.
+        console.log("Actualizando datos del gráfico de tarta existente.");
+        activityPieChart.data.labels = labels;
+        activityPieChart.data.datasets[0].data = data;
+        activityPieChart.update();
+    } else {
+        // Si no existe, lo creamos por primera vez.
+        console.log("Creando nuevo gráfico de tarta.");
+        const ctx = document.getElementById('activity-pie-chart').getContext('2d');
+        activityPieChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Número de Actividades',
+                    data: data,
+                    backgroundColor: [
+                        'rgba(252, 82, 0, 0.8)', 'rgba(0, 128, 255, 0.8)', 'rgba(54, 162, 235, 0.8)',
+                        'rgba(255, 206, 86, 0.8)', 'rgba(75, 192, 192, 0.8)', 'rgba(153, 102, 255, 0.8)',
+                    ],
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+            }
+        });
+    }
+}
 
 // =================================================================
 // 4. LÓGICA DE LA INTERFAZ DE USUARIO (UI)
@@ -226,6 +215,8 @@ function setupTabs() {
 
 // En script.js, reemplaza la función logout
 
+// En script.js, asegúrate de que tu función logout se ve así:
+
 function logout() {
     // Borramos tanto el token como las actividades cacheadas
     localStorage.removeItem('strava_access_token');
@@ -235,10 +226,11 @@ function logout() {
     loginSection.classList.remove('hidden');
     allActivities = []; // Limpiamos los datos en memoria
     
-    // Si existe el gráfico, lo destruimos para que se cree de nuevo en el próximo login
+    // ¡PASO CRUCIAL! Destruimos la instancia del gráfico si existe
     if (activityPieChart) {
+        console.log("Destruyendo gráfico al cerrar sesión.");
         activityPieChart.destroy();
-        activityPieChart = null;
+        activityPieChart = null; // Reseteamos la variable a null
     }
 }
 
