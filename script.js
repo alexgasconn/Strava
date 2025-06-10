@@ -56,39 +56,50 @@ function redirectToStravaAuthorize() {
  * Maneja el código de autorización que Strava nos devuelve,
  * llamando a nuestro propio micro-backend para obtener el token.
  */
+// Reemplaza tu antigua función handleOAuthCallback con esta:
 async function handleOAuthCallback(code) {
-    loadingMessage.textContent = 'Autenticando con Strava...';
+    loadingMessage.textContent = 'Autenticando con Strava, por favor espera...';
     
     try {
-        // Hacemos una llamada POST a nuestra propia función serverless
-        // Vercel la hará disponible en la ruta /api/strava-auth
+        // Hacemos una llamada POST a nuestra propia función serverless.
+        // Vercel la hará disponible automáticamente en la ruta /api/strava-auth
         const response = await fetch('/api/strava-auth', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ code: code }), // Enviamos el código en el cuerpo
+            body: JSON.stringify({ code: code }), // Enviamos el código en el cuerpo de la petición
         });
 
         const data = await response.json();
 
         if (!response.ok) {
+            // Si nuestro backend devuelve un error, lo mostramos
             throw new Error(data.error || 'Fallo en el servidor de autenticación');
         }
 
         // La respuesta 'data' de nuestro proxy contiene el access_token, refresh_token, etc.
         const { access_token } = data;
 
-        // Guardamos el token en localStorage
+        if (!access_token) {
+          throw new Error('No se recibió el token de acceso desde el servidor.');
+        }
+
+        // Guardamos el token en localStorage para futuras visitas
         localStorage.setItem('strava_access_token', access_token);
 
-        // Limpiamos la URL y mostramos las estadísticas
+        // Limpiamos la URL para que el código de autorización no quede visible
         window.history.replaceState({}, document.title, window.location.pathname);
+        
+        // Ocultamos el mensaje de carga y mostramos las estadísticas
+        loadingMessage.textContent = '';
         showStats(access_token);
 
     } catch (error) {
         console.error('Error durante el proceso de autenticación:', error);
-        loadingMessage.textContent = `Error de autenticación: ${error.message}`;
+        loadingMessage.textContent = `Error de autenticación: ${error.message}. Por favor, inténtalo de nuevo.`;
+        // Ocultamos el botón de logout y mostramos el de login por si falla
+        logout(); 
     }
 }
 
