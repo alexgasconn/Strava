@@ -47,50 +47,53 @@ function redirectToStravaAuthorize() {
  * Vamos a simular el flujo ideal y luego ver cómo resolverlo.
  * Por ahora, vamos a leer el token si ya lo tenemos guardado.
  */
+// En tu archivo script.js
+
+// ... (todo el código anterior se queda igual) ...
+
+/**
+ * ¡NUEVA VERSIÓN DE LA FUNCIÓN!
+ * Maneja el código de autorización que Strava nos devuelve,
+ * llamando a nuestro propio micro-backend para obtener el token.
+ */
 async function handleOAuthCallback(code) {
     loadingMessage.textContent = 'Autenticando con Strava...';
     
-    // En un mundo real, aquí iría la llamada a un backend o proxy para intercambiar el código.
-    // Como no tenemos, vamos a hacer la llamada POST directamente, aunque puede fallar.
-    // Esta es la parte más frágil de un enfoque 100% estático.
     try {
-        // NOTA: Esta llamada probablemente será bloqueada por la política CORS del navegador.
-        // Esto demuestra el límite de un sitio 100% estático con el flujo OAuth estándar.
-        // La solución a largo plazo es una Cloud Function (como vimos antes) que actúe como proxy.
-        //
-        // PARA ESTE MVP, VAMOS A USAR UN TRUCO:
-        // Strava te devuelve a la URL con ?code=...&scope=...
-        // Si tienes el código, lo guardamos y pedimos al usuario que vuelva a cargar.
-        // Es un mal UX, pero es para demostrar el concepto.
-        
-        // El flujo correcto implica un backend, pero para este ejercicio,
-        // vamos a asumir que el token se obtiene y se guarda en localStorage.
-        // En un paso posterior, podemos usar un proxy CORS gratuito o una cloud function.
+        // Hacemos una llamada POST a nuestra propia función serverless
+        // Vercel la hará disponible en la ruta /api/strava-auth
+        const response = await fetch('/api/strava-auth', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ code: code }), // Enviamos el código en el cuerpo
+        });
 
-        // Por ahora, para que funcione de manera demostrativa, vamos a simplificar:
-        // Si tenemos un código, lo guardamos y luego lo usaremos.
-        localStorage.setItem('strava_auth_code', code);
+        const data = await response.json();
 
-        // Limpiamos la URL para que no se vea el código
+        if (!response.ok) {
+            throw new Error(data.error || 'Fallo en el servidor de autenticación');
+        }
+
+        // La respuesta 'data' de nuestro proxy contiene el access_token, refresh_token, etc.
+        const { access_token } = data;
+
+        // Guardamos el token en localStorage
+        localStorage.setItem('strava_access_token', access_token);
+
+        // Limpiamos la URL y mostramos las estadísticas
         window.history.replaceState({}, document.title, window.location.pathname);
-        
-        // ¡Este es el paso que requiere el backend!
-        // Como no lo tenemos, no podemos obtener el token de acceso aquí.
-        // Lo que haremos es un hack: asumiremos que el usuario ya tiene un token
-        // de un proceso anterior para poder mostrar las estadísticas.
-        // A continuación, se muestra cómo se haría si tuviéramos un token.
-
-        loadingMessage.textContent = '¡Necesitamos un backend para finalizar! Pero continuemos con datos de ejemplo.';
-        // Para la demo, vamos a simular que tenemos el token
-        const fakeAccessToken = 'ESTE_ES_UN_TOKEN_FALSO';
-        localStorage.setItem('strava_access_token', fakeAccessToken);
-        showStats(fakeAccessToken);
+        showStats(access_token);
 
     } catch (error) {
-        console.error('Error al intercambiar el código:', error);
-        loadingMessage.textContent = 'Error de autenticación. Es probable que sea un problema de CORS debido a la naturaleza estática del sitio.';
+        console.error('Error durante el proceso de autenticación:', error);
+        loadingMessage.textContent = `Error de autenticación: ${error.message}`;
     }
 }
+
+
+// ... (el resto de tu script.js, como fetchAthleteStats, showStats, etc., se queda igual) ...
 
 
 /**
