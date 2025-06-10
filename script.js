@@ -224,31 +224,63 @@ function setupTabs() {
     });
 }
 
+// En script.js, reemplaza la función logout
+
 function logout() {
+    // Borramos tanto el token como las actividades cacheadas
     localStorage.removeItem('strava_access_token');
+    localStorage.removeItem('strava_all_activities'); 
+
     appSection.classList.add('hidden');
     loginSection.classList.remove('hidden');
-    allActivities = []; // Limpiamos los datos
+    allActivities = []; // Limpiamos los datos en memoria
+    
+    // Si existe el gráfico, lo destruimos para que se cree de nuevo en el próximo login
+    if (activityPieChart) {
+        activityPieChart.destroy();
+        activityPieChart = null;
+    }
 }
 
 // =================================================================
 // 5. FUNCIÓN PRINCIPAL DE INICIALIZACIÓN
 // =================================================================
 
+// En script.js, reemplaza la función initializeApp
+
 async function initializeApp(accessToken) {
-    // 1. Obtener y procesar todos los datos
-    const rawActivities = await fetchAllActivities(accessToken);
-    if (!rawActivities) return; // Si falla la obtención de datos, paramos
-    allActivities = preprocessData(rawActivities);
+    
+    // --- NUEVA LÓGICA DE CACHÉ ---
+    const cachedActivities = localStorage.getItem('strava_all_activities');
+
+    if (cachedActivities) {
+        console.log('Cargando actividades desde la caché local...');
+        allActivities = JSON.parse(cachedActivities);
+        // El pre-procesamiento sigue siendo necesario porque los objetos Date no se guardan en JSON
+        allActivities = preprocessData(allActivities); 
+    } else {
+        console.log('No hay caché. Obteniendo actividades desde la API de Strava...');
+        // 1. Obtener todos los datos si no están en caché
+        const rawActivities = await fetchAllActivities(accessToken);
+        if (!rawActivities) return; 
+
+        // Guardamos los datos crudos en la caché ANTES de procesarlos
+        localStorage.setItem('strava_all_activities', JSON.stringify(rawActivities));
+        
+        allActivities = preprocessData(rawActivities);
+    }
+    
+    // --- El resto de la función es igual ---
 
     // 2. Actualizar la UI
     hideLoading();
     loginSection.classList.add('hidden');
     appSection.classList.remove('hidden');
     
-    // Asumimos que los datos del atleta están en la primera actividad (no es ideal, pero funciona por ahora)
     if (allActivities.length > 0) {
-      athleteName.textContent = `Dashboard de ${allActivities[0].athlete.firstname} ${allActivities[0].athlete.lastname}`;
+      // Necesitamos encontrar el nombre del atleta. Puede que no esté en todas las actividades.
+      const athleteInfo = allActivities.find(a => a.athlete)?.athlete || {firstname: 'Atleta', lastname: ''};
+      athleteName.textContent = `Dashboard de ${athleteInfo.firstname} ${athleteInfo.lastname}`;
     }
 
     // 3. Renderizar el contenido de la primera pestaña
