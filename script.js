@@ -1,6 +1,6 @@
 // --- CONFIGURACIÓN ---
 // ¡¡IMPORTANTE!! Reemplaza esto con tu Client ID de Strava
-const STRAVA_CLIENT_ID = 'TU_CLIENT_ID'; 
+const STRAVA_CLIENT_ID = '143540'; 
 const REDIRECT_URI = window.location.origin + window.location.pathname;
 
 // --- ELEMENTOS DEL DOM ---
