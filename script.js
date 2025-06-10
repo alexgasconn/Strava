@@ -134,6 +134,98 @@ function renderPieChart() {
     });
 }
 
+function renderDistanceOverTime() {
+    const canvas = document.getElementById('distance-over-time');
+    if (!canvas) return;
+    if (Chart.getChart(canvas)) return;
+
+    const sorted = [...allActivities].sort((a, b) => a.start_date_local_obj - b.start_date_local_obj);
+    const labels = sorted.map(a => a.start_date_local_obj.toLocaleDateString());
+    const data = sorted.map(a => a.distance_km);
+
+    new Chart(canvas.getContext('2d'), {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Distancia (km)',
+                data,
+                borderColor: 'orange',
+                backgroundColor: 'rgba(252, 82, 0, 0.2)',
+                fill: true,
+                tension: 0.2
+            }]
+        },
+        options: {
+            plugins: { title: { display: true, text: 'Distancia por Actividad' } },
+            scales: { x: { title: { display: true, text: 'Fecha' } }, y: { title: { display: true, text: 'Km' } } }
+        }
+    });
+}
+
+function renderElevationDistribution() {
+    const canvas = document.getElementById('elevation-distribution');
+    if (!canvas) return;
+    if (Chart.getChart(canvas)) return;
+
+    const bins = {};
+    allActivities.forEach(a => {
+        const bin = Math.floor(a.elevation_gain_m / 100) * 100;
+        bins[bin] = (bins[bin] || 0) + 1;
+    });
+    const labels = Object.keys(bins).sort((a, b) => a - b);
+    const data = labels.map(bin => bins[bin]);
+
+    new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: labels.map(l => `${l}-${parseInt(l)+99} m`),
+            datasets: [{
+                label: 'Número de actividades',
+                data,
+                backgroundColor: 'rgba(0,128,255,0.5)'
+            }]
+        },
+        options: {
+            plugins: { title: { display: true, text: 'Distribución de Desnivel Ganado' } },
+            scales: { x: { title: { display: true, text: 'Desnivel (m)' } }, y: { title: { display: true, text: 'Actividades' } } }
+        }
+    });
+}
+
+function renderAvgSpeedByType() {
+    const canvas = document.getElementById('avg-speed-by-type');
+    if (!canvas) return;
+    if (Chart.getChart(canvas)) return;
+
+    const speedByType = {};
+    const countByType = {};
+    allActivities.forEach(a => {
+        const speed = a.distance_km / a.moving_time_hours;
+        if (!isFinite(speed)) return;
+        speedByType[a.type] = (speedByType[a.type] || 0) + speed;
+        countByType[a.type] = (countByType[a.type] || 0) + 1;
+    });
+    const labels = Object.keys(speedByType);
+    const data = labels.map(type => (speedByType[type] / countByType[type]).toFixed(2));
+
+    new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Velocidad Media (km/h)',
+                data,
+                backgroundColor: 'rgba(54,162,235,0.7)'
+            }]
+        },
+        options: {
+            plugins: { title: { display: true, text: 'Velocidad Media por Deporte' } },
+            scales: { x: { title: { display: true, text: 'Deporte' } }, y: { title: { display: true, text: 'Km/h' } } }
+        }
+    });
+}
+
 // =================================================================
 // 4. LÓGICA DE LA INTERFAZ DE USUARIO (UI)
 // =================================================================
@@ -171,6 +263,9 @@ function setupTabs() {
                 switch (tabId) {
                     case 'general':
                         renderPieChart();
+                        renderDistanceOverTime();
+                        renderElevationDistribution();
+                        renderAvgSpeedByType();
                         break;
                     case 'running':
                         // renderRunningTab(); // Próximamente
