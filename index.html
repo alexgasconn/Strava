@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Dashboard de Strava</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container">
+        <h1>Mi Dashboard de Strava</h1>
+
+        <!-- Esta sección se muestra si el usuario NO está autenticado -->
+        <div id="login-section">
+            <p>Conecta tu cuenta de Strava para ver tus estadísticas.</p>
+            <button id="login-button">Conectar con Strava</button>
+        </div>
+
+        <!-- Esta sección se muestra DESPUÉS de la autenticación -->
+        <div id="stats-section" class="hidden">
+            <h2 id="athlete-name"></h2>
+            <div id="stats-grid">
+                <!-- Las estadísticas se insertarán aquí con JavaScript -->
+            </div>
+            <button id="logout-button">Cerrar Sesión</button>
+        </div>
+
+        <!-- Mensaje de carga o error -->
+        <div id="loading-message"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
