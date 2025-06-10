@@ -1,70 +1,105 @@
-body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background-color: #f4f4f4;
-    color: #333;
+/* Añade esto al final de tu style.css */
+
+#app-section header {
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
-    min-height: 100vh;
-    margin: 0;
+    margin-bottom: 1rem;
 }
 
-.container {
-    background-color: white;
-    padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    text-align: center;
-    max-width: 600px;
-    width: 90%;
+#tabs {
+    border-bottom: 2px solid #ddd;
+    margin-bottom: 1rem;
 }
 
-h1 {
-    color: #FC5200; /* Naranja de Strava */
-}
-
-button {
-    background-color: #FC5200;
-    color: white;
+.tab-link {
+    background-color: transparent;
     border: none;
-    padding: 10px 20px;
-    font-size: 16px;
-    border-radius: 5px;
+    padding: 10px 15px;
     cursor: pointer;
-    transition: background-color 0.3s;
+    font-size: 16px;
+    color: #555;
+    border-bottom: 3px solid transparent;
 }
 
-button:hover {
-    background-color: #d44600;
+.tab-link.active {
+    color: #FC5200;
+    border-bottom-color: #FC5200;
 }
 
-.hidden {
+.tab-content {
     display: none;
 }
 
-#stats-grid {
+.tab-content.active {
+    display: block;
+}
+
+#summary-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 1rem;
-    margin-top: 2rem;
-    text-align: left;
+    margin-bottom: 2rem;
 }
 
-.stat-card {
+.card {
     background-color: #f9f9f9;
-    padding: 1rem;
-    border-radius: 5px;
-    border-left: 4px solid #FC5200;
+    padding: 1.5rem;
+    border-radius: 8px;
+    text-align: center;
+    border-left: 5px solid #FC5200;
 }
 
-.stat-card h3 {
+.card h3 {
     margin: 0 0 0.5rem 0;
     font-size: 1rem;
     color: #555;
 }
 
-.stat-card p {
+.card p {
     margin: 0;
-    font-size: 1.5rem;
+    font-size: 2rem;
     font-weight: bold;
+    color: #333;
+}
+
+.chart-container {
+    margin-top: 2rem;
+    padding: 1rem;
+    background-color: #fff;
+    border-radius: 8px;
+}
+
+#loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.spinner {
+    border: 8px solid #f3f3f3;
+    border-top: 8px solid #FC5200;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 1s linear infinite;
+}
+
+#loading-overlay p {
+    margin-top: 20px;
+    font-size: 18px;
+    color: #333;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }

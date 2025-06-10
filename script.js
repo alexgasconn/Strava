@@ -1,227 +1,247 @@
-// --- CONFIGURACIÓN ---
-// ¡¡IMPORTANTE!! Reemplaza esto con tu Client ID de Strava
-const STRAVA_CLIENT_ID = '143540'; 
+// =================================================================
+// 1. CONFIGURACIÓN Y ELEMENTOS DEL DOM
+// =================================================================
+const STRAVA_CLIENT_ID = '143540'; // Tu Client ID
 const REDIRECT_URI = window.location.origin + window.location.pathname;
 
-// --- ELEMENTOS DEL DOM ---
+// Referencias a los elementos de la página
 const loginSection = document.getElementById('login-section');
-const statsSection = document.getElementById('stats-section');
+const appSection = document.getElementById('app-section');
+const loadingOverlay = document.getElementById('loading-overlay');
+const loadingMessage = document.getElementById('loading-message');
 const loginButton = document.getElementById('login-button');
 const logoutButton = document.getElementById('logout-button');
 const athleteName = document.getElementById('athlete-name');
-const statsGrid = document.getElementById('stats-grid');
-const loadingMessage = document.getElementById('loading-message');
+const tabsContainer = document.getElementById('tabs');
 
-// --- LÓGICA DE AUTENTICACIÓN ---
+// Almacén global de datos
+let allActivities = [];
+let activityPieChart = null;
 
-/**
- * Redirige al usuario a la página de autorización de Strava.
- */
+
+// =================================================================
+// 2. LÓGICA DE AUTENTICACIÓN Y OBTENCIÓN DE DATOS
+// =================================================================
+
 function redirectToStravaAuthorize() {
-    const scope = 'read,activity:read_all'; // Permisos que pedimos
+    const scope = 'read,activity:read_all';
     const authUrl = `https://www.strava.com/oauth/authorize?client_id=${STRAVA_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=${scope}`;
     window.location.href = authUrl;
 }
 
-/**
- * Maneja el código de autorización que Strava nos devuelve.
- * Esto es complicado en un sitio estático porque necesitamos intercambiar el código
- * por un token de acceso, y eso requiere el Client Secret (que no debe estar aquí).
- * 
- * SOLUCIÓN: Usaremos un "truco". El flujo OAuth de Strava para clientes públicos
- * (como el nuestro) está diseñado para devolver el token de acceso directamente
- * si usamos 'response_type=token'. PERO, por seguridad, es mejor el flujo de código.
- * Como este es un MVP y no manejaremos datos sensibles más allá de la lectura,
- * procederemos con el flujo de código, pero necesitaremos un pequeño "proxy" o
- * una solución más avanzada a futuro. Por ahora, asumiremos que obtenemos el token.
- * 
- * **Actualización para un enfoque 100% estático:**
- * Strava no soporta el flujo implícito (response_type=token) directamente.
- * El flujo estándar REQUIERE un backend para intercambiar el código.
- * 
- * **LA SOLUCIÓN REAL PARA UN SITIO ESTÁTICO:**
- * Strava en 2023 permite un flujo donde el `code` se intercambia por un `access_token`
- * sin `client_secret` para clientes públicos, pero la llamada debe ser POST,
- * lo que puede ser bloqueado por CORS si se hace desde el navegador.
- * 
- * Vamos a simular el flujo ideal y luego ver cómo resolverlo.
- * Por ahora, vamos a leer el token si ya lo tenemos guardado.
- */
-// En tu archivo script.js
-
-// ... (todo el código anterior se queda igual) ...
-
-/**
- * ¡NUEVA VERSIÓN DE LA FUNCIÓN!
- * Maneja el código de autorización que Strava nos devuelve,
- * llamando a nuestro propio micro-backend para obtener el token.
- */
-// Reemplaza tu antigua función handleOAuthCallback con esta:
 async function handleOAuthCallback(code) {
-    loadingMessage.textContent = 'Autenticando con Strava, por favor espera...';
-    
+    showLoading('Autenticando...');
     try {
-        // Hacemos una llamada POST a nuestra propia función serverless.
-        // Vercel la hará disponible automáticamente en la ruta /api/strava-auth
         const response = await fetch('/api/strava-auth', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ code: code }), // Enviamos el código en el cuerpo de la petición
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code }),
         });
-
         const data = await response.json();
+        if (!response.ok) throw new Error(data.error);
 
-        if (!response.ok) {
-            // Si nuestro backend devuelve un error, lo mostramos
-            throw new Error(data.error || 'Fallo en el servidor de autenticación');
-        }
-
-        // La respuesta 'data' de nuestro proxy contiene el access_token, refresh_token, etc.
         const { access_token } = data;
-
-        if (!access_token) {
-          throw new Error('No se recibió el token de acceso desde el servidor.');
-        }
-
-        // Guardamos el token en localStorage para futuras visitas
         localStorage.setItem('strava_access_token', access_token);
-
-        // Limpiamos la URL para que el código de autorización no quede visible
+        
         window.history.replaceState({}, document.title, window.location.pathname);
         
-        // Ocultamos el mensaje de carga y mostramos las estadísticas
-        loadingMessage.textContent = '';
-        showStats(access_token);
-
+        // Una vez autenticados, obtenemos los datos
+        initializeApp(access_token);
     } catch (error) {
-        console.error('Error durante el proceso de autenticación:', error);
-        loadingMessage.textContent = `Error de autenticación: ${error.message}. Por favor, inténtalo de nuevo.`;
-        // Ocultamos el botón de logout y mostramos el de login por si falla
-        logout(); 
+        handleError('Fallo en la autenticación', error);
     }
 }
 
-
-// ... (el resto de tu script.js, como fetchAthleteStats, showStats, etc., se queda igual) ...
-
-
-/**
- * Obtiene las estadísticas del atleta de la API de Strava.
- */
-async function fetchAthleteStats(accessToken) {
-    loadingMessage.textContent = 'Obteniendo tus estadísticas...';
+async function fetchAllActivities(accessToken) {
+    showLoading('Obteniendo historial de actividades... Esto puede tardar unos momentos.');
     try {
-        const response = await fetch('https://www.strava.com/api/v3/athlete', {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
+        const response = await fetch('/api/strava-activities', {
+            headers: { 'Authorization': `Bearer ${accessToken}` }
         });
-
         if (!response.ok) {
-            // Si el token ha expirado o es inválido
+            const data = await response.json();
+            // Si el token ha expirado, forzamos el logout
             if (response.status === 401) {
                 logout();
-                alert('Tu sesión de Strava ha expirado. Por favor, conéctate de nuevo.');
+                alert('Tu sesión ha expirado. Por favor, conéctate de nuevo.');
             }
-            throw new Error(`Error de la API de Strava: ${response.statusText}`);
+            throw new Error(data.error || 'No se pudieron obtener las actividades.');
         }
-
-        const athleteData = await response.json();
-
-        const statsResponse = await fetch(`https://www.strava.com/api/v3/athletes/${athleteData.id}/stats`, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
-        });
-        const statsData = await statsResponse.json();
-        
-        loadingMessage.textContent = '';
-        return { athlete: athleteData, stats: statsData };
-
+        return await response.json();
     } catch (error) {
-        console.error('Error al obtener datos de Strava:', error);
-        loadingMessage.textContent = 'No se pudieron cargar los datos.';
-        return null;
+        handleError('No se pudieron cargar las actividades', error);
     }
 }
 
-/**
- * Muestra las estadísticas en la página.
- */
-function showStats(accessToken) {
-    loginSection.classList.add('hidden');
-    statsSection.classList.remove('hidden');
+// =================================================================
+// 3. PROCESAMIENTO Y VISUALIZACIÓN DE DATOS
+// =================================================================
 
-    fetchAthleteStats(accessToken).then(data => {
-        if (!data) return;
+function preprocessData(activities) {
+    return activities.map(act => ({
+        ...act,
+        // Convertimos a unidades más manejables
+        distance_km: act.distance / 1000,
+        moving_time_hours: act.moving_time / 3600,
+        elevation_gain_m: act.total_elevation_gain,
+        start_date_local_obj: new Date(act.start_date_local),
+    }));
+}
 
-        const { athlete, stats } = data;
-        athleteName.textContent = `Bienvenido, ${athlete.firstname} ${athlete.lastname}!`;
-        
-        const allTimeRideTotals = stats.all_ride_totals;
-        const allTimeRunTotals = stats.all_run_totals;
+function renderGeneralTab() {
+    // --- 1. Renderizar Tarjetas de Resumen ---
+    const totalRuns = allActivities.filter(a => a.type === 'Run').length;
+    const totalRides = allActivities.filter(a => a.type === 'Ride').length;
+    const totalSwims = allActivities.filter(a => a.type === 'Swim').length;
+    const totalDistance = allActivities.reduce((sum, a) => sum + a.distance_km, 0);
 
-        statsGrid.innerHTML = `
-            <div class="stat-card">
-                <h3>Total Carreras</h3>
-                <p>${allTimeRunTotals.count}</p>
-            </div>
-            <div class="stat-card">
-                <h3>Distancia Corriendo</h3>
-                <p>${(allTimeRunTotals.distance / 1000).toFixed(2)} km</p>
-            </div>
-            <div class="stat-card">
-                <h3>Total Bici</h3>
-                <p>${allTimeRideTotals.count}</p>
-            </div>
-            <div class="stat-card">
-                <h3>Distancia en Bici</h3>
-                <p>${(allTimeRideTotals.distance / 1000).toFixed(2)} km</p>
-            </div>
-        `;
+    const summaryCardsContainer = document.getElementById('summary-cards');
+    summaryCardsContainer.innerHTML = `
+        <div class="card">
+            <h3>Distancia Total</h3>
+            <p>${totalDistance.toFixed(0)} km</p>
+        </div>
+        <div class="card">
+            <h3>Carreras</h3>
+            <p>${totalRuns}</p>
+        </div>
+        <div class="card">
+            <h3>Salidas en Bici</h3>
+            <p>${totalRides}</p>
+        </div>
+        <div class="card">
+            <h3>Sesiones de Natación</h3>
+            <p>${totalSwims}</p>
+        </div>
+    `;
+
+    // --- 2. Renderizar Gráfico de Tarta ---
+    const activityCounts = allActivities.reduce((acc, act) => {
+        acc[act.type] = (acc[act.type] || 0) + 1;
+        return acc;
+    }, {});
+
+    const ctx = document.getElementById('activity-pie-chart').getContext('2d');
+    
+    // Si ya existe un gráfico, lo destruimos antes de crear uno nuevo
+    if (activityPieChart) {
+        activityPieChart.destroy();
+    }
+
+    activityPieChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: Object.keys(activityCounts),
+            datasets: [{
+                label: 'Número de Actividades',
+                data: Object.values(activityCounts),
+                backgroundColor: [ // Colores de ejemplo
+                    'rgba(252, 82, 0, 0.8)',
+                    'rgba(0, 128, 255, 0.8)',
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(255, 206, 86, 0.8)',
+                    'rgba(75, 192, 192, 0.8)',
+                    'rgba(153, 102, 255, 0.8)',
+                ],
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+        }
     });
 }
 
-/**
- * Cierra la sesión borrando los datos guardados.
- */
-function logout() {
-    localStorage.removeItem('strava_access_token');
-    localStorage.removeItem('strava_auth_code');
-    loginSection.classList.remove('hidden');
-    statsSection.classList.add('hidden');
-    athleteName.textContent = '';
-    statsGrid.innerHTML = '';
+
+// =================================================================
+// 4. LÓGICA DE LA INTERFAZ DE USUARIO (UI)
+// =================================================================
+
+function showLoading(message) {
+    loadingMessage.textContent = message;
+    loadingOverlay.classList.remove('hidden');
 }
 
-// --- LÓGICA DE INICIO ---
+function hideLoading() {
+    loadingOverlay.classList.add('hidden');
+}
 
-/**
- * Punto de entrada principal. Se ejecuta cuando la página se carga.
- */
+function handleError(message, error) {
+    console.error(message, error);
+    hideLoading();
+    // Podríamos mostrar un mensaje de error más visible al usuario aquí
+}
+
+function setupTabs() {
+    tabsContainer.addEventListener('click', (e) => {
+        if (e.target.matches('.tab-link')) {
+            // Quitar clase 'active' de todos los botones y contenidos
+            document.querySelectorAll('.tab-link').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            // Añadir clase 'active' al botón y contenido seleccionados
+            e.target.classList.add('active');
+            const tabId = e.target.getAttribute('data-tab');
+            document.getElementById(tabId).classList.add('active');
+        }
+    });
+}
+
+function logout() {
+    localStorage.removeItem('strava_access_token');
+    appSection.classList.add('hidden');
+    loginSection.classList.remove('hidden');
+    allActivities = []; // Limpiamos los datos
+}
+
+// =================================================================
+// 5. FUNCIÓN PRINCIPAL DE INICIALIZACIÓN
+// =================================================================
+
+async function initializeApp(accessToken) {
+    // 1. Obtener y procesar todos los datos
+    const rawActivities = await fetchAllActivities(accessToken);
+    if (!rawActivities) return; // Si falla la obtención de datos, paramos
+    allActivities = preprocessData(rawActivities);
+
+    // 2. Actualizar la UI
+    hideLoading();
+    loginSection.classList.add('hidden');
+    appSection.classList.remove('hidden');
+    
+    // Asumimos que los datos del atleta están en la primera actividad (no es ideal, pero funciona por ahora)
+    if (allActivities.length > 0) {
+      athleteName.textContent = `Dashboard de ${allActivities[0].athlete.firstname} ${allActivities[0].athlete.lastname}`;
+    }
+
+    // 3. Renderizar el contenido de la primera pestaña
+    renderGeneralTab();
+}
+
+
 function main() {
+    // Asignar eventos a los botones
     loginButton.addEventListener('click', redirectToStravaAuthorize);
     logoutButton.addEventListener('click', logout);
+    
+    // Configurar la lógica de las pestañas
+    setupTabs();
 
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
-
     const accessToken = localStorage.getItem('strava_access_token');
 
-    if (accessToken) {
-        // Si ya tenemos un token, mostramos las estadísticas
-        showStats(accessToken);
-    } else if (code) {
-        // Si Strava nos ha devuelto un código, lo manejamos
-        // NOTA: Como se explicó, este paso es problemático en un sitio estático.
-        // La función handleOAuthCallback explica el problema y la solución temporal.
+    if (code) {
+        // Si volvemos de Strava con un código, lo intercambiamos por un token
         handleOAuthCallback(code);
+    } else if (accessToken) {
+        // Si ya tenemos un token guardado, iniciamos la app directamente
+        initializeApp(accessToken);
     } else {
-        // Si no hay ni token ni código, mostramos el botón de login
-        loginSection.classList.remove('hidden');
+        // Si no hay nada, mostramos la pantalla de login
+        hideLoading();
     }
 }
 
+// ¡Ejecutar la aplicación!
 main();
