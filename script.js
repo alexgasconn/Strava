@@ -88,8 +88,10 @@ function preprocessData(activities) {
     }));
 }
 
+// En script.js, reemplaza esta función
+
 function renderGeneralTab() {
-    // --- 1. Renderizar Tarjetas de Resumen ---
+    // --- 1. Renderizar Tarjetas de Resumen (esto es seguro llamarlo varias veces) ---
     const totalRuns = allActivities.filter(a => a.type === 'Run').length;
     const totalRides = allActivities.filter(a => a.type === 'Ride').length;
     const totalSwims = allActivities.filter(a => a.type === 'Swim').length;
@@ -115,19 +117,23 @@ function renderGeneralTab() {
         </div>
     `;
 
-    // --- 2. Renderizar Gráfico de Tarta ---
+    // --- 2. Renderizar Gráfico de Tarta (LÓGICA MEJORADA) ---
+    const canvas = document.getElementById('activity-pie-chart');
+    
+    // Si el gráfico ya existe, no hacemos nada más.
+    // Esto previene el bucle de re-renderizado.
+    if (Chart.getChart(canvas)) {
+        return; 
+    }
+    
     const activityCounts = allActivities.reduce((acc, act) => {
         acc[act.type] = (acc[act.type] || 0) + 1;
         return acc;
     }, {});
 
-    const ctx = document.getElementById('activity-pie-chart').getContext('2d');
+    const ctx = canvas.getContext('2d');
     
-    // Si ya existe un gráfico, lo destruimos antes de crear uno nuevo
-    if (activityPieChart) {
-        activityPieChart.destroy();
-    }
-
+    // Guardamos la instancia del gráfico en una variable global para poder gestionarla
     activityPieChart = new Chart(ctx, {
         type: 'pie',
         data: {
@@ -135,7 +141,7 @@ function renderGeneralTab() {
             datasets: [{
                 label: 'Número de Actividades',
                 data: Object.values(activityCounts),
-                backgroundColor: [ // Colores de ejemplo
+                backgroundColor: [
                     'rgba(252, 82, 0, 0.8)',
                     'rgba(0, 128, 255, 0.8)',
                     'rgba(54, 162, 235, 0.8)',
@@ -172,17 +178,48 @@ function handleError(message, error) {
     // Podríamos mostrar un mensaje de error más visible al usuario aquí
 }
 
+// En script.js, reemplaza también esta función
+
 function setupTabs() {
+    // Un objeto para rastrear qué pestañas ya han sido renderizadas
+    const renderedTabs = {
+        general: true, // La pestaña general se renderiza al inicio
+        running: false,
+        cycling: false,
+        swimming: false,
+    };
+
     tabsContainer.addEventListener('click', (e) => {
         if (e.target.matches('.tab-link')) {
-            // Quitar clase 'active' de todos los botones y contenidos
+            const tabId = e.target.getAttribute('data-tab');
+
+            // Ocultar todas las pestañas y botones
             document.querySelectorAll('.tab-link').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
 
-            // Añadir clase 'active' al botón y contenido seleccionados
+            // Activar la pestaña y el botón seleccionados
             e.target.classList.add('active');
-            const tabId = e.target.getAttribute('data-tab');
             document.getElementById(tabId).classList.add('active');
+
+            // Renderizar el contenido de la pestaña SI Y SOLO SI no ha sido renderizada antes
+            if (!renderedTabs[tabId]) {
+                switch (tabId) {
+                    case 'running':
+                        // renderRunningTab(); // <-- Llamaremos a esta función cuando la creemos
+                        console.log('Renderizando pestaña de Running por primera vez');
+                        break;
+                    case 'cycling':
+                        // renderCyclingTab(); // <-- Llamaremos a esta función cuando la creemos
+                        console.log('Renderizando pestaña de Ciclismo por primera vez');
+                        break;
+                    case 'swimming':
+                        // renderSwimmingTab(); // <-- Llamaremos a esta función cuando la creemos
+                        console.log('Renderizando pestaña de Natación por primera vez');
+                        break;
+                }
+                // Marcar la pestaña como renderizada para no volver a hacerlo
+                renderedTabs[tabId] = true;
+            }
         }
     });
 }
