@@ -1,105 +1,197 @@
-/* Añade esto al final de tu style.css */
+/* style.css - VERSIÓN REMODELADA */
 
+/* Paleta de colores y variables globales */
+:root {
+    --strava-orange: #FC5200;
+    --primary-blue: #0077B6;
+    --text-color: #333;
+    --text-light: #666;
+    --bg-color: #f4f5f7;
+    --container-bg: #ffffff;
+    --border-color: #e1e4e8;
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 2rem;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* --- SECCIÓN DE LOGIN --- */
+#login-section {
+    background-color: var(--container-bg);
+    padding: 3rem;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    text-align: center;
+}
+
+#login-section h1 {
+    color: var(--strava-orange);
+}
+
+button {
+    background-color: var(--strava-orange);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.2s;
+}
+
+button:hover {
+    background-color: #e04a00;
+    transform: translateY(-2px);
+}
+
+/* --- SECCIÓN DE LA APP --- */
 #app-section header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
 }
 
+#app-section header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+}
+
+#logout-button {
+    background-color: var(--text-light);
+}
+#logout-button:hover {
+    background-color: var(--text-color);
+}
+
+/* --- NAVEGACIÓN POR PESTAÑAS --- */
 #tabs {
-    border-bottom: 2px solid #ddd;
-    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 2rem;
 }
 
 .tab-link {
-    background-color: transparent;
-    border: none;
-    padding: 10px 15px;
-    cursor: pointer;
-    font-size: 16px;
-    color: #555;
+    background: none;
+    padding: 1rem 1.5rem;
+    color: var(--text-light);
     border-bottom: 3px solid transparent;
 }
 
 .tab-link.active {
-    color: #FC5200;
-    border-bottom-color: #FC5200;
+    color: var(--strava-orange);
+    border-bottom-color: var(--strava-orange);
+    font-weight: bold;
 }
 
-.tab-content {
-    display: none;
-}
+.tab-content { display: none; }
+.tab-content.active { display: block; }
 
-.tab-content.active {
-    display: block;
-}
-
-#summary-cards {
+/* --- DISEÑO DE REJILLA --- */
+.summary-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
+    gap: 1.5rem;
     margin-bottom: 2rem;
 }
 
+.grid-2-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.full-width {
+    grid-column: 1 / -1; /* Ocupa todo el ancho en un grid */
+}
+
+/* --- ESTILOS DE COMPONENTES --- */
 .card {
-    background-color: #f9f9f9;
+    background-color: var(--container-bg);
     padding: 1.5rem;
-    border-radius: 8px;
+    border-radius: 12px;
     text-align: center;
-    border-left: 5px solid #FC5200;
+    box-shadow: var(--shadow);
 }
 
 .card h3 {
     margin: 0 0 0.5rem 0;
     font-size: 1rem;
-    color: #555;
+    font-weight: normal;
+    color: var(--text-light);
 }
 
 .card p {
     margin: 0;
-    font-size: 2rem;
+    font-size: 2.2rem;
     font-weight: bold;
-    color: #333;
+    color: var(--text-color);
 }
 
-.chart-container {
-    margin-top: 2rem;
-    padding: 1rem;
-    background-color: #fff;
-    border-radius: 8px;
+.chart-container, .table-container {
+    background-color: var(--container-bg);
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    margin-bottom: 1.5rem;
 }
 
-#loading-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
+h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
+/* --- ESTILOS DE TABLAS Y HEATMAP --- */
+table {
     width: 100%;
-    height: 100%;
-    background-color: rgba(255, 255, 255, 0.8);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
+    border-collapse: collapse;
+}
+
+th, td {
+    text-align: left;
+    padding: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+th {
+    font-weight: bold;
+    color: var(--text-light);
+}
+
+#cal-heatmap {
+    margin-top: 1rem;
+}
+
+/* --- PANTALLA DE CARGA --- */
+#loading-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(244, 245, 247, 0.8);
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
     z-index: 1000;
 }
-
 .spinner {
-    border: 8px solid #f3f3f3;
-    border-top: 8px solid #FC5200;
-    border-radius: 50%;
-    width: 60px;
-    height: 60px;
+    border: 8px solid #e1e4e8; border-top: 8px solid var(--strava-orange);
+    border-radius: 50%; width: 60px; height: 60px;
     animation: spin 1s linear infinite;
 }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-#loading-overlay p {
-    margin-top: 20px;
-    font-size: 18px;
-    color: #333;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+/* --- RESPONSIVE --- */
+@media (max-width: 768px) {
+    body { padding: 1rem; }
+    .grid-2-col { grid-template-columns: 1fr; }
+    #app-section header { flex-direction: column; gap: 1rem; }
+    #tabs { overflow-x: auto; }
 }
