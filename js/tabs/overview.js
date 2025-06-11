@@ -40,19 +40,23 @@ function renderConsistencyHeatmap(activities) {
         value: aggregatedData[date]
     }));
 
-    cal.paint({
-        itemSelector: "#cal-heatmap",
-        domain: { type: "month", label: { text: "MMM", textAlign: "start", position: "top" } },
-        subDomain: { type: "ghDay", radius: 2, width: 11, height: 11, gutter: 4 },
-        range: 12,
-        data: { source: finalHeatmapData, x: 'date', y: 'value' },
-        scale: {
-            color: {
-                type: 'threshold',
-                range: ['#ebedf0', '#fcbba1', '#fc9272', '#fb6a4a', '#de2d26'],
-                domain: [1, 2, 3, 4]
-            }
-        },
-        date: { start: new Date(new Date().setFullYear(new Date().getFullYear() - 1)) }
-    });
+    const heatmapContainer = document.getElementById('cal-heatmap');
+    if (heatmapContainer) {
+        heatmapContainer.innerHTML = ''; // Limpiar antes de pintar
+        cal.paint({
+            itemSelector: heatmapContainer,
+            domain: { type: "month", label: { text: "MMM", textAlign: "start", position: "top" } },
+            subDomain: { type: "ghDay", radius: 2, width: 11, height: 11, gutter: 4 },
+            range: 12,
+            data: { source: finalHeatmapData, x: 'date', y: 'value' },
+            scale: {
+                color: {
+                    type: 'threshold',
+                    range: ['#ebedf0', '#fcbba1', '#fc9272', '#fb6a4a', '#de2d26'],
+                    domain: [1, 2, 3, 4]
+                }
+            },
+            date: { start: new Date(new Date().setFullYear(new Date().getFullYear() - 1)) }
+        });
+    }
 }

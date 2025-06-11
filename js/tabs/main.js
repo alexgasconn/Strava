@@ -1,6 +1,6 @@
 // js/main.js
 
-// Importamos las funciones de los otros módulos
+// Importamos las funciones de los otros módulos con las rutas y extensiones correctas
 import { showLoading, hideLoading, handleError } from './ui.js';
 import { renderOverviewTab } from './tabs/overview.js';
 import { renderRunningTab } from './tabs/running.js';
@@ -8,6 +8,7 @@ import { renderRunningTab } from './tabs/running.js';
 // --- CONFIGURACIÓN Y ESTADO GLOBAL ---
 const STRAVA_CLIENT_ID = '143540';
 const REDIRECT_URI = window.location.origin + window.location.pathname;
+const CACHE_KEY = 'strava_processed_activities_v2'; // Clave para la caché
 let allActivities = [];
 
 // --- REFERENCIAS AL DOM ---
@@ -37,7 +38,7 @@ async function handleOAuthCallback(code) {
         if (!response.ok) throw new Error(data.error);
         localStorage.setItem('strava_access_token', data.access_token);
         window.history.replaceState({}, document.title, window.location.pathname);
-        initializeApp(data.access_token);
+        await initializeApp(data.access_token);
     } catch (error) {
         handleError('Fallo en la autenticación', error);
     }
@@ -94,21 +95,27 @@ function setupTabs() {
 
 function logout() {
     localStorage.clear();
-    window.location.reload(); // La forma más simple de resetear el estado
+    window.location.reload();
 }
 
 // --- FUNCIÓN PRINCIPAL DE INICIALIZACIÓN ---
 async function initializeApp(accessToken) {
-    const cachedActivities = localStorage.getItem('strava_all_activities');
+    const cachedActivities = localStorage.getItem(CACHE_KEY);
+
     if (cachedActivities) {
+        console.log('Cargando actividades PRE-PROCESADAS desde la caché local...');
         allActivities = JSON.parse(cachedActivities);
+        allActivities.forEach(act => {
+            act.start_date_local_obj = new Date(act.start_date_local_obj);
+        });
     } else {
+        console.log('No hay caché. Obteniendo y procesando actividades...');
         const rawActivities = await fetchAllActivities(accessToken);
         if (!rawActivities) return;
-        localStorage.setItem('strava_all_activities', JSON.stringify(rawActivities));
-        allActivities = rawActivities;
+        
+        allActivities = preprocessData(rawActivities);
+        localStorage.setItem(CACHE_KEY, JSON.stringify(allActivities));
     }
-    allActivities = preprocessData(allActivities);
     
     hideLoading();
     loginSection.classList.add('hidden');

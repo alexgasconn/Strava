@@ -1,13 +1,14 @@
 // js/tabs/running.js
 
-// Almacén para los gráficos de esta pestaña
 let runningCharts = {};
 
 export function renderRunningTab(activities) {
     console.log("Renderizando pestaña de Running...");
     const runs = activities.filter(a => a.type === 'Run');
+    const runningContainer = document.getElementById('running');
+
     if (runs.length === 0) {
-        document.getElementById('running').innerHTML = "<h2>Análisis de Running</h2><p>No se encontraron actividades de carrera.</p>";
+        if(runningContainer) runningContainer.innerHTML = "<h2>Análisis de Running</h2><p>No se encontraron actividades de carrera.</p>";
         return;
     }
 
@@ -24,12 +25,15 @@ function renderRunningSummary(runs) {
     const totalRunTime = runs.reduce((sum, r) => sum + r.moving_time_hours, 0);
     const totalRunElevation = runs.reduce((sum, r) => sum + r.elevation_gain_m, 0);
 
-    document.getElementById('running-summary-cards').innerHTML = `
-        <div class="card"><h3>Carreras Totales</h3><p>${runs.length}</p></div>
-        <div class="card"><h3>Distancia Total</h3><p>${totalRunDistance.toFixed(0)} km</p></div>
-        <div class="card"><h3>Horas Corriendo</h3><p>${totalRunTime.toFixed(1)} h</p></div>
-        <div class="card"><h3>Desnivel Total</h3><p>${totalRunElevation.toFixed(0)} m</p></div>
-    `;
+    const container = document.getElementById('running-summary-cards');
+    if (container) {
+        container.innerHTML = `
+            <div class="card"><h3>Carreras Totales</h3><p>${runs.length}</p></div>
+            <div class="card"><h3>Distancia Total</h3><p>${totalRunDistance.toFixed(0)} km</p></div>
+            <div class="card"><h3>Horas Corriendo</h3><p>${totalRunTime.toFixed(1)} h</p></div>
+            <div class="card"><h3>Desnivel Total</h3><p>${totalRunElevation.toFixed(0)} m</p></div>
+        `;
+    }
 }
 
 function renderPaceVsDistanceChart(runs) {
