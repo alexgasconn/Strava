@@ -1,5 +1,5 @@
 // =================================================================
-// script.js - VERSIÓN "TODO EN UNO"
+// script.js - VERSIÓN "TODO EN UNO" (COMPLETA Y CORREGIDA)
 // =================================================================
 
 // --- 1. CONFIGURACIÓN Y ESTADO GLOBAL ---
@@ -22,7 +22,20 @@ function showLoading(message) { loadingMessage.textContent = message; loadingOve
 function hideLoading() { loadingOverlay.classList.add('hidden'); }
 function handleError(message, error) { console.error(message, error); hideLoading(); alert(`Error: ${message}.`); }
 
-// --- 4. FUNCIONES DE RENDERIZADO ---
+// --- 4. LÓGICA DE AUTENTICACIÓN (LAS FUNCIONES QUE FALTABAN) ---
+
+function redirectToStravaAuthorize() {
+    const scope = 'read,activity:read_all';
+    const authUrl = `https://www.strava.com/oauth/authorize?client_id=${STRAVA_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=${scope}`;
+    window.location.href = authUrl;
+}
+
+function logout() { 
+    localStorage.clear(); 
+    window.location.reload(); 
+}
+
+// --- 5. FUNCIONES DE RENDERIZADO ---
 function createChart(canvasId, config) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
@@ -73,7 +86,7 @@ function renderDashboard(activities) {
 
     // Gráfico de Líneas: Distancia Mensual
     const monthlyDistance = activities.reduce((acc, act) => {
-        const month = act.start_date_local.substring(0, 7); // YYYY-MM
+        const month = act.start_date_local.substring(0, 7);
         acc[month] = (acc[month] || 0) + (act.distance / 1000);
         return acc;
     }, {});
@@ -114,13 +127,13 @@ function renderDashboard(activities) {
     createChart('ride-elevation-histogram', {
         type: 'bar',
         data: {
-            labels: Object.keys(rideElevBins).sort((a,b) => a-b).map(l => `${l}m`),
+            labels: Object.keys(rideElevBins).sort((a,b) => parseInt(a)-parseInt(b)).map(l => `${l}m`),
             datasets: [{ label: '# Salidas', data: Object.values(rideElevBins), backgroundColor: 'rgba(0, 119, 182, 0.7)' }]
         }
     });
 }
 
-// --- 5. LÓGICA PRINCIPAL ---
+// --- 6. LÓGICA PRINCIPAL DE INICIALIZACIÓN ---
 async function initializeApp(accessToken) {
     try {
         let activities;
@@ -165,12 +178,14 @@ async function handleAuth() {
             return handleError('Fallo en la autenticación', error);
         }
     }
-    if (accessToken) initializeApp(accessToken);
-    else hideLoading();
+    if (accessToken) {
+        initializeApp(accessToken);
+    } else {
+        hideLoading();
+    }
 }
 
-function logout() { localStorage.clear(); window.location.reload(); }
-
+// --- PUNTO DE ENTRADA DE LA APP ---
 loginButton.addEventListener('click', redirectToStravaAuthorize);
 logoutButton.addEventListener('click', logout);
 handleAuth();
