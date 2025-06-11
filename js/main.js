@@ -116,7 +116,7 @@ async function initializeApp(accessToken) {
         allActivities = preprocessData(rawActivities);
         localStorage.setItem(CACHE_KEY, JSON.stringify(allActivities));
     }
-    
+    console.table(allActivities); 
     hideLoading();
     loginSection.classList.add('hidden');
     appSection.classList.remove('hidden');
