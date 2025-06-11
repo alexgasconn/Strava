@@ -1,205 +1,34 @@
-/* style.css - VERSIÓN REMODELADA PROFESIONAL */
-
 :root {
     --strava-orange: #FC5200;
-    --primary-blue: #0077B6;
     --text-color: #333;
-    --text-light: #595959;
-    --bg-color: #f7f7f7;
+    --bg-color: #f4f5f7;
     --container-bg: #ffffff;
     --border-color: #e1e4e8;
-    --shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-    --border-radius: 12px;
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
-
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: sans-serif;
     background-color: var(--bg-color);
     color: var(--text-color);
     margin: 0;
     padding: 2rem;
 }
-
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-}
-
-#login-section {
+.container { max-width: 900px; margin: 0 auto; }
+#login-section, #app-section {
     background-color: var(--container-bg);
-    padding: 3rem;
-    border-radius: var(--border-radius);
+    padding: 2rem;
+    border-radius: 12px;
     box-shadow: var(--shadow);
-    text-align: center;
-    max-width: 600px;
-    margin: 4rem auto;
 }
-
-#login-section h1 {
-    color: var(--strava-orange);
-    font-size: 2.5rem;
-    margin-bottom: 0.5rem;
-}
-
-#login-section p {
-    color: var(--text-light);
-    font-size: 1.1rem;
-    margin-bottom: 2rem;
-}
-
-button {
-    background-color: var(--strava-orange);
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    font-size: 1rem;
-    font-weight: 600;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-}
-
-button:hover {
-    background-color: #e04a00;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-
-#app-section header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-    padding-bottom: 1.5rem;
-    border-bottom: 1px solid var(--border-color);
-}
-
-#app-section header h1 {
-    margin: 0;
-    font-size: 2rem;
-}
-
-#logout-button {
-    background-color: var(--text-light);
-}
-#logout-button:hover {
-    background-color: var(--text-color);
-}
-
-#tabs {
-    margin-bottom: 2rem;
-}
-
-.tab-link {
-    background: none;
-    border: none;
-    padding: 1rem 0;
-    margin-right: 2rem;
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--text-light);
-    border-bottom: 3px solid transparent;
-    transition: color 0.2s, border-color 0.2s;
-}
-
-.tab-link.active {
-    color: var(--strava-orange);
-    border-bottom-color: var(--strava-orange);
-}
-
-.tab-content { display: none; }
-.tab-content.active { display: block; animation: fadeIn 0.5s; }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-.summary-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-}
-
-.grid-2-col {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-}
-
-.full-width {
-    grid-column: 1 / -1;
-}
-
-.card, .chart-container, .table-container {
-    background-color: var(--container-bg);
-    padding: 1.5rem;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow);
-    margin-bottom: 1.5rem;
-}
-
-.card h3 {
-    margin: 0 0 0.5rem 0;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--text-light);
-    text-transform: uppercase;
-}
-
-.card p {
-    margin: 0;
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: var(--text-color);
-}
-
-h2 {
-    font-size: 1.5rem;
-    margin-bottom: 1.5rem;
-    color: var(--text-color);
-}
-
-h3 {
-    font-size: 1.1rem;
-    margin-top: 0;
-    color: var(--text-color);
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-th, td {
-    text-align: left;
-    padding: 12px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-th {
-    font-weight: 600;
-    color: var(--text-light);
-    font-size: 0.9rem;
-}
-
-#cal-heatmap {
-    margin-top: 1rem;
-}
-
-#loading-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background-color: rgba(247, 247, 247, 0.9);
-    display: flex; flex-direction: column; justify-content: center; align-items: center;
-    z-index: 1000;
-}
-.spinner {
-    border: 8px solid #e1e4e8; border-top: 8px solid var(--strava-orange);
-    border-radius: 50%; width: 60px; height: 60px;
-    animation: spin 1s linear infinite;
-}
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
-@media (max-width: 768px) {
-    body { padding: 1rem; }
-    .grid-2-col { grid-template-columns: 1fr; }
-    #app-section header { flex-direction: column; text-align: center; gap: 1rem; }
-    #tabs { overflow-x: auto; white-space: nowrap; }
-}
+h1 { color: var(--strava-orange); }
+button { background-color: var(--strava-orange); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
+header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); margin-bottom: 1rem; padding-bottom: 1rem; }
+.hidden { display: none; }
+.summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem; }
+.card { background-color: #f9f9f9; padding: 1.5rem; border-radius: 8px; text-align: center; }
+.card h3 { margin: 0 0 0.5rem 0; font-size: 1rem; color: #666; }
+.card p { margin: 0; font-size: 2rem; font-weight: bold; }
+.chart-container { padding: 1rem; }
+#loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; }
+.spinner { border: 8px solid #f3f3f3; border-top: 8px solid var(--strava-orange); border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
