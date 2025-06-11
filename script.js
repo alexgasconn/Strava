@@ -115,41 +115,7 @@ function renderGeneralTab() {
         </div>
     `;
 
-    // --- 2. Renderizar Gráfico de Tarta ---
-    const activityCounts = allActivities.reduce((acc, act) => {
-        acc[act.type] = (acc[act.type] || 0) + 1;
-        return acc;
-    }, {});
-
-    const ctx = document.getElementById('activity-pie-chart').getContext('2d');
     
-    // Si ya existe un gráfico, lo destruimos antes de crear uno nuevo
-    if (activityPieChart) {
-        activityPieChart.destroy();
-    }
-
-    activityPieChart = new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: Object.keys(activityCounts),
-            datasets: [{
-                label: 'Número de Actividades',
-                data: Object.values(activityCounts),
-                backgroundColor: [ // Colores de ejemplo
-                    'rgba(252, 82, 0, 0.8)',
-                    'rgba(0, 128, 255, 0.8)',
-                    'rgba(54, 162, 235, 0.8)',
-                    'rgba(255, 206, 86, 0.8)',
-                    'rgba(75, 192, 192, 0.8)',
-                    'rgba(153, 102, 255, 0.8)',
-                ],
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-        }
-    });
 }
 
 
