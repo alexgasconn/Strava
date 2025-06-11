@@ -100,31 +100,46 @@ function logout() {
 
 // --- FUNCIÓN PRINCIPAL DE INICIALIZACIÓN ---
 async function initializeApp(accessToken) {
-    const cachedActivities = localStorage.getItem(CACHE_KEY);
+    try {
+        const cachedActivities = localStorage.getItem(CACHE_KEY);
 
-    if (cachedActivities) {
-        console.log('Cargando actividades PRE-PROCESADAS desde la caché local...');
-        allActivities = JSON.parse(cachedActivities);
-        allActivities.forEach(act => {
-            act.start_date_local_obj = new Date(act.start_date_local_obj);
-        });
-    } else {
-        console.log('No hay caché. Obteniendo y procesando actividades...');
-        const rawActivities = await fetchAllActivities(accessToken);
-        if (!rawActivities) return;
+        if (cachedActivities) {
+            console.log('Cargando actividades PRE-PROCESADAS desde la caché local...');
+            allActivities = JSON.parse(cachedActivities);
+            allActivities.forEach(act => {
+                act.start_date_local_obj = new Date(act.start_date_local_obj);
+            });
+        } else {
+            console.log('No hay caché. Obteniendo y procesando actividades...');
+            const rawActivities = await fetchAllActivities(accessToken);
+            // fetchAllActivities ya maneja el error y no debería devolver null, pero por seguridad
+            if (!rawActivities) throw new Error("Fallo al obtener actividades de la API.");
+            
+            allActivities = preprocessData(rawActivities);
+            localStorage.setItem(CACHE_KEY, JSON.stringify(allActivities));
+        }
+
+        console.log(`Datos listos. ${allActivities.length} actividades cargadas.`);
+        // console.table(allActivities);
+
+        // Mostramos la aplicación
+        loginSection.classList.add('hidden');
+        appSection.classList.remove('hidden');
         
-        allActivities = preprocessData(rawActivities);
-        localStorage.setItem(CACHE_KEY, JSON.stringify(allActivities));
-    }
-    console.table(allActivities); 
-    hideLoading();
-    loginSection.classList.add('hidden');
-    appSection.classList.remove('hidden');
-    
-    const athleteInfo = allActivities.find(a => a.athlete)?.athlete || { firstname: 'Atleta', lastname: '' };
-    athleteName.textContent = `Dashboard de ${athleteInfo.firstname} ${athleteInfo.lastname}`;
+        const athleteInfo = allActivities.find(a => a.athlete)?.athlete || { firstname: 'Atleta', lastname: '' };
+        athleteName.textContent = `Dashboard de ${athleteInfo.firstname} ${athleteInfo.lastname}`;
 
-    document.querySelector('[data-tab="overview"]').click();
+        // Disparamos el renderizado de la primera pestaña
+        document.querySelector('[data-tab="overview"]').click();
+
+    } catch (error) {
+        // Si cualquier cosa en el proceso de inicialización falla, lo capturamos aquí
+        handleError("Error durante la inicialización de la aplicación", error);
+    } finally {
+        // ¡CRUCIAL! Este bloque se ejecuta SIEMPRE, incluso si hay un error en el try.
+        // Esto garantiza que la pantalla de carga desaparezca.
+        hideLoading();
+    }
 }
 
 // --- PUNTO DE ENTRADA DE LA APP ---
