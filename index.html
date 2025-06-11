@@ -1,48 +1,63 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Simple de Strava</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="style.css">
-</head>
+<!-- Dentro de index.html, reemplaza el <body> -->
 <body>
     <div class="container">
-        <!-- SECCIÓN DE LOGIN -->
         <div id="login-section">
-            <h1>Dashboard Simple</h1>
-            <p>Conecta tu cuenta de Strava.</p>
+            <h1>Mi Dashboard de Strava</h1>
+            <p>Conecta tu cuenta de Strava para ver tu historial de entrenamiento analizado.</p>
             <button id="login-button">Conectar con Strava</button>
         </div>
 
-        <!-- SECCIÓN PRINCIPAL DE LA APP -->
+        <!-- Esta es la sección principal de la app, oculta al principio -->
         <div id="app-section" class="hidden">
             <header>
                 <h1 id="athlete-name"></h1>
                 <button id="logout-button">Cerrar Sesión</button>
             </header>
 
+            <!-- Barra de Navegación de Pestañas -->
+            <nav id="tabs">
+                <button class="tab-link active" data-tab="general">🏃🚴🏊 General</button>
+                <button class="tab-link" data-tab="running">🏃 Running</button>
+                <button class="tab-link" data-tab="cycling">🚴 Cycling</button>
+                <button class="tab-link" data-tab="swimming">🏊 Swimming</button>
+            </nav>
+
+            <!-- Contenedores para el contenido de cada pestaña -->
             <main>
-                <h2>Resumen Total</h2>
-                <div id="summary-cards" class="summary-grid">
-                    <!-- Las tarjetas se insertarán aquí -->
+                <div id="general" class="tab-content active">
+                    <!-- Aquí irán las tarjetas de resumen y el gráfico de tarta -->
+                    <h2>Resumen General</h2>
+                    <div id="summary-cards"></div>
+                    <div class="chart-container">
+                        <h3>Distribución de Actividades</h3>
+                        <canvas id="activity-pie-chart"></canvas>
+                    </div>
                 </div>
-                <div class="chart-container">
-                    <h3>Actividades por Tipo</h3>
-                    <canvas id="simple-bar-chart"></canvas>
+
+                <div id="running" class="tab-content">
+                    <h2>Análisis de Running</h2>
+                    <!-- Contenido futuro de la pestaña de Running -->
+                </div>
+
+                <div id="cycling" class="tab-content">
+                    <h2>Análisis de Ciclismo</h2>
+                    <!-- Contenido futuro de la pestaña de Ciclismo -->
+                </div>
+                
+                <div id="swimming" class="tab-content">
+                    <h2>Análisis de Natación</h2>
+                    <!-- Contenido futuro de la pestaña de Natación -->
                 </div>
             </main>
         </div>
 
-        <!-- PANTALLA DE CARGA -->
         <div id="loading-overlay" class="hidden">
             <div class="spinner"></div>
             <p id="loading-message"></p>
         </div>
     </div>
 
-    <!-- Carga de nuestro único script -->
-    <script src="/script.js"></script>
+    <!-- Incluimos la librería Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
 </body>
-</html>

@@ -1,12 +1,10 @@
 // =================================================================
-// script.js - VERSIÓN ULTRA-SIMPLIFICADA
+// 1. CONFIGURACIÓN Y ELEMENTOS DEL DOM
 // =================================================================
-
-// --- 1. CONFIGURACIÓN Y REFERENCIAS AL DOM ---
-const STRAVA_CLIENT_ID = '143540';
+const STRAVA_CLIENT_ID = '143540'; // Tu Client ID
 const REDIRECT_URI = window.location.origin + window.location.pathname;
-const CACHE_KEY = 'strava_simple_data_v1';
 
+// Referencias a los elementos de la página
 const loginSection = document.getElementById('login-section');
 const appSection = document.getElementById('app-section');
 const loadingOverlay = document.getElementById('loading-overlay');
@@ -14,8 +12,151 @@ const loadingMessage = document.getElementById('loading-message');
 const loginButton = document.getElementById('login-button');
 const logoutButton = document.getElementById('logout-button');
 const athleteName = document.getElementById('athlete-name');
+const tabsContainer = document.getElementById('tabs');
 
-// --- 2. FUNCIONES DE UI ---
+// Almacén global de datos
+let allActivities = [];
+let activityPieChart = null;
+
+
+// =================================================================
+// 2. LÓGICA DE AUTENTICACIÓN Y OBTENCIÓN DE DATOS
+// =================================================================
+
+function redirectToStravaAuthorize() {
+    const scope = 'read,activity:read_all';
+    const authUrl = `https://www.strava.com/oauth/authorize?client_id=${STRAVA_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=${scope}`;
+    window.location.href = authUrl;
+}
+
+async function handleOAuthCallback(code) {
+    showLoading('Autenticando...');
+    try {
+        const response = await fetch('/api/strava-auth', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error);
+
+        const { access_token } = data;
+        localStorage.setItem('strava_access_token', access_token);
+        
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        // Una vez autenticados, obtenemos los datos
+        initializeApp(access_token);
+    } catch (error) {
+        handleError('Fallo en la autenticación', error);
+    }
+}
+
+async function fetchAllActivities(accessToken) {
+    showLoading('Obteniendo historial de actividades... Esto puede tardar unos momentos.');
+    try {
+        const response = await fetch('/api/strava-activities', {
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+        if (!response.ok) {
+            const data = await response.json();
+            // Si el token ha expirado, forzamos el logout
+            if (response.status === 401) {
+                logout();
+                alert('Tu sesión ha expirado. Por favor, conéctate de nuevo.');
+            }
+            throw new Error(data.error || 'No se pudieron obtener las actividades.');
+        }
+        return await response.json();
+    } catch (error) {
+        handleError('No se pudieron cargar las actividades', error);
+    }
+}
+
+// =================================================================
+// 3. PROCESAMIENTO Y VISUALIZACIÓN DE DATOS
+// =================================================================
+
+function preprocessData(activities) {
+    return activities.map(act => ({
+        ...act,
+        // Convertimos a unidades más manejables
+        distance_km: act.distance / 1000,
+        moving_time_hours: act.moving_time / 3600,
+        elevation_gain_m: act.total_elevation_gain,
+        start_date_local_obj: new Date(act.start_date_local),
+    }));
+}
+
+function renderGeneralTab() {
+    // --- 1. Renderizar Tarjetas de Resumen ---
+    const totalRuns = allActivities.filter(a => a.type === 'Run').length;
+    const totalRides = allActivities.filter(a => a.type === 'Ride').length;
+    const totalSwims = allActivities.filter(a => a.type === 'Swim').length;
+    const totalDistance = allActivities.reduce((sum, a) => sum + a.distance_km, 0);
+
+    const summaryCardsContainer = document.getElementById('summary-cards');
+    summaryCardsContainer.innerHTML = `
+        <div class="card">
+            <h3>Distancia Total</h3>
+            <p>${totalDistance.toFixed(0)} km</p>
+        </div>
+        <div class="card">
+            <h3>Carreras</h3>
+            <p>${totalRuns}</p>
+        </div>
+        <div class="card">
+            <h3>Salidas en Bici</h3>
+            <p>${totalRides}</p>
+        </div>
+        <div class="card">
+            <h3>Sesiones de Natación</h3>
+            <p>${totalSwims}</p>
+        </div>
+    `;
+
+    // --- 2. Renderizar Gráfico de Tarta ---
+    const activityCounts = allActivities.reduce((acc, act) => {
+        acc[act.type] = (acc[act.type] || 0) + 1;
+        return acc;
+    }, {});
+
+    const ctx = document.getElementById('activity-pie-chart').getContext('2d');
+    
+    // Si ya existe un gráfico, lo destruimos antes de crear uno nuevo
+    if (activityPieChart) {
+        activityPieChart.destroy();
+    }
+
+    activityPieChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: Object.keys(activityCounts),
+            datasets: [{
+                label: 'Número de Actividades',
+                data: Object.values(activityCounts),
+                backgroundColor: [ // Colores de ejemplo
+                    'rgba(252, 82, 0, 0.8)',
+                    'rgba(0, 128, 255, 0.8)',
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(255, 206, 86, 0.8)',
+                    'rgba(75, 192, 192, 0.8)',
+                    'rgba(153, 102, 255, 0.8)',
+                ],
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+        }
+    });
+}
+
+
+// =================================================================
+// 4. LÓGICA DE LA INTERFAZ DE USUARIO (UI)
+// =================================================================
+
 function showLoading(message) {
     loadingMessage.textContent = message;
     loadingOverlay.classList.remove('hidden');
@@ -28,131 +169,79 @@ function hideLoading() {
 function handleError(message, error) {
     console.error(message, error);
     hideLoading();
-    alert(`Error: ${message}. Revisa la consola.`);
+    // Podríamos mostrar un mensaje de error más visible al usuario aquí
 }
 
-// --- 3. LÓGICA DE LA APP ---
-function redirectToStravaAuthorize() {
-    const scope = 'read,activity:read_all';
-    const authUrl = `https://www.strava.com/oauth/authorize?client_id=${STRAVA_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=${scope}`;
-    window.location.href = authUrl;
+function setupTabs() {
+    tabsContainer.addEventListener('click', (e) => {
+        if (e.target.matches('.tab-link')) {
+            // Quitar clase 'active' de todos los botones y contenidos
+            document.querySelectorAll('.tab-link').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            // Añadir clase 'active' al botón y contenido seleccionados
+            e.target.classList.add('active');
+            const tabId = e.target.getAttribute('data-tab');
+            document.getElementById(tabId).classList.add('active');
+        }
+    });
 }
 
 function logout() {
-    localStorage.clear();
-    window.location.reload();
+    localStorage.removeItem('strava_access_token');
+    appSection.classList.add('hidden');
+    loginSection.classList.remove('hidden');
+    allActivities = []; // Limpiamos los datos
 }
 
-function renderDashboard(activities) {
-    console.log("Renderizando dashboard simple...");
-
-    // 1. Calcular resúmenes
-    const totalActivities = activities.length;
-    const totalDistance = activities.reduce((sum, act) => sum + (act.distance / 1000), 0);
-    const totalHours = activities.reduce((sum, act) => sum + (act.moving_time / 3600), 0);
-
-    // 2. Mostrar tarjetas de resumen
-    const summaryContainer = document.getElementById('summary-cards');
-    summaryContainer.innerHTML = `
-        <div class="card"><h3>Actividades</h3><p>${totalActivities}</p></div>
-        <div class="card"><h3>Distancia Total</h3><p>${totalDistance.toFixed(0)} km</p></div>
-        <div class="card"><h3>Horas en Mov.</h3><p>${totalHours.toFixed(1)} h</p></div>
-    `;
-
-    // 3. Contar actividades por tipo para el gráfico
-    const activityCounts = activities.reduce((acc, act) => {
-        acc[act.type] = (acc[act.type] || 0) + 1;
-        return acc;
-    }, {});
-    
-    // 4. Renderizar un gráfico de barras simple
-    const canvas = document.getElementById('simple-bar-chart');
-    if (canvas) {
-        new Chart(canvas.getContext('2d'), {
-            type: 'bar',
-            data: {
-                labels: Object.keys(activityCounts),
-                datasets: [{
-                    label: 'Número de Actividades',
-                    data: Object.values(activityCounts),
-                    backgroundColor: 'rgba(252, 82, 0, 0.7)',
-                }]
-            },
-            options: { indexAxis: 'y' } // Barras horizontales para mejor lectura
-        });
-    }
-}
+// =================================================================
+// 5. FUNCIÓN PRINCIPAL DE INICIALIZACIÓN
+// =================================================================
 
 async function initializeApp(accessToken) {
-    try {
-        showLoading('Cargando datos...');
-        let activities;
-        const cachedActivities = localStorage.getItem(CACHE_KEY);
+    // 1. Obtener y procesar todos los datos
+    const rawActivities = await fetchAllActivities(accessToken);
+    if (!rawActivities) return; // Si falla la obtención de datos, paramos
+    allActivities = preprocessData(rawActivities);
 
-        if (cachedActivities) {
-            console.log('Cargando desde caché...');
-            activities = JSON.parse(cachedActivities);
-        } else {
-            console.log('Obteniendo desde API de Strava...');
-            const response = await fetch('/api/strava-activities', {
-                headers: { 'Authorization': `Bearer ${accessToken}` }
-            });
-            if (!response.ok) throw new Error('Fallo al obtener actividades de la API.');
-            activities = await response.json();
-            localStorage.setItem(CACHE_KEY, JSON.stringify(activities));
-        }
+    // 2. Actualizar la UI
+    hideLoading();
+    loginSection.classList.add('hidden');
+    appSection.classList.remove('hidden');
+    
+    // Asumimos que los datos del atleta están en la primera actividad (no es ideal, pero funciona por ahora)
+    if (allActivities.length > 0) {
+      athleteName.textContent = `Dashboard de ${allActivities[0].athlete.firstname} ${allActivities[0].athlete.lastname}`;
+    }
 
-        console.log(`${activities.length} actividades cargadas.`);
+    // 3. Renderizar el contenido de la primera pestaña
+    renderGeneralTab();
+}
 
-        // Mostrar la app y el nombre del atleta
-        loginSection.classList.add('hidden');
-        appSection.classList.remove('hidden');
-        const athleteInfo = activities.find(a => a.athlete)?.athlete || { firstname: 'Atleta', lastname: '' };
-        athleteName.textContent = `Dashboard de ${athleteInfo.firstname} ${athleteInfo.lastname}`;
 
-        // Renderizar el contenido
-        renderDashboard(activities);
+function main() {
+    // Asignar eventos a los botones
+    loginButton.addEventListener('click', redirectToStravaAuthorize);
+    logoutButton.addEventListener('click', logout);
+    
+    // Configurar la lógica de las pestañas
+    setupTabs();
 
-    } catch (error) {
-        handleError("Error al inicializar la aplicación", error);
-    } finally {
-        // Asegurarnos de que el spinner siempre desaparece
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    const accessToken = localStorage.getItem('strava_access_token');
+
+    if (code) {
+        // Si volvemos de Strava con un código, lo intercambiamos por un token
+        handleOAuthCallback(code);
+    } else if (accessToken) {
+        // Si ya tenemos un token guardado, iniciamos la app directamente
+        initializeApp(accessToken);
+    } else {
+        // Si no hay nada, mostramos la pantalla de login
         hideLoading();
     }
 }
 
-async function handleAuth() {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
-    let accessToken = localStorage.getItem('strava_access_token');
-
-    if (code) {
-        showLoading('Autenticando...');
-        try {
-            const response = await fetch('/api/strava-auth', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code }),
-            });
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error);
-            accessToken = data.access_token;
-            localStorage.setItem('strava_access_token', accessToken);
-            window.history.replaceState({}, '', window.location.pathname);
-        } catch (error) {
-            handleError('Fallo en la autenticación', error);
-            return;
-        }
-    }
-
-    if (accessToken) {
-        initializeApp(accessToken);
-    } else {
-        hideLoading(); // Ocultar si no hay token y no hay código
-    }
-}
-
-// --- PUNTO DE ENTRADA ---
-loginButton.addEventListener('click', redirectToStravaAuthorize);
-logoutButton.addEventListener('click', logout);
-handleAuth();
+// ¡Ejecutar la aplicación!
+main();

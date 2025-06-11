@@ -1,34 +1,105 @@
-:root {
-    --strava-orange: #FC5200;
-    --text-color: #333;
-    --bg-color: #f4f5f7;
-    --container-bg: #ffffff;
-    --border-color: #e1e4e8;
-    --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+/* Añade esto al final de tu style.css */
+
+#app-section header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
 }
-body {
-    font-family: sans-serif;
-    background-color: var(--bg-color);
-    color: var(--text-color);
+
+#tabs {
+    border-bottom: 2px solid #ddd;
+    margin-bottom: 1rem;
+}
+
+.tab-link {
+    background-color: transparent;
+    border: none;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-size: 16px;
+    color: #555;
+    border-bottom: 3px solid transparent;
+}
+
+.tab-link.active {
+    color: #FC5200;
+    border-bottom-color: #FC5200;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+#summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.card {
+    background-color: #f9f9f9;
+    padding: 1.5rem;
+    border-radius: 8px;
+    text-align: center;
+    border-left: 5px solid #FC5200;
+}
+
+.card h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+    color: #555;
+}
+
+.card p {
     margin: 0;
-    padding: 2rem;
+    font-size: 2rem;
+    font-weight: bold;
+    color: #333;
 }
-.container { max-width: 900px; margin: 0 auto; }
-#login-section, #app-section {
-    background-color: var(--container-bg);
-    padding: 2rem;
-    border-radius: 12px;
-    box-shadow: var(--shadow);
+
+.chart-container {
+    margin-top: 2rem;
+    padding: 1rem;
+    background-color: #fff;
+    border-radius: 8px;
 }
-h1 { color: var(--strava-orange); }
-button { background-color: var(--strava-orange); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); margin-bottom: 1rem; padding-bottom: 1rem; }
-.hidden { display: none; }
-.summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem; }
-.card { background-color: #f9f9f9; padding: 1.5rem; border-radius: 8px; text-align: center; }
-.card h3 { margin: 0 0 0.5rem 0; font-size: 1rem; color: #666; }
-.card p { margin: 0; font-size: 2rem; font-weight: bold; }
-.chart-container { padding: 1rem; }
-#loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; }
-.spinner { border: 8px solid #f3f3f3; border-top: 8px solid var(--strava-orange); border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite; }
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+#loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.spinner {
+    border: 8px solid #f3f3f3;
+    border-top: 8px solid #FC5200;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 1s linear infinite;
+}
+
+#loading-overlay p {
+    margin-top: 20px;
+    font-size: 18px;
+    color: #333;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
