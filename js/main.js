@@ -101,6 +101,7 @@ function logout() {
 // --- FUNCIÓN PRINCIPAL DE INICIALIZACIÓN ---
 async function initializeApp(accessToken) {
     try {
+        const CACHE_KEY = 'strava_processed_activities_v2';
         const cachedActivities = localStorage.getItem(CACHE_KEY);
 
         if (cachedActivities) {
@@ -112,7 +113,6 @@ async function initializeApp(accessToken) {
         } else {
             console.log('No hay caché. Obteniendo y procesando actividades...');
             const rawActivities = await fetchAllActivities(accessToken);
-            // fetchAllActivities ya maneja el error y no debería devolver null, pero por seguridad
             if (!rawActivities) throw new Error("Fallo al obtener actividades de la API.");
             
             allActivities = preprocessData(rawActivities);
@@ -120,25 +120,25 @@ async function initializeApp(accessToken) {
         }
 
         console.log(`Datos listos. ${allActivities.length} actividades cargadas.`);
-        // console.table(allActivities);
 
-        // Mostramos la aplicación
+        // Mostramos la aplicación y los datos básicos
         loginSection.classList.add('hidden');
         appSection.classList.remove('hidden');
         
         const athleteInfo = allActivities.find(a => a.athlete)?.athlete || { firstname: 'Atleta', lastname: '' };
         athleteName.textContent = `Dashboard de ${athleteInfo.firstname} ${athleteInfo.lastname}`;
 
-        // Disparamos el renderizado de la primera pestaña
-        document.querySelector('[data-tab="overview"]').click();
-
     } catch (error) {
-        // Si cualquier cosa en el proceso de inicialización falla, lo capturamos aquí
         handleError("Error durante la inicialización de la aplicación", error);
     } finally {
-        // ¡CRUCIAL! Este bloque se ejecuta SIEMPRE, incluso si hay un error en el try.
-        // Esto garantiza que la pantalla de carga desaparezca.
+        // ¡GARANTIZADO! Ocultamos el spinner aquí, ANTES de renderizar los gráficos.
         hideLoading();
+        
+        // ¡LA MAGIA! Retrasamos el renderizado para después de que la UI se haya actualizado.
+        // Esto pone el click() en la siguiente "vuelta" del bucle de eventos del navegador.
+        setTimeout(() => {
+            document.querySelector('[data-tab="overview"]').click();
+        }, 0);
     }
 }
 
