@@ -163,8 +163,39 @@
 
 // main();
 
-import { hideLoading } from './ui.js';
+import { showLoading, hideLoading, handleError } from './ui.js';
 
-console.log("main.js se ha cargado.");
-hideLoading(); // ¿Se oculta el spinner?
-console.log("hideLoading() se ha llamado.");
+// Dejamos las referencias al DOM
+const loginSection = document.getElementById('login-section');
+const appSection = document.getElementById('app-section');
+const loginButton = document.getElementById('login-button');
+const logoutButton = document.getElementById('logout-button');
+
+function logout() {
+    localStorage.clear();
+    window.location.reload();
+}
+
+// Una versión súper simplificada de initializeApp
+function initializeApp() {
+    console.log("initializeApp se ha llamado. Ocultando spinner AHORA.");
+    hideLoading();
+    loginSection.classList.add('hidden');
+    appSection.classList.remove('hidden');
+    console.log("UI principal debería ser visible.");
+}
+
+function main() {
+    loginButton.addEventListener('click', () => alert("Login desactivado para la prueba. Refresca y borra la caché para simular un login exitoso."));
+    logoutButton.addEventListener('click', logout);
+    
+    // Simulación de un login exitoso. Borra la caché para probar el login real.
+    const accessToken = localStorage.getItem('strava_access_token');
+    if (accessToken) {
+        initializeApp();
+    } else {
+        hideLoading();
+    }
+}
+
+main();
