@@ -404,6 +404,102 @@ function renderDashboard(activities) {
             }
         }
     });
+
+    // --- 7. RENDIMIENTO POR EQUIPO (gear) ---
+
+    // 1. Build a mapping from gear_id to gear name (if available)
+    const gearMap = {};
+    activities.forEach(a => {
+        if (a.gear_id && a.gear && a.gear.name) gearMap[a.gear_id] = a.gear.name;
+    });
+
+    // 2. Aggregate distance per gear per month
+    const gearMonthKm = {};
+    runs.forEach(a => {
+        if (!a.gear_id) return;
+        const gear = gearMap[a.gear_id] || a.gear_id;
+        const month = a.start_date_local.substring(0, 7);
+        if (!gearMonthKm[gear]) gearMonthKm[gear] = {};
+        gearMonthKm[gear][month] = (gearMonthKm[gear][month] || 0) + a.distance / 1000;
+    });
+
+    // 3. Get all months and all gears
+    const allMonths = Array.from(new Set(runs.map(a => a.start_date_local.substring(0, 7)))).sort();
+    const allGears = Object.keys(gearMonthKm);
+
+    // 4. Prepare data for charts
+    const gearDistanceData = allGears.map(gear => {
+        return {
+            gear: gear,
+            monthlyDistances: allMonths.map(month => gearMonthKm[gear][month] || 0)
+        };
+    });
+
+    // 5. Render gear distance charts
+    gearDistanceData.forEach((data, index) => {
+        const canvasId = `gear-distance-chart-${index}`;
+        const canvas = document.getElementById(canvasId);
+        if (canvas) {
+            createChart(canvasId, {
+                type: 'line',
+                data: {
+                    labels: allMonths,
+                    datasets: [{
+                        label: `Distancia por ${data.gear}`,
+                        data: data.monthlyDistances,
+                        borderColor: `hsl(${(index * 360) / gearDistanceData.length}, 100%, 50%)`,
+                        fill: false,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    plugins: { title: { display: true, text: `Distancia mensual por ${data.gear}` } },
+                    scales: {
+                        x: { title: { display: true, text: 'Mes' } },
+                        y: { title: { display: true, text: 'Distancia (km)' } }
+                    }
+                }
+            });
+        }
+    });
+
+    // --- Gráfico de áreas apiladas: Distancia acumulada por equipo ---
+    const stackedAreaCanvas = document.getElementById('stacked-area-chart');
+    if (stackedAreaCanvas) {
+        // Prepara los datos para el gráfico de áreas apiladas
+        const stackedData = allMonths.map((month, monthIdx) => {
+            const monthData = { x: month, y: 0 };
+            allGears.forEach((gear, gearIdx) => {
+                const val = gearMonthKm[gear][month] || 0;
+                monthData[`y${gearIdx}`] = val;
+                monthData.y += val;
+            });
+            return monthData;
+        });
+
+        // Configura y crea el gráfico
+        createChart('stacked-area-chart', {
+            type: 'line',
+            data: {
+                labels: allMonths,
+                datasets: allGears.map((gear, idx) => ({
+                    label: gear,
+                    data: stackedData.map(d => ({ x: d.x, y: d[`y${idx}`] })),
+                    fill: true,
+                    backgroundColor: `hsl(${(idx * 360) / allGears.length}, 70%, 60%)`,
+                    borderColor: `hsl(${(idx * 360) / allGears.length}, 70%, 40%)`,
+                    tension: 0.2
+                }))
+            },
+            options: {
+                plugins: { title: { display: true, text: 'Distancia acumulada por equipo' } },
+                scales: {
+                    x: { title: { display: true, text: 'Mes' } },
+                    y: { title: { display: true, text: 'Distancia (km)' } }
+                }
+            }
+        });
+    }
 }
 
 // --- 6. LÓGICA PRINCIPAL DE INICIALIZACIÓN ---
