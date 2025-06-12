@@ -144,19 +144,20 @@ function renderDashboard(activities) {
         });
     }
 
-    // Histograma de distancias (bins de 5km)
+    // Histograma de distancias (bins de 0,5km)
     const distanceBins = activities.reduce((acc, act) => {
-        const bin = Math.floor((act.distance / 1000) / 5) * 1; // Bin de 1km
+        const bin = (Math.floor((act.distance / 1000) / 0.5) * 0.5).toFixed(1); // Bin de 0,5km
         acc[bin] = (acc[bin] || 0) + 1;
         return acc;
     }, {});
+    const sortedBins = Object.keys(distanceBins).map(Number).sort((a, b) => a - b);
     createChart('distance-histogram', {
         type: 'bar',
         data: {
-            labels: Object.keys(distanceBins).sort((a, b) => parseInt(a) - parseInt(b)).map(l => `${l}-${parseInt(l) + 4} km`),
+            labels: sortedBins.map(l => `${l.toFixed(1)}-${(l + 0.5).toFixed(1)} km`),
             datasets: [{
                 label: '# Actividades',
-                data: Object.keys(distanceBins).sort((a, b) => parseInt(a) - parseInt(b)).map(l => distanceBins[l]),
+                data: sortedBins.map(l => distanceBins[l.toFixed(1)]),
                 backgroundColor: 'rgba(252, 82, 0, 0.5)'
             }]
         },
