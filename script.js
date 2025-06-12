@@ -140,9 +140,13 @@ function renderDashboard(activities) {
 
     // --- Histograma de distancias (bin size configurable por variable) ---
     const HISTOGRAM_BIN_SIZE_KM = 1; // <-- Cambia este valor para ajustar el tamaño del bin (en km)
-    const histogramContainer = document.getElementById('distance-histogram-container');
-    if (histogramContainer) {
-        histogramContainer.innerHTML = `<canvas id="distance-histogram"></canvas>`;
+    const histogramCanvas = document.getElementById('distance-histogram');
+    if (histogramCanvas) {
+        // Limpia el gráfico anterior si existe
+        if (charts['distance-histogram']) {
+            charts['distance-histogram'].destroy();
+            charts['distance-histogram'] = null;
+        }
         const distances = runs.map(act => act.distance / 1000);
         const maxDistance = Math.max(...distances, 0);
         const binSize = HISTOGRAM_BIN_SIZE_KM;
@@ -152,7 +156,7 @@ function renderDashboard(activities) {
             const idx = Math.floor(d / binSize);
             if (idx < binCount) bins[idx]++;
         });
-        createChart('distance-histogram', {
+        charts['distance-histogram'] = new Chart(histogramCanvas, {
             type: 'bar',
             data: {
                 labels: bins.map((_, i) => `${(i * binSize).toFixed(1)}-${((i + 1) * binSize).toFixed(1)}`),
@@ -266,6 +270,94 @@ function renderDashboard(activities) {
             `;
         }
     }
+
+    // --- ATL, CTL y TSB usando esfuerzo ---
+
+    // 1. Prepara los datos diarios de esfuerzo
+    const effortByDay = {};
+    runs.forEach(act => {
+        const date = act.start_date_local.substring(0, 10);
+        const effort = act.perceived_exertion ?? act.suffer_score ?? 0;
+        effortByDay[date] = (effortByDay[date] || 0) + effort;
+    });
+
+    // 2. Genera el rango de fechas completo
+    const allEffortDays = Object.keys(effortByDay).sort();
+    if (allEffortDays.length === 0) return; // No hay datos
+
+    const startDate = new Date(allEffortDays[0]);
+    const endDate = new Date(allEffortDays[allEffortDays.length - 1]);
+    const days = [];
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        days.push(d.toISOString().slice(0, 10));
+    }
+
+    // 3. Vector de esfuerzo diario (rellena con 0 si no hay actividad)
+    const dailyEffort = days.map(date => effortByDay[date] || 0);
+
+    // 4. Función para media exponencial móvil
+    function expMovingAvg(arr, lambda) {
+        const result = [];
+        let prev = arr[0] || 0;
+        for (let i = 0; i < arr.length; i++) {
+            const val = arr[i] || 0;
+            prev = prev + lambda * (val - prev);
+            result.push(prev);
+        }
+        return result;
+    }
+
+    // 5. Calcula ATL (7 días), CTL (42 días), TSB
+    const atl = expMovingAvg(dailyEffort, 1/7);
+    const ctl = expMovingAvg(dailyEffort, 1/42);
+    const tsb = ctl.map((c, i) => c - atl[i]);
+
+    // 6. Grafica los tres
+    createChart('ctl-atl-tsb', {
+        type: 'line',
+        data: {
+            labels: days,
+            datasets: [
+                {
+                    label: 'ATL (7d)',
+                    data: atl,
+                    borderColor: '#FC5200',
+                    backgroundColor: 'rgba(252,82,0,0.1)',
+                    fill: false,
+                    tension: 0.2
+                },
+                {
+                    label: 'CTL (42d)',
+                    data: ctl,
+                    borderColor: '#0074D9',
+                    backgroundColor: 'rgba(0,116,217,0.1)',
+                    fill: false,
+                    tension: 0.2
+                },
+                {
+                    label: 'TSB (CTL-ATL)',
+                    data: tsb,
+                    borderColor: '#2ECC40',
+                    backgroundColor: 'rgba(46,204,64,0.1)',
+                    fill: false,
+                    tension: 0.2,
+                    yAxisID: 'y2'
+                }
+            ]
+        },
+        options: {
+            plugins: { title: { display: true, text: 'ATL, CTL y TSB (Esfuerzo diario)' } },
+            scales: {
+                x: { title: { display: true, text: 'Fecha' } },
+                y: { title: { display: true, text: 'Carga (ATL/CTL)' } },
+                y2: {
+                    position: 'right',
+                    title: { display: true, text: 'TSB' },
+                    grid: { drawOnChartArea: false }
+                }
+            }
+        }
+    });
 }
 
 // --- 6. LÓGICA PRINCIPAL DE INICIALIZACIÓN ---
