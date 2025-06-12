@@ -136,6 +136,89 @@ function renderDashboard(activities) {
             }
         });
     }
+
+    // Histograma de distancias (bins de 5km)
+    const distanceBins = activities.reduce((acc, act) => {
+        const bin = Math.floor((act.distance / 1000) / 5) * 1; // Bin de 1km
+        acc[bin] = (acc[bin] || 0) + 1;
+        return acc;
+    }, {});
+    createChart('distance-histogram', {
+        type: 'bar',
+        data: {
+            labels: Object.keys(distanceBins).sort((a, b) => parseInt(a) - parseInt(b)).map(l => `${l}-${parseInt(l) + 4} km`),
+            datasets: [{
+                label: '# Actividades',
+                data: Object.keys(distanceBins).sort((a, b) => parseInt(a) - parseInt(b)).map(l => distanceBins[l]),
+                backgroundColor: 'rgba(252, 82, 0, 0.5)'
+            }]
+        },
+        options: {
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { title: { display: true, text: 'Distancia (km)' } },
+                y: { title: { display: true, text: 'Cantidad' } }
+            }
+        }
+    });
+
+    // Heatmap años vs meses
+    const yearMonthCounts = {};
+    activities.forEach(act => {
+        const [year, month] = act.start_date_local.substring(0, 7).split('-');
+        if (!yearMonthCounts[year]) yearMonthCounts[year] = {};
+        yearMonthCounts[year][month] = (yearMonthCounts[year][month] || 0) + 1;
+    });
+    const years = Object.keys(yearMonthCounts).sort();
+    const months = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+    const data = years.map(year =>
+        months.map(month => yearMonthCounts[year][month] || 0)
+    );
+    const heatmapCanvas = document.getElementById('year-month-heatmap');
+    if (heatmapCanvas) {
+        if (charts['year-month-heatmap']) charts['year-month-heatmap'].destroy();
+        charts['year-month-heatmap'] = new Chart(heatmapCanvas.getContext('2d'), {
+            type: 'matrix',
+            data: {
+                labels: months,
+                datasets: [{
+                    label: 'Actividades por mes/año',
+                    data: years.flatMap((year, yIdx) =>
+                        months.map((month, mIdx) => ({
+                            x: month,
+                            y: year,
+                            v: data[yIdx][mIdx]
+                        }))
+                    ),
+                    backgroundColor: ctx => {
+                        const v = ctx.raw.v;
+                        if (v === 0) return '#ebedf0';
+                        if (v === 1) return '#fcbba1';
+                        if (v <= 3) return '#fc9272';
+                        if (v <= 6) return '#fb6a4a';
+                        return '#de2d26';
+                    },
+                    width: ({chart}) => (chart.chartArea || {}).width / months.length - 2,
+                    height: ({chart}) => (chart.chartArea || {}).height / years.length - 2,
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: ctx => `Año: ${ctx[0].raw.y}, Mes: ${ctx[0].raw.x}`,
+                            label: ctx => `Actividades: ${ctx.raw.v}`
+                        }
+                    }
+                },
+                scales: {
+                    x: { type: 'category', labels: months, title: { display: true, text: 'Mes' } },
+                    y: { type: 'category', labels: years, title: { display: true, text: 'Año' }, reverse: true }
+                }
+            }
+        });
+    }
 }
 
 // --- 6. LÓGICA PRINCIPAL DE INICIALIZACIÓN ---
