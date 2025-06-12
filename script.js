@@ -120,18 +120,31 @@ function renderDashboard(activities) {
     }
 
     // --- Gráfico de Líneas: Distancia Mensual ---
-    const monthlyDistance = runs.reduce((acc, act) => {
+    // Agrupa y suma la distancia de cada mes correctamente
+    const monthlyDistanceMap = {};
+    runs.forEach(act => {
         const month = act.start_date_local.substring(0, 7);
-        acc[month] = (acc[month] || 0) + (act.distance / 1000);
-        return acc;
-    }, {});
+        monthlyDistanceMap[month] = (monthlyDistanceMap[month] || 0) + (act.distance / 1000);
+    });
+    const sortedMonths = Object.keys(monthlyDistanceMap).sort();
+    const monthlyDistances = sortedMonths.map(month => monthlyDistanceMap[month]);
     const monthlyDistanceCanvas = document.getElementById('monthly-distance-chart');
-    if (monthlyDistanceCanvas && !charts['monthly-distance-chart']) {
+    if (monthlyDistanceCanvas) {
+        if (charts['monthly-distance-chart']) {
+            charts['monthly-distance-chart'].destroy();
+            charts['monthly-distance-chart'] = null;
+        }
         charts['monthly-distance-chart'] = new Chart(monthlyDistanceCanvas, {
             type: 'line',
             data: {
-                labels: Object.keys(monthlyDistance).sort(),
-                datasets: [{ label: 'Distancia (km)', data: Object.values(monthlyDistance), borderColor: '#FC5200', fill: false, tension: 0.1 }]
+                labels: sortedMonths,
+                datasets: [{
+                    label: 'Distancia (km)',
+                    data: monthlyDistances,
+                    borderColor: '#FC5200',
+                    fill: false,
+                    tension: 0.1
+                }]
             }
         });
     }
@@ -279,8 +292,6 @@ function renderDashboard(activities) {
                             <th>Distancia (km)</th>
                             <th>Tiempo</th>
                             <th>Ritmo (min/km)</th>
-                            <th>FC Media</th>
-                            <th>Esfuerzo</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -293,15 +304,11 @@ function renderDashboard(activities) {
                             const timeStr = `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
                             const pace = act.distance > 0 ? (act.moving_time / 60) / (act.distance / 1000) : 0;
                             const paceStr = pace ? `${Math.floor(pace)}:${Math.round((pace % 1) * 60).toString().padStart(2, '0')}` : '-';
-                            const hr = act.average_heartrate ? Math.round(act.average_heartrate) : '-';
-                            const effort = act.perceived_exertion ?? act.suffer_score ?? '-';
                             return `<tr>
                                 <td>${act.start_date_local.substring(0,10)}</td>
                                 <td>${distKm}</td>
                                 <td>${timeStr}</td>
                                 <td>${paceStr}</td>
-                                <td>${hr}</td>
-                                <td>${effort}</td>
                             </tr>`;
                         }).join('')}
                     </tbody>
