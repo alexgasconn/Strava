@@ -82,8 +82,8 @@ function renderDashboard(activities) {
     }
 
     // --- Gráfico de Barras: Tipos de Running (workout_type) ---
-    // workout_type: 0=None, 1=Race, 2=Long run, 3=Workout
-    const workoutTypeLabels = ['Otro', 'Carrera', 'Tirada larga', 'Entrenamiento'];
+    // workout_type: 0=Workout, 1=Race, 2=Long run, 3=Workout
+    const workoutTypeLabels = ['Workout', 'Race', 'Long Run', 'Workout'];
     const workoutTypeCounts = [0, 0, 0, 0];
     runs.forEach(act => {
         const wt = typeof act.workout_type === 'number' ? act.workout_type : 0;
@@ -138,41 +138,39 @@ function renderDashboard(activities) {
         });
     }
 
-    // --- Histograma de distancias (bins de 0,5km, eje x: 1, 2, 3...) ---
-    const binSize = 0.5;
-    const maxDistance = Math.max(...runs.map(act => act.distance / 1000), 0);
-    const binCount = Math.ceil(maxDistance / binSize);
-    const bins = Array.from({ length: binCount }, (_, i) => ({
-        min: i * binSize,
-        max: (i + 1) * binSize
-    }));
-
-    // Contar actividades en cada bin
-    const distanceBins = Array(binCount).fill(0);
-    runs.forEach(act => {
-        const dist = act.distance / 1000;
-        const idx = Math.floor(dist / binSize);
-        if (idx < binCount) distanceBins[idx]++;
-    });
-
-    createChart('distance-histogram', {
-        type: 'bar',
-        data: {
-            labels: bins.map((_, i) => (i + 1).toString()),
-            datasets: [{
-                label: '# Actividades',
-                data: distanceBins,
-                backgroundColor: 'rgba(252, 82, 0, 0.5)'
-            }]
-        },
-        options: {
-            plugins: { legend: { display: false } },
-            scales: {
-                x: { title: { display: true, text: 'Bin (cada 0,5 km)' } },
-                y: { title: { display: true, text: 'Cantidad' } }
+    // --- Histograma de distancias (bin size configurable por variable) ---
+    const HISTOGRAM_BIN_SIZE_KM = 1; // <-- Cambia este valor para ajustar el tamaño del bin (en km)
+    const histogramContainer = document.getElementById('distance-histogram-container');
+    if (histogramContainer) {
+        histogramContainer.innerHTML = `<canvas id="distance-histogram"></canvas>`;
+        const distances = runs.map(act => act.distance / 1000);
+        const maxDistance = Math.max(...distances, 0);
+        const binSize = HISTOGRAM_BIN_SIZE_KM;
+        const binCount = Math.ceil(maxDistance / binSize);
+        const bins = Array(binCount).fill(0);
+        distances.forEach(d => {
+            const idx = Math.floor(d / binSize);
+            if (idx < binCount) bins[idx]++;
+        });
+        createChart('distance-histogram', {
+            type: 'bar',
+            data: {
+                labels: bins.map((_, i) => `${(i * binSize).toFixed(1)}-${((i + 1) * binSize).toFixed(1)}`),
+                datasets: [{
+                    label: '# Actividades',
+                    data: bins,
+                    backgroundColor: 'rgba(252, 82, 0, 0.5)'
+                }]
+            },
+            options: {
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { title: { display: true, text: `Distancia (bins de ${binSize} km)` } },
+                    y: { title: { display: true, text: 'Cantidad' } }
+                }
             }
-        }
-    });
+        });
+    }
 
     // --- VO2max estimado por actividad y gráfico temporal ---
 
@@ -222,6 +220,52 @@ function renderDashboard(activities) {
             }
         }
     });
+
+    // --- Lista de carreras (workout_type === 1) ---
+    const raceListContainer = document.getElementById('race-list');
+    if (raceListContainer) {
+        const races = runs.filter(act => act.workout_type === 1);
+        if (races.length === 0) {
+            raceListContainer.innerHTML = "<p>No hay carreras registradas.</p>";
+        } else {
+            raceListContainer.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Distancia (km)</th>
+                            <th>Tiempo</th>
+                            <th>Ritmo (min/km)</th>
+                            <th>FC Media</th>
+                            <th>Esfuerzo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${races.map(act => {
+                            const distKm = (act.distance / 1000).toFixed(2);
+                            const timeSec = act.moving_time;
+                            const h = Math.floor(timeSec / 3600);
+                            const m = Math.floor((timeSec % 3600) / 60);
+                            const s = timeSec % 60;
+                            const timeStr = `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                            const pace = act.distance > 0 ? (act.moving_time / 60) / (act.distance / 1000) : 0;
+                            const paceStr = pace ? `${Math.floor(pace)}:${Math.round((pace % 1) * 60).toString().padStart(2, '0')}` : '-';
+                            const hr = act.average_heartrate ? Math.round(act.average_heartrate) : '-';
+                            const effort = act.perceived_exertion ?? act.suffer_score ?? '-';
+                            return `<tr>
+                                <td>${act.start_date_local.substring(0,10)}</td>
+                                <td>${distKm}</td>
+                                <td>${timeStr}</td>
+                                <td>${paceStr}</td>
+                                <td>${hr}</td>
+                                <td>${effort}</td>
+                            </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+    }
 }
 
 // --- 6. LÓGICA PRINCIPAL DE INICIALIZACIÓN ---
