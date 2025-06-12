@@ -22,6 +22,13 @@ function showLoading(message) { loadingMessage.textContent = message; loadingOve
 function hideLoading() { loadingOverlay.classList.add('hidden'); }
 function handleError(message, error) { console.error(message, error); hideLoading(); alert(`Error: ${message}.`); }
 
+function createChart(canvasId, config) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    if (charts[canvasId]) charts[canvasId].destroy();
+    charts[canvasId] = new Chart(canvas, config);
+}
+
 // --- 4. LÓGICA DE AUTENTICACIÓN (LAS FUNCIONES QUE FALTABAN) ---
 
 function redirectToStravaAuthorize() {
