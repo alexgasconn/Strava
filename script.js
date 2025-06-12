@@ -193,8 +193,9 @@ function renderDashboard(activities) {
     // --- VO2max estimado por actividad y gráfico temporal ---
 
     // Cambia este valor por el máximo real del usuario si lo sabes:
-    const USER_MAX_HR = 190; // <-- Ajusta según tu perfil
+    const USER_MAX_HR = 195; // <-- Ajusta según tu perfil
 
+    // 1. Calcular VO2max estimado por actividad
     const vo2maxData = runs
         .filter(act => act.average_heartrate && act.moving_time > 0 && act.distance > 0)
         .map(act => {
@@ -209,20 +210,44 @@ function renderDashboard(activities) {
             const vo2max = vo2_at_pace / (avg_hr / USER_MAX_HR);
             return {
                 date: act.start_date_local.substring(0, 10),
+                yearMonth: act.start_date_local.substring(0, 7),
                 vo2max: vo2max
             };
         });
 
-    const vo2maxLabels = vo2maxData.map(d => d.date);
-    const vo2maxValues = vo2maxData.map(d => d.vo2max);
+    // 2. Agrupar por año-mes y calcular media mensual
+    const vo2maxByMonth = {};
+    vo2maxData.forEach(d => {
+        if (!vo2maxByMonth[d.yearMonth]) vo2maxByMonth[d.yearMonth] = [];
+        vo2maxByMonth[d.yearMonth].push(d.vo2max);
+    });
+    const months = Object.keys(vo2maxByMonth).sort();
+    const vo2maxMonthlyAvg = months.map(month => {
+        const vals = vo2maxByMonth[month];
+        return vals.reduce((a, b) => a + b, 0) / vals.length;
+    });
 
+    // 3. Calcular media móvil (rolling mean) sobre los valores mensuales
+    function rollingMean(arr, windowSize) {
+        const result = [];
+        for (let i = 0; i < arr.length; i++) {
+            const start = Math.max(0, i - windowSize + 1);
+            const window = arr.slice(start, i + 1);
+            result.push(window.reduce((a, b) => a + b, 0) / window.length);
+        }
+        return result;
+    }
+    const ROLLING_WINDOW = 3; // 3 meses
+    const vo2maxRolling = rollingMean(vo2maxMonthlyAvg, ROLLING_WINDOW);
+
+    // 4. Graficar
     createChart('vo2max-over-time', {
         type: 'line',
         data: {
-            labels: vo2maxLabels,
+            labels: months,
             datasets: [{
-                label: 'VO₂max estimado',
-                data: vo2maxValues,
+                label: `VO₂max estimado (media móvil ${ROLLING_WINDOW} meses)`,
+                data: vo2maxRolling,
                 fill: true,
                 borderColor: 'rgba(54, 162, 235, 1)',
                 backgroundColor: 'rgba(54, 162, 235, 0.2)',
@@ -233,7 +258,7 @@ function renderDashboard(activities) {
         options: {
             plugins: { title: { display: true, text: 'VO₂max estimado a lo largo del tiempo' } },
             scales: {
-                x: { title: { display: true, text: 'Fecha' } },
+                x: { title: { display: true, text: 'Año-Mes' } },
                 y: { title: { display: true, text: 'VO₂max' } }
             }
         }
