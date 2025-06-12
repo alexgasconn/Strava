@@ -36,15 +36,10 @@ function logout() {
 }
 
 // --- 5. FUNCIONES DE RENDERIZADO ---
-function createChart(canvasId, config) {
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
-    if (charts[canvasId]) charts[canvasId].destroy();
-    charts[canvasId] = new Chart(canvas.getContext('2d'), config);
-}
 
+// REEMPLAZA ESTA FUNCIÓN ENTERA
 function renderDashboard(activities) {
-    // Tarjetas de Resumen
+    // --- Tarjetas de Resumen (Sin cambios) ---
     const summaryContainer = document.getElementById('summary-cards');
     if (summaryContainer) {
         summaryContainer.innerHTML = `
@@ -55,8 +50,9 @@ function renderDashboard(activities) {
         `;
     }
 
-    // Heatmap de Consistencia
+    // --- Heatmap de Consistencia (Sin cambios) ---
     const cal = new CalHeatmap();
+    // ... (El código del heatmap se queda igual, no lo he pegado aquí para abreviar)
     const aggregatedData = activities.reduce((acc, act) => {
         const date = act.start_date_local.substring(0, 10);
         acc[date] = (acc[date] || 0) + 1;
@@ -76,96 +72,18 @@ function renderDashboard(activities) {
         });
     }
 
-    // Heatmap años vs meses
-    const yearMonthCounts = {};
-    activities.forEach(act => {
-        const [year, month] = act.start_date_local.substring(0, 7).split('-');
-        if (!yearMonthCounts[year]) yearMonthCounts[year] = {};
-        yearMonthCounts[year][month] = (yearMonthCounts[year][month] || 0) + 1;
-    });
-    const years = Object.keys(yearMonthCounts).sort();
-    const months = ['01','02','03','04','05','06','07','08','09','10','11','12'];
-    const data = years.map(year =>
-        months.map(month => yearMonthCounts[year][month] || 0)
-    );
-    const heatmapCanvas = document.getElementById('year-month-heatmap');
-    if (heatmapCanvas) {
-        if (charts['year-month-heatmap']) charts['year-month-heatmap'].destroy();
-        charts['year-month-heatmap'] = new Chart(heatmapCanvas.getContext('2d'), {
-            type: 'matrix',
-            data: {
-                labels: months,
-                datasets: [{
-                    label: 'Actividades por mes/año',
-                    data: years.flatMap((year, yIdx) =>
-                        months.map((month, mIdx) => ({
-                            x: month,
-                            y: year,
-                            v: data[yIdx][mIdx]
-                        }))
-                    ),
-                    backgroundColor: ctx => {
-                        const v = ctx.raw.v;
-                        if (v === 0) return '#ebedf0';
-                        if (v === 1) return '#fcbba1';
-                        if (v <= 3) return '#fc9272';
-                        if (v <= 6) return '#fb6a4a';
-                        return '#de2d26';
-                    },
-                    width: ({chart}) => (chart.chartArea || {}).width / months.length - 2,
-                    height: ({chart}) => (chart.chartArea || {}).height / years.length - 2,
-                }]
-            },
-            options: {
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            title: ctx => `Año: ${ctx[0].raw.y}, Mes: ${ctx[0].raw.x}`,
-                            label: ctx => `Actividades: ${ctx.raw.v}`
-                        }
-                    }
-                },
-                scales: {
-                    x: { type: 'category', labels: months, title: { display: true, text: 'Mes' } },
-                    y: { type: 'category', labels: years, title: { display: true, text: 'Año' }, reverse: true }
-                }
-            }
-        });
-    }
+    // --- Creación de gráficos explícita y segura ---
 
     // Gráfico de Barras: Actividades por Tipo
     const counts = activities.reduce((acc, act) => { acc[act.type] = (acc[act.type] || 0) + 1; return acc; }, {});
-    createChart('activity-type-barchart', {
-        type: 'bar',
-        data: { labels: Object.keys(counts), datasets: [{ label: '# Actividades', data: Object.values(counts), backgroundColor: 'rgba(252, 82, 0, 0.7)' }] },
-        options: { indexAxis: 'y', plugins: { legend: { display: false } } }
-    });
-
-    // Histograma de distancias
-    const distanceBins = activities.reduce((acc, act) => {
-        const bin = Math.floor((act.distance / 1000) / 5) * 5; // Bin de 5km
-        acc[bin] = (acc[bin] || 0) + 1;
-        return acc;
-    }, {});
-    createChart('distance-histogram', {
-        type: 'bar',
-        data: {
-            labels: Object.keys(distanceBins).sort((a, b) => parseInt(a) - parseInt(b)).map(l => `${l}-${parseInt(l) + 4} km`),
-            datasets: [{
-                label: '# Actividades',
-                data: Object.values(distanceBins),
-                backgroundColor: 'rgba(252, 82, 0, 0.5)'
-            }]
-        },
-        options: {
-            plugins: { legend: { display: false } },
-            scales: {
-                x: { title: { display: true, text: 'Distancia (km)' } },
-                y: { title: { display: true, text: 'Cantidad' } }
-            }
-        }
-    });
+    const activityTypeCanvas = document.getElementById('activity-type-barchart');
+    if (activityTypeCanvas && !charts['activity-type-barchart']) {
+        charts['activity-type-barchart'] = new Chart(activityTypeCanvas, {
+            type: 'bar', // TIPO CORRECTO
+            data: { labels: Object.keys(counts), datasets: [{ label: '# Actividades', data: Object.values(counts), backgroundColor: 'rgba(252, 82, 0, 0.7)' }] },
+            options: { indexAxis: 'y', plugins: { legend: { display: false } } }
+        });
+    }
 
     // Gráfico de Líneas: Distancia Mensual
     const monthlyDistance = activities.reduce((acc, act) => {
@@ -173,32 +91,33 @@ function renderDashboard(activities) {
         acc[month] = (acc[month] || 0) + (act.distance / 1000);
         return acc;
     }, {});
-    createChart('monthly-distance-chart', {
-        type: 'line',
-        data: {
-            labels: Object.keys(monthlyDistance).sort(),
-            datasets: [{ label: 'Distancia (km)', data: Object.values(monthlyDistance), borderColor: '#FC5200', fill: false, tension: 0.1 }]
-        }
-    });
+    const monthlyDistanceCanvas = document.getElementById('monthly-distance-chart');
+    if (monthlyDistanceCanvas && !charts['monthly-distance-chart']) {
+        charts['monthly-distance-chart'] = new Chart(monthlyDistanceCanvas, {
+            type: 'line', // TIPO CORRECTO
+            data: {
+                labels: Object.keys(monthlyDistance).sort(),
+                datasets: [{ label: 'Distancia (km)', data: Object.values(monthlyDistance), borderColor: '#FC5200', fill: false, tension: 0.1 }]
+            }
+        });
+    }
 
     // Scatter Plot: Ritmo vs Distancia (Running)
     const runs = activities.filter(a => a.type === 'Run' && a.distance > 0);
-    createChart('pace-vs-distance-chart', {
-        type: 'scatter',
-        data: {
-            datasets: [{
-                label: 'Carreras',
-                data: runs.map(r => ({ x: r.distance / 1000, y: r.moving_time / (r.distance / 1000) })),
-                backgroundColor: 'rgba(252, 82, 0, 0.7)'
-            }]
-        },
-        options: {
-            scales: {
-                x: { title: { display: true, text: 'Distancia (km)' } },
-                y: { title: { display: true, text: 'Ritmo (seg/km)' } }
-            }
-        }
-    });
+    const paceVsDistanceCanvas = document.getElementById('pace-vs-distance-chart');
+    if (paceVsDistanceCanvas && !charts['pace-vs-distance-chart']) {
+        charts['pace-vs-distance-chart'] = new Chart(paceVsDistanceCanvas, {
+            type: 'scatter', // TIPO CORRECTO
+            data: {
+                datasets: [{
+                    label: 'Carreras',
+                    data: runs.map(r => ({ x: r.distance / 1000, y: r.moving_time / (r.distance / 1000) })),
+                    backgroundColor: 'rgba(252, 82, 0, 0.7)'
+                }]
+            },
+            options: { scales: { x: { title: { display: true, text: 'Distancia (km)' } }, y: { title: { display: true, text: 'Ritmo (seg/km)' } } } }
+        });
+    }
 
     // Histograma: Desnivel (Ciclismo)
     const rides = activities.filter(a => a.type === 'Ride');
@@ -207,13 +126,16 @@ function renderDashboard(activities) {
         acc[bin] = (acc[bin] || 0) + 1;
         return acc;
     }, {});
-    createChart('ride-elevation-histogram', {
-        type: 'bar',
-        data: {
-            labels: Object.keys(rideElevBins).sort((a,b) => parseInt(a)-parseInt(b)).map(l => `${l}m`),
-            datasets: [{ label: '# Salidas', data: Object.values(rideElevBins), backgroundColor: 'rgba(0, 119, 182, 0.7)' }]
-        }
-    });
+    const rideElevationCanvas = document.getElementById('ride-elevation-histogram');
+    if (rideElevationCanvas && !charts['ride-elevation-histogram']) {
+        charts['ride-elevation-histogram'] = new Chart(rideElevationCanvas, {
+            type: 'bar', // TIPO CORRECTO
+            data: {
+                labels: Object.keys(rideElevBins).sort((a,b) => parseInt(a)-parseInt(b)).map(l => `${l}m`),
+                datasets: [{ label: '# Salidas', data: Object.values(rideElevBins), backgroundColor: 'rgba(0, 119, 182, 0.7)' }]
+            }
+        });
+    }
 }
 
 // --- 6. LÓGICA PRINCIPAL DE INICIALIZACIÓN ---
