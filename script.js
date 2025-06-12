@@ -49,6 +49,20 @@ function renderDashboard(activities) {
     // --- Filtrar solo actividades de running (incluye Trail Run, etc) ---
     const runs = activities.filter(a => a.type && a.type.includes('Run'));
 
+    // 1. Get all distances
+    const allDistances = runs.map(a => a.distance);
+    // 2. Calculate 90th percentile
+    const sortedDistances = [...allDistances].sort((a, b) => a - b);
+    const p90Index = Math.floor(0.9 * sortedDistances.length);
+    const p90Distance = sortedDistances[p90Index] || 0;
+
+    // 3. Tag as Long Run if not a race and distance >= 90th percentile
+    runs.forEach(a => {
+        if (a.workout_type !== 1 && a.distance >= p90Distance) {
+            a.workout_type = 2; // Long run
+        }
+    });
+
     // --- Tarjetas de Resumen ---
     const summaryContainer = document.getElementById('summary-cards');
     if (summaryContainer) {
