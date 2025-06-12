@@ -237,7 +237,7 @@ function renderDashboard(activities) {
         }
         return result;
     }
-    const ROLLING_WINDOW = 3; // 3 meses
+    const ROLLING_WINDOW = 1; // 3 meses
     const vo2maxRolling = rollingMean(vo2maxMonthlyAvg, ROLLING_WINDOW);
 
     // 4. Graficar
