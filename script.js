@@ -125,20 +125,30 @@ function renderDashboard(activities) {
         });
     }
 
-    // --- Histograma de distancias (bins de 0,5km) ---
-    const distanceBins = runs.reduce((acc, act) => {
-        const bin = (Math.floor((act.distance / 1000) / 0.5) * 0.5).toFixed(1);
-        acc[bin] = (acc[bin] || 0) + 1;
-        return acc;
-    }, {});
-    const sortedBins = Object.keys(distanceBins).map(Number).sort((a, b) => a - b);
+    // --- Histograma de distancias (bins de 0,5km, desde 0 hasta el máximo redondeado) ---
+    const binSize = 0.5;
+    const maxDistance = Math.max(...runs.map(act => act.distance / 1000), 0);
+    const binCount = Math.ceil(maxDistance / binSize);
+    const bins = Array.from({ length: binCount }, (_, i) => ({
+        min: i * binSize,
+        max: (i + 1) * binSize
+    }));
+
+    // Contar actividades en cada bin
+    const distanceBins = Array(binCount).fill(0);
+    runs.forEach(act => {
+        const dist = act.distance / 1000;
+        const idx = Math.floor(dist / binSize);
+        if (idx < binCount) distanceBins[idx]++;
+    });
+
     createChart('distance-histogram', {
         type: 'bar',
         data: {
-            labels: sortedBins.map(l => `${l.toFixed(1)}-${(l + 0.5).toFixed(1)} km`),
+            labels: bins.map(b => `${b.min.toFixed(1)}-${b.max.toFixed(1)} km`),
             datasets: [{
                 label: '# Actividades',
-                data: sortedBins.map(l => distanceBins[l.toFixed(1)]),
+                data: distanceBins,
                 backgroundColor: 'rgba(252, 82, 0, 0.5)'
             }]
         },
