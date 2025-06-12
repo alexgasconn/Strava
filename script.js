@@ -46,21 +46,23 @@ function logout() {
 
 // REEMPLAZA ESTA FUNCIÓN ENTERA
 function renderDashboard(activities) {
-    // --- Tarjetas de Resumen (Sin cambios) ---
+    // --- Filtrar solo actividades de running (incluye Trail Run, etc) ---
+    const runs = activities.filter(a => a.type && a.type.includes('Run'));
+
+    // --- Tarjetas de Resumen ---
     const summaryContainer = document.getElementById('summary-cards');
     if (summaryContainer) {
         summaryContainer.innerHTML = `
-            <div class="card"><h3>Actividades</h3><p>${activities.length}</p></div>
-            <div class="card"><h3>Distancia Total</h3><p>${(activities.reduce((s, a) => s + a.distance, 0) / 1000).toFixed(0)} km</p></div>
-            <div class="card"><h3>Tiempo Total</h3><p>${(activities.reduce((s, a) => s + a.moving_time, 0) / 3600).toFixed(1)} h</p></div>
-            <div class="card"><h3>Desnivel Total</h3><p>${activities.reduce((s, a) => s + a.total_elevation_gain, 0).toLocaleString()} m</p></div>
+            <div class="card"><h3>Actividades</h3><p>${runs.length}</p></div>
+            <div class="card"><h3>Distancia Total</h3><p>${(runs.reduce((s, a) => s + a.distance, 0) / 1000).toFixed(0)} km</p></div>
+            <div class="card"><h3>Tiempo Total</h3><p>${(runs.reduce((s, a) => s + a.moving_time, 0) / 3600).toFixed(1)} h</p></div>
+            <div class="card"><h3>Desnivel Total</h3><p>${runs.reduce((s, a) => s + a.total_elevation_gain, 0).toLocaleString()} m</p></div>
         `;
     }
 
-    // --- Heatmap de Consistencia (Sin cambios) ---
+    // --- Heatmap de Consistencia (CalHeatmap) ---
     const cal = new CalHeatmap();
-    // ... (El código del heatmap se queda igual, no lo he pegado aquí para abreviar)
-    const aggregatedData = activities.reduce((acc, act) => {
+    const aggregatedData = runs.reduce((acc, act) => {
         const date = act.start_date_local.substring(0, 10);
         acc[date] = (acc[date] || 0) + 1;
         return acc;
@@ -79,21 +81,19 @@ function renderDashboard(activities) {
         });
     }
 
-    // --- Creación de gráficos explícita y segura ---
-
-    // Gráfico de Barras: Actividades por Tipo
-    const counts = activities.reduce((acc, act) => { acc[act.type] = (acc[act.type] || 0) + 1; return acc; }, {});
+    // --- Gráfico de Barras: Actividades por Tipo (solo running) ---
+    const counts = runs.reduce((acc, act) => { acc[act.type] = (acc[act.type] || 0) + 1; return acc; }, {});
     const activityTypeCanvas = document.getElementById('activity-type-barchart');
     if (activityTypeCanvas && !charts['activity-type-barchart']) {
         charts['activity-type-barchart'] = new Chart(activityTypeCanvas, {
-            type: 'bar', // TIPO CORRECTO
+            type: 'bar',
             data: { labels: Object.keys(counts), datasets: [{ label: '# Actividades', data: Object.values(counts), backgroundColor: 'rgba(252, 82, 0, 0.7)' }] },
             options: { indexAxis: 'y', plugins: { legend: { display: false } } }
         });
     }
 
-    // Gráfico de Líneas: Distancia Mensual
-    const monthlyDistance = activities.reduce((acc, act) => {
+    // --- Gráfico de Líneas: Distancia Mensual ---
+    const monthlyDistance = runs.reduce((acc, act) => {
         const month = act.start_date_local.substring(0, 7);
         acc[month] = (acc[month] || 0) + (act.distance / 1000);
         return acc;
@@ -101,7 +101,7 @@ function renderDashboard(activities) {
     const monthlyDistanceCanvas = document.getElementById('monthly-distance-chart');
     if (monthlyDistanceCanvas && !charts['monthly-distance-chart']) {
         charts['monthly-distance-chart'] = new Chart(monthlyDistanceCanvas, {
-            type: 'line', // TIPO CORRECTO
+            type: 'line',
             data: {
                 labels: Object.keys(monthlyDistance).sort(),
                 datasets: [{ label: 'Distancia (km)', data: Object.values(monthlyDistance), borderColor: '#FC5200', fill: false, tension: 0.1 }]
@@ -109,16 +109,15 @@ function renderDashboard(activities) {
         });
     }
 
-    // Scatter Plot: Ritmo vs Distancia (Running)
-    const runs = activities.filter(a => a.type === 'Run' && a.distance > 0);
+    // --- Scatter Plot: Ritmo vs Distancia (Running) ---
     const paceVsDistanceCanvas = document.getElementById('pace-vs-distance-chart');
     if (paceVsDistanceCanvas && !charts['pace-vs-distance-chart']) {
         charts['pace-vs-distance-chart'] = new Chart(paceVsDistanceCanvas, {
-            type: 'scatter', // TIPO CORRECTO
+            type: 'scatter',
             data: {
                 datasets: [{
                     label: 'Carreras',
-                    data: runs.map(r => ({ x: r.distance / 1000, y: r.moving_time / (r.distance / 1000) })),
+                    data: runs.filter(r => r.distance > 0).map(r => ({ x: r.distance / 1000, y: r.moving_time / (r.distance / 1000) })),
                     backgroundColor: 'rgba(252, 82, 0, 0.7)'
                 }]
             },
@@ -126,27 +125,9 @@ function renderDashboard(activities) {
         });
     }
 
-    // Histograma: Desnivel (Ciclismo)
-    const rides = activities.filter(a => a.type === 'Ride');
-    const rideElevBins = rides.reduce((acc, ride) => {
-        const bin = Math.floor(ride.total_elevation_gain / 200) * 200;
-        acc[bin] = (acc[bin] || 0) + 1;
-        return acc;
-    }, {});
-    const rideElevationCanvas = document.getElementById('ride-elevation-histogram');
-    if (rideElevationCanvas && !charts['ride-elevation-histogram']) {
-        charts['ride-elevation-histogram'] = new Chart(rideElevationCanvas, {
-            type: 'bar', // TIPO CORRECTO
-            data: {
-                labels: Object.keys(rideElevBins).sort((a,b) => parseInt(a)-parseInt(b)).map(l => `${l}m`),
-                datasets: [{ label: '# Salidas', data: Object.values(rideElevBins), backgroundColor: 'rgba(0, 119, 182, 0.7)' }]
-            }
-        });
-    }
-
-    // Histograma de distancias (bins de 0,5km)
-    const distanceBins = activities.reduce((acc, act) => {
-        const bin = (Math.floor((act.distance / 1000) / 0.5) * 0.5).toFixed(1); // Bin de 0,5km
+    // --- Histograma de distancias (bins de 0,5km) ---
+    const distanceBins = runs.reduce((acc, act) => {
+        const bin = (Math.floor((act.distance / 1000) / 0.5) * 0.5).toFixed(1);
         acc[bin] = (acc[bin] || 0) + 1;
         return acc;
     }, {});
@@ -170,9 +151,9 @@ function renderDashboard(activities) {
         }
     });
 
-    // Heatmap años vs meses
+    // --- Heatmap años vs meses (solo running) ---
     const yearMonthCounts = {};
-    activities.forEach(act => {
+    runs.forEach(act => {
         const [year, month] = act.start_date_local.substring(0, 7).split('-');
         if (!yearMonthCounts[year]) yearMonthCounts[year] = {};
         yearMonthCounts[year][month] = (yearMonthCounts[year][month] || 0) + 1;
