@@ -161,63 +161,54 @@ function renderDashboard(activities) {
         }
     });
 
-    // --- Heatmap años vs meses (solo running) ---
-    const yearMonthCounts = {};
-    runs.forEach(act => {
-        const [year, month] = act.start_date_local.substring(0, 7).split('-');
-        if (!yearMonthCounts[year]) yearMonthCounts[year] = {};
-        yearMonthCounts[year][month] = (yearMonthCounts[year][month] || 0) + 1;
-    });
-    const years = Object.keys(yearMonthCounts).sort();
-    const months = ['01','02','03','04','05','06','07','08','09','10','11','12'];
-    const data = years.map(year =>
-        months.map(month => yearMonthCounts[year][month] || 0)
-    );
-    const heatmapCanvas = document.getElementById('year-month-heatmap');
-    if (heatmapCanvas) {
-        if (charts['year-month-heatmap']) charts['year-month-heatmap'].destroy();
-        charts['year-month-heatmap'] = new Chart(heatmapCanvas.getContext('2d'), {
-            type: 'matrix',
-            data: {
-                labels: months,
-                datasets: [{
-                    label: 'Actividades por mes/año',
-                    data: years.flatMap((year, yIdx) =>
-                        months.map((month, mIdx) => ({
-                            x: month,
-                            y: year,
-                            v: data[yIdx][mIdx]
-                        }))
-                    ),
-                    backgroundColor: ctx => {
-                        const v = ctx.raw.v;
-                        if (v === 0) return '#ebedf0';
-                        if (v === 1) return '#fcbba1';
-                        if (v <= 3) return '#fc9272';
-                        if (v <= 6) return '#fb6a4a';
-                        return '#de2d26';
-                    },
-                    width: ({chart}) => (chart.chartArea || {}).width / months.length - 2,
-                    height: ({chart}) => (chart.chartArea || {}).height / years.length - 2,
-                }]
-            },
-            options: {
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            title: ctx => `Año: ${ctx[0].raw.y}, Mes: ${ctx[0].raw.x}`,
-                            label: ctx => `Actividades: ${ctx.raw.v}`
-                        }
-                    }
-                },
-                scales: {
-                    x: { type: 'category', labels: months, title: { display: true, text: 'Mes' } },
-                    y: { type: 'category', labels: years, title: { display: true, text: 'Año' }, reverse: true }
-                }
-            }
+    // --- VO2max estimado por actividad y gráfico temporal ---
+
+    // Cambia este valor por el máximo real del usuario si lo sabes:
+    const USER_MAX_HR = 190; // <-- Ajusta según tu perfil
+
+    const vo2maxData = runs
+        .filter(act => act.average_heartrate && act.moving_time > 0 && act.distance > 0)
+        .map(act => {
+            const dist_km = act.distance / 1000;
+            const time_hr = act.moving_time / 3600;
+            const speed_kmh = dist_km / time_hr;
+            // VO2 at pace (simplificado): 3.5 + 12 * velocidad_km_h / 60
+            // O usa Daniels: VO2 = (vel_m_min * 0.2) + 3.5
+            const vel_m_min = (act.distance / act.moving_time) * 60;
+            const vo2_at_pace = (vel_m_min * 0.2) + 3.5;
+            const avg_hr = act.average_heartrate;
+            const vo2max = vo2_at_pace / (avg_hr / USER_MAX_HR);
+            return {
+                date: act.start_date_local.substring(0, 10),
+                vo2max: vo2max
+            };
         });
-    }
+
+    const vo2maxLabels = vo2maxData.map(d => d.date);
+    const vo2maxValues = vo2maxData.map(d => d.vo2max);
+
+    createChart('vo2max-over-time', {
+        type: 'line',
+        data: {
+            labels: vo2maxLabels,
+            datasets: [{
+                label: 'VO₂max estimado',
+                data: vo2maxValues,
+                fill: true,
+                borderColor: 'rgba(54, 162, 235, 1)',
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                pointRadius: 2,
+                tension: 0.2
+            }]
+        },
+        options: {
+            plugins: { title: { display: true, text: 'VO₂max estimado a lo largo del tiempo' } },
+            scales: {
+                x: { title: { display: true, text: 'Fecha' } },
+                y: { title: { display: true, text: 'VO₂max' } }
+            }
+        }
+    });
 }
 
 // --- 6. LÓGICA PRINCIPAL DE INICIALIZACIÓN ---
