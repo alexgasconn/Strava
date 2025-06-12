@@ -81,13 +81,26 @@ function renderDashboard(activities) {
         });
     }
 
-    // --- Gráfico de Barras: Actividades por Tipo (solo running) ---
-    const counts = runs.reduce((acc, act) => { acc[act.type] = (acc[act.type] || 0) + 1; return acc; }, {});
-    const activityTypeCanvas = document.getElementById('activity-type-barchart');
-    if (activityTypeCanvas && !charts['activity-type-barchart']) {
-        charts['activity-type-barchart'] = new Chart(activityTypeCanvas, {
+    // --- Gráfico de Barras: Tipos de Running (workout_type) ---
+    // workout_type: 0=None, 1=Race, 2=Long run, 3=Workout
+    const workoutTypeLabels = ['Otro', 'Carrera', 'Tirada larga', 'Entrenamiento'];
+    const workoutTypeCounts = [0, 0, 0, 0];
+    runs.forEach(act => {
+        const wt = typeof act.workout_type === 'number' ? act.workout_type : 0;
+        workoutTypeCounts[wt] = (workoutTypeCounts[wt] || 0) + 1;
+    });
+    const workoutTypeCanvas = document.getElementById('activity-type-barchart');
+    if (workoutTypeCanvas && !charts['activity-type-barchart']) {
+        charts['activity-type-barchart'] = new Chart(workoutTypeCanvas, {
             type: 'bar',
-            data: { labels: Object.keys(counts), datasets: [{ label: '# Actividades', data: Object.values(counts), backgroundColor: 'rgba(252, 82, 0, 0.7)' }] },
+            data: {
+                labels: workoutTypeLabels,
+                datasets: [{
+                    label: '# Actividades',
+                    data: workoutTypeCounts,
+                    backgroundColor: 'rgba(252, 82, 0, 0.7)'
+                }]
+            },
             options: { indexAxis: 'y', plugins: { legend: { display: false } } }
         });
     }
@@ -125,7 +138,7 @@ function renderDashboard(activities) {
         });
     }
 
-    // --- Histograma de distancias (bins de 0,5km, desde 0 hasta el máximo redondeado) ---
+    // --- Histograma de distancias (bins de 0,5km, eje x: 1, 2, 3...) ---
     const binSize = 0.5;
     const maxDistance = Math.max(...runs.map(act => act.distance / 1000), 0);
     const binCount = Math.ceil(maxDistance / binSize);
@@ -145,7 +158,7 @@ function renderDashboard(activities) {
     createChart('distance-histogram', {
         type: 'bar',
         data: {
-            labels: bins.map(b => `${b.min.toFixed(1)}-${b.max.toFixed(1)} km`),
+            labels: bins.map((_, i) => (i + 1).toString()),
             datasets: [{
                 label: '# Actividades',
                 data: distanceBins,
@@ -155,7 +168,7 @@ function renderDashboard(activities) {
         options: {
             plugins: { legend: { display: false } },
             scales: {
-                x: { title: { display: true, text: 'Distancia (km)' } },
+                x: { title: { display: true, text: 'Bin (cada 0,5 km)' } },
                 y: { title: { display: true, text: 'Cantidad' } }
             }
         }
