@@ -690,3 +690,65 @@ function filterActivitiesByDate(activities) {
         return true;
     });
 }
+
+// --- MISCELLANEOUS FUNCTIONS ---
+function getMidpoint(coords) {
+    // coords: [[lat, lng], ...]
+    const n = coords.length;
+    const avgLat = coords.reduce((sum, c) => sum + c[0], 0) / n;
+    const avgLng = coords.reduce((sum, c) => sum + c[1], 0) / n;
+    return [avgLat, avgLng];
+}
+
+async function reverseGeocode(lat, lon) {
+    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`;
+    const resp = await fetch(url, { headers: { 'User-Agent': 'StravaDashboard/1.0' } });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    // Try to get neighbourhood, then city, then country
+    return data.address.neighbourhood || data.address.suburb || data.address.city || data.address.town || data.address.village || data.address.state || data.address.country || "Unknown";
+}
+
+async function getRunLocations(runs) {
+    const locationCounts = {};
+    for (const run of runs) {
+        // You need decoded polyline or start_latlng/end_latlng
+        const coords = run.decoded_polyline || [run.start_latlng, run.end_latlng].filter(Boolean);
+        if (!coords || coords.length === 0) continue;
+        const start = coords[0];
+        const finish = coords[coords.length - 1];
+        const mid = getMidpoint(coords);
+
+        // Reverse geocode all three
+        const locs = await Promise.all([
+            reverseGeocode(start[0], start[1]),
+            reverseGeocode(mid[0], mid[1]),
+            reverseGeocode(finish[0], finish[1])
+        ]);
+        locs.forEach(loc => {
+            if (!loc) return;
+            locationCounts[loc] = (locationCounts[loc] || 0) + 1;
+        });
+    }
+    return locationCounts;
+}
+
+function plotLocationBarChart(locationCounts) {
+    const sorted = Object.entries(locationCounts).sort((a, b) => b[1] - a[1]).slice(0, 20);
+    const ctx = document.getElementById('location-bar-chart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: sorted.map(e => e[0]),
+            datasets: [{
+                label: 'Number of Runs',
+                data: sorted.map(e => e[1]),
+                backgroundColor: 'rgba(54, 162, 235, 0.7)'
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            plugins: { title: { display: true, text: 'Most Common Run Locations' } }
+        }
+    });
+}

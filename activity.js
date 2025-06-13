@@ -160,131 +160,73 @@ async function fetchActivity() {
       L.polyline(coords, { color: '#FC5200', weight: 4 }).addTo(map);
     }
 
-    // SPLITS - User selectable split distance and additional charts for elevation and heart rate variability
+    // SPLITS - Only show original 1000m splits with charts for pace, elevation, and heart rate
     const splits = act.splits_metric || [];
     if (splits.length) {
-      // Create split distance selector if not present
-      let splitSelector = document.getElementById('split-distance-selector');
-      if (!splitSelector) {
-      splitSelector = document.createElement('select');
-      splitSelector.id = 'split-distance-selector';
-      [100, 250, 500, 1000].forEach(val => {
-        const opt = document.createElement('option');
-        opt.value = val;
-        opt.textContent = `${val} m`;
-        splitSelector.appendChild(opt);
-      });
-      splitsSection.prepend(splitSelector);
-      }
-
-      function renderSplitsCharts(splitDistance) {
       // Remove old charts if any
       ['chart-pace', 'chart-heartrate', 'chart-elevation'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.remove();
+      const el = document.getElementById(id);
+      if (el) el.remove();
       });
 
       // Create canvases
       ['pace', 'heartrate', 'elevation'].forEach(type => {
-        const canvas = document.createElement('canvas');
-        canvas.id = `chart-${type}`;
-        splitsSection.appendChild(canvas);
+      const canvas = document.createElement('canvas');
+      canvas.id = `chart-${type}`;
+      splitsSection.appendChild(canvas);
       });
-
-      // Aggregate splits by selected distance
-      let aggSplits = [];
-      let temp = { distance: 0, time: 0, hr: 0, elev: 0, hrArr: [], count: 0 };
-      splits.forEach(s => {
-        temp.distance += s.distance;
-        temp.time += s.moving_time;
-        temp.hr += s.average_heartrate || 0;
-        temp.elev += s.elevation_difference || 0;
-        if (s.average_heartrate) temp.hrArr.push(s.average_heartrate);
-        temp.count++;
-        if (temp.distance >= splitDistance) {
-        aggSplits.push({
-          distance: temp.distance,
-          time: temp.time,
-          hr: temp.hr / temp.count,
-          elev: temp.elev / temp.count,
-          hrv: temp.hrArr.length > 1
-          ? Math.max(...temp.hrArr) - Math.min(...temp.hrArr)
-          : 0
-        });
-        temp = { distance: 0, time: 0, hr: 0, elev: 0, hrArr: [], count: 0 };
-        }
-      });
-      if (temp.count > 0) {
-        aggSplits.push({
-        distance: temp.distance,
-        time: temp.time,
-        hr: temp.hr / temp.count,
-        elev: temp.elev / temp.count,
-        hrv: temp.hrArr.length > 1
-          ? Math.max(...temp.hrArr) - Math.min(...temp.hrArr)
-          : 0
-        });
-      }
 
       let cumulative = 0;
-      const labels = aggSplits.map(s => {
-        cumulative += s.distance;
-        return `${(cumulative / 1000).toFixed(2)} km`;
+      const labels = splits.map(s => {
+      cumulative += s.distance;
+      return `${(cumulative / 1000).toFixed(2)} km`;
       });
-      const paceData = aggSplits.map(s => s.time / (s.distance / 1000)); // min/km
-      const hrData = aggSplits.map(s => s.hr);
-      const elevData = aggSplits.map(s => s.elev);
-      const hrvData = aggSplits.map(s => s.hrv);
+      const paceData = splits.map(s => s.moving_time / (s.distance / 1000)); // min/km
+      const hrData = splits.map(s => s.average_heartrate || null);
+      const elevData = splits.map(s => s.elevation_difference || 0);
 
       new Chart(document.getElementById('chart-pace'), {
-        type: 'line',
-        data: {
+      type: 'line',
+      data: {
         labels,
         datasets: [{
-          label: 'Pace (min/km)',
-          data: paceData,
-          borderColor: '#FC5200',
-          fill: false,
-          tension: 0.2
+        label: 'Pace (min/km)',
+        data: paceData,
+        borderColor: '#FC5200',
+        fill: false,
+        tension: 0.2
         }]
-        },
-        options: { scales: { y: { reverse: true } } }
+      },
+      options: { scales: { y: { reverse: true } } }
       });
 
       new Chart(document.getElementById('chart-heartrate'), {
-        type: 'line',
-        data: {
+      type: 'line',
+      data: {
         labels,
         datasets: [{
-          label: 'Heart Rate (bpm)',
-          data: hrData,
-          borderColor: '#0074D9',
-          fill: false,
-          tension: 0.2
+        label: 'Heart Rate (bpm)',
+        data: hrData,
+        borderColor: '#0074D9',
+        fill: false,
+        tension: 0.2
         }]
-        }
+      }
       });
 
       new Chart(document.getElementById('chart-elevation'), {
-        type: 'line',
-        data: {
+      type: 'line',
+      data: {
         labels,
         datasets: [{
-          label: 'Elevation (m)',
-          data: elevData,
-          borderColor: '#2ECC40',
-          fill: false,
-          tension: 0.2
+        label: 'Elevation (m)',
+        data: elevData,
+        borderColor: '#2ECC40',
+        fill: false,
+        tension: 0.2
         }]
-        }
-      });
       }
-
-      // Initial render
-      renderSplitsCharts(Number(splitSelector.value));
-
-      // Update on selector change
-      splitSelector.onchange = () => renderSplitsCharts(Number(splitSelector.value));
+      });
     }
 
     // SEGMENTS
