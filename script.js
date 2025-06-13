@@ -362,7 +362,7 @@ function renderDashboard(activities) {
     const ctl = expMovingAvg(dailyEffort, 1/42);
     const tsb = ctl.map((c, i) => c - atl[i]);
 
-    // 6. Grafica los tres
+    // 6. Grafica los tres en el mismo eje Y (izquierda)
     createChart('ctl-atl-tsb', {
         type: 'line',
         data: {
@@ -390,8 +390,7 @@ function renderDashboard(activities) {
                     borderColor: '#2ECC40',
                     backgroundColor: 'rgba(46,204,64,0.1)',
                     fill: false,
-                    tension: 0.2,
-                    yAxisID: 'y2'
+                    tension: 0.2
                 }
             ]
         },
@@ -399,15 +398,11 @@ function renderDashboard(activities) {
             plugins: { title: { display: true, text: 'ATL, CTL y TSB (Esfuerzo diario)' } },
             scales: {
                 x: { title: { display: true, text: 'Fecha' } },
-                y: { title: { display: true, text: 'Carga (ATL/CTL)' } },
-                y2: {
-                    position: 'right',
-                    title: { display: true, text: 'TSB' },
-                    grid: { drawOnChartArea: false }
-                }
+                y: { title: { display: true, text: 'Carga (ATL/CTL/TSB)' } }
             }
         }
     });
+
 
     // --- 7. RENDIMIENTO POR EQUIPO (gear) ---
 
