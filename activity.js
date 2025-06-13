@@ -159,68 +159,76 @@ async function fetchActivity() {
       ? `${act.start_latlng[0].toFixed(5)}, ${act.start_latlng[1].toFixed(5)}`
       : 'N/A';
 
+    const moveRatio = act.moving_time && act.elapsed_time
+      ? (act.moving_time / act.elapsed_time).toFixed(2)
+      : 'N/A';
+
     headerDiv.innerHTML = `
       <h2>${act.name || 'Activity'}</h2>
       <table class="df-table activity-summary">
       <tr>
-        <th>Date</th>
-        <td>${date}</td>
+      <th>Date</th>
+      <td>${date}</td>
       </tr>
       <tr>
-        <th>Type</th>
-        <td>${type}</td>
+      <th>Type</th>
+      <td>${type}</td>
       </tr>
       <tr>
-        <th>Distance</th>
-        <td>${distKm} km</td>
+      <th>Distance</th>
+      <td>${distKm} km</td>
       </tr>
       <tr>
-        <th>Moving Time</th>
-        <td>${duration}</td>
+      <th>Moving Time</th>
+      <td>${duration}</td>
       </tr>
       <tr>
-        <th>Elapsed Time</th>
-        <td>${elapsed}</td>
+      <th>Elapsed Time</th>
+      <td>${elapsed}</td>
       </tr>
       <tr>
-        <th>Pace</th>
-        <td>${pace} min/km</td>
+      <th>Move Ratio</th>
+      <td>${moveRatio}</td>
       </tr>
       <tr>
-        <th>Elevation Gain</th>
-        <td>${elevGain} m</td>
+      <th>Pace</th>
+      <td>${pace} min/km</td>
       </tr>
       <tr>
-        <th>Avg HR</th>
-        <td>${avgHr}</td>
+      <th>Elevation Gain</th>
+      <td>${elevGain} m</td>
       </tr>
       <tr>
-        <th>Max HR</th>
-        <td>${maxHr}</td>
+      <th>Avg HR</th>
+      <td>${avgHr}</td>
       </tr>
       <tr>
-        <th>Avg Cadence</th>
-        <td>${avgCad}</td>
+      <th>Max HR</th>
+      <td>${maxHr}</td>
       </tr>
       <tr>
-        <th>Max Cadence</th>
-        <td>${maxCad}</td>
+      <th>Avg Cadence</th>
+      <td>${avgCad}</td>
       </tr>
       <tr>
-        <th>Calories</th>
-        <td>${calories}</td>
+      <th>Max Cadence</th>
+      <td>${maxCad}</td>
       </tr>
       <tr>
-        <th>Gear</th>
-        <td>${gear}</td>
+      <th>Calories</th>
+      <td>${calories}</td>
       </tr>
       <tr>
-        <th>Device</th>
-        <td>${device}</td>
+      <th>Gear</th>
+      <td>${gear}</td>
       </tr>
       <tr>
-        <th>Start Location</th>
-        <td>${location}</td>
+      <th>Device</th>
+      <td>${device}</td>
+      </tr>
+      <tr>
+      <th>Start Location</th>
+      <td>${location}</td>
       </tr>
       </table>
     `;
