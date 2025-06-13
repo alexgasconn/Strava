@@ -608,9 +608,12 @@ function renderDashboard(activities) {
             `;
         }
     }
+
+    // --- Plot Location Bar Chart ---
+    plotLocationBarChart(runs);
 }
 
-// --- 6. MAIN INITIALIZATION LOGIC ---
+ // --- 6. INITIALIZATION AND AUTHENTICATION ---
 async function initializeApp(accessToken) {
     try {
         let activities;
@@ -736,7 +739,11 @@ async function plotLocationBarChart(runs) {
     // Prepare data for Chart.js
     const sorted = Object.entries(locationCounts).sort((a, b) => b[1] - a[1]).slice(0, 20);
     const ctx = document.getElementById('location-bar-chart').getContext('2d');
-    new Chart(ctx, {
+    if (charts['location-bar-chart']) {
+        charts['location-bar-chart'].destroy();
+        charts['location-bar-chart'] = null;
+    }
+    charts['location-bar-chart'] = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: sorted.map(e => e[0]),
