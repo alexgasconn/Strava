@@ -128,15 +128,18 @@ function renderDashboard(activities) {
         });
     }
 
-    // --- Gráfico de Líneas: Distancia Mensual ---
-    // Agrupa y suma la distancia de cada mes correctamente
+    // --- Gráfico de Líneas y Barras: Distancia Mensual + Número de Corridas ---
+    // Agrupa y suma la distancia y cuenta actividades por mes
     const monthlyDistanceMap = {};
+    const monthlyCountMap = {};
     runs.forEach(act => {
         const month = act.start_date_local.substring(0, 7);
         monthlyDistanceMap[month] = (monthlyDistanceMap[month] || 0) + (act.distance / 1000);
+        monthlyCountMap[month] = (monthlyCountMap[month] || 0) + 1;
     });
     const sortedMonths = Object.keys(monthlyDistanceMap).sort();
     const monthlyDistances = sortedMonths.map(month => monthlyDistanceMap[month]);
+    const monthlyCounts = sortedMonths.map(month => monthlyCountMap[month]);
     const monthlyDistanceCanvas = document.getElementById('monthly-distance-chart');
     if (monthlyDistanceCanvas) {
         if (charts['monthly-distance-chart']) {
@@ -144,16 +147,47 @@ function renderDashboard(activities) {
             charts['monthly-distance-chart'] = null;
         }
         charts['monthly-distance-chart'] = new Chart(monthlyDistanceCanvas, {
-            type: 'line',
+            type: 'bar',
             data: {
                 labels: sortedMonths,
-                datasets: [{
-                    label: 'Distancia (km)',
-                    data: monthlyDistances,
-                    borderColor: '#FC5200',
-                    fill: false,
-                    tension: 0.1
-                }]
+                datasets: [
+                    {
+                        type: 'line',
+                        label: 'Distancia (km)',
+                        data: monthlyDistances,
+                        borderColor: '#FC5200',
+                        backgroundColor: 'rgba(252,82,0,0.15)',
+                        fill: false,
+                        tension: 0.1,
+                        yAxisID: 'y',
+                        order: 1
+                    },
+                    {
+                        type: 'bar',
+                        label: '# Corridas',
+                        data: monthlyCounts,
+                        backgroundColor: 'rgba(54,162,235,0.25)',
+                        borderColor: 'rgba(54,162,235,0.5)',
+                        borderWidth: 1,
+                        yAxisID: 'y1',
+                        order: 2
+                    }
+                ]
+            },
+            options: {
+                scales: {
+                    y: {
+                        type: 'linear',
+                        position: 'left',
+                        title: { display: true, text: 'Distancia (km)' }
+                    },
+                    y1: {
+                        type: 'linear',
+                        position: 'right',
+                        title: { display: true, text: '# Corridas' },
+                        grid: { drawOnChartArea: false }
+                    }
+                }
             }
         });
     }
