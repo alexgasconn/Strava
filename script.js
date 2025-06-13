@@ -609,8 +609,7 @@ function renderDashboard(activities) {
         }
     }
 
-    // --- Plot Location Bar Chart ---
-    plotLocationBarChart(runs);
+    plotRunsHeatmap(runs);
 }
 
 // --- 6. INITIALIZATION AND AUTHENTICATION ---
@@ -703,138 +702,43 @@ function getMidpoint(coords) {
     return [avgLat, avgLng];
 }
 
-// Helper: reverse geocode using Nominatim
-async function reverseGeocode(lat, lon) {
-    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`;
-    const resp = await fetch(url, { headers: { 'User-Agent': 'StravaDashboard/1.0' } });
-    if (!resp.ok) return null;
-    const data = await resp.json();
-    return data.address.neighbourhood || data.address.suburb || data.address.city || data.address.town || data.address.village || data.address.state || data.address.country || "Unknown";
-}
 
-// Main function to process runs and plot
-async function plotLocationBarChart(runs) {
-    const canvas = document.getElementById('location-bar-chart');
-    if (!canvas) return;
-
-    // 1. Get unique start_latlngs
-    const coordToActs = {};
+// --- HEATMAP: RUNS BY LOCATION ---
+function plotRunsHeatmap(runs) {
+    // Prepara los puntos: start, mid, end
+    const points = [];
     runs.forEach(act => {
         if (Array.isArray(act.start_latlng) && act.start_latlng.length === 2) {
-            const key = act.start_latlng.join(',');
-            if (!coordToActs[key]) coordToActs[key] = [];
-            coordToActs[key].push(act);
+            points.push([act.start_latlng[0], act.start_latlng[1]]);
+        }
+        if (Array.isArray(act.end_latlng) && act.end_latlng.length === 2) {
+            points.push([act.end_latlng[0], act.end_latlng[1]]);
+        }
+        // Si tienes decoded_polyline, calcula el punto medio
+        if (Array.isArray(act.decoded_polyline) && act.decoded_polyline.length > 0) {
+            const midIdx = Math.floor(act.decoded_polyline.length / 2);
+            points.push([act.decoded_polyline[midIdx][0], act.decoded_polyline[midIdx][1]]);
         }
     });
-    const uniqueCoords = Object.keys(coordToActs);
 
-    // 2. Try to load cached geocoding results
-    let geoCache = {};
-    try {
-        geoCache = JSON.parse(localStorage.getItem('geoCache') || '{}');
-    } catch { geoCache = {}; }
-
-    // 3. Geocode missing coordinates (with rate limit)
-    let updated = false;
-    for (const coord of uniqueCoords) {
-        if (!geoCache[coord]) {
-            const [lat, lon] = coord.split(',').map(Number);
-            // Show loading message
-            canvas.parentElement.querySelector('h3').textContent = 'Geocoding locations...';
-            try {
-                const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`;
-                const resp = await fetch(url, { headers: { 'User-Agent': 'StravaDashboard/1.0' } });
-                if (resp.ok) {
-                    const data = await resp.json();
-                    geoCache[coord] = data.address.city || data.address.town || data.address.village || data.address.state || data.address.country || "Unknown";
-                } else {
-                    geoCache[coord] = "Unknown";
-                }
-            } catch {
-                geoCache[coord] = "Unknown";
-            }
-            updated = true;
-            await new Promise(res => setTimeout(res, 1100)); // 1.1s delay for Nominatim
-        }
+    // Inicializa el mapa solo una vez
+    if (!window.runsHeatmapMap) {
+        window.runsHeatmapMap = L.map('runs-heatmap').setView([40, -3], 2); // Centra en Europa por defecto
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(window.runsHeatmapMap);
     }
-    if (updated) localStorage.setItem('geoCache', JSON.stringify(geoCache));
-    canvas.parentElement.querySelector('h3').textContent = 'Location Bar Chart';
 
-    // 4. Count activities per location
-    const locationCounts = {};
-    runs.forEach(act => {
-        if (Array.isArray(act.start_latlng) && act.start_latlng.length === 2) {
-            const key = act.start_latlng.join(',');
-            const loc = geoCache[key] || "Unknown";
-            locationCounts[loc] = (locationCounts[loc] || 0) + 1;
-        }
-    });
-
-    // 5. Prepare and plot
-    const sorted = Object.entries(locationCounts).sort((a, b) => b[1] - a[1]).slice(0, 15);
-    const ctx = canvas.getContext('2d');
-    if (window.charts && window.charts['location-bar-chart']) {
-        window.charts['location-bar-chart'].destroy();
+    // Limpia capas anteriores
+    if (window.runsHeatmapLayer) {
+        window.runsHeatmapMap.removeLayer(window.runsHeatmapLayer);
     }
-    window.charts = window.charts || {};
-    window.charts['location-bar-chart'] = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: sorted.map(e => e[0]),
-            datasets: [{
-                label: 'Number of Runs',
-                data: sorted.map(e => e[1]),
-                backgroundColor: 'rgba(54, 162, 235, 0.7)'
-            }]
-        },
-        options: {
-            indexAxis: 'y',
-            plugins: { title: { display: true, text: 'Most Common Run Locations' } },
-            scales: {
-                x: { title: { display: true, text: 'Number of Runs' } },
-                y: { title: { display: true, text: 'Location' } }
-            }
-        }
-    });
-}
 
-// Main function to process activities and plot location bar chart
-function plotLocationBarChart(activities) {
-    // Cuenta cuántas actividades hay por ciudad
-    const locationCounts = {};
-    activities.forEach(act => {
-        const loc = act.location_city || "Unknown";
-        locationCounts[loc] = (locationCounts[loc] || 0) + 1;
-    });
+    // Añade la capa de heatmap
+    window.runsHeatmapLayer = L.heatLayer(points, {radius: 15, blur: 20, maxZoom: 12}).addTo(window.runsHeatmapMap);
 
-    // Ordena y selecciona las 15 ciudades más frecuentes
-    const sorted = Object.entries(locationCounts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 15);
-
-    // Prepara los datos para Chart.js
-    const ctx = document.getElementById('location-bar-chart').getContext('2d');
-    if (window.charts && window.charts['location-bar-chart']) {
-        window.charts['location-bar-chart'].destroy();
+    // Ajusta el mapa a los puntos si hay datos
+    if (points.length > 0) {
+        window.runsHeatmapMap.fitBounds(points);
     }
-    window.charts = window.charts || {};
-    window.charts['location-bar-chart'] = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: sorted.map(e => e[0]),
-            datasets: [{
-                label: 'Number of Activities',
-                data: sorted.map(e => e[1]),
-                backgroundColor: 'rgba(54, 162, 235, 0.7)'
-            }]
-        },
-        options: {
-            indexAxis: 'y',
-            plugins: { title: { display: true, text: 'Most Common Activity Locations' } },
-            scales: {
-                x: { title: { display: true, text: 'Number of Activities' } },
-                y: { title: { display: true, text: 'Location' } }
-            }
-        }
-    });
 }
