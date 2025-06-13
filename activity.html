@@ -1,16 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <title>Activity Details</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <title>Activity Details</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+
 </head>
+
 <body>
-  <div class="container">
-    <h1>Activity Details</h1>
-    <div id="activity-details"></div>
-    <button onclick="window.close()">Close</button>
-  </div>
-  <script src="activity.js"></script>
+    <div class="container">
+        <h1>Activity Details</h1>
+        <div id="activity-header" class="card"></div>
+        <div id="activity-map" style="height: 400px; margin-bottom: 2rem;"></div>
+        <div class="charts-grid">
+            <div class="chart-container"><canvas id="chart-pace"></canvas></div>
+            <div class="chart-container"><canvas id="chart-heartrate"></canvas></div>
+        </div>
+        <div id="splits-section" class="chart-container full-width"></div>
+        <div id="segments-section" class="chart-container full-width"></div>
+
+        <button onclick="window.close()">Close</button>
+    </div>
+    <script src="activity.js"></script>
 </body>
+
 </html>
