@@ -76,6 +76,18 @@ function binHRByDistance(distance_data, hr_data, binSize = 100) {
   return bins;
 }
 
+
+async function fetchStream(type) {
+  const response = await fetch(`/api/strava-streams?id=${activityId}&type=${type}`, {
+    headers: { 'Authorization': `Bearer ${localStorage.getItem('strava_access_token')}` }
+  });
+  if (!response.ok) throw new Error(`Stream fetch failed: ${await response.text()}`);
+  const stream = await response.json();
+  return stream.data;  // ✅ Aquí está el array de valores para ese tipo
+}
+
+
+
 async function fetchActivity() {
   const accessToken = localStorage.getItem('strava_access_token');
   if (!accessToken) {
@@ -263,6 +275,8 @@ async function fetchActivity() {
       });
     }
 
+
+
     // SEGMENTS
     const segs = act.segment_efforts || [];
     if (segs.length) {
@@ -279,10 +293,13 @@ async function fetchActivity() {
     }
 
     // HR RANGE CHART - Heart Rate range (min/max) and average by distance
-    const distance_data = splits.map(s => s.distance);
-    const hr_data = splits.map(s => s.average_heartrate);
-    // Prepare data
-    const bins = binHRByDistance(distance_data, hr_data, 100); // 100m bins
+    // HR RANGE CHART - Heart Rate range using full stream data
+    const [hrStream, distStream] = await Promise.all([
+      fetchStream('heartrate'),
+      fetchStream('distance')
+    ]);
+    const bins = binHRByDistance(distStream, hrStream, 100); // 100m bins
+
     const labels = bins.map(b => b.distance / 1000); // in km
     const minHR = bins.map(b => b.min);
     const maxHR = bins.map(b => b.max);
