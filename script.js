@@ -411,17 +411,14 @@ function renderDashboard(activities) {
 
     // --- 7. RENDIMIENTO POR EQUIPO (gear) ---
 
-    // 1. Build a mapping from gear_id to gear name (if available)
-    const gearMap = {};
-    activities.forEach(a => {
-        if (a.gear_id && a.gear && a.gear.name) gearMap[a.gear_id] = a.gear.name;
-    });
-
+    // 1. Build a mapping from gear_id to gear_id (since only gear_id is available)
+    // If you have gear names, you can enhance this later.
+    // For now, just use gear_id as the label.
     // 2. Aggregate distance per gear per month
     const gearMonthKm = {};
     runs.forEach(a => {
         if (!a.gear_id) return;
-        const gear = gearMap[a.gear_id] || a.gear_id;
+        const gear = a.gear_id;
         const month = a.start_date_local.substring(0, 7);
         if (!gearMonthKm[gear]) gearMonthKm[gear] = {};
         gearMonthKm[gear][month] = (gearMonthKm[gear][month] || 0) + a.distance / 1000;
@@ -474,15 +471,15 @@ function renderDashboard(activities) {
         const stackedData = allMonths.map((month, monthIdx) => {
             const monthData = { x: month, y: 0 };
             allGears.forEach((gear, gearIdx) => {
+        const stackedData = allMonths.map((month) => {
+            const monthData = { x: month, y: 0 };
+            allGears.forEach((gear, gearIdx) => {
                 const val = gearMonthKm[gear][month] || 0;
                 monthData[`y${gearIdx}`] = val;
                 monthData.y += val;
             });
             return monthData;
         });
-
-        // Configura y crea el gráfico
-        createChart('stacked-area-chart', {
             type: 'line',
             data: {
                 labels: allMonths,
