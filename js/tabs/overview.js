@@ -2,7 +2,7 @@
 
 export function renderOverviewTab(activities) {
     console.log("Renderizando pestaña Overview...");
-    renderSummaryCards(activities);
+    // renderSummaryCards(activities);
     // renderConsistencyHeatmap(activities);
 }
 

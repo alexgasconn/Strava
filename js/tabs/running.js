@@ -15,9 +15,9 @@ export function renderRunningTab(activities) {
     // Pre-procesamiento específico
     runs.forEach(run => run.pace_seconds_per_km = run.distance_km > 0 ? run.moving_time / run.distance_km : 0);
 
-    renderRunningSummary(runs);
-    renderPaceVsDistanceChart(runs);
-    renderTopRunsTables(runs);
+    // renderRunningSummary(runs);
+    // renderPaceVsDistanceChart(runs);
+    // renderTopRunsTables(runs);
 }
 
 function renderRunningSummary(runs) {
