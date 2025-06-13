@@ -60,21 +60,102 @@ async function fetchActivity() {
     }
     const act = await response.json();
 
-    // HEADER
+    // HEADER (Professional, ordered, more data)
     const distKm = (act.distance / 1000).toFixed(2);
-    const pace = formatPace(act.average_speed);
     const duration = formatTime(act.moving_time);
+    const elapsed = formatTime(act.elapsed_time);
+    const pace = formatPace(act.average_speed);
+    const elevGain = Math.round(act.total_elevation_gain || 0);
+    const avgHr = act.average_heartrate ? `${Math.round(act.average_heartrate)} bpm` : 'N/A';
+    const maxHr = act.max_heartrate ? `${Math.round(act.max_heartrate)} bpm` : 'N/A';
+    const avgCad = act.average_cadence ? `${Math.round(act.average_cadence)} rpm` : 'N/A';
+    const maxCad = act.max_cadence ? `${Math.round(act.max_cadence)} rpm` : 'N/A';
+    const calories = act.calories ? `${Math.round(act.calories)} kcal` : 'N/A';
+    const device = act.device_name || 'N/A';
+    const gear = act.gear?.name || 'N/A';
+    const type = act.type || 'N/A';
+    const date = act.start_date_local ? new Date(act.start_date_local).toLocaleString() : 'N/A';
+    const location = [act.start_latlng?.[0], act.start_latlng?.[1]].every(Number.isFinite)
+      ? `${act.start_latlng[0].toFixed(5)}, ${act.start_latlng[1].toFixed(5)}`
+      : 'N/A';
+
     headerDiv.innerHTML = `
-      <h2>${act.name}</h2>
-      <p><strong>Date:</strong> ${act.start_date_local.split('T')[0]}</p>
-      <p><strong>Distance:</strong> ${distKm} km · <strong>Time:</strong> ${duration} · <strong>Pace:</strong> ${pace} min/km · <strong>HR:</strong> ${Math.round(act.average_heartrate || 0)} bpm · <strong>Cadence:</strong> ${Math.round(act.average_cadence || 0)} rpm</p>
-      <p><strong>Gear:</strong> ${act.gear?.name || 'N/A'} · <strong>Device:</strong> ${act.device_name || 'N/A'}</p>
+      <h2>${act.name || 'Activity'}</h2>
+      <table class="df-table activity-summary">
+      <tr>
+        <th>Date</th>
+        <td>${date}</td>
+      </tr>
+      <tr>
+        <th>Type</th>
+        <td>${type}</td>
+      </tr>
+      <tr>
+        <th>Distance</th>
+        <td>${distKm} km</td>
+      </tr>
+      <tr>
+        <th>Moving Time</th>
+        <td>${duration}</td>
+      </tr>
+      <tr>
+        <th>Elapsed Time</th>
+        <td>${elapsed}</td>
+      </tr>
+      <tr>
+        <th>Pace</th>
+        <td>${pace} min/km</td>
+      </tr>
+      <tr>
+        <th>Elevation Gain</th>
+        <td>${elevGain} m</td>
+      </tr>
+      <tr>
+        <th>Avg HR</th>
+        <td>${avgHr}</td>
+      </tr>
+      <tr>
+        <th>Max HR</th>
+        <td>${maxHr}</td>
+      </tr>
+      <tr>
+        <th>Avg Cadence</th>
+        <td>${avgCad}</td>
+      </tr>
+      <tr>
+        <th>Max Cadence</th>
+        <td>${maxCad}</td>
+      </tr>
+      <tr>
+        <th>Calories</th>
+        <td>${calories}</td>
+      </tr>
+      <tr>
+        <th>Gear</th>
+        <td>${gear}</td>
+      </tr>
+      <tr>
+        <th>Device</th>
+        <td>${device}</td>
+      </tr>
+      <tr>
+        <th>Start Location</th>
+        <td>${location}</td>
+      </tr>
+      </table>
     `;
 
     // MAP
     if (act.map?.summary_polyline) {
       const coords = decodePolyline(act.map.summary_polyline);
-      const map = L.map(mapDiv).setView(coords[0], 14);
+      const map = L.map(mapDiv);
+      // Calculate bounds
+      const lats = coords.map(c => c[0]);
+      const lngs = coords.map(c => c[1]);
+      const southWest = [Math.min(...lats), Math.min(...lngs)];
+      const northEast = [Math.max(...lats), Math.max(...lngs)];
+      const bounds = L.latLngBounds(southWest, northEast);
+      map.fitBounds(bounds, { padding: [20, 20] });
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
       L.polyline(coords, { color: '#FC5200', weight: 4 }).addTo(map);
     }
@@ -98,13 +179,13 @@ async function fetchActivity() {
 
       function renderSplitsCharts(splitDistance) {
       // Remove old charts if any
-      ['chart-pace', 'chart-heartrate', 'chart-elevation', 'chart-hrv'].forEach(id => {
+      ['chart-pace', 'chart-heartrate', 'chart-elevation'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.remove();
       });
 
       // Create canvases
-      ['pace', 'heartrate', 'elevation', 'hrv'].forEach(type => {
+      ['pace', 'heartrate', 'elevation'].forEach(type => {
         const canvas = document.createElement('canvas');
         canvas.id = `chart-${type}`;
         splitsSection.appendChild(canvas);
@@ -145,7 +226,11 @@ async function fetchActivity() {
         });
       }
 
-      const labels = aggSplits.map((s, i) => `${(splitDistance / 1000 * (i + 1)).toFixed(2)} km`);
+      let cumulative = 0;
+      const labels = aggSplits.map(s => {
+        cumulative += s.distance;
+        return `${(cumulative / 1000).toFixed(2)} km`;
+      });
       const paceData = aggSplits.map(s => s.time / (s.distance / 1000)); // min/km
       const hrData = aggSplits.map(s => s.hr);
       const elevData = aggSplits.map(s => s.elev);
@@ -188,20 +273,6 @@ async function fetchActivity() {
           label: 'Elevation (m)',
           data: elevData,
           borderColor: '#2ECC40',
-          fill: false,
-          tension: 0.2
-        }]
-        }
-      });
-
-      new Chart(document.getElementById('chart-hrv'), {
-        type: 'line',
-        data: {
-        labels,
-        datasets: [{
-          label: 'HR Variability (bpm)',
-          data: hrvData,
-          borderColor: '#FF851B',
           fill: false,
           tension: 0.2
         }]
