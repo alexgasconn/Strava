@@ -48,6 +48,8 @@ function logout() {
 function renderDashboard(activities) {
     // --- Filtrar solo actividades de running (incluye Trail Run, etc) ---
     const runs = activities.filter(a => a.type && a.type.includes('Run'));
+    console.log(`Total actividades de running: ${runs.length}`);
+    console.log(`Actividades de running:`, runs);
     
 
     // 1. Get all distances
@@ -56,6 +58,7 @@ function renderDashboard(activities) {
     const sortedDistances = [...allDistances].sort((a, b) => a - b);
     const p90Index = Math.floor(0.9 * sortedDistances.length);
     const p90Distance = sortedDistances[p90Index] || 0;
+    console.log(`90th Percentile Distance: ${p90Distance} m`);
 
     // 3. Tag as Long Run if not a race and distance >= 90th percentile
     runs.forEach(a => {
