@@ -79,24 +79,85 @@ async function fetchActivity() {
       L.polyline(coords, { color: '#FC5200', weight: 4 }).addTo(map);
     }
 
-    // SPLITS
+    // SPLITS - User selectable split distance and additional charts for elevation and cadence
     const splits = act.splits_metric || [];
     if (splits.length) {
-      const labels = splits.map((s, i) => `Km ${i + 1}`);
-      const paceData = splits.map(s => 1000 / s.average_speed);
-      const hrData = splits.map(s => s.average_heartrate);
+      // Create split distance selector if not present
+      let splitSelector = document.getElementById('split-distance-selector');
+      if (!splitSelector) {
+      splitSelector = document.createElement('select');
+      splitSelector.id = 'split-distance-selector';
+      [200, 250, 500, 1000, 5000].forEach(val => {
+        const opt = document.createElement('option');
+        opt.value = val;
+        opt.textContent = val === 1609 ? '1 mile' : `${val} m`;
+        splitSelector.appendChild(opt);
+      });
+      splitsSection.prepend(splitSelector);
+      }
+
+      function renderSplitsCharts(splitDistance) {
+      // Remove old charts if any
+      ['chart-pace', 'chart-heartrate', 'chart-elevation', 'chart-cadence'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+      });
+
+      // Create canvases
+      ['pace', 'heartrate', 'elevation', 'cadence'].forEach(type => {
+        const canvas = document.createElement('canvas');
+        canvas.id = `chart-${type}`;
+        splitsSection.appendChild(canvas);
+      });
+
+      // Aggregate splits by selected distance
+      let aggSplits = [];
+      let temp = { distance: 0, time: 0, hr: 0, elev: 0, cadence: 0, count: 0 };
+      splits.forEach(s => {
+        temp.distance += s.distance;
+        temp.time += s.moving_time;
+        temp.hr += s.average_heartrate || 0;
+        temp.elev += s.elevation_difference || 0;
+        temp.cadence += s.average_cadence || 0;
+        temp.count++;
+        if (temp.distance >= splitDistance) {
+        aggSplits.push({
+          distance: temp.distance,
+          time: temp.time,
+          hr: temp.hr / temp.count,
+          elev: temp.elev / temp.count,
+          cadence: temp.cadence / temp.count
+        });
+        temp = { distance: 0, time: 0, hr: 0, elev: 0, cadence: 0, count: 0 };
+        }
+      });
+      if (temp.count > 0) {
+        aggSplits.push({
+        distance: temp.distance,
+        time: temp.time,
+        hr: temp.hr / temp.count,
+        elev: temp.elev / temp.count,
+        cadence: temp.cadence / temp.count
+        });
+      }
+
+      const labels = aggSplits.map((s, i) => `${(splitDistance / 1000 * (i + 1)).toFixed(2)} km`);
+      const paceData = aggSplits.map(s => s.time / (s.distance / 1000)); // min/km
+      const hrData = aggSplits.map(s => s.hr);
+      const elevData = aggSplits.map(s => s.elev);
+      const cadenceData = aggSplits.map(s => s.cadence);
 
       new Chart(document.getElementById('chart-pace'), {
         type: 'line',
         data: {
-          labels,
-          datasets: [{
-            label: 'Pace (min/km)',
-            data: paceData,
-            borderColor: '#FC5200',
-            fill: false,
-            tension: 0.2
-          }]
+        labels,
+        datasets: [{
+          label: 'Pace (min/km)',
+          data: paceData,
+          borderColor: '#FC5200',
+          fill: false,
+          tension: 0.2
+        }]
         },
         options: { scales: { y: { reverse: true } } }
       });
@@ -104,16 +165,51 @@ async function fetchActivity() {
       new Chart(document.getElementById('chart-heartrate'), {
         type: 'line',
         data: {
-          labels,
-          datasets: [{
-            label: 'Heart Rate (bpm)',
-            data: hrData,
-            borderColor: '#0074D9',
-            fill: false,
-            tension: 0.2
-          }]
+        labels,
+        datasets: [{
+          label: 'Heart Rate (bpm)',
+          data: hrData,
+          borderColor: '#0074D9',
+          fill: false,
+          tension: 0.2
+        }]
         }
       });
+
+      new Chart(document.getElementById('chart-elevation'), {
+        type: 'line',
+        data: {
+        labels,
+        datasets: [{
+          label: 'Elevation (m)',
+          data: elevData,
+          borderColor: '#2ECC40',
+          fill: false,
+          tension: 0.2
+        }]
+        }
+      });
+
+      new Chart(document.getElementById('chart-cadence'), {
+        type: 'line',
+        data: {
+        labels,
+        datasets: [{
+          label: 'Cadence (rpm)',
+          data: cadenceData,
+          borderColor: '#B10DC9',
+          fill: false,
+          tension: 0.2
+        }]
+        }
+      });
+      }
+
+      // Initial render
+      renderSplitsCharts(Number(splitSelector.value));
+
+      // Update on selector change
+      splitSelector.onchange = () => renderSplitsCharts(Number(splitSelector.value));
     }
 
     // SEGMENTS
