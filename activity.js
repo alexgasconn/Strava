@@ -92,6 +92,8 @@ async function fetchActivity() {
     }
     const act = await response.json();
 
+    console.log('Activity data:', act);
+
     // HEADER (Professional, ordered, more data)
     const distKm = (act.distance / 1000).toFixed(2);
     const duration = formatTime(act.moving_time);
