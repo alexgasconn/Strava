@@ -700,40 +700,40 @@ function getMidpoint(coords) {
     return [avgLat, avgLng];
 }
 
+// Helper: reverse geocode using Nominatim
 async function reverseGeocode(lat, lon) {
     const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`;
     const resp = await fetch(url, { headers: { 'User-Agent': 'StravaDashboard/1.0' } });
     if (!resp.ok) return null;
     const data = await resp.json();
-    // Try to get neighbourhood, then city, then country
     return data.address.neighbourhood || data.address.suburb || data.address.city || data.address.town || data.address.village || data.address.state || data.address.country || "Unknown";
 }
 
-async function getRunLocations(runs) {
+// Main function to process runs and plot
+async function plotLocationBarChart(runs) {
     const locationCounts = {};
     for (const run of runs) {
-        // You need decoded polyline or start_latlng/end_latlng
-        const coords = run.decoded_polyline || [run.start_latlng, run.end_latlng].filter(Boolean);
-        if (!coords || coords.length === 0) continue;
-        const start = coords[0];
-        const finish = coords[coords.length - 1];
-        const mid = getMidpoint(coords);
-
-        // Reverse geocode all three
-        const locs = await Promise.all([
-            reverseGeocode(start[0], start[1]),
-            reverseGeocode(mid[0], mid[1]),
-            reverseGeocode(finish[0], finish[1])
-        ]);
-        locs.forEach(loc => {
-            if (!loc) return;
-            locationCounts[loc] = (locationCounts[loc] || 0) + 1;
-        });
+        // Use start_latlng and end_latlng; if you have polyline, decode it for more points
+        const coords = [];
+        if (run.start_latlng) coords.push(run.start_latlng);
+        if (run.end_latlng) coords.push(run.end_latlng);
+        // If you have a decoded polyline, use it for midpoint
+        let mid = null;
+        if (run.decoded_polyline && run.decoded_polyline.length > 0) {
+            mid = getMidpoint(run.decoded_polyline);
+        } else if (coords.length === 2) {
+            mid = getMidpoint(coords);
+        }
+        // Reverse geocode start, mid, finish (with 1s delay between requests)
+        const points = [coords[0], mid, coords[coords.length - 1]].filter(Boolean);
+        for (const pt of points) {
+            if (!pt) continue;
+            const loc = await reverseGeocode(pt[0], pt[1]);
+            if (loc) locationCounts[loc] = (locationCounts[loc] || 0) + 1;
+            await new Promise(res => setTimeout(res, 1100)); // 1.1s delay for Nominatim
+        }
     }
-    return locationCounts;
-}
-
-function plotLocationBarChart(locationCounts) {
+    // Prepare data for Chart.js
     const sorted = Object.entries(locationCounts).sort((a, b) => b[1] - a[1]).slice(0, 20);
     const ctx = document.getElementById('location-bar-chart').getContext('2d');
     new Chart(ctx, {
@@ -752,3 +752,6 @@ function plotLocationBarChart(locationCounts) {
         }
     });
 }
+
+// Usage: call this after you have your runs array
+// plotLocationBarChart(runs);
