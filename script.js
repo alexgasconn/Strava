@@ -555,6 +555,7 @@ function renderDashboard(activities) {
                         <th>Elevation (m)</th>
                         <th>Type</th>
                         <th>Gear</th>
+                        <th>Details</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -579,6 +580,11 @@ function renderDashboard(activities) {
                     <td>${act.total_elevation_gain || 0}</td>
                     <td>${type}</td>
                     <td>${act.gear_id || ''}</td>
+                    <td>
+                      <a href="activity.html?id=${act.id}" target="_blank">
+                        <button>Details</button>
+                      </a>
+                    </td>
                 </tr>`;
             }).join('')}
                 </tbody>
