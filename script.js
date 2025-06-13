@@ -714,37 +714,70 @@ async function reverseGeocode(lat, lon) {
 
 // Main function to process runs and plot
 async function plotLocationBarChart(runs) {
-    const locationCounts = {};
-    for (const run of runs) {
-        // Use start_latlng and end_latlng; if you have polyline, decode it for more points
-        const coords = [];
-        if (run.start_latlng) coords.push(run.start_latlng);
-        if (run.end_latlng) coords.push(run.end_latlng);
-        // If you have a decoded polyline, use it for midpoint
-        let mid = null;
-        if (run.decoded_polyline && run.decoded_polyline.length > 0) {
-            mid = getMidpoint(run.decoded_polyline);
-        } else if (coords.length === 2) {
-            mid = getMidpoint(coords);
+    const canvas = document.getElementById('location-bar-chart');
+    if (!canvas) return;
+
+    // 1. Get unique start_latlngs
+    const coordToActs = {};
+    runs.forEach(act => {
+        if (Array.isArray(act.start_latlng) && act.start_latlng.length === 2) {
+            const key = act.start_latlng.join(',');
+            if (!coordToActs[key]) coordToActs[key] = [];
+            coordToActs[key].push(act);
         }
-        // Reverse geocode start, mid, finish (with 1s delay between requests)
-        const points = [coords[0], mid, coords[coords.length - 1]].filter(Boolean);
-        for (const pt of points) {
-            if (!pt) continue;
-            const loc = await reverseGeocode(pt[0], pt[1]);
-            if (loc) locationCounts[loc] = (locationCounts[loc] || 0) + 1;
+    });
+    const uniqueCoords = Object.keys(coordToActs);
+
+    // 2. Try to load cached geocoding results
+    let geoCache = {};
+    try {
+        geoCache = JSON.parse(localStorage.getItem('geoCache') || '{}');
+    } catch { geoCache = {}; }
+
+    // 3. Geocode missing coordinates (with rate limit)
+    let updated = false;
+    for (const coord of uniqueCoords) {
+        if (!geoCache[coord]) {
+            const [lat, lon] = coord.split(',').map(Number);
+            // Show loading message
+            canvas.parentElement.querySelector('h3').textContent = 'Geocoding locations...';
+            try {
+                const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`;
+                const resp = await fetch(url, { headers: { 'User-Agent': 'StravaDashboard/1.0' } });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    geoCache[coord] = data.address.city || data.address.town || data.address.village || data.address.state || data.address.country || "Unknown";
+                } else {
+                    geoCache[coord] = "Unknown";
+                }
+            } catch {
+                geoCache[coord] = "Unknown";
+            }
+            updated = true;
             await new Promise(res => setTimeout(res, 1100)); // 1.1s delay for Nominatim
         }
     }
-    // Prepare data for Chart.js
-    const sorted = Object.entries(locationCounts).sort((a, b) => b[1] - a[1]).slice(0, 20);
-    console.log('Top 20 Locations:', sorted);
-    const ctx = document.getElementById('location-bar-chart').getContext('2d');
-    if (charts['location-bar-chart']) {
-        charts['location-bar-chart'].destroy();
-        charts['location-bar-chart'] = null;
+    if (updated) localStorage.setItem('geoCache', JSON.stringify(geoCache));
+    canvas.parentElement.querySelector('h3').textContent = 'Location Bar Chart';
+
+    // 4. Count activities per location
+    const locationCounts = {};
+    runs.forEach(act => {
+        if (Array.isArray(act.start_latlng) && act.start_latlng.length === 2) {
+            const key = act.start_latlng.join(',');
+            const loc = geoCache[key] || "Unknown";
+            locationCounts[loc] = (locationCounts[loc] || 0) + 1;
+        }
+    });
+
+    // 5. Prepare and plot
+    const sorted = Object.entries(locationCounts).sort((a, b) => b[1] - a[1]).slice(0, 15);
+    const ctx = canvas.getContext('2d');
+    if (window.charts && window.charts['location-bar-chart']) {
+        window.charts['location-bar-chart'].destroy();
     }
-    charts['location-bar-chart'] = new Chart(ctx, {
+    window.charts = window.charts || {};
+    window.charts['location-bar-chart'] = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: sorted.map(e => e[0]),
@@ -756,7 +789,11 @@ async function plotLocationBarChart(runs) {
         },
         options: {
             indexAxis: 'y',
-            plugins: { title: { display: true, text: 'Most Common Run Locations' } }
+            plugins: { title: { display: true, text: 'Most Common Run Locations' } },
+            scales: {
+                x: { title: { display: true, text: 'Number of Runs' } },
+                y: { title: { display: true, text: 'Location' } }
+            }
         }
     });
 }
