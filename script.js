@@ -702,42 +702,56 @@ function getMidpoint(coords) {
     return [avgLat, avgLng];
 }
 
+function getRunHeatmapPoints(act) {
+    const points = [];
+    let coords = [];
+    // Use decoded_polyline if available, else fallback to start/end
+    if (Array.isArray(act.decoded_polyline) && act.decoded_polyline.length > 0) {
+        coords = act.decoded_polyline;
+    } else if (Array.isArray(act.start_latlng) && Array.isArray(act.end_latlng)) {
+        coords = [act.start_latlng, act.end_latlng];
+    }
+    if (coords.length > 0) {
+        const idxs = [
+            0,
+            Math.floor(coords.length * 0.2),
+            Math.floor(coords.length * 0.4),
+            Math.floor(coords.length * 0.5),
+            Math.floor(coords.length * 0.6),
+            Math.floor(coords.length * 0.8),
+            coords.length - 1
+        ];
+        idxs.forEach(i => {
+            if (coords[i]) points.push([coords[i][0], coords[i][1]]);
+        });
+    }
+    return points;
+}
 
 // --- HEATMAP: RUNS BY LOCATION ---
 function plotRunsHeatmap(runs) {
-    // Prepara los puntos: start, mid, end
     const points = [];
     runs.forEach(act => {
-        if (Array.isArray(act.start_latlng) && act.start_latlng.length === 2) {
-            points.push([act.start_latlng[0], act.start_latlng[1]]);
-        }
-        if (Array.isArray(act.end_latlng) && act.end_latlng.length === 2) {
-            points.push([act.end_latlng[0], act.end_latlng[1]]);
-        }
-        // Si tienes decoded_polyline, calcula el punto medio
-        if (Array.isArray(act.decoded_polyline) && act.decoded_polyline.length > 0) {
-            const midIdx = Math.floor(act.decoded_polyline.length / 2);
-            points.push([act.decoded_polyline[midIdx][0], act.decoded_polyline[midIdx][1]]);
-        }
+        points.push(...getRunHeatmapPoints(act));
     });
 
-    // Inicializa el mapa solo una vez
+    // Initialize map only once
     if (!window.runsHeatmapMap) {
-        window.runsHeatmapMap = L.map('runs-heatmap').setView([40, -3], 2); // Centra en Europa por defecto
+        window.runsHeatmapMap = L.map('runs-heatmap').setView([40, -3], 2);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(window.runsHeatmapMap);
     }
 
-    // Limpia capas anteriores
+    // Remove previous layer
     if (window.runsHeatmapLayer) {
         window.runsHeatmapMap.removeLayer(window.runsHeatmapLayer);
     }
 
-    // Añade la capa de heatmap
+    // Add heatmap layer
     window.runsHeatmapLayer = L.heatLayer(points, {radius: 15, blur: 20, maxZoom: 12}).addTo(window.runsHeatmapMap);
 
-    // Ajusta el mapa a los puntos si hay datos
+    // Fit map to points
     if (points.length > 0) {
         window.runsHeatmapMap.fitBounds(points);
     }
