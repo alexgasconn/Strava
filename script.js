@@ -8,6 +8,10 @@ const REDIRECT_URI = window.location.origin + window.location.pathname;
 const CACHE_KEY = 'strava_dashboard_data_v1';
 let charts = {};
 
+let dateFilterFrom = null;
+let dateFilterTo = null;
+let allActivities = []; // Store all activities for filtering
+
 // --- 2. REFERENCIAS AL DOM ---
 const loginSection = document.getElementById('login-section');
 const appSection = document.getElementById('app-section');
@@ -37,20 +41,21 @@ function redirectToStravaAuthorize() {
     window.location.href = authUrl;
 }
 
-function logout() { 
-    localStorage.clear(); 
-    window.location.reload(); 
+function logout() {
+    localStorage.clear();
+    window.location.reload();
 }
 
 // --- 5. FUNCIONES DE RENDERIZADO ---
 
 // REEMPLAZA ESTA FUNCIÓN ENTERA
 function renderDashboard(activities) {
+    const filtered = filterActivitiesByDate(activities);
     // --- Filtrar solo actividades de running (incluye Trail Run, etc) ---
-    const runs = activities.filter(a => a.type && a.type.includes('Run'));
+    const runs = filtered.filter(a => a.type && a.type.includes('Run'));
     console.log(`Total actividades de running: ${runs.length}`);
     console.log(`Actividades de running:`, runs);
-    
+
 
     // 1. Get all distances
     const allDistances = runs.map(a => a.distance);
@@ -300,21 +305,21 @@ function renderDashboard(activities) {
                     </thead>
                     <tbody>
                         ${races.map(act => {
-                            const distKm = (act.distance / 1000).toFixed(2);
-                            const timeSec = act.moving_time;
-                            const h = Math.floor(timeSec / 3600);
-                            const m = Math.floor((timeSec % 3600) / 60);
-                            const s = timeSec % 60;
-                            const timeStr = `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-                            const pace = act.distance > 0 ? (act.moving_time / 60) / (act.distance / 1000) : 0;
-                            const paceStr = pace ? `${Math.floor(pace)}:${Math.round((pace % 1) * 60).toString().padStart(2, '0')}` : '-';
-                            return `<tr>
-                                <td>${act.start_date_local.substring(0,10)}</td>
+                const distKm = (act.distance / 1000).toFixed(2);
+                const timeSec = act.moving_time;
+                const h = Math.floor(timeSec / 3600);
+                const m = Math.floor((timeSec % 3600) / 60);
+                const s = timeSec % 60;
+                const timeStr = `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                const pace = act.distance > 0 ? (act.moving_time / 60) / (act.distance / 1000) : 0;
+                const paceStr = pace ? `${Math.floor(pace)}:${Math.round((pace % 1) * 60).toString().padStart(2, '0')}` : '-';
+                return `<tr>
+                                <td>${act.start_date_local.substring(0, 10)}</td>
                                 <td>${distKm}</td>
                                 <td>${timeStr}</td>
                                 <td>${paceStr}</td>
                             </tr>`;
-                        }).join('')}
+            }).join('')}
                     </tbody>
                 </table>
             `;
@@ -358,8 +363,8 @@ function renderDashboard(activities) {
     }
 
     // 5. Calcula ATL (7 días), CTL (42 días), TSB
-    const atl = expMovingAvg(dailyEffort, 1/7);
-    const ctl = expMovingAvg(dailyEffort, 1/42);
+    const atl = expMovingAvg(dailyEffort, 1 / 7);
+    const ctl = expMovingAvg(dailyEffort, 1 / 42);
     const tsb = ctl.map((c, i) => c - atl[i]);
 
     // 6. Grafica los tres en el mismo eje Y (izquierda)
@@ -494,6 +499,14 @@ function renderDashboard(activities) {
             }
         });
     }
+
+    if (allActivities.length) {
+        const dates = allActivities.map(a => a.start_date_local.substring(0, 10)).sort();
+        document.getElementById('date-from').min = dates[0];
+        document.getElementById('date-from').max = dates[dates.length - 1];
+        document.getElementById('date-to').min = dates[0];
+        document.getElementById('date-to').max = dates[dates.length - 1];
+    }
 }
 
 // --- 6. LÓGICA PRINCIPAL DE INICIALIZACIÓN ---
@@ -516,6 +529,7 @@ async function initializeApp(accessToken) {
         const athleteInfo = activities.find(a => a.athlete)?.athlete || { firstname: 'Atleta' };
         athleteName.textContent = `Dashboard de ${athleteInfo.firstname}`;
 
+        allActivities = activities; // Save all for filtering
         renderDashboard(activities);
     } catch (error) {
         handleError("Error al inicializar la aplicación", error);
@@ -552,3 +566,26 @@ async function handleAuth() {
 loginButton.addEventListener('click', redirectToStravaAuthorize);
 logoutButton.addEventListener('click', logout);
 handleAuth();
+
+document.getElementById('apply-date-filter').addEventListener('click', () => {
+    dateFilterFrom = document.getElementById('date-from').value || null;
+    dateFilterTo = document.getElementById('date-to').value || null;
+    renderDashboard(allActivities);
+});
+document.getElementById('reset-date-filter').addEventListener('click', () => {
+    dateFilterFrom = null;
+    dateFilterTo = null;
+    document.getElementById('date-from').value = '';
+    document.getElementById('date-to').value = '';
+    renderDashboard(allActivities);
+});
+
+function filterActivitiesByDate(activities) {
+    if (!dateFilterFrom && !dateFilterTo) return activities;
+    return activities.filter(act => {
+        const date = act.start_date_local.substring(0, 10);
+        if (dateFilterFrom && date < dateFilterFrom) return false;
+        if (dateFilterTo && date > dateFilterTo) return false;
+        return true;
+    });
+}
