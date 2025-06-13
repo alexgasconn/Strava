@@ -1,9 +1,12 @@
 const params = new URLSearchParams(window.location.search);
 const activityId = params.get('id');
+console.log(`Activity ID: ${activityId}`);
 const detailsDiv = document.getElementById('activity-details');
 
 async function fetchActivity() {
     const accessToken = localStorage.getItem('strava_access_token');
+    console.log(`Access Token: ${accessToken}`);
+
     if (!accessToken) {
         detailsDiv.innerHTML = "<p>You must be logged in to view activity details.</p>";
         return;
@@ -13,7 +16,10 @@ async function fetchActivity() {
         const response = await fetch(`/api/strava-activity/${activityId}`, {
             headers: { 'Authorization': `Bearer ${accessToken}` }
         });
-        if (!response.ok) throw new Error("Failed to fetch activity details");
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`HTTP ${response.status}: ${text}`);
+        }
         const act = await response.json();
         // Show all fields in a table
         detailsDiv.innerHTML = `<table class="df-table">
