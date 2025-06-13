@@ -159,76 +159,68 @@ async function fetchActivity() {
       ? `${act.start_latlng[0].toFixed(5)}, ${act.start_latlng[1].toFixed(5)}`
       : 'N/A';
 
-    const moveRatio = act.moving_time && act.elapsed_time
-      ? (act.moving_time / act.elapsed_time).toFixed(2)
-      : 'N/A';
-
     headerDiv.innerHTML = `
       <h2>${act.name || 'Activity'}</h2>
       <table class="df-table activity-summary">
       <tr>
-      <th>Date</th>
-      <td>${date}</td>
+        <th>Date</th>
+        <td>${date}</td>
       </tr>
       <tr>
-      <th>Type</th>
-      <td>${type}</td>
+        <th>Type</th>
+        <td>${type}</td>
       </tr>
       <tr>
-      <th>Distance</th>
-      <td>${distKm} km</td>
+        <th>Distance</th>
+        <td>${distKm} km</td>
       </tr>
       <tr>
-      <th>Moving Time</th>
-      <td>${duration}</td>
+        <th>Moving Time</th>
+        <td>${duration}</td>
       </tr>
       <tr>
-      <th>Elapsed Time</th>
-      <td>${elapsed}</td>
+        <th>Elapsed Time</th>
+        <td>${elapsed}</td>
       </tr>
       <tr>
-      <th>Move Ratio</th>
-      <td>${moveRatio}</td>
+        <th>Pace</th>
+        <td>${pace} min/km</td>
       </tr>
       <tr>
-      <th>Pace</th>
-      <td>${pace} min/km</td>
+        <th>Elevation Gain</th>
+        <td>${elevGain} m</td>
       </tr>
       <tr>
-      <th>Elevation Gain</th>
-      <td>${elevGain} m</td>
+        <th>Avg HR</th>
+        <td>${avgHr}</td>
       </tr>
       <tr>
-      <th>Avg HR</th>
-      <td>${avgHr}</td>
+        <th>Max HR</th>
+        <td>${maxHr}</td>
       </tr>
       <tr>
-      <th>Max HR</th>
-      <td>${maxHr}</td>
+        <th>Avg Cadence</th>
+        <td>${avgCad}</td>
       </tr>
       <tr>
-      <th>Avg Cadence</th>
-      <td>${avgCad}</td>
+        <th>Max Cadence</th>
+        <td>${maxCad}</td>
       </tr>
       <tr>
-      <th>Max Cadence</th>
-      <td>${maxCad}</td>
+        <th>Calories</th>
+        <td>${calories}</td>
       </tr>
       <tr>
-      <th>Calories</th>
-      <td>${calories}</td>
+        <th>Gear</th>
+        <td>${gear}</td>
       </tr>
       <tr>
-      <th>Gear</th>
-      <td>${gear}</td>
+        <th>Device</th>
+        <td>${device}</td>
       </tr>
       <tr>
-      <th>Device</th>
-      <td>${device}</td>
-      </tr>
-      <tr>
-      <th>Start Location</th>
-      <td>${location}</td>
+        <th>Start Location</th>
+        <td>${location}</td>
       </tr>
       </table>
     `;
@@ -334,77 +326,60 @@ async function fetchActivity() {
         </tbody></table>`;
     }
 
-    // HR RANGE CHART - Heart Rate range (min/max) and average by distance
-    // HR RANGE CHART - Heart Rate range using full stream data
-    const [hrStream, distStream] = await Promise.all([
-      fetchStream('heartrate'),
-      fetchStream('distance')
-    ]);
-    const bins = binHRByDistance(distStream, hrStream, 100); // 100m bins
-
-    plotRangeChart('hr-range-chart', bins, 'Heart Rate', 'rgba(255,99,132,1)', 'Heart Rate (bpm)');
-
-    const paceBins = binStreamByDistance(distanceStream, paceStream, 100);
-    plotRangeChart('pace-range-chart', paceBins, 'Pace', 'rgba(54,162,235,1)', 'Pace (min/km)');
-  } catch (err) {
-    headerDiv.innerHTML = `<p>Error: ${err.message}</p>`;
-  }
-}
-fetchActivity();
-
-function plotRangeChart(canvasId, bins, label, color, yLabel) {
-  const labels = bins.map(b => (b.distance / 1000).toFixed(2)); // km
-  const minVals = bins.map(b => b.min);
-  const maxVals = bins.map(b => b.max);
-  const avgVals = bins.map(b => b.avg);
-
-  const ctx = document.getElementById(canvasId).getContext('2d');
-  if (window.charts && window.charts[canvasId]) {
-    window.charts[canvasId].destroy();
-  }
-  window.charts = window.charts || {};
-  window.charts[canvasId] = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: labels,
-      datasets: [
-        {
-          label: `${label} Max`,
-          data: maxVals,
-          fill: '-1',
-          backgroundColor: color + '33', // semi-transparent
-          borderColor: 'rgba(0,0,0,0)',
-          pointRadius: 0,
-          order: 1
-        },
-        {
-          label: `${label} Min`,
-          data: minVals,
-          fill: false,
-          borderColor: 'rgba(0,0,0,0)',
-          pointRadius: 0,
-          order: 1
-        },
-        {
-          label: `${label} Avg`,
-          data: avgVals,
-          borderColor: color,
-          backgroundColor: color + '22',
-          fill: false,
-          pointRadius: 0,
-          borderWidth: 2,
-          order: 2
-        }
-      ]
-    },
-    options: {
-      plugins: {
-        title: { display: true, text: `${label} Range by Distance` }
-      },
-      scales: {
-        x: { title: { display: true, text: 'Distance (km)' } },
-        y: { title: { display: true, text: yLabel } }
-      }
+    // HR RANGE CHART - Heart Rate range (min/max/avg) by distance bins using stream data
+    // Create containers for charts if not present
+    let hrChartDiv = document.getElementById('hr-range-chart');
+    if (!hrChartDiv) {
+      hrChartDiv = document.createElement('canvas');
+      hrChartDiv.id = 'hr-range-chart';
+      splitsSection.appendChild(hrChartDiv);
     }
-  });
-}
+    let paceChartDiv = document.getElementById('pace-range-chart');
+    if (!paceChartDiv) {
+      paceChartDiv = document.createElement('canvas');
+      paceChartDiv.id = 'pace-range-chart';
+      splitsSection.appendChild(paceChartDiv);
+    }
+
+    // Fetch streams
+    const [hrStream, distStream, timeStream] = await Promise.all([
+      fetchStream('heartrate'),
+      fetchStream('distance'),
+      fetchStream('time')
+    ]);
+
+    // Bin HR by distance (e.g. every 100m)
+    const hrBins = binHRByDistance(distStream, hrStream, 100);
+
+    // Plot HR range chart (area between min/max, avg as line)
+    plotRangeChart('hr-range-chart', hrBins, 'Heart Rate', 'rgba(255,99,132,1)', 'Heart Rate (bpm)');
+
+    // Pace: calculate instantaneous pace (min/km) from distance and time streams
+    // We'll use a moving window of N points (e.g. 10) to smooth pace
+    function calcPaceStream(distance, time, window = 10) {
+      const paceArr = [];
+      for (let i = 0; i < distance.length; i++) {
+      if (i < window || !Number.isFinite(distance[i]) || !Number.isFinite(time[i])) {
+        paceArr.push(null);
+        continue;
+      }
+      const distDelta = distance[i] - distance[i - window];
+      const timeDelta = time[i] - time[i - window];
+      if (distDelta > 0 && timeDelta > 0) {
+        const speed = distDelta / timeDelta; // m/s
+        const pace = 1000 / speed / 60; // min/km
+        paceArr.push(pace);
+      } else {
+        paceArr.push(null);
+      }
+      }
+      return paceArr;
+    }
+
+    const paceStream = calcPaceStream(distStream, timeStream, 10);
+
+    // Bin pace by distance (same bins as HR)
+    const paceBins = binStreamByDistance(distStream, paceStream, 100);
+
+    // Plot Pace range chart (area between min/max, avg as line)
+    plotRangeChart('pace-range-chart', paceBins, 'Pace', 'rgba(54,162,235,1)', 'Pace (min/km)');
