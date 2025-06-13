@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en"></html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard de Strava</title>
-    <!-- Carga de librerías y nuestro CSS -->
+    <title>Strava Dashboard</title>
+    <!-- Load libraries and our CSS -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/cal-heatmap@4.2.2/dist/cal-heatmap.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -14,18 +14,18 @@
 </head>
 <body>
     <div class="container">
-        <!-- SECCIÓN DE LOGIN -->
+        <!-- LOGIN SECTION -->
         <div id="login-section">
-            <h1>Tu Rendimiento, Analizado.</h1>
-            <p>Conecta tu cuenta de Strava para visualizar tu progreso y descubrir nuevos insights.</p>
-            <button id="login-button">Conectar con Strava</button>
+            <h1>Your Performance, Analyzed.</h1>
+            <p>Connect your Strava account to visualize your progress and discover new insights.</p>
+            <button id="login-button">Connect with Strava</button>
         </div>
 
-        <!-- SECCIÓN PRINCIPAL DE LA APP -->
+        <!-- MAIN APP SECTION -->
         <div id="app-section" class="hidden">
             <header>
                 <h1 id="athlete-name"></h1>
-                <button id="logout-button">Cerrar Sesión</button>
+                <button id="logout-button">Log Out</button>
                 <div id="date-filter" style="margin-bottom:1em;">
                     <label>From: <input type="date" id="date-from"></label>
                     <label>To: <input type="date" id="date-to"></label>
@@ -35,35 +35,35 @@
             </header>
 
             <main>
-                <!-- Tarjetas de Resumen -->
+                <!-- Summary Cards -->
                 <div id="summary-cards" class="summary-grid"></div>
 
-                <!-- Calendario de Consistencia -->
+                <!-- Consistency Calendar -->
                 <div class="chart-container full-width">
-                    <h3>Consistencia del Último Año</h3>
+                    <h3>Consistency (Last Year)</h3>
                     <div id="cal-heatmap"></div>
                 </div>
 
-                <!-- Rejilla para los gráficos detallados -->
+                <!-- Grid for detailed charts -->
                 <div class="charts-grid">
                     <div class="chart-container">
-                        <h3>Actividades por Tipo</h3>
+                        <h3>Activities by Type</h3>
                         <canvas id="activity-type-barchart"></canvas>
                     </div>
                     <div class="chart-container">
-                        <h3>Distancia Mensual (Último Año)</h3>
+                        <h3>Monthly Distance (Last Year)</h3>
                         <canvas id="monthly-distance-chart"></canvas>
                     </div>
                     <div class="chart-container">
-                        <h3>Ritmo vs. Distancia (Carreras)</h3>
+                        <h3>Pace vs. Distance (Runs)</h3>
                         <canvas id="pace-vs-distance-chart"></canvas>
                     </div>
                     <div class="chart-container">
-                        <h3>Distribución de Distancias</h3>
+                        <h3>Distance Distribution</h3>
                         <canvas id="distance-histogram"></canvas>
                     </div>
                     <div class="chart-container">
-                        <h3>VO₂max estimado a lo largo del tiempo</h3>
+                        <h3>Estimated VO₂max Over Time</h3>
                         <canvas id="vo2max-over-time"></canvas>
                     </div>
                     <div class="chart-container">
@@ -71,7 +71,7 @@
                         <ul id="race-list"></ul>
                     </div>
                     <div class="chart-container">
-                        <h3>ATL, CTL y TSB (Esfuerzo)</h3>
+                        <h3>ATL, CTL & TSB (Effort)</h3>
                         <canvas id="ctl-atl-tsb"></canvas>
                     </div>
                     <div class="chart-container">
@@ -82,14 +82,14 @@
             </main>
         </div>
 
-        <!-- PANTALLA DE CARGA -->
+        <!-- LOADING SCREEN -->
         <div id="loading-overlay" class="hidden">
             <div class="spinner"></div>
             <p id="loading-message"></p>
         </div>
     </div>
 
-    <!-- Carga de nuestro único script -->
+    <!-- Load our only script -->
     <script src="script.js"></script>
 </body>
 </html>

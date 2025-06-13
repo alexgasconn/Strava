@@ -1,8 +1,8 @@
 // =================================================================
-// script.js - VERSIÓN "TODO EN UNO" (COMPLETA Y CORREGIDA)
+// script.js - "ALL-IN-ONE" VERSION (COMPLETE AND FIXED)
 // =================================================================
 
-// --- 1. CONFIGURACIÓN Y ESTADO GLOBAL ---
+// --- 1. CONFIGURATION & GLOBAL STATE ---
 const STRAVA_CLIENT_ID = '143540';
 const REDIRECT_URI = window.location.origin + window.location.pathname;
 const CACHE_KEY = 'strava_dashboard_data_v1';
@@ -12,7 +12,7 @@ let dateFilterFrom = null;
 let dateFilterTo = null;
 let allActivities = []; // Store all activities for filtering
 
-// --- 2. REFERENCIAS AL DOM ---
+// --- 2. DOM REFERENCES ---
 const loginSection = document.getElementById('login-section');
 const appSection = document.getElementById('app-section');
 const loadingOverlay = document.getElementById('loading-overlay');
@@ -21,7 +21,7 @@ const loginButton = document.getElementById('login-button');
 const logoutButton = document.getElementById('logout-button');
 const athleteName = document.getElementById('athlete-name');
 
-// --- 3. FUNCIONES DE UI ---
+// --- 3. UI FUNCTIONS ---
 function showLoading(message) { loadingMessage.textContent = message; loadingOverlay.classList.remove('hidden'); }
 function hideLoading() { loadingOverlay.classList.add('hidden'); }
 function handleError(message, error) { console.error(message, error); hideLoading(); alert(`Error: ${message}.`); }
@@ -33,7 +33,7 @@ function createChart(canvasId, config) {
     charts[canvasId] = new Chart(canvas, config);
 }
 
-// --- 4. LÓGICA DE AUTENTICACIÓN (LAS FUNCIONES QUE FALTABAN) ---
+// --- 4. AUTHENTICATION LOGIC ---
 
 function redirectToStravaAuthorize() {
     const scope = 'read,activity:read_all';
@@ -46,16 +46,14 @@ function logout() {
     window.location.reload();
 }
 
-// --- 5. FUNCIONES DE RENDERIZADO ---
+// --- 5. RENDERING FUNCTIONS ---
 
-// REEMPLAZA ESTA FUNCIÓN ENTERA
 function renderDashboard(activities) {
     const filtered = filterActivitiesByDate(activities);
-    // --- Filtrar solo actividades de running (incluye Trail Run, etc) ---
+    // --- Filter only running activities (includes Trail Run, etc) ---
     const runs = filtered.filter(a => a.type && a.type.includes('Run'));
-    console.log(`Total actividades de running: ${runs.length}`);
-    console.log(`Actividades de running:`, runs);
-
+    console.log(`Total running activities: ${runs.length}`);
+    console.log(`Running activities:`, runs);
 
     // 1. Get all distances
     const allDistances = runs.map(a => a.distance);
@@ -72,18 +70,18 @@ function renderDashboard(activities) {
         }
     });
 
-    // --- Tarjetas de Resumen ---
+    // --- Summary Cards ---
     const summaryContainer = document.getElementById('summary-cards');
     if (summaryContainer) {
         summaryContainer.innerHTML = `
-            <div class="card"><h3>Actividades</h3><p>${runs.length}</p></div>
-            <div class="card"><h3>Distancia Total</h3><p>${(runs.reduce((s, a) => s + a.distance, 0) / 1000).toFixed(0)} km</p></div>
-            <div class="card"><h3>Tiempo Total</h3><p>${(runs.reduce((s, a) => s + a.moving_time, 0) / 3600).toFixed(1)} h</p></div>
-            <div class="card"><h3>Desnivel Total</h3><p>${runs.reduce((s, a) => s + a.total_elevation_gain, 0).toLocaleString()} m</p></div>
+            <div class="card"><h3>Activities</h3><p>${runs.length}</p></div>
+            <div class="card"><h3>Total Distance</h3><p>${(runs.reduce((s, a) => s + a.distance, 0) / 1000).toFixed(0)} km</p></div>
+            <div class="card"><h3>Total Time</h3><p>${(runs.reduce((s, a) => s + a.moving_time, 0) / 3600).toFixed(1)} h</p></div>
+            <div class="card"><h3>Total Elevation</h3><p>${runs.reduce((s, a) => s + a.total_elevation_gain, 0).toLocaleString()} m</p></div>
         `;
     }
 
-    // --- Heatmap de Consistencia (CalHeatmap) ---
+    // --- Consistency Heatmap (CalHeatmap) ---
     const cal = new CalHeatmap();
     const aggregatedData = runs.reduce((acc, act) => {
         const date = act.start_date_local.substring(0, 10);
@@ -104,7 +102,7 @@ function renderDashboard(activities) {
         });
     }
 
-    // --- Gráfico de Barras: Tipos de Running (workout_type) ---
+    // --- Bar Chart: Running Types (workout_type) ---
     // workout_type: 0=Workout, 1=Race, 2=Long run, 3=Workout
     const workoutTypeLabels = ['Workout', 'Race', 'Long Run', 'Workout'];
     const workoutTypeCounts = [0, 0, 0, 0];
@@ -119,7 +117,7 @@ function renderDashboard(activities) {
             data: {
                 labels: workoutTypeLabels,
                 datasets: [{
-                    label: '# Actividades',
+                    label: '# Activities',
                     data: workoutTypeCounts,
                     backgroundColor: 'rgba(252, 82, 0, 0.7)'
                 }]
@@ -128,8 +126,8 @@ function renderDashboard(activities) {
         });
     }
 
-    // --- Gráfico de Líneas y Barras: Distancia Mensual + Número de Corridas ---
-    // Agrupa y suma la distancia y cuenta actividades por mes
+    // --- Line & Bar Chart: Monthly Distance + Number of Runs ---
+    // Group and sum distance and count activities per month
     const monthlyDistanceMap = {};
     const monthlyCountMap = {};
     runs.forEach(act => {
@@ -153,7 +151,7 @@ function renderDashboard(activities) {
                 datasets: [
                     {
                         type: 'line',
-                        label: 'Distancia (km)',
+                        label: 'Distance (km)',
                         data: monthlyDistances,
                         borderColor: '#FC5200',
                         backgroundColor: 'rgba(252,82,0,0.15)',
@@ -164,7 +162,7 @@ function renderDashboard(activities) {
                     },
                     {
                         type: 'bar',
-                        label: '# Corridas',
+                        label: '# Runs',
                         data: monthlyCounts,
                         backgroundColor: 'rgba(54,162,235,0.25)',
                         borderColor: 'rgba(54,162,235,0.5)',
@@ -179,12 +177,12 @@ function renderDashboard(activities) {
                     y: {
                         type: 'linear',
                         position: 'left',
-                        title: { display: true, text: 'Distancia (km)' }
+                        title: { display: true, text: 'Distance (km)' }
                     },
                     y1: {
                         type: 'linear',
                         position: 'right',
-                        title: { display: true, text: '# Corridas' },
+                        title: { display: true, text: '# Runs' },
                         grid: { drawOnChartArea: false }
                     }
                 }
@@ -192,27 +190,27 @@ function renderDashboard(activities) {
         });
     }
 
-    // --- Scatter Plot: Ritmo vs Distancia (Running) ---
+    // --- Scatter Plot: Pace vs Distance (Running) ---
     const paceVsDistanceCanvas = document.getElementById('pace-vs-distance-chart');
     if (paceVsDistanceCanvas && !charts['pace-vs-distance-chart']) {
         charts['pace-vs-distance-chart'] = new Chart(paceVsDistanceCanvas, {
             type: 'scatter',
             data: {
                 datasets: [{
-                    label: 'Carreras',
+                    label: 'Runs',
                     data: runs.filter(r => r.distance > 0).map(r => ({ x: r.distance / 1000, y: r.moving_time / (r.distance / 1000) })),
                     backgroundColor: 'rgba(252, 82, 0, 0.7)'
                 }]
             },
-            options: { scales: { x: { title: { display: true, text: 'Distancia (km)' } }, y: { title: { display: true, text: 'Ritmo (seg/km)' } } } }
+            options: { scales: { x: { title: { display: true, text: 'Distance (km)' } }, y: { title: { display: true, text: 'Pace (sec/km)' } } } }
         });
     }
 
-    // --- Histograma de distancias (bin size configurable por variable) ---
-    const HISTOGRAM_BIN_SIZE_KM = 1; // <-- Cambia este valor para ajustar el tamaño del bin (en km)
+    // --- Distance Histogram (bin size configurable by variable) ---
+    const HISTOGRAM_BIN_SIZE_KM = 1; // <-- Change this value to adjust bin size (in km)
     const histogramCanvas = document.getElementById('distance-histogram');
     if (histogramCanvas) {
-        // Limpia el gráfico anterior si existe
+        // Clear previous chart if exists
         if (charts['distance-histogram']) {
             charts['distance-histogram'].destroy();
             charts['distance-histogram'] = null;
@@ -231,7 +229,7 @@ function renderDashboard(activities) {
             data: {
                 labels: bins.map((_, i) => `${(i * binSize).toFixed(1)}-${((i + 1) * binSize).toFixed(1)}`),
                 datasets: [{
-                    label: '# Actividades',
+                    label: '# Activities',
                     data: bins,
                     backgroundColor: 'rgba(252, 82, 0, 0.5)'
                 }]
@@ -239,27 +237,27 @@ function renderDashboard(activities) {
             options: {
                 plugins: { legend: { display: false } },
                 scales: {
-                    x: { title: { display: true, text: `Distancia (bins de ${binSize} km)` } },
-                    y: { title: { display: true, text: 'Cantidad' } }
+                    x: { title: { display: true, text: `Distance (bins of ${binSize} km)` } },
+                    y: { title: { display: true, text: 'Count' } }
                 }
             }
         });
     }
 
-    // --- VO2max estimado por actividad y gráfico temporal ---
+    // --- Estimated VO2max per activity and time chart ---
 
-    // Cambia este valor por el máximo real del usuario si lo sabes:
-    const USER_MAX_HR = 195; // <-- Ajusta según tu perfil
+    // Change this value to your real max HR if you know it:
+    const USER_MAX_HR = 195; // <-- Adjust according to your profile
 
-    // 1. Calcular VO2max estimado por actividad
+    // 1. Calculate estimated VO2max per activity
     const vo2maxData = runs
         .filter(act => act.average_heartrate && act.moving_time > 0 && act.distance > 0)
         .map(act => {
             const dist_km = act.distance / 1000;
             const time_hr = act.moving_time / 3600;
             const speed_kmh = dist_km / time_hr;
-            // VO2 at pace (simplificado): 3.5 + 12 * velocidad_km_h / 60
-            // O usa Daniels: VO2 = (vel_m_min * 0.2) + 3.5
+            // VO2 at pace (simplified): 3.5 + 12 * speed_km_h / 60
+            // Or use Daniels: VO2 = (vel_m_min * 0.2) + 3.5
             const vel_m_min = (act.distance / act.moving_time) * 60;
             const vo2_at_pace = (vel_m_min * 0.2) + 3.5;
             const avg_hr = act.average_heartrate;
@@ -271,7 +269,7 @@ function renderDashboard(activities) {
             };
         });
 
-    // 2. Agrupar por año-mes y calcular media mensual
+    // 2. Group by year-month and calculate monthly average
     const vo2maxByMonth = {};
     vo2maxData.forEach(d => {
         if (!vo2maxByMonth[d.yearMonth]) vo2maxByMonth[d.yearMonth] = [];
@@ -283,7 +281,7 @@ function renderDashboard(activities) {
         return vals.reduce((a, b) => a + b, 0) / vals.length;
     });
 
-    // 3. Calcular media móvil (rolling mean) sobre los valores mensuales
+    // 3. Calculate rolling mean over monthly values
     function rollingMean(arr, windowSize) {
         const result = [];
         for (let i = 0; i < arr.length; i++) {
@@ -293,16 +291,16 @@ function renderDashboard(activities) {
         }
         return result;
     }
-    const ROLLING_WINDOW = 1; // 3 meses
+    const ROLLING_WINDOW = 1; // 3 months
     const vo2maxRolling = rollingMean(vo2maxMonthlyAvg, ROLLING_WINDOW);
 
-    // 4. Graficar
+    // 4. Chart
     createChart('vo2max-over-time', {
         type: 'line',
         data: {
             labels: months,
             datasets: [{
-                label: `VO₂max estimado (media móvil ${ROLLING_WINDOW} meses)`,
+                label: `Estimated VO₂max (rolling mean ${ROLLING_WINDOW} months)`,
                 data: vo2maxRolling,
                 fill: true,
                 borderColor: 'rgba(54, 162, 235, 1)',
@@ -312,29 +310,29 @@ function renderDashboard(activities) {
             }]
         },
         options: {
-            plugins: { title: { display: true, text: 'VO₂max estimado a lo largo del tiempo' } },
+            plugins: { title: { display: true, text: 'Estimated VO₂max over time' } },
             scales: {
-                x: { title: { display: true, text: 'Año-Mes' } },
+                x: { title: { display: true, text: 'Year-Month' } },
                 y: { title: { display: true, text: 'VO₂max' } }
             }
         }
     });
 
-    // --- Lista de carreras (workout_type === 1) ---
+    // --- Race List (workout_type === 1) ---
     const raceListContainer = document.getElementById('race-list');
     if (raceListContainer) {
         const races = runs.filter(act => act.workout_type === 1);
         if (races.length === 0) {
-            raceListContainer.innerHTML = "<p>No hay carreras registradas.</p>";
+            raceListContainer.innerHTML = "<p>No races found.</p>";
         } else {
             raceListContainer.innerHTML = `
                 <table>
                     <thead>
                         <tr>
-                            <th>Fecha</th>
-                            <th>Distancia (km)</th>
-                            <th>Tiempo</th>
-                            <th>Ritmo (min/km)</th>
+                            <th>Date</th>
+                            <th>Distance (km)</th>
+                            <th>Time</th>
+                            <th>Pace (min/km)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -360,9 +358,9 @@ function renderDashboard(activities) {
         }
     }
 
-    // --- ATL, CTL y TSB usando esfuerzo ---
+    // --- ATL, CTL and TSB using effort ---
 
-    // 1. Prepara los datos diarios de esfuerzo
+    // 1. Prepare daily effort data
     const effortByDay = {};
     runs.forEach(act => {
         const date = act.start_date_local.substring(0, 10);
@@ -370,9 +368,9 @@ function renderDashboard(activities) {
         effortByDay[date] = (effortByDay[date] || 0) + effort;
     });
 
-    // 2. Genera el rango de fechas completo
+    // 2. Generate full date range
     const allEffortDays = Object.keys(effortByDay).sort();
-    if (allEffortDays.length === 0) return; // No hay datos
+    if (allEffortDays.length === 0) return; // No data
 
     const startDate = new Date(allEffortDays[0]);
     const endDate = new Date(allEffortDays[allEffortDays.length - 1]);
@@ -381,10 +379,10 @@ function renderDashboard(activities) {
         days.push(d.toISOString().slice(0, 10));
     }
 
-    // 3. Vector de esfuerzo diario (rellena con 0 si no hay actividad)
+    // 3. Daily effort vector (fill with 0 if no activity)
     const dailyEffort = days.map(date => effortByDay[date] || 0);
 
-    // 4. Función para media exponencial móvil
+    // 4. Exponential moving average function
     function expMovingAvg(arr, lambda) {
         const result = [];
         let prev = arr[0] || 0;
@@ -396,12 +394,12 @@ function renderDashboard(activities) {
         return result;
     }
 
-    // 5. Calcula ATL (7 días), CTL (42 días), TSB
+    // 5. Calculate ATL (7 days), CTL (42 days), TSB
     const atl = expMovingAvg(dailyEffort, 1 / 7);
     const ctl = expMovingAvg(dailyEffort, 1 / 42);
     const tsb = ctl.map((c, i) => c - atl[i]);
 
-    // 6. Grafica los tres en el mismo eje Y (izquierda)
+    // 6. Chart all three on the same Y axis (left)
     createChart('ctl-atl-tsb', {
         type: 'line',
         data: {
@@ -434,16 +432,15 @@ function renderDashboard(activities) {
             ]
         },
         options: {
-            plugins: { title: { display: true, text: 'ATL, CTL y TSB (Esfuerzo diario)' } },
+            plugins: { title: { display: true, text: 'ATL, CTL and TSB (Daily Effort)' } },
             scales: {
-                x: { title: { display: true, text: 'Fecha' } },
-                y: { title: { display: true, text: 'Carga (ATL/CTL/TSB)' } }
+                x: { title: { display: true, text: 'Date' } },
+                y: { title: { display: true, text: 'Load (ATL/CTL/TSB)' } }
             }
         }
     });
 
-
-    // --- 7. RENDIMIENTO POR EQUIPO (gear) ---
+    // --- 7. PERFORMANCE BY GEAR ---
 
     // 1. Build a mapping from gear_id to gear_id (since only gear_id is available)
     // If you have gear names, you can enhance this later.
@@ -480,7 +477,7 @@ function renderDashboard(activities) {
                 data: {
                     labels: allMonths,
                     datasets: [{
-                        label: `Distancia por ${data.gear}`,
+                        label: `Distance for ${data.gear}`,
                         data: data.monthlyDistances,
                         borderColor: `hsl(${(index * 360) / gearDistanceData.length}, 100%, 50%)`,
                         fill: false,
@@ -488,20 +485,20 @@ function renderDashboard(activities) {
                     }]
                 },
                 options: {
-                    plugins: { title: { display: true, text: `Distancia mensual por ${data.gear}` } },
+                    plugins: { title: { display: true, text: `Monthly distance for ${data.gear}` } },
                     scales: {
-                        x: { title: { display: true, text: 'Mes' } },
-                        y: { title: { display: true, text: 'Distancia (km)' } }
+                        x: { title: { display: true, text: 'Month' } },
+                        y: { title: { display: true, text: 'Distance (km)' } }
                     }
                 }
             });
         }
     });
 
-    // --- Gráfico de áreas apiladas: Distancia acumulada por equipo ---
+    // --- Stacked Area Chart: Cumulative Distance by Gear ---
     const stackedAreaCanvas = document.getElementById('stacked-area-chart');
     if (stackedAreaCanvas) {
-        // Prepara los datos para el gráfico de áreas apiladas
+        // Prepare data for stacked area chart
         const stackedData = allMonths.map((month) => {
             const monthData = { x: month, y: 0 };
             allGears.forEach((gear, gearIdx) => {
@@ -525,10 +522,10 @@ function renderDashboard(activities) {
                 }))
             },
             options: {
-                plugins: { title: { display: true, text: 'Distancia acumulada por equipo' } },
+                plugins: { title: { display: true, text: 'Cumulative distance by gear' } },
                 scales: {
-                    x: { title: { display: true, text: 'Mes' } },
-                    y: { title: { display: true, text: 'Distancia (km)' } }
+                    x: { title: { display: true, text: 'Month' } },
+                    y: { title: { display: true, text: 'Distance (km)' } }
                 }
             }
         });
@@ -543,7 +540,7 @@ function renderDashboard(activities) {
     }
 }
 
-// --- 6. LÓGICA PRINCIPAL DE INICIALIZACIÓN ---
+// --- 6. MAIN INITIALIZATION LOGIC ---
 async function initializeApp(accessToken) {
     try {
         let activities;
@@ -551,22 +548,22 @@ async function initializeApp(accessToken) {
         if (cachedActivities) {
             activities = JSON.parse(cachedActivities);
         } else {
-            showLoading('Obteniendo historial de actividades...');
+            showLoading('Fetching activity history...');
             const response = await fetch('/api/strava-activities', { headers: { 'Authorization': `Bearer ${accessToken}` } });
-            if (!response.ok) throw new Error((await response.json()).error || 'Fallo en API');
+            if (!response.ok) throw new Error((await response.json()).error || 'API failure');
             activities = await response.json();
             localStorage.setItem(CACHE_KEY, JSON.stringify(activities));
         }
 
         loginSection.classList.add('hidden');
         appSection.classList.remove('hidden');
-        const athleteInfo = activities.find(a => a.athlete)?.athlete || { firstname: 'Atleta' };
-        athleteName.textContent = `Dashboard de ${athleteInfo.firstname}`;
+        const athleteInfo = activities.find(a => a.athlete)?.athlete || { firstname: 'Athlete' };
+        athleteName.textContent = `Dashboard for ${athleteInfo.firstname}`;
 
         allActivities = activities; // Save all for filtering
         renderDashboard(activities);
     } catch (error) {
-        handleError("Error al inicializar la aplicación", error);
+        handleError("Error initializing the app", error);
     } finally {
         hideLoading();
     }
@@ -577,7 +574,7 @@ async function handleAuth() {
     const code = params.get('code');
     let accessToken = localStorage.getItem('strava_access_token');
     if (code) {
-        showLoading('Autenticando...');
+        showLoading('Authenticating...');
         try {
             const response = await fetch('/api/strava-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
             if (!response.ok) throw new Error((await response.json()).error);
@@ -586,7 +583,7 @@ async function handleAuth() {
             localStorage.setItem('strava_access_token', accessToken);
             window.history.replaceState({}, '', window.location.pathname);
         } catch (error) {
-            return handleError('Fallo en la autenticación', error);
+            return handleError('Authentication failed', error);
         }
     }
     if (accessToken) {
@@ -596,7 +593,7 @@ async function handleAuth() {
     }
 }
 
-// --- PUNTO DE ENTRADA DE LA APP ---
+// --- APP ENTRY POINT ---
 loginButton.addEventListener('click', redirectToStravaAuthorize);
 logoutButton.addEventListener('click', logout);
 handleAuth();
