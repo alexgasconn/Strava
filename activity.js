@@ -13,7 +13,7 @@ async function fetchActivity() {
     }
     try {
         detailsDiv.innerHTML = "<p>Loading...</p>";
-        const response = await fetch(`/api/strava-activity/${activityId}`, {
+        const response = await fetch(`/api/strava-activity?id=${activityId}`, {
             headers: { 'Authorization': `Bearer ${accessToken}` }
         });
         if (!response.ok) {
