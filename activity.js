@@ -44,6 +44,38 @@ function decodePolyline(str) {
   return coordinates;
 }
 
+function binHRByDistance(distance_data, hr_data, binSize = 100) {
+  const bins = [];
+  let binStart = 0;
+  let binHRs = [];
+  for (let i = 0; i < distance_data.length; i++) {
+    if (distance_data[i] - binStart < binSize) {
+      if (typeof hr_data[i] === 'number') binHRs.push(hr_data[i]);
+    } else {
+      if (binHRs.length) {
+        bins.push({
+          distance: binStart + binSize / 2,
+          min: Math.min(...binHRs),
+          max: Math.max(...binHRs),
+          avg: binHRs.reduce((a, b) => a + b, 0) / binHRs.length
+        });
+      }
+      binStart += binSize;
+      binHRs = [hr_data[i]];
+    }
+  }
+  // Add last bin
+  if (binHRs.length) {
+    bins.push({
+      distance: binStart + binSize / 2,
+      min: Math.min(...binHRs),
+      max: Math.max(...binHRs),
+      avg: binHRs.reduce((a, b) => a + b, 0) / binHRs.length
+    });
+  }
+  return bins;
+}
+
 async function fetchActivity() {
   const accessToken = localStorage.getItem('strava_access_token');
   if (!accessToken) {
@@ -165,67 +197,67 @@ async function fetchActivity() {
     if (splits.length) {
       // Remove old charts if any
       ['chart-pace', 'chart-heartrate', 'chart-elevation'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.remove();
+        const el = document.getElementById(id);
+        if (el) el.remove();
       });
 
       // Create canvases
       ['pace', 'heartrate', 'elevation'].forEach(type => {
-      const canvas = document.createElement('canvas');
-      canvas.id = `chart-${type}`;
-      splitsSection.appendChild(canvas);
+        const canvas = document.createElement('canvas');
+        canvas.id = `chart-${type}`;
+        splitsSection.appendChild(canvas);
       });
 
       let cumulative = 0;
       const labels = splits.map(s => {
-      cumulative += s.distance;
-      return `${(cumulative / 1000).toFixed(2)} km`;
+        cumulative += s.distance;
+        return `${(cumulative / 1000).toFixed(2)} km`;
       });
       const paceData = splits.map(s => s.moving_time / (s.distance / 1000)); // min/km
       const hrData = splits.map(s => s.average_heartrate || null);
       const elevData = splits.map(s => s.elevation_difference || 0);
 
       new Chart(document.getElementById('chart-pace'), {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [{
-        label: 'Pace (min/km)',
-        data: paceData,
-        borderColor: '#FC5200',
-        fill: false,
-        tension: 0.2
-        }]
-      },
-      options: { scales: { y: { reverse: true } } }
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Pace (min/km)',
+            data: paceData,
+            borderColor: '#FC5200',
+            fill: false,
+            tension: 0.2
+          }]
+        },
+        options: { scales: { y: { reverse: true } } }
       });
 
       new Chart(document.getElementById('chart-heartrate'), {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [{
-        label: 'Heart Rate (bpm)',
-        data: hrData,
-        borderColor: '#0074D9',
-        fill: false,
-        tension: 0.2
-        }]
-      }
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Heart Rate (bpm)',
+            data: hrData,
+            borderColor: '#0074D9',
+            fill: false,
+            tension: 0.2
+          }]
+        }
       });
 
       new Chart(document.getElementById('chart-elevation'), {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [{
-        label: 'Elevation (m)',
-        data: elevData,
-        borderColor: '#2ECC40',
-        fill: false,
-        tension: 0.2
-        }]
-      }
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Elevation (m)',
+            data: elevData,
+            borderColor: '#2ECC40',
+            fill: false,
+            tension: 0.2
+          }]
+        }
       });
     }
 
@@ -243,6 +275,63 @@ async function fetchActivity() {
         </tr>`).join('')}
         </tbody></table>`;
     }
+
+    // HR RANGE CHART - Heart Rate range (min/max) and average by distance
+    const distance_data = splits.map(s => s.distance);
+    const hr_data = splits.map(s => s.average_heartrate);
+    // Prepare data
+    const bins = binHRByDistance(distance_data, hr_data, 100); // 100m bins
+    const labels = bins.map(b => b.distance / 1000); // in km
+    const minHR = bins.map(b => b.min);
+    const maxHR = bins.map(b => b.max);
+    const avgHR = bins.map(b => b.avg);
+
+    // Plot
+    const ctx = document.getElementById('hr-range-chart').getContext('2d');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'HR Range',
+            data: maxHR,
+            fill: '-1', // fill to previous dataset (minHR)
+            backgroundColor: 'rgba(255,99,132,0.2)',
+            borderColor: 'rgba(255,99,132,0.0)',
+            pointRadius: 0,
+            order: 1
+          },
+          {
+            label: 'HR Range',
+            data: minHR,
+            fill: false,
+            borderColor: 'rgba(255,99,132,0.0)',
+            pointRadius: 0,
+            order: 1
+          },
+          {
+            label: 'Average HR',
+            data: avgHR,
+            borderColor: 'rgba(54,162,235,1)',
+            backgroundColor: 'rgba(54,162,235,0.1)',
+            fill: false,
+            pointRadius: 0,
+            borderWidth: 2,
+            order: 2
+          }
+        ]
+      },
+      options: {
+        plugins: {
+          title: { display: true, text: 'Heart Rate Range by Distance' }
+        },
+        scales: {
+          x: { title: { display: true, text: 'Distance (km)' } },
+          y: { title: { display: true, text: 'Heart Rate (bpm)' } }
+        }
+      }
+    });
   } catch (err) {
     headerDiv.innerHTML = `<p>Error: ${err.message}</p>`;
   }
