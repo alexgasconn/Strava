@@ -79,7 +79,7 @@ async function fetchActivity() {
       L.polyline(coords, { color: '#FC5200', weight: 4 }).addTo(map);
     }
 
-    // SPLITS - User selectable split distance and additional charts for elevation and cadence
+    // SPLITS - User selectable split distance and additional charts for elevation and heart rate variability
     const splits = act.splits_metric || [];
     if (splits.length) {
       // Create split distance selector if not present
@@ -87,10 +87,10 @@ async function fetchActivity() {
       if (!splitSelector) {
       splitSelector = document.createElement('select');
       splitSelector.id = 'split-distance-selector';
-      [200, 250, 500, 1000, 5000].forEach(val => {
+      [100, 250, 500, 1000].forEach(val => {
         const opt = document.createElement('option');
         opt.value = val;
-        opt.textContent = val === 1609 ? '1 mile' : `${val} m`;
+        opt.textContent = `${val} m`;
         splitSelector.appendChild(opt);
       });
       splitsSection.prepend(splitSelector);
@@ -98,13 +98,13 @@ async function fetchActivity() {
 
       function renderSplitsCharts(splitDistance) {
       // Remove old charts if any
-      ['chart-pace', 'chart-heartrate', 'chart-elevation', 'chart-cadence'].forEach(id => {
+      ['chart-pace', 'chart-heartrate', 'chart-elevation', 'chart-hrv'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.remove();
       });
 
       // Create canvases
-      ['pace', 'heartrate', 'elevation', 'cadence'].forEach(type => {
+      ['pace', 'heartrate', 'elevation', 'hrv'].forEach(type => {
         const canvas = document.createElement('canvas');
         canvas.id = `chart-${type}`;
         splitsSection.appendChild(canvas);
@@ -112,13 +112,13 @@ async function fetchActivity() {
 
       // Aggregate splits by selected distance
       let aggSplits = [];
-      let temp = { distance: 0, time: 0, hr: 0, elev: 0, cadence: 0, count: 0 };
+      let temp = { distance: 0, time: 0, hr: 0, elev: 0, hrArr: [], count: 0 };
       splits.forEach(s => {
         temp.distance += s.distance;
         temp.time += s.moving_time;
         temp.hr += s.average_heartrate || 0;
         temp.elev += s.elevation_difference || 0;
-        temp.cadence += s.average_cadence || 0;
+        if (s.average_heartrate) temp.hrArr.push(s.average_heartrate);
         temp.count++;
         if (temp.distance >= splitDistance) {
         aggSplits.push({
@@ -126,9 +126,11 @@ async function fetchActivity() {
           time: temp.time,
           hr: temp.hr / temp.count,
           elev: temp.elev / temp.count,
-          cadence: temp.cadence / temp.count
+          hrv: temp.hrArr.length > 1
+          ? Math.max(...temp.hrArr) - Math.min(...temp.hrArr)
+          : 0
         });
-        temp = { distance: 0, time: 0, hr: 0, elev: 0, cadence: 0, count: 0 };
+        temp = { distance: 0, time: 0, hr: 0, elev: 0, hrArr: [], count: 0 };
         }
       });
       if (temp.count > 0) {
@@ -137,7 +139,9 @@ async function fetchActivity() {
         time: temp.time,
         hr: temp.hr / temp.count,
         elev: temp.elev / temp.count,
-        cadence: temp.cadence / temp.count
+        hrv: temp.hrArr.length > 1
+          ? Math.max(...temp.hrArr) - Math.min(...temp.hrArr)
+          : 0
         });
       }
 
@@ -145,7 +149,7 @@ async function fetchActivity() {
       const paceData = aggSplits.map(s => s.time / (s.distance / 1000)); // min/km
       const hrData = aggSplits.map(s => s.hr);
       const elevData = aggSplits.map(s => s.elev);
-      const cadenceData = aggSplits.map(s => s.cadence);
+      const hrvData = aggSplits.map(s => s.hrv);
 
       new Chart(document.getElementById('chart-pace'), {
         type: 'line',
@@ -190,14 +194,14 @@ async function fetchActivity() {
         }
       });
 
-      new Chart(document.getElementById('chart-cadence'), {
+      new Chart(document.getElementById('chart-hrv'), {
         type: 'line',
         data: {
         labels,
         datasets: [{
-          label: 'Cadence (rpm)',
-          data: cadenceData,
-          borderColor: '#B10DC9',
+          label: 'HR Variability (bpm)',
+          data: hrvData,
+          borderColor: '#FF851B',
           fill: false,
           tension: 0.2
         }]
