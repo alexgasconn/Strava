@@ -468,9 +468,6 @@ function renderDashboard(activities) {
     const stackedAreaCanvas = document.getElementById('stacked-area-chart');
     if (stackedAreaCanvas) {
         // Prepara los datos para el gráfico de áreas apiladas
-        const stackedData = allMonths.map((month, monthIdx) => {
-            const monthData = { x: month, y: 0 };
-            allGears.forEach((gear, gearIdx) => {
         const stackedData = allMonths.map((month) => {
             const monthData = { x: month, y: 0 };
             allGears.forEach((gear, gearIdx) => {
@@ -480,6 +477,7 @@ function renderDashboard(activities) {
             });
             return monthData;
         });
+        createChart('stacked-area-chart', {
             type: 'line',
             data: {
                 labels: allMonths,
