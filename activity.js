@@ -76,6 +76,40 @@ function binHRByDistance(distance_data, hr_data, binSize = 100) {
   return bins;
 }
 
+function binStreamByDistance(distanceArr, valueArr, binSize = 100) {
+  // distanceArr and valueArr must be same length
+  const bins = [];
+  let binStart = 0;
+  let binValues = [];
+  for (let i = 0; i < distanceArr.length; i++) {
+    if (distanceArr[i] - binStart < binSize) {
+      if (typeof valueArr[i] === 'number' && !isNaN(valueArr[i])) binValues.push(valueArr[i]);
+    } else {
+      if (binValues.length) {
+        bins.push({
+          distance: binStart + binSize / 2,
+          min: Math.min(...binValues),
+          max: Math.max(...binValues),
+          avg: binValues.reduce((a, b) => a + b, 0) / binValues.length
+        });
+      }
+      binStart += binSize;
+      binValues = [valueArr[i]];
+    }
+  }
+  // Add last bin
+  if (binValues.length) {
+    bins.push({
+      distance: binStart + binSize / 2,
+      min: Math.min(...binValues),
+      max: Math.max(...binValues),
+      avg: binValues.reduce((a, b) => a + b, 0) / binValues.length
+    });
+  }
+  return bins;
+}
+
+
 
 async function fetchStream(type) {
   const response = await fetch(`/api/strava-streams?id=${activityId}&type=${type}`, {
@@ -300,59 +334,69 @@ async function fetchActivity() {
     ]);
     const bins = binHRByDistance(distStream, hrStream, 100); // 100m bins
 
-    const labels = bins.map(b => b.distance / 1000); // in km
-    const minHR = bins.map(b => b.min);
-    const maxHR = bins.map(b => b.max);
-    const avgHR = bins.map(b => b.avg);
+    plotRangeChart('hr-range-chart', bins, 'Heart Rate', 'rgba(255,99,132,1)', 'Heart Rate (bpm)');
 
-    // Plot
-    const ctx = document.getElementById('hr-range-chart').getContext('2d');
-    new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: [
-          {
-            label: 'HR Range',
-            data: maxHR,
-            fill: '-1', // fill to previous dataset (minHR)
-            backgroundColor: 'rgba(255,99,132,0.2)',
-            borderColor: 'rgba(255,99,132,0.0)',
-            pointRadius: 0,
-            order: 1
-          },
-          {
-            label: 'HR Range',
-            data: minHR,
-            fill: false,
-            borderColor: 'rgba(255,99,132,0.0)',
-            pointRadius: 0,
-            order: 1
-          },
-          {
-            label: 'Average HR',
-            data: avgHR,
-            borderColor: 'rgba(54,162,235,1)',
-            backgroundColor: 'rgba(54,162,235,0.1)',
-            fill: false,
-            pointRadius: 0,
-            borderWidth: 2,
-            order: 2
-          }
-        ]
-      },
-      options: {
-        plugins: {
-          title: { display: true, text: 'Heart Rate Range by Distance' }
-        },
-        scales: {
-          x: { title: { display: true, text: 'Distance (km)' } },
-          y: { title: { display: true, text: 'Heart Rate (bpm)' } }
-        }
-      }
-    });
+    const paceBins = binStreamByDistance(distanceStream, paceStream, 100);
+    plotRangeChart('pace-range-chart', paceBins, 'Pace', 'rgba(54,162,235,1)', 'Pace (min/km)');
   } catch (err) {
     headerDiv.innerHTML = `<p>Error: ${err.message}</p>`;
   }
 }
 fetchActivity();
+
+function plotRangeChart(canvasId, bins, label, color, yLabel) {
+  const labels = bins.map(b => (b.distance / 1000).toFixed(2)); // km
+  const minVals = bins.map(b => b.min);
+  const maxVals = bins.map(b => b.max);
+  const avgVals = bins.map(b => b.avg);
+
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  if (window.charts && window.charts[canvasId]) {
+    window.charts[canvasId].destroy();
+  }
+  window.charts = window.charts || {};
+  window.charts[canvasId] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: `${label} Max`,
+          data: maxVals,
+          fill: '-1',
+          backgroundColor: color + '33', // semi-transparent
+          borderColor: 'rgba(0,0,0,0)',
+          pointRadius: 0,
+          order: 1
+        },
+        {
+          label: `${label} Min`,
+          data: minVals,
+          fill: false,
+          borderColor: 'rgba(0,0,0,0)',
+          pointRadius: 0,
+          order: 1
+        },
+        {
+          label: `${label} Avg`,
+          data: avgVals,
+          borderColor: color,
+          backgroundColor: color + '22',
+          fill: false,
+          pointRadius: 0,
+          borderWidth: 2,
+          order: 2
+        }
+      ]
+    },
+    options: {
+      plugins: {
+        title: { display: true, text: `${label} Range by Distance` }
+      },
+      scales: {
+        x: { title: { display: true, text: 'Distance (km)' } },
+        y: { title: { display: true, text: yLabel } }
+      }
+    }
+  });
+}
