@@ -722,7 +722,15 @@ function getRunHeatmapPoints(act) {
             coords.length - 1
         ];
         idxs.forEach(i => {
-            if (coords[i]) points.push([coords[i][0], coords[i][1]]);
+            if (
+                coords[i] &&
+                typeof coords[i][0] === 'number' &&
+                typeof coords[i][1] === 'number' &&
+                !isNaN(coords[i][0]) &&
+                !isNaN(coords[i][1])
+            ) {
+                points.push([coords[i][0], coords[i][1]]);
+            }
         });
     }
     return points;
