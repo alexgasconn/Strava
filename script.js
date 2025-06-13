@@ -538,6 +538,53 @@ function renderDashboard(activities) {
         document.getElementById('date-to').min = dates[0];
         document.getElementById('date-to').max = dates[dates.length - 1];
     }
+
+    const allRunsTable = document.getElementById('all-runs-table');
+    if (allRunsTable) {
+        if (runs.length === 0) {
+            allRunsTable.innerHTML = "<tr><td>No runs found.</td></tr>";
+        } else {
+            allRunsTable.innerHTML = `
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Date</th>
+                        <th>Distance (km)</th>
+                        <th>Time</th>
+                        <th>Pace (min/km)</th>
+                        <th>Elevation (m)</th>
+                        <th>Type</th>
+                        <th>Gear</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${runs.map(act => {
+                const distKm = (act.distance / 1000).toFixed(2);
+                const timeSec = act.moving_time;
+                const h = Math.floor(timeSec / 3600);
+                const m = Math.floor((timeSec % 3600) / 60);
+                const s = timeSec % 60;
+                const timeStr = `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                const pace = act.distance > 0 ? (act.moving_time / 60) / (act.distance / 1000) : 0;
+                const paceStr = pace ? `${Math.floor(pace)}:${Math.round((pace % 1) * 60).toString().padStart(2, '0')}` : '-';
+                const type = typeof act.workout_type === 'number'
+                    ? (['Workout', 'Race', 'Long Run', 'Workout'][act.workout_type] || 'Other')
+                    : (act.type || '');
+                return `<tr>
+                    <td>${act.id}</td>
+                    <td>${act.start_date_local.substring(0, 10)}</td>
+                    <td>${distKm}</td>
+                    <td>${timeStr}</td>
+                    <td>${paceStr}</td>
+                    <td>${act.total_elevation_gain || 0}</td>
+                    <td>${type}</td>
+                    <td>${act.gear_id || ''}</td>
+                </tr>`;
+            }).join('')}
+                </tbody>
+            `;
+        }
+    }
 }
 
 // --- 6. MAIN INITIALIZATION LOGIC ---
