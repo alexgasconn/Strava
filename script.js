@@ -738,6 +738,7 @@ async function plotLocationBarChart(runs) {
     }
     // Prepare data for Chart.js
     const sorted = Object.entries(locationCounts).sort((a, b) => b[1] - a[1]).slice(0, 20);
+    console.log('Top 20 Locations:', sorted);
     const ctx = document.getElementById('location-bar-chart').getContext('2d');
     if (charts['location-bar-chart']) {
         charts['location-bar-chart'].destroy();
@@ -761,4 +762,4 @@ async function plotLocationBarChart(runs) {
 }
 
 // Usage: call this after you have your runs array
-// plotLocationBarChart(runs);
+plotLocationBarChart(runs);
