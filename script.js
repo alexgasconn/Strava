@@ -323,16 +323,21 @@ function renderDashboard(activities) {
     if (raceListContainer) {
         const races = runs.filter(act => act.workout_type === 1);
         if (races.length === 0) {
-            raceListContainer.innerHTML = "<p>No races found.</p>";
+            raceListContainer.innerHTML = "<tr><td>No races found.</td></tr>";
         } else {
             raceListContainer.innerHTML = `
-                <table>
+                <table class="df-table">
                     <thead>
                         <tr>
+                            <th>ID</th>
                             <th>Date</th>
                             <th>Distance (km)</th>
                             <th>Time</th>
                             <th>Pace (min/km)</th>
+                            <th>Elevation (m)</th>
+                            <th>Type</th>
+                            <th>Gear</th>
+                            <th>Details</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -345,11 +350,23 @@ function renderDashboard(activities) {
                 const timeStr = `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
                 const pace = act.distance > 0 ? (act.moving_time / 60) / (act.distance / 1000) : 0;
                 const paceStr = pace ? `${Math.floor(pace)}:${Math.round((pace % 1) * 60).toString().padStart(2, '0')}` : '-';
+                const type = typeof act.workout_type === 'number'
+                    ? (['Workout', 'Race', 'Long Run', 'Workout'][act.workout_type] || 'Other')
+                    : (act.type || '');
                 return `<tr>
+                                <td>${act.id}</td>
                                 <td>${act.start_date_local.substring(0, 10)}</td>
                                 <td>${distKm}</td>
                                 <td>${timeStr}</td>
                                 <td>${paceStr}</td>
+                                <td>${act.total_elevation_gain || 0}</td>
+                                <td>${type}</td>
+                                <td>${act.gear_id || ''}</td>
+                                <td>
+                                  <a href="activity.html?id=${act.id}" target="_blank">
+                                    <button>Details</button>
+                                  </a>
+                                </td>
                             </tr>`;
             }).join('')}
                     </tbody>
