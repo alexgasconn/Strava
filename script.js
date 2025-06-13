@@ -760,6 +760,3 @@ async function plotLocationBarChart(runs) {
         }
     });
 }
-
-// Usage: call this after you have your runs array
-plotLocationBarChart(runs);
