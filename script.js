@@ -613,7 +613,7 @@ function renderDashboard(activities) {
     plotLocationBarChart(runs);
 }
 
- // --- 6. INITIALIZATION AND AUTHENTICATION ---
+// --- 6. INITIALIZATION AND AUTHENTICATION ---
 async function initializeApp(accessToken) {
     try {
         let activities;
@@ -757,6 +757,47 @@ async function plotLocationBarChart(runs) {
         options: {
             indexAxis: 'y',
             plugins: { title: { display: true, text: 'Most Common Run Locations' } }
+        }
+    });
+}
+
+// Main function to process activities and plot location bar chart
+function plotLocationBarChart(activities) {
+    // Cuenta cuántas actividades hay por ciudad
+    const locationCounts = {};
+    activities.forEach(act => {
+        const loc = act.location_city || "Unknown";
+        locationCounts[loc] = (locationCounts[loc] || 0) + 1;
+    });
+
+    // Ordena y selecciona las 15 ciudades más frecuentes
+    const sorted = Object.entries(locationCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 15);
+
+    // Prepara los datos para Chart.js
+    const ctx = document.getElementById('location-bar-chart').getContext('2d');
+    if (window.charts && window.charts['location-bar-chart']) {
+        window.charts['location-bar-chart'].destroy();
+    }
+    window.charts = window.charts || {};
+    window.charts['location-bar-chart'] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: sorted.map(e => e[0]),
+            datasets: [{
+                label: 'Number of Activities',
+                data: sorted.map(e => e[1]),
+                backgroundColor: 'rgba(54, 162, 235, 0.7)'
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            plugins: { title: { display: true, text: 'Most Common Activity Locations' } },
+            scales: {
+                x: { title: { display: true, text: 'Number of Activities' } },
+                y: { title: { display: true, text: 'Location' } }
+            }
         }
     });
 }
