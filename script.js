@@ -911,3 +911,54 @@ function plotDistanceByDateCharts(activities, windowSize = 10) {
         }
     });
 }
+
+function plotScatterChart({canvasId, data, xLabel, yLabel, title, color}) {
+    if (charts[canvasId]) charts[canvasId].destroy();
+    charts[canvasId] = new Chart(document.getElementById(canvasId), {
+        type: 'scatter',
+        data: {
+            datasets: [{
+                label: title,
+                data,
+                backgroundColor: color
+            }]
+        },
+        options: {
+            plugins: { title: { display: true, text: title } },
+            scales: {
+                x: { title: { display: true, text: xLabel } },
+                y: { title: { display: true, text: yLabel } }
+            }
+        }
+    });
+}
+
+function plotHistogram({canvasId, values, binSize, xLabel, yLabel, title, color}) {
+    if (charts[canvasId]) charts[canvasId].destroy();
+    const maxVal = Math.max(...values, 0);
+    const binCount = Math.ceil(maxVal / binSize);
+    const bins = Array(binCount).fill(0);
+    values.forEach(v => {
+        const idx = Math.floor(v / binSize);
+        if (idx < binCount) bins[idx]++;
+    });
+    const labels = bins.map((_, i) => `${i * binSize}-${(i + 1) * binSize}`);
+    charts[canvasId] = new Chart(document.getElementById(canvasId), {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: yLabel,
+                data: bins,
+                backgroundColor: color
+            }]
+        },
+        options: {
+            plugins: { title: { display: true, text: title } },
+            scales: {
+                x: { title: { display: true, text: xLabel } },
+                y: { title: { display: true, text: yLabel } }
+            }
+        }
+    });
+}
