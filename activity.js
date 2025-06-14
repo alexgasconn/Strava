@@ -16,7 +16,10 @@ async function fetchActivity() {
         detailsDiv.innerHTML = "<p>Loading...</p>";
         // ⚠️ CAMBIO CRUCIAL: ahora pasamos el ID como query param
         const response = await fetch(`/api/strava-activity?id=${activityId}`, {
-            headers: { 'Authorization': `Bearer ${accessToken}` }
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'x-refresh-token': localStorage.getItem('strava_refresh_token') || ''
+          }
         });
 
         if (!response.ok) {
