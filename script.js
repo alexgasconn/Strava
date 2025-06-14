@@ -609,6 +609,33 @@ function renderDashboard(activities) {
         }
     }
 
+    // --- Distance vs Elevation Gain (Scatterplot) ---
+    const scatterData = runs.map(r => ({
+        x: r.distance / 1000, // km
+        y: r.total_elevation_gain || 0 // m
+    }));
+    plotScatterChart({
+        canvasId: 'distance-vs-elevation-chart',
+        data: scatterData,
+        xLabel: 'Distance (km)',
+        yLabel: 'Elevation Gain (m)',
+        title: 'Distance vs Elevation Gain',
+        color: 'rgba(54,162,235,0.7)'
+    });
+
+    // --- Elevation Gain Histogram ---
+    const elevationValues = runs.map(r => r.total_elevation_gain || 0);
+    plotHistogram({
+        canvasId: 'elevation-histogram',
+        values: elevationValues,
+        binSize: 50, // puedes ajustar el tamaño del bin
+        xLabel: 'Elevation Gain (m)',
+        yLabel: '# Activities',
+        title: 'Elevation Gain Histogram',
+        color: 'rgba(252, 82, 0, 0.5)'
+    });
+
+
     plotRunsHeatmap(runs);
     plotDistanceByDateCharts(runs); // o plotDistanceByDateCharts(filtered) si quieres filtrar
 }
@@ -758,7 +785,7 @@ function plotRunsHeatmap(runs) {
     }
 
     // Add heatmap layer
-    window.runsHeatmapLayer = L.heatLayer(points, {radius: 15, blur: 20, maxZoom: 12}).addTo(window.runsHeatmapMap);
+    window.runsHeatmapLayer = L.heatLayer(points, { radius: 15, blur: 20, maxZoom: 12 }).addTo(window.runsHeatmapMap);
 
     // Fit map to points
     if (points.length > 0) {
@@ -912,7 +939,7 @@ function plotDistanceByDateCharts(activities, windowSize = 10) {
     });
 }
 
-function plotScatterChart({canvasId, data, xLabel, yLabel, title, color}) {
+function plotScatterChart({ canvasId, data, xLabel, yLabel, title, color }) {
     if (charts[canvasId]) charts[canvasId].destroy();
     charts[canvasId] = new Chart(document.getElementById(canvasId), {
         type: 'scatter',
@@ -933,7 +960,7 @@ function plotScatterChart({canvasId, data, xLabel, yLabel, title, color}) {
     });
 }
 
-function plotHistogram({canvasId, values, binSize, xLabel, yLabel, title, color}) {
+function plotHistogram({ canvasId, values, binSize, xLabel, yLabel, title, color }) {
     if (charts[canvasId]) charts[canvasId].destroy();
     const maxVal = Math.max(...values, 0);
     const binCount = Math.ceil(maxVal / binSize);
