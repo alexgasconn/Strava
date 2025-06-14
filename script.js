@@ -611,7 +611,7 @@ function renderDashboard(activities) {
     plotHistogram({
         canvasId: 'elevation-histogram',
         values: elevationValues,
-        binSize: 50, // puedes ajustar el tamaño del bin
+        binSize: 20, // puedes ajustar el tamaño del bin
         xLabel: 'Elevation Gain (m)',
         yLabel: '# Activities',
         title: 'Elevation Gain Histogram',
