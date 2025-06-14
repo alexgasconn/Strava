@@ -13,7 +13,7 @@ export default async function handler(req, res) {
 
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Authorization header is missing or invalid' });
+    return res.status(401).json({ error: 'Authorization header is missing' });
   }
   const accessToken = authHeader.split(' ')[1];
 
@@ -23,17 +23,21 @@ export default async function handler(req, res) {
       headers: { 'Authorization': `Bearer ${accessToken}` }
     });
 
+    const responseText = await response.text();
     if (!response.ok) {
-      const errorData = await response.json();
-      return res.status(response.status).json(errorData);
+        console.error(`Strava Streams API Error (${response.status}):`, responseText);
+        try {
+            return res.status(response.status).json(JSON.parse(responseText));
+        } catch (e) {
+            return res.status(response.status).json({ message: responseText });
+        }
     }
     
-    // Devolvemos el objeto completo con todos los streams pedidos
-    const streamData = await response.json();
-    res.status(200).json(streamData);
+    const streamData = JSON.parse(responseText);
+    return res.status(200).json(streamData);
 
   } catch (error) {
-    console.error('Error fetching streams from Strava:', error);
-    res.status(500).json({ error: error.message });
+    console.error('Error fetching stream from Strava:', error);
+    return res.status(500).json({ error: 'Server failed to process stream request.', details: error.message });
   }
 }

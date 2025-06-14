@@ -1,22 +1,19 @@
+// api/strava-activity.js
 import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
-  // Only allow GET
   if (req.method !== 'GET') {
-    res.setHeader('Allow', 'GET');
-    return res.status(405).end('Method Not Allowed');
+    return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  // Get the activity ID from the query string
   const { id } = req.query;
   if (!id) {
     return res.status(400).json({ error: 'Activity ID is required' });
   }
 
-  // Get the access token from the Authorization header
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Authorization header is missing or invalid' });
+    return res.status(401).json({ error: 'Authorization header is missing' });
   }
   const accessToken = authHeader.split(' ')[1];
 
@@ -25,15 +22,28 @@ export default async function handler(req, res) {
     const response = await fetch(url, {
       headers: { 'Authorization': `Bearer ${accessToken}` }
     });
+    
+    // Leemos la respuesta como texto primero para poder depurar
+    const responseText = await response.text();
 
     if (!response.ok) {
-      const errorData = await response.json();
-      return res.status(response.status).json(errorData);
+        // Si no fue exitosa, el texto es probablemente el error
+        console.error(`Strava API Error (${response.status}):`, responseText);
+        // Intentamos parsearlo como JSON, si falla, usamos el texto
+        try {
+            const errorJson = JSON.parse(responseText);
+            return res.status(response.status).json(errorJson);
+        } catch (e) {
+            return res.status(response.status).json({ message: responseText });
+        }
     }
+    
+    // Si fue exitosa, el texto es el JSON de la actividad
+    const activity = JSON.parse(responseText);
+    return res.status(200).json(activity);
 
-    const activity = await response.json();
-    res.status(200).json(activity);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("Internal Server Error in strava-activity:", error);
+    return res.status(500).json({ error: 'Server failed to process the request.', details: error.message });
   }
 }
