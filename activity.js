@@ -71,10 +71,53 @@ async function fetchActivity() {
 
     const act = await response.json();
     renderActivity(act);
+    renderStreamsCharts(act.id);
+
   } catch (err) {
     detailsDiv.innerHTML = `<p>Error: ${err.message}</p>`;
   }
 }
+
+
+
+async function fetchStreams(activityId) {
+  const accessToken = localStorage.getItem('strava_access_token');
+  const refreshToken = localStorage.getItem('strava_refresh_token');
+
+  try {
+    const res = await fetch(`/api/strava-streams?id=${activityId}&type=heartrate,altitude,distance`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'x-refresh-token': refreshToken || ''
+      }
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(`Stream error ${res.status}: ${err.message || JSON.stringify(err)}`);
+    }
+
+    const data = await res.json();
+
+    // 📊 Aquí puedes trabajar con los datos devueltos
+    console.log('Streams:', data);
+
+    // Ejemplo: array de HR
+    const hrStream = data.heartrate?.data || [];
+    const altStream = data.altitude?.data || [];
+    const distStream = data.distance?.data || [];
+
+    // Puedes ahora graficarlos, mapearlos, etc.
+    return { hrStream, altStream, distStream };
+
+  } catch (err) {
+    console.error('Error fetching streams:', err.message);
+  }
+}
+
+
+
+
 
 function renderActivity(act) {
   // --- 1. Datos básicos
@@ -180,5 +223,91 @@ function renderActivity(act) {
     `;
   }
 }
+
+
+async function renderStreamsCharts(activityId) {
+  const { hrStream, altStream, distStream } = await fetchStreams(activityId);
+  if (!distStream.length) return;
+
+  // 1. Altitud vs Distancia
+  new Chart(document.getElementById('chart-altitude'), {
+    type: 'line',
+    data: {
+      labels: distStream.map(d => (d / 1000).toFixed(2)), // km
+      datasets: [{
+        label: 'Altitud (m)',
+        data: altStream,
+        borderColor: '#888',
+        fill: false,
+        tension: 0.1
+      }]
+    },
+    options: {
+      plugins: { title: { display: true, text: 'Altitud vs Distancia (km)' } },
+      scales: {
+        x: { title: { display: true, text: 'Distancia (km)' } },
+        y: { title: { display: true, text: 'Altitud (m)' } }
+      }
+    }
+  });
+
+  // 2. Ritmo vs Distancia (pace = delta tiempo / delta distancia)
+  const paceStream = [];
+  for (let i = 1; i < distStream.length; i++) {
+    const deltaD = distStream[i] - distStream[i - 1];
+    if (deltaD <= 0) {
+      paceStream.push(null);
+      continue;
+    }
+    const deltaT = 1; // Suponiendo 1s entre puntos
+    const speed = deltaD / deltaT;
+    const pace = 1000 / speed;
+    paceStream.push(pace);
+  }
+
+  new Chart(document.getElementById('chart-pace-distance'), {
+    type: 'line',
+    data: {
+      labels: distStream.slice(1).map(d => (d / 1000).toFixed(2)),
+      datasets: [{
+        label: 'Ritmo (min/km)',
+        data: paceStream.map(p => p ? (p / 60).toFixed(2) : null),
+        borderColor: '#FC5200',
+        fill: false,
+        tension: 0.1
+      }]
+    },
+    options: {
+      plugins: { title: { display: true, text: 'Pace vs Distancia (km)' } },
+      scales: {
+        x: { title: { display: true, text: 'Distancia (km)' } },
+        y: { title: { display: true, text: 'Ritmo (min/km)' } }
+      }
+    }
+  });
+
+  // 3. FC vs Distancia
+  new Chart(document.getElementById('chart-heart-distance'), {
+    type: 'line',
+    data: {
+      labels: distStream.map(d => (d / 1000).toFixed(2)),
+      datasets: [{
+        label: 'FC (bpm)',
+        data: hrStream,
+        borderColor: 'red',
+        fill: false,
+        tension: 0.1
+      }]
+    },
+    options: {
+      plugins: { title: { display: true, text: 'Frecuencia cardíaca vs Distancia (km)' } },
+      scales: {
+        x: { title: { display: true, text: 'Distancia (km)' } },
+        y: { title: { display: true, text: 'BPM' } }
+      }
+    }
+  });
+}
+
 
 fetchActivity();
