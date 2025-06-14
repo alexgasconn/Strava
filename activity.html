@@ -1,49 +1,16 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Detalles de la Actividad</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+  <meta charset="UTF-8">
+  <title>Activity Details</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <h1 id="activity-name-title">Detalles de la Actividad</h1>
-        <div id="activity-header" class="table-container"></div>
-        
-        <div class="chart-container full-width">
-            <h3>Mapa de la Actividad</h3>
-            <div id="activity-map" style="height: 400px; width: 100%; border-radius: 8px;"></div>
-        </div>
-        
-        <div class="chart-container full-width">
-            <h3>Análisis por Kilómetro (Splits)</h3>
-            <div class="charts-grid">
-                <div class="chart-container"><canvas id="chart-pace"></canvas></div>
-                <div class="chart-container"><canvas id="chart-heartrate"></canvas></div>
-                <div class="chart-container"><canvas id="chart-elevation"></canvas></div>
-            </div>
-        </div>
-
-        <div class="chart-container full-width">
-            <h3>Rangos por Distancia (Streams)</h3>
-             <div class="grid-2-col">
-                <div class="chart-container">
-                    <h4>Frecuencia Cardíaca</h4>
-                    <canvas id="hr-range-chart"></canvas>
-                </div>
-                <div class="chart-container">
-                    <h4>Ritmo</h4>
-                    <canvas id="pace-range-chart"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <div id="segments-section" class="table-container full-width"></div>
-        <button onclick="window.close()">Cerrar</button>
-    </div>
-    <script src="activity.js"></script>
+  <div class="container">
+    <h1>Activity Details</h1>
+    <div id="activity-details"></div>
+    <button onclick="window.close()">Close</button>
+  </div>
+  <script src="activity.js"></script>
 </body>
 </html>
