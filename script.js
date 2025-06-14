@@ -764,3 +764,75 @@ function plotRunsHeatmap(runs) {
         window.runsHeatmapMap.fitBounds(points);
     }
 }
+
+function rollingMean(arr, windowSize) {
+    const result = [];
+    for (let i = 0; i < arr.length; i++) {
+        const start = Math.max(0, i - windowSize + 1);
+        const window = arr.slice(start, i + 1);
+        result.push(window.reduce((a, b) => a + b, 0) / window.length);
+    }
+    return result;
+}
+
+function plotDistanceCharts(distanceStream, timeStream) {
+    // distanceStream: array de metros, timeStream: array de segundos desde inicio
+    const accumulated = distanceStream.map((d, i) => d / 1000); // km
+    const timeLabels = timeStream.map(t => (t / 60).toFixed(1)); // minutos
+
+    // Rolling mean (ventana de 10 puntos, puedes ajustar)
+    const rolling = rollingMean(accumulated, 10);
+
+    // Acumulado vs tiempo
+    if (charts['accumulated-distance-chart']) charts['accumulated-distance-chart'].destroy();
+    charts['accumulated-distance-chart'] = new Chart(document.getElementById('accumulated-distance-chart').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: timeLabels,
+            datasets: [{
+                label: 'Accumulated Distance (km)',
+                data: accumulated,
+                borderColor: 'rgba(54,162,235,1)',
+                backgroundColor: 'rgba(54,162,235,0.1)',
+                fill: true,
+                pointRadius: 0,
+                tension: 0.2
+            }]
+        },
+        options: {
+            plugins: { title: { display: true, text: 'Accumulated Distance vs Time' } },
+            scales: {
+                x: { title: { display: true, text: 'Time (min)' } },
+                y: { title: { display: true, text: 'Distance (km)' } }
+            }
+        }
+    });
+
+    // Rolling mean vs tiempo
+    if (charts['rolling-mean-distance-chart']) charts['rolling-mean-distance-chart'].destroy();
+    charts['rolling-mean-distance-chart'] = new Chart(document.getElementById('rolling-mean-distance-chart').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: timeLabels,
+            datasets: [{
+                label: 'Rolling Mean Distance (km)',
+                data: rolling,
+                borderColor: 'rgba(255,99,132,1)',
+                backgroundColor: 'rgba(255,99,132,0.1)',
+                fill: true,
+                pointRadius: 0,
+                tension: 0.2
+            }]
+        },
+        options: {
+            plugins: { title: { display: true, text: 'Rolling Mean Distance vs Time' } },
+            scales: {
+                x: { title: { display: true, text: 'Time (min)' } },
+                y: { title: { display: true, text: 'Distance (km)' } }
+            }
+        }
+    });
+}
+
+// Por ejemplo, después de cargar los streams:
+plotDistanceCharts(distanceStream, timeStream);
