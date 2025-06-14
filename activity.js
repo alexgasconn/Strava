@@ -227,6 +227,7 @@ function renderActivity(act) {
 
 async function renderStreamsCharts(activityId) {
   const { hrStream, altStream, distStream } = await fetchStreams(activityId);
+  console.log('Streams data:', { hrStream, altStream, distStream });
   if (!distStream.length) return;
 
   // 1. Altitud vs Distancia
