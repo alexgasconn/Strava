@@ -1,22 +1,28 @@
+// =================================================================
+// activity.js - VERSIÓN REFACTORIZADA Y CORREGIDA
+// =================================================================
+
+// --- 1. CONFIGURACIÓN Y REFERENCIAS AL DOM ---
 const params = new URLSearchParams(window.location.search);
 const activityId = params.get('id');
-const headerDiv = document.getElementById('activity-header');
-const mapDiv = document.getElementById('activity-map');
-const splitsSection = document.getElementById('splits-section');
-const segmentsSection = document.getElementById('segments-section');
+const accessToken = localStorage.getItem('strava_access_token');
+const charts = {}; // Para gestionar las instancias de los gráficos
+
+// --- 2. FUNCIONES DE UTILIDAD ---
 
 function formatTime(seconds) {
-  const min = Math.floor(seconds / 60);
-  const sec = seconds % 60;
-  return `${min}:${sec.toString().padStart(2, '0')}`;
+  if (isNaN(seconds) || seconds < 0) return 'N/A';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.round(seconds % 3600 % 60);
+  return `${h > 0 ? h + ':' : ''}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
-function formatPace(speed) {
-  if (!speed || speed === 0) return '-';
-  const pace = 1000 / speed;
-  const min = Math.floor(pace / 60);
-  const sec = Math.round(pace % 60);
-  return `${min}:${sec.toString().padStart(2, '0')}`;
+function formatPace(secondsPerKm) {
+  if (isNaN(secondsPerKm) || secondsPerKm <= 0) return 'N/A';
+  const min = Math.floor(secondsPerKm / 60);
+  const sec = Math.round(secondsPerKm % 60);
+  return `${min}'${sec.toString().padStart(2, '0')}"/km`;
 }
 
 function decodePolyline(str) {
@@ -44,348 +50,205 @@ function decodePolyline(str) {
   return coordinates;
 }
 
-function binHRByDistance(distance_data, hr_data, binSize = 100) {
-  const bins = [];
-  let binStart = 0;
-  let binHRs = [];
-  for (let i = 0; i < distance_data.length; i++) {
-    if (distance_data[i] - binStart < binSize) {
-      if (typeof hr_data[i] === 'number') binHRs.push(hr_data[i]);
-    } else {
-      if (binHRs.length) {
-        bins.push({
-          distance: binStart + binSize / 2,
-          min: Math.min(...binHRs),
-          max: Math.max(...binHRs),
-          avg: binHRs.reduce((a, b) => a + b, 0) / binHRs.length
-        });
-      }
-      binStart += binSize;
-      binHRs = [hr_data[i]];
-    }
-  }
-  // Add last bin
-  if (binHRs.length) {
-    bins.push({
-      distance: binStart + binSize / 2,
-      min: Math.min(...binHRs),
-      max: Math.max(...binHRs),
-      avg: binHRs.reduce((a, b) => a + b, 0) / binHRs.length
-    });
-  }
-  return bins;
-}
-
 function binStreamByDistance(distanceArr, valueArr, binSize = 100) {
-  // distanceArr and valueArr must be same length
+  if (!distanceArr || !valueArr) return [];
   const bins = [];
   let binStart = 0;
   let binValues = [];
   for (let i = 0; i < distanceArr.length; i++) {
-    if (distanceArr[i] - binStart < binSize) {
-      if (typeof valueArr[i] === 'number' && !isNaN(valueArr[i])) binValues.push(valueArr[i]);
+    const currentDist = distanceArr[i];
+    const currentValue = valueArr[i];
+    if (typeof currentDist !== 'number' || isNaN(currentDist)) continue;
+
+    if (currentDist - binStart < binSize) {
+      if (typeof currentValue === 'number' && !isNaN(currentValue)) {
+        binValues.push(currentValue);
+      }
     } else {
-      if (binValues.length) {
+      if (binValues.length > 0) {
         bins.push({
           distance: binStart + binSize / 2,
           min: Math.min(...binValues),
           max: Math.max(...binValues),
-          avg: binValues.reduce((a, b) => a + b, 0) / binValues.length
+          avg: binValues.reduce((a, b) => a + b, 0) / binValues.length,
         });
       }
       binStart += binSize;
-      binValues = [valueArr[i]];
+      // Reiniciar con el valor actual si es válido
+      binValues = (typeof currentValue === 'number' && !isNaN(currentValue)) ? [currentValue] : [];
     }
   }
-  // Add last bin
-  if (binValues.length) {
+  // Añadir el último bin
+  if (binValues.length > 0) {
     bins.push({
       distance: binStart + binSize / 2,
       min: Math.min(...binValues),
       max: Math.max(...binValues),
-      avg: binValues.reduce((a, b) => a + b, 0) / binValues.length
+      avg: binValues.reduce((a, b) => a + b, 0) / binValues.length,
     });
   }
   return bins;
 }
 
 
+// --- 3. FUNCIONES DE RENDERIZADO ---
 
-async function fetchStream(type) {
-  const response = await fetch(`/api/strava-streams?id=${activityId}&type=${type}`, {
-    headers: { 'Authorization': `Bearer ${localStorage.getItem('strava_access_token')}` }
-  });
-  if (!response.ok) throw new Error(`Stream fetch failed: ${await response.text()}`);
-  const stream = await response.json();
-  return stream.data;  // ✅ Aquí está el array de valores para ese tipo
+function createChart(canvasId, config) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) {
+        console.error(`Canvas con ID "${canvasId}" no encontrado.`);
+        return;
+    }
+    if (charts[canvasId]) charts[canvasId].destroy();
+    charts[canvasId] = new Chart(canvas.getContext('2d'), config);
 }
 
-
-
-async function fetchActivity() {
-  const accessToken = localStorage.getItem('strava_access_token');
-  if (!accessToken) {
-    headerDiv.innerHTML = "<p>You must be logged in to view activity details.</p>";
-    return;
-  }
-  try {
-    const response = await fetch(`/api/strava-activity?id=${activityId}`, {
-      headers: { 'Authorization': `Bearer ${accessToken}` }
-    });
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`HTTP ${response.status}: ${text}`);
-    }
-    const act = await response.json();
-
-    console.log('Activity data:', act);
-
-    // HEADER (Professional, ordered, more data)
-    const distKm = (act.distance / 1000).toFixed(2);
-    const duration = formatTime(act.moving_time);
-    const elapsed = formatTime(act.elapsed_time);
-    const pace = formatPace(act.average_speed);
-    const elevGain = Math.round(act.total_elevation_gain || 0);
-    const avgHr = act.average_heartrate ? `${Math.round(act.average_heartrate)} bpm` : 'N/A';
-    const maxHr = act.max_heartrate ? `${Math.round(act.max_heartrate)} bpm` : 'N/A';
-    const avgCad = act.average_cadence ? `${Math.round(act.average_cadence)} rpm` : 'N/A';
-    const maxCad = act.max_cadence ? `${Math.round(act.max_cadence)} rpm` : 'N/A';
-    const calories = act.calories ? `${Math.round(act.calories)} kcal` : 'N/A';
-    const device = act.device_name || 'N/A';
-    const gear = act.gear?.name || 'N/A';
-    const type = act.type || 'N/A';
-    const date = act.start_date_local ? new Date(act.start_date_local).toLocaleString() : 'N/A';
-    const location = [act.start_latlng?.[0], act.start_latlng?.[1]].every(Number.isFinite)
-      ? `${act.start_latlng[0].toFixed(5)}, ${act.start_latlng[1].toFixed(5)}`
-      : 'N/A';
-
+function renderHeader(act) {
+    document.getElementById('activity-name-title').textContent = act.name || 'Detalles de la Actividad';
+    const headerDiv = document.getElementById('activity-header');
+    const paceSeconds = act.distance > 0 ? act.moving_time / (act.distance / 1000) : 0;
     headerDiv.innerHTML = `
-      <h2>${act.name || 'Activity'}</h2>
       <table class="df-table activity-summary">
-      <tr>
-        <th>Date</th>
-        <td>${date}</td>
-      </tr>
-      <tr>
-        <th>Type</th>
-        <td>${type}</td>
-      </tr>
-      <tr>
-        <th>Distance</th>
-        <td>${distKm} km</td>
-      </tr>
-      <tr>
-        <th>Moving Time</th>
-        <td>${duration}</td>
-      </tr>
-      <tr>
-        <th>Elapsed Time</th>
-        <td>${elapsed}</td>
-      </tr>
-      <tr>
-        <th>Pace</th>
-        <td>${pace} min/km</td>
-      </tr>
-      <tr>
-        <th>Elevation Gain</th>
-        <td>${elevGain} m</td>
-      </tr>
-      <tr>
-        <th>Avg HR</th>
-        <td>${avgHr}</td>
-      </tr>
-      <tr>
-        <th>Max HR</th>
-        <td>${maxHr}</td>
-      </tr>
-      <tr>
-        <th>Avg Cadence</th>
-        <td>${avgCad}</td>
-      </tr>
-      <tr>
-        <th>Max Cadence</th>
-        <td>${maxCad}</td>
-      </tr>
-      <tr>
-        <th>Calories</th>
-        <td>${calories}</td>
-      </tr>
-      <tr>
-        <th>Gear</th>
-        <td>${gear}</td>
-      </tr>
-      <tr>
-        <th>Device</th>
-        <td>${device}</td>
-      </tr>
-      <tr>
-        <th>Start Location</th>
-        <td>${location}</td>
-      </tr>
+        <tr><th>Distancia</th><td>${(act.distance / 1000).toFixed(2)} km</td></tr>
+        <tr><th>Tiempo en Mov.</th><td>${formatTime(act.moving_time)}</td></tr>
+        <tr><th>Ritmo Medio</th><td>${formatPace(paceSeconds)}</td></tr>
+        <tr><th>Desnivel</th><td>${Math.round(act.total_elevation_gain || 0)} m</td></tr>
+        <tr><th>FC Media</th><td>${act.average_heartrate ? `${Math.round(act.average_heartrate)} bpm` : 'N/A'}</td></tr>
+        <tr><th>Calorías</th><td>${act.calories ? `${Math.round(act.calories)} kcal` : 'N/A'}</td></tr>
+        <tr><th>Fecha</th><td>${act.start_date_local ? new Date(act.start_date_local).toLocaleString() : 'N/A'}</td></tr>
+        <tr><th>Material</th><td>${act.gear?.name || 'N/A'}</td></tr>
       </table>
     `;
+}
 
-    // MAP
+function renderMap(act) {
     if (act.map?.summary_polyline) {
       const coords = decodePolyline(act.map.summary_polyline);
-      const map = L.map(mapDiv);
-      // Calculate bounds
-      const lats = coords.map(c => c[0]);
-      const lngs = coords.map(c => c[1]);
-      const southWest = [Math.min(...lats), Math.min(...lngs)];
-      const northEast = [Math.max(...lats), Math.max(...lngs)];
-      const bounds = L.latLngBounds(southWest, northEast);
-      map.fitBounds(bounds, { padding: [20, 20] });
+      if (coords.length === 0) return;
+      const map = L.map('activity-map').fitBounds(coords, {padding: [20, 20]});
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
       L.polyline(coords, { color: '#FC5200', weight: 4 }).addTo(map);
     }
+}
 
-    // SPLITS - Only show original 1000m splits with charts for pace, elevation, and heart rate
+function renderSplits(act) {
     const splits = act.splits_metric || [];
-    if (splits.length) {
-      // Remove old charts if any
-      ['chart-pace', 'chart-heartrate', 'chart-elevation'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.remove();
-      });
+    if (splits.length === 0) return;
 
-      // Create canvases
-      ['pace', 'heartrate', 'elevation'].forEach(type => {
-        const canvas = document.createElement('canvas');
-        canvas.id = `chart-${type}`;
-        splitsSection.appendChild(canvas);
-      });
+    const labels = splits.map((s, i) => `${i + 1} km`);
+    const paceData = splits.map(s => s.distance > 0 ? s.moving_time / (s.distance / 1000) : null);
+    const hrData = splits.map(s => s.average_heartrate || null);
+    const elevData = splits.map(s => s.elevation_difference || 0);
 
-      let cumulative = 0;
-      const labels = splits.map(s => {
-        cumulative += s.distance;
-        return `${(cumulative / 1000).toFixed(2)} km`;
-      });
-      const paceData = splits.map(s => s.moving_time / (s.distance / 1000)); // min/km
-      const hrData = splits.map(s => s.average_heartrate || null);
-      const elevData = splits.map(s => s.elevation_difference || 0);
-
-      new Chart(document.getElementById('chart-pace'), {
+    createChart('chart-pace', {
         type: 'line',
-        data: {
-          labels,
-          datasets: [{
-            label: 'Pace (min/km)',
-            data: paceData,
-            borderColor: '#FC5200',
-            fill: false,
-            tension: 0.2
-          }]
-        },
-        options: { scales: { y: { reverse: true } } }
-      });
-
-      new Chart(document.getElementById('chart-heartrate'), {
+        data: { labels, datasets: [{ label: 'Ritmo (seg/km)', data: paceData, borderColor: '#FC5200', fill: false }] },
+        options: { scales: { y: { reverse: true, title: { display: true, text: "Ritmo" } } } }
+    });
+    createChart('chart-heartrate', {
         type: 'line',
-        data: {
-          labels,
-          datasets: [{
-            label: 'Heart Rate (bpm)',
-            data: hrData,
-            borderColor: '#0074D9',
-            fill: false,
-            tension: 0.2
-          }]
-        }
-      });
-
-      new Chart(document.getElementById('chart-elevation'), {
+        data: { labels, datasets: [{ label: 'FC (bpm)', data: hrData, borderColor: '#e10000', fill: false }] },
+        options: { scales: { y: { title: { display: true, text: "FC" } } } }
+    });
+    createChart('chart-elevation', {
         type: 'line',
-        data: {
-          labels,
-          datasets: [{
-            label: 'Elevation (m)',
-            data: elevData,
-            borderColor: '#2ECC40',
-            fill: false,
-            tension: 0.2
-          }]
-        }
-      });
-    }
+        data: { labels, datasets: [{ label: 'Desnivel (m)', data: elevData, borderColor: '#2ECC40', fill: 'start', backgroundColor: 'rgba(46, 204, 64, 0.1)' }] },
+        options: { scales: { y: { title: { display: true, text: "Desnivel" } } } }
+    });
+}
 
-
-
-    // SEGMENTS
+function renderSegments(act) {
     const segs = act.segment_efforts || [];
-    if (segs.length) {
-      segmentsSection.innerHTML = `<h3>Segments</h3><table class="df-table">
-        <thead><tr><th>Name</th><th>Dist</th><th>Time</th><th>Pace</th><th>HR</th></tr></thead><tbody>
+    if (segs.length === 0) return;
+    const segmentsSection = document.getElementById('segments-section');
+    const paceSeconds = (s) => s.distance > 0 ? s.moving_time / (s.distance / 1000) : 0;
+    segmentsSection.innerHTML = `<h3>Segmentos</h3><table class="df-table">
+        <thead><tr><th>Nombre</th><th>Dist.</th><th>Tiempo</th><th>Ritmo</th><th>FC</th></tr></thead><tbody>
         ${segs.map(s => `<tr>
           <td>${s.name}</td>
           <td>${(s.distance / 1000).toFixed(2)} km</td>
           <td>${formatTime(s.moving_time)}</td>
-          <td>${formatPace(s.distance / s.moving_time)}</td>
-          <td>${Math.round(s.average_heartrate || 0)} bpm</td>
+          <td>${formatPace(paceSeconds(s))}</td>
+          <td>${s.average_heartrate ? Math.round(s.average_heartrate) : '-'}</td>
         </tr>`).join('')}
         </tbody></table>`;
+}
+
+function renderStreamCharts(streamsData) {
+    const { heartrate, velocity_smooth, distance } = streamsData;
+    
+    if (heartrate?.data && distance?.data) {
+        const hrBins = binStreamByDistance(distance.data, heartrate.data, 100);
+        plotRangeChart('hr-range-chart', hrBins, 'Frecuencia Cardíaca', '#ff6384', 'FC (bpm)');
+    }
+    
+    if (velocity_smooth?.data && distance?.data) {
+        const paceInSecondsPerKm = velocity_smooth.data.map(speed => speed > 0 ? 1000 / speed : null);
+        const paceBins = binStreamByDistance(distance.data, paceInSecondsPerKm, 100);
+        plotRangeChart('pace-range-chart', paceBins, 'Ritmo', '#36a2eb', 'Ritmo (seg/km)');
+    }
+}
+
+function plotRangeChart(canvasId, bins, label, color, yLabel) {
+    if (bins.length === 0) return;
+    const labels = bins.map(b => (b.distance / 1000).toFixed(1));
+    createChart(canvasId, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          { label: `${label} Max`, data: bins.map(b => b.max), fill: '-1', backgroundColor: color + '33', borderColor: 'transparent', pointRadius: 0 },
+          { label: `${label} Min`, data: bins.map(b => b.min), fill: false, borderColor: 'transparent', pointRadius: 0 },
+          { label: `${label} Media`, data: bins.map(b => b.avg), borderColor: color, fill: false, borderWidth: 2, pointRadius: 0 }
+        ]
+      },
+      options: { scales: { x: { title: { display: true, text: 'Distancia (km)' } }, y: { title: { display: true, text: yLabel } } } }
+    });
+}
+
+
+// --- 4. LÓGICA PRINCIPAL DE LA PÁGINA ---
+async function main() {
+    if (!activityId || !accessToken) {
+        document.body.innerHTML = "<h1>Error: Falta ID de actividad o no has iniciado sesión.</h1>";
+        return;
     }
 
-    // HR RANGE CHART - Heart Rate range (min/max/avg) by distance bins using stream data
-    // Create containers for charts if not present
-    let hrChartDiv = document.getElementById('hr-range-chart');
-    if (!hrChartDiv) {
-      hrChartDiv = document.createElement('canvas');
-      hrChartDiv.id = 'hr-range-chart';
-      splitsSection.appendChild(hrChartDiv);
+    try {
+        // Fetch principal de la actividad
+        const activityResponse = await fetch(`/api/strava-activity?id=${activityId}`, {
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+        if (!activityResponse.ok) throw new Error(`Error al obtener actividad: ${activityResponse.statusText}`);
+        const activityData = await activityResponse.json();
+        console.log("Datos de actividad recibidos:", activityData);
+
+        // Renderizar todo lo que no depende de streams
+        renderHeader(activityData);
+        renderMap(activityData);
+        renderSplits(activityData);
+        renderSegments(activityData);
+
+        // Fetch de todos los streams necesarios EN PARALELO
+        const streamTypes = 'heartrate,velocity_smooth,distance';
+        const streamsResponse = await fetch(`/api/strava-streams?id=${activityId}&type=${streamTypes}`, {
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+        
+        if (streamsResponse.ok) {
+            const streamsData = await streamsResponse.json();
+            console.log("Datos de streams recibidos:", streamsData);
+            // Ahora que tenemos TODOS los streams, renderizamos los gráficos que dependen de ellos
+            renderStreamCharts(streamsData);
+        } else {
+            console.warn("No se pudieron obtener los datos de streams para esta actividad.");
+        }
+
+    } catch (error) {
+        console.error("Fallo en la carga de la página de actividad:", error);
+        document.body.innerHTML = `<h1>Error al cargar la actividad</h1><p>${error.message}</p>`;
     }
-    let paceChartDiv = document.getElementById('pace-range-chart');
-    if (!paceChartDiv) {
-      paceChartDiv = document.createElement('canvas');
-      paceChartDiv.id = 'pace-range-chart';
-      splitsSection.appendChild(paceChartDiv);
-    }
+}
 
-    // Fetch streams
-    const [hrStream, distStream, timeStream] = await Promise.all([
-      fetchStream('heartrate'),
-      fetchStream('distance'),
-      fetchStream('time')
-    ]);
-
-    // Bin HR by distance (e.g. every 100m)
-    const hrBins = binHRByDistance(distStream, hrStream, 100);
-
-    // Plot HR range chart (area between min/max, avg as line)
-    plotRangeChart('hr-range-chart', hrBins, 'Heart Rate', 'rgba(255,99,132,1)', 'Heart Rate (bpm)');
-
-    // Pace: calculate instantaneous pace (min/km) from distance and time streams
-    // We'll use a moving window of N points (e.g. 10) to smooth pace
-    function calcPaceStream(distance, time, window = 10) {
-      const paceArr = [];
-      for (let i = 0; i < distance.length; i++) {
-      if (i < window || !Number.isFinite(distance[i]) || !Number.isFinite(time[i])) {
-        paceArr.push(null);
-        continue;
-      }
-      const distDelta = distance[i] - distance[i - window];
-      const timeDelta = time[i] - time[i - window];
-      if (distDelta > 0 && timeDelta > 0) {
-        const speed = distDelta / timeDelta; // m/s
-        const pace = 1000 / speed / 60; // min/km
-        paceArr.push(pace);
-      } else {
-        paceArr.push(null);
-      }
-      }
-      return paceArr;
-    }
-
-    const paceStream = calcPaceStream(distStream, timeStream, 10);
-
-    // Bin pace by distance (same bins as HR)
-    const paceBins = binStreamByDistance(distStream, paceStream, 100);
-
-    // Plot Pace range chart (area between min/max, avg as line)
-            plotRangeChart('pace-range-chart', paceBins, 'Pace', 'rgba(54,162,235,1)', 'Pace (min/km)');
-         
-      } catch (err) {
-        headerDiv.innerHTML = `<p>Error loading activity: ${err.message}</p>`;
-        console.error(err);
-      }
-    }
+// Iniciar la carga de la página
+main();
