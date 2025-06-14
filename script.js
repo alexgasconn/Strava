@@ -610,6 +610,7 @@ function renderDashboard(activities) {
     }
 
     plotRunsHeatmap(runs);
+    plotDistanceByDateCharts(runs); // o plotDistanceByDateCharts(filtered) si quieres filtrar
 }
 
 // --- 6. INITIALIZATION AND AUTHENTICATION ---
@@ -836,3 +837,77 @@ function plotDistanceCharts(distanceStream, timeStream) {
 
 // Por ejemplo, después de cargar los streams:
 plotDistanceCharts(distanceStream, timeStream);
+
+function plotDistanceByDateCharts(activities, windowSize = 10) {
+    // Ordena por fecha
+    const sorted = [...activities]
+        .filter(a => a.type && a.type.includes('Run') && a.distance > 0)
+        .sort((a, b) => new Date(a.start_date_local) - new Date(b.start_date_local));
+
+    const labels = sorted.map(a => a.start_date_local.substring(0, 10));
+    const distances = sorted.map(a => a.distance / 1000); // km
+
+    // Acumulado
+    const accumulated = [];
+    distances.reduce((acc, d, i) => accumulated[i] = acc + d, 0);
+
+    // Rolling mean
+    function rollingMean(arr, windowSize) {
+        return arr.map((_, i, a) => {
+            const start = Math.max(0, i - windowSize + 1);
+            const window = a.slice(start, i + 1);
+            return window.reduce((s, v) => s + v, 0) / window.length;
+        });
+    }
+    const rolling = rollingMean(distances, windowSize);
+
+    // Acumulado vs fecha
+    if (charts['accumulated-distance-chart']) charts['accumulated-distance-chart'].destroy();
+    charts['accumulated-distance-chart'] = new Chart(document.getElementById('accumulated-distance-chart').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Accumulated Distance (km)',
+                data: accumulated,
+                borderColor: 'rgba(54,162,235,1)',
+                backgroundColor: 'rgba(54,162,235,0.1)',
+                fill: true,
+                pointRadius: 0,
+                tension: 0.2
+            }]
+        },
+        options: {
+            plugins: { title: { display: true, text: 'Accumulated Distance vs Date' } },
+            scales: {
+                x: { title: { display: true, text: 'Date' } },
+                y: { title: { display: true, text: 'Distance (km)' } }
+            }
+        }
+    });
+
+    // Rolling mean vs fecha
+    if (charts['rolling-mean-distance-chart']) charts['rolling-mean-distance-chart'].destroy();
+    charts['rolling-mean-distance-chart'] = new Chart(document.getElementById('rolling-mean-distance-chart').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: `Rolling Mean Distance (window ${windowSize})`,
+                data: rolling,
+                borderColor: 'rgba(255,99,132,1)',
+                backgroundColor: 'rgba(255,99,132,0.1)',
+                fill: true,
+                pointRadius: 0,
+                tension: 0.2
+            }]
+        },
+        options: {
+            plugins: { title: { display: true, text: 'Rolling Mean Distance vs Date' } },
+            scales: {
+                x: { title: { display: true, text: 'Date' } },
+                y: { title: { display: true, text: 'Distance (km)' } }
+            }
+        }
+    });
+}
