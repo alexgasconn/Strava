@@ -19,17 +19,19 @@ export default async function handler(req, res) {
 
   let accessToken = authHeader.split(' ')[1];
 
-  const streamUrl = (token) =>
+  const buildUrl = (token) =>
     `https://www.strava.com/api/v3/activities/${id}/streams?keys=${type}&key_by_type=true`;
 
   async function fetchStreams(token) {
-    return await fetch(streamUrl(token), {
+    const res = await fetch(buildUrl(token), {
       headers: { Authorization: `Bearer ${token}` },
     });
+    return res;
   }
 
   let response = await fetchStreams(accessToken);
 
+  // If unauthorized, try refresh
   if (response.status === 401 && refreshToken) {
     try {
       const refreshRes = await fetch('https://www.strava.com/oauth/token', {
@@ -57,26 +59,30 @@ export default async function handler(req, res) {
 
       response = await fetchStreams(accessToken);
     } catch (err) {
-      return res.status(500).json({
-        error: 'Refresh token request failed',
-        details: err.message,
-      });
+      return res.status(500).json({ error: 'Refresh token request failed', details: err.message });
     }
   }
 
   const text = await response.text();
+
   if (!response.ok) {
     try {
       return res.status(response.status).json(JSON.parse(text));
     } catch {
+      console.error("Strava non-JSON error response:", text);
       return res.status(response.status).json({ message: text });
     }
   }
 
   try {
-    const streamData = JSON.parse(text);
-    return res.status(200).json(streamData);
+    const data = JSON.parse(text);
+    return res.status(200).json(data);
   } catch (err) {
-    return res.status(500).json({ error: 'Invalid JSON from Strava', details: err.message });
+    console.error("Invalid JSON from Strava:", text);
+    return res.status(500).json({
+      error: "Invalid JSON returned by Strava",
+      details: err.message,
+      raw: text
+    });
   }
 }
