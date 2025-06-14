@@ -1,9 +1,7 @@
-// api/strava-activity.js
-import fetch from 'node-fetch';
-
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
+    res.setHeader('Allow', 'GET');
+    return res.status(405).end('Method Not Allowed');
   }
 
   const { id } = req.query;
@@ -13,8 +11,9 @@ export default async function handler(req, res) {
 
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Authorization header is missing' });
+    return res.status(401).json({ error: 'Authorization header is missing or invalid' });
   }
+
   const accessToken = authHeader.split(' ')[1];
 
   try {
@@ -24,21 +23,13 @@ export default async function handler(req, res) {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Strava API Error (${response.status}):`, errorText);
-      try {
-        const errorJson = JSON.parse(errorText);
-        return res.status(response.status).json(errorJson);
-      } catch {
-        return res.status(response.status).json({ message: errorText });
-      }
+      const errorData = await response.json();
+      return res.status(response.status).json(errorData);
     }
 
-    const activity = await response.json();  // ✅ más seguro
-    return res.status(200).json(activity);
-
+    const activity = await response.json();
+    res.status(200).json(activity);
   } catch (error) {
-    console.error("Internal Server Error in strava-activity:", error);
-    return res.status(500).json({ error: 'Server failed to process the request.', details: error.message });
+    res.status(500).json({ error: error.message });
   }
 }
