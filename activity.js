@@ -219,7 +219,11 @@ async function main() {
         const activityResponse = await fetch(`/api/strava-activity?id=${activityId}`, {
             headers: { 'Authorization': `Bearer ${accessToken}` }
         });
-        if (!activityResponse.ok) throw new Error(`Error al obtener actividad: ${activityResponse.statusText}`);
+        if (!activityResponse.ok) {
+          const errorText = await activityResponse.text();
+          throw new Error(`Error al obtener actividad: ${activityResponse.statusText} — ${errorText}`);
+        }
+
         const activityData = await activityResponse.json();
         console.log("Datos de actividad recibidos:", activityData);
 
