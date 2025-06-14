@@ -382,4 +382,10 @@ async function fetchActivity() {
     const paceBins = binStreamByDistance(distStream, paceStream, 100);
 
     // Plot Pace range chart (area between min/max, avg as line)
-    plotRangeChart('pace-range-chart', paceBins, 'Pace', 'rgba(54,162,235,1)', 'Pace (min/km)');
+            plotRangeChart('pace-range-chart', paceBins, 'Pace', 'rgba(54,162,235,1)', 'Pace (min/km)');
+         
+      } catch (err) {
+        headerDiv.innerHTML = `<p>Error loading activity: ${err.message}</p>`;
+        console.error(err);
+      }
+    }
