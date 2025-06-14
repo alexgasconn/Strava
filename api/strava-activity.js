@@ -22,24 +22,19 @@ export default async function handler(req, res) {
     const response = await fetch(url, {
       headers: { 'Authorization': `Bearer ${accessToken}` }
     });
-    
-    // Leemos la respuesta como texto primero para poder depurar
-    const responseText = await response.text();
 
     if (!response.ok) {
-        // Si no fue exitosa, el texto es probablemente el error
-        console.error(`Strava API Error (${response.status}):`, responseText);
-        // Intentamos parsearlo como JSON, si falla, usamos el texto
-        try {
-            const errorJson = JSON.parse(responseText);
-            return res.status(response.status).json(errorJson);
-        } catch (e) {
-            return res.status(response.status).json({ message: responseText });
-        }
+      const errorText = await response.text();
+      console.error(`Strava API Error (${response.status}):`, errorText);
+      try {
+        const errorJson = JSON.parse(errorText);
+        return res.status(response.status).json(errorJson);
+      } catch {
+        return res.status(response.status).json({ message: errorText });
+      }
     }
-    
-    // Si fue exitosa, el texto es el JSON de la actividad
-    const activity = JSON.parse(responseText);
+
+    const activity = await response.json();  // ✅ más seguro
     return res.status(200).json(activity);
 
   } catch (error) {
