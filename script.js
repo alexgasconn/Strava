@@ -1069,5 +1069,47 @@ function plotGearGanttChart(runs) {
     });
 }
 
-plotStackedAreaGearChart(runs);      // Tu función original para el stacked area
-plotGearGanttChart(runs);            // La nueva función para el mini Gantt
+function plotStackedAreaGearChart(runs) {
+    // Agrupa por mes y gear
+    const gearMonthKm = {};
+    runs.forEach(a => {
+        if (!a.gear_id) return;
+        const gear = a.gear?.name || a.gear_id;
+        const month = a.start_date_local.substring(0, 7);
+        if (!gearMonthKm[month]) gearMonthKm[month] = {};
+        gearMonthKm[month][gear] = (gearMonthKm[month][gear] || 0) + a.distance / 1000;
+    });
+
+    const allMonths = Object.keys(gearMonthKm).sort();
+    const allGears = Array.from(
+        new Set(runs.map(a => a.gear?.name || a.gear_id).filter(Boolean))
+    );
+
+    const datasets = allGears.map((gear, idx) => ({
+        label: gear,
+        data: allMonths.map(month => gearMonthKm[month]?.[gear] || 0),
+        backgroundColor: `hsl(${(idx * 360) / allGears.length}, 70%, 60%)`,
+        fill: true,
+        borderWidth: 1,
+        tension: 0.2
+    }));
+
+    if (charts['stacked-area-chart']) charts['stacked-area-chart'].destroy();
+    charts['stacked-area-chart'] = new Chart(document.getElementById('stacked-area-chart'), {
+        type: 'line',
+        data: {
+            labels: allMonths,
+            datasets: datasets
+        },
+        options: {
+            plugins: { title: { display: true, text: 'Gear Usage by Month (Stacked Area)' } },
+            responsive: true,
+            interaction: { mode: 'index', intersect: false },
+            stacked: true,
+            scales: {
+                x: { stacked: true, title: { display: true, text: 'Year-Month' } },
+                y: { stacked: true, title: { display: true, text: 'Distance (km)' } }
+            }
+        }
+    });
+}
