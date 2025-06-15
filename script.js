@@ -1024,3 +1024,47 @@ function plotHistogram({ canvasId, values, binSize, xLabel, yLabel, title, color
         }
     });
 }
+
+function plotGearGanttChart(runs) {
+    // 1. Agrupa por mes y gear
+    const gearMonthKm = {};
+    runs.forEach(a => {
+        if (!a.gear_id) return;
+        const gear = a.gear_id;
+        const month = a.start_date_local.substring(0, 7);
+        if (!gearMonthKm[month]) gearMonthKm[month] = {};
+        gearMonthKm[month][gear] = (gearMonthKm[month][gear] || 0) + a.distance / 1000;
+    });
+
+    // 2. Saca todos los meses y gears únicos
+    const allMonths = Object.keys(gearMonthKm).sort();
+    const allGears = Array.from(new Set(runs.map(a => a.gear_id).filter(Boolean)));
+
+    // 3. Prepara los datasets para Chart.js
+    const datasets = allGears.map((gear, idx) => ({
+        label: gear,
+        data: allMonths.map(month => gearMonthKm[month]?.[gear] || 0),
+        backgroundColor: `hsl(${(idx * 360) / allGears.length}, 70%, 60%)`
+    }));
+
+    // 4. Dibuja el gráfico
+    if (charts['gear-gantt-chart']) charts['gear-gantt-chart'].destroy();
+    charts['gear-gantt-chart'] = new Chart(document.getElementById('gear-gantt-chart'), {
+        type: 'bar',
+        data: {
+            labels: allMonths,
+            datasets: datasets
+        },
+        options: {
+            indexAxis: 'y',
+            plugins: { title: { display: true, text: 'Gear Usage per Month (km)' } },
+            responsive: true,
+            scales: {
+                x: { stacked: true, title: { display: true, text: 'Distance (km)' } },
+                y: { stacked: true, title: { display: true, text: 'Year-Month' } }
+            }
+        }
+    });
+}
+
+plotGearGanttChart(runs);
