@@ -841,7 +841,7 @@ function rollingMean(arr, windowSize) {
 function plotDistanceCharts(distanceStream, timeStream) {
     // distanceStream: array de metros, timeStream: array de segundos desde inicio
     const accumulated = distanceStream.map((d, i) => d / 1000); // km
-    const timeLabels = timeStream.map(t => (t / 60).toFixed(1)); // minutos
+    const timeLabels = timeStream.map(t => (t / 60).toFixed(1)); // minutes
 
     // Rolling mean (ventana de 10 puntos, puedes ajustar)
     const rolling = rollingMean(accumulated, 10);
