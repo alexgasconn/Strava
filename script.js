@@ -711,19 +711,32 @@ document.getElementById('reset-date-filter').addEventListener('click', () => {
     renderDashboard(allActivities);
 });
 document.getElementById('refresh-button').addEventListener('click', async () => {
-    const accessToken = localStorage.getItem('strava_access_token');
-    if (!accessToken) {
+    const tokenData = localStorage.getItem('strava_tokens');
+    if (!tokenData) {
         alert('You must be logged in.');
         return;
     }
+
+    const encoded = btoa(tokenData);
     showLoading('Refreshing activities...');
+
     try {
-        // Fuerza fetch desde Strava, ignora caché
-        const response = await fetch('/api/strava-activities', { headers: { 'Authorization': `Bearer ${accessToken}` } });
-        if (!response.ok) throw new Error((await response.json()).error || 'API failure');
-        const activities = await response.json();
+        const response = await fetch('/api/strava-activities', {
+            headers: {
+                Authorization: `Bearer ${encoded}`
+            }
+        });
+
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'API failure');
+
+        if (result.tokens) {
+            localStorage.setItem('strava_tokens', JSON.stringify(result.tokens));
+        }
+
+        const activities = result.activities;
         localStorage.setItem(CACHE_KEY, JSON.stringify(activities));
-        allActivities = activities; // Update allActivities
+        allActivities = activities;
         renderDashboard(activities);
     } catch (error) {
         handleError('Error refreshing activities', error);
@@ -731,6 +744,7 @@ document.getElementById('refresh-button').addEventListener('click', async () => 
         hideLoading();
     }
 });
+
 
 function filterActivitiesByDate(activities) {
     if (!dateFilterFrom && !dateFilterTo) return activities;
