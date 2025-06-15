@@ -426,7 +426,7 @@ function renderDashboard(activities) {
                     data: ctl,
                     borderColor: '#0074D9',
                     backgroundColor: 'rgba(0,116,217,0.1)',
-                    fill: false,
+                    fill: true,
                     tension: 0.2
                 },
                 {
@@ -692,6 +692,27 @@ document.getElementById('reset-date-filter').addEventListener('click', () => {
     document.getElementById('date-from').value = '';
     document.getElementById('date-to').value = '';
     renderDashboard(allActivities);
+});
+document.getElementById('refresh-button').addEventListener('click', async () => {
+    const accessToken = localStorage.getItem('strava_access_token');
+    if (!accessToken) {
+        alert('You must be logged in.');
+        return;
+    }
+    showLoading('Refreshing activities...');
+    try {
+        // Fuerza fetch desde Strava, ignora caché
+        const response = await fetch('/api/strava-activities', { headers: { 'Authorization': `Bearer ${accessToken}` } });
+        if (!response.ok) throw new Error((await response.json()).error || 'API failure');
+        const activities = await response.json();
+        localStorage.setItem(CACHE_KEY, JSON.stringify(activities));
+        allActivities = activities; // Update allActivities
+        renderDashboard(activities);
+    } catch (error) {
+        handleError('Error refreshing activities', error);
+    } finally {
+        hideLoading();
+    }
 });
 
 function filterActivitiesByDate(activities) {
