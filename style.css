@@ -20,14 +20,11 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
-    background: linear-gradient(120deg, #f8fafc 0%, #e9f0f7 100%);
-    color: var(--text-medium);
+    background: linear-gradient(120deg, #fff 0%, #f7f7f7 100%);
+    font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+    color: #222;
     margin: 0;
-    padding: 2rem;
-    line-height: 1.6;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    padding: 0;
 }
 
 .container {
@@ -58,21 +55,20 @@ body {
 }
 
 button {
-    background: var(--strava-orange);
-    color: white;
+    background: #fc4c02;
+    color: #fff;
     border: none;
-    padding: 12px 28px;
+    border-radius: 6px;
+    padding: 0.7em 1.5em;
     font-size: 1rem;
     font-weight: 600;
-    border-radius: var(--border-radius-md);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background 0.18s;
+    margin: 0.2em 0.5em;
 }
 
 button:hover {
-    background-color: #e04a00;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(252, 82, 0, 0.2);
+    background: #d84300;
 }
 
 .hidden {
@@ -146,10 +142,18 @@ main {
 
 .card,
 .chart-container {
-    background: var(--bg-card);
-    padding: 1.5rem;
-    border-radius: var(--border-radius-lg);
-    box-shadow: var(--shadow);
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 4px 18px rgba(252, 76, 2, 0.08), 0 1.5px 4px rgba(0, 0, 0, 0.04);
+    padding: 1.7rem 1.2rem 2.2rem 1.2rem;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+    border-top: 4px solid #fc4c02;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    transition: box-shadow 0.2s;
 }
 
 .card h3 {
@@ -167,36 +171,28 @@ main {
     color: var(--text-dark);
 }
 
-.chart-container {
-    background: #fff;
-    border-radius: 14px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
-    padding: 1.5rem 1rem 2.2rem 1rem;
-    min-width: 0;
-    width: 100%;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    border: 1px solid #e5e7eb;
+.chart-container:hover {
+    box-shadow: 0 8px 32px rgba(252, 76, 2, 0.16), 0 2px 8px rgba(0, 0, 0, 0.07);
 }
 
 .chart-container h3 {
     margin-bottom: 1.2rem;
-    font-size: 1.15rem;
-    font-weight: 600;
-    color: #222;
+    font-size: 1.18rem;
+    font-weight: 700;
+    color: #fc4c02;
+    letter-spacing: 0.02em;
     text-align: left;
 }
 
 .chart-container canvas {
     width: 100% !important;
-    height: 320px !important;
+    height: 340px !important;
     max-width: 100%;
     display: block;
     margin: 0 auto;
-    background: #fafbfc;
-    border-radius: 8px;
+    background: #f9f9f9;
+    border-radius: 10px;
+    border: 1.5px solid #f5e7e0;
 }
 
 #cal-heatmap {
