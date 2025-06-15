@@ -1,5 +1,8 @@
 <!DOCTYPE html>
-<html lang="en"></html>
+<html lang="en">
+
+</html>
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,6 +18,7 @@
     <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
 </head>
+
 <body>
     <div class="container">
         <!-- LOGIN SECTION -->
@@ -78,7 +82,7 @@
                         <h3>Gear Usage by Month</h3>
                         <canvas id="stacked-area-chart"></canvas>
                     </div>
-                        <div class="chart-container full-width">
+                    <div class="chart-container full-width">
                         <h3>Accumulated Distance vs Time</h3>
                         <canvas id="accumulated-distance-chart"></canvas>
                     </div>
@@ -90,26 +94,28 @@
                         <h3>Distance vs Elevation Gain</h3>
                         <canvas id="distance-vs-elevation-chart"></canvas>
                     </div>
-                        <div class="chart-container">
+                    <div class="chart-container">
                         <h3>Elevation Gain Histogram</h3>
                         <canvas id="elevation-histogram"></canvas>
                     </div>
-                    
+
                     <div class="chart-container full-width">
                         <h3>Run Start/Mid/End Heatmap</h3>
                         <div id="runs-heatmap" style="height: 400px; width: 100%;"></div>
                     </div>
                     <div class="chart-container">
                         <h3>Races</h3>
-                        <ul id="race-list"></ul>
+                        <div style="overflow-x:auto;">
+                            <table id="race-list" class="df-table"></table>
+                        </div>
                     </div>
+
                     <div class="chart-container full-width">
                         <h3>All Runs</h3>
                         <div style="overflow-x:auto;">
                             <table id="all-runs-table" class="df-table"></table>
                         </div>
                     </div>
-                    <
                 </div>
             </main>
         </div>
@@ -124,4 +130,5 @@
     <!-- Load our only script -->
     <script src="script.js"></script>
 </body>
+
 </html>
