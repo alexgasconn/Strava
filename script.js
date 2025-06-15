@@ -623,6 +623,7 @@ function renderDashboard(activities) {
     plotDistanceByDateCharts(runs); // o plotDistanceByDateCharts(filtered) si quieres filtrar
     plotStackedAreaGearChart(runs);   // Stacked area (Gear Usage by Month)
     plotGearGanttChart(runs);         // Mini Gantt (Gear Usage per Month)
+    renderGearInfo(runs);
 }
 
 // --- 6. INITIALIZATION AND AUTHENTICATION ---
@@ -1157,4 +1158,48 @@ for (const activity of activities) {
     displayGearName(activity.gear_id).then(name => {
         gearCell.textContent = name;
     });
+}
+
+async function renderGearInfo(runs) {
+    const gearIds = Array.from(new Set(runs.map(a => a.gear_id).filter(Boolean)));
+    const gearInfoList = document.getElementById('gear-info-list');
+    if (!gearInfoList) return;
+
+    if (gearIds.length === 0) {
+        gearInfoList.innerHTML = '<p>No gear found.</p>';
+        return;
+    }
+
+    gearInfoList.innerHTML = '<p>Loading gear info...</p>';
+
+    // Fetch info for each gear
+    const gearDetails = await Promise.all(gearIds.map(async gearId => {
+        try {
+            const gear = await fetchGearById(gearId);
+            // Calcula distancia total con ese gear
+            const totalKm = runs.filter(a => a.gear_id === gearId)
+                .reduce((sum, a) => sum + a.distance, 0) / 1000;
+            return {
+                id: gearId,
+                name: `${gear.brand_name} ${gear.model_name}`,
+                type: gear.type,
+                distance: totalKm.toFixed(1),
+                nickname: gear.nickname || '',
+                retired: gear.retired ? 'Yes' : 'No'
+            };
+        } catch {
+            return { id: gearId, name: 'Unknown', type: '', distance: '-', nickname: '', retired: '' };
+        }
+    }));
+
+    // Render cards
+    gearInfoList.innerHTML = gearDetails.map(g => `
+      <div class="gear-card">
+        <h4>${g.name}</h4>
+        ${g.nickname ? `<div><span class="gear-label">Nickname:</span> ${g.nickname}</div>` : ''}
+        <div><span class="gear-label">Type:</span> ${g.type}</div>
+        <div><span class="gear-label">Total Distance:</span> ${g.distance} km</div>
+        <div><span class="gear-label">Retired:</span> ${g.retired}</div>
+      </div>
+    `).join('');
 }
