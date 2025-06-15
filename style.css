@@ -299,3 +299,35 @@ main {
 .df-table tr:nth-child(even) {
     background: #fafafa;
 }
+
+.gear-info-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.gear-card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(252, 76, 2, 0.07);
+    border-left: 5px solid #fc4c02;
+    padding: 1.2em 1.5em;
+    min-width: 220px;
+    max-width: 320px;
+    flex: 1 1 220px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.gear-card h4 {
+    margin: 0 0 0.5em 0;
+    color: #fc4c02;
+    font-size: 1.1em;
+}
+
+.gear-card .gear-label {
+    font-weight: 600;
+    margin-right: 0.5em;
+}

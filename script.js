@@ -627,71 +627,71 @@ function renderDashboard(activities) {
 
 // --- 6. INITIALIZATION AND AUTHENTICATION ---
 async function initializeApp(encodedTokenPayload) {
-  try {
-    const response = await fetch('/api/strava-activities', {
-      headers: {
-        Authorization: `Bearer ${btoa(encodedTokenPayload)}`
-      }
-    });
+    try {
+        const response = await fetch('/api/strava-activities', {
+            headers: {
+                Authorization: `Bearer ${btoa(encodedTokenPayload)}`
+            }
+        });
 
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error);
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error);
 
-    // Actualiza tokens si se han renovado
-    if (result.tokens) {
-      localStorage.setItem('strava_tokens', JSON.stringify(result.tokens));
+        // Actualiza tokens si se han renovado
+        if (result.tokens) {
+            localStorage.setItem('strava_tokens', JSON.stringify(result.tokens));
+        }
+
+        const activities = result.activities;
+        loginSection.classList.add('hidden');
+        appSection.classList.remove('hidden');
+        const athleteInfo = activities.find(a => a.athlete)?.athlete || { firstname: 'Athlete' };
+        athleteName.textContent = `Dashboard for ${athleteInfo.firstname}`;
+
+        allActivities = activities;
+        renderDashboard(activities);
+    } catch (error) {
+        handleError("Error initializing the app", error);
+    } finally {
+        hideLoading();
     }
-
-    const activities = result.activities;
-    loginSection.classList.add('hidden');
-    appSection.classList.remove('hidden');
-    const athleteInfo = activities.find(a => a.athlete)?.athlete || { firstname: 'Athlete' };
-    athleteName.textContent = `Dashboard for ${athleteInfo.firstname}`;
-
-    allActivities = activities;
-    renderDashboard(activities);
-  } catch (error) {
-    handleError("Error initializing the app", error);
-  } finally {
-    hideLoading();
-  }
 }
 
 
 async function handleAuth() {
-  const params = new URLSearchParams(window.location.search);
-  const code = params.get('code');
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
 
-  if (code) {
-    showLoading('Authenticating...');
-    try {
-      const response = await fetch('/api/strava-auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code })
-      });
+    if (code) {
+        showLoading('Authenticating...');
+        try {
+            const response = await fetch('/api/strava-auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code })
+            });
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error);
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error);
 
-      localStorage.setItem('strava_tokens', JSON.stringify({
-        access_token: data.access_token,
-        refresh_token: data.refresh_token,
-        expires_at: data.expires_at
-      }));
+            localStorage.setItem('strava_tokens', JSON.stringify({
+                access_token: data.access_token,
+                refresh_token: data.refresh_token,
+                expires_at: data.expires_at
+            }));
 
-      window.history.replaceState({}, '', window.location.pathname);
-    } catch (error) {
-      return handleError('Authentication failed', error);
+            window.history.replaceState({}, '', window.location.pathname);
+        } catch (error) {
+            return handleError('Authentication failed', error);
+        }
     }
-  }
 
-  const tokenData = localStorage.getItem('strava_tokens');
-  if (tokenData) {
-    await initializeApp(tokenData);
-  } else {
-    hideLoading();
-  }
+    const tokenData = localStorage.getItem('strava_tokens');
+    if (tokenData) {
+        await initializeApp(tokenData);
+    } else {
+        hideLoading();
+    }
 }
 
 
@@ -1111,5 +1111,50 @@ function plotStackedAreaGearChart(runs) {
                 y: { stacked: true, title: { display: true, text: 'Distance (km)' } }
             }
         }
+    });
+}
+
+async function fetchGearById(gearId) {
+    const tokenData = localStorage.getItem('strava_tokens');
+    if (!tokenData) throw new Error('Not authenticated');
+    const encoded = btoa(tokenData);
+
+    const response = await fetch(`/api/strava-gear?id=${gearId}`, {
+        headers: {
+            Authorization: `Bearer ${encoded}`
+        }
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error);
+
+    return data;
+}
+
+const gearCache = {};
+
+async function displayGearName(gearId) {
+    if (!gearId) return 'Unknown';
+    if (gearCache[gearId]) return gearCache[gearId];
+
+    try {
+        const gear = await fetchGearById(gearId);
+        const label = `${gear.brand_name} ${gear.model_name}`;
+        gearCache[gearId] = label;
+        return label;
+    } catch {
+        return 'Unknown';
+    }
+}
+
+const table = document.getElementById('all-runs-table');
+for (const activity of activities) {
+    const row = table.insertRow();
+    row.insertCell().textContent = activity.name;
+    row.insertCell().textContent = activity.distance;
+
+    const gearCell = row.insertCell();
+    displayGearName(activity.gear_id).then(name => {
+        gearCell.textContent = name;
     });
 }
