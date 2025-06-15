@@ -130,7 +130,7 @@ main {
 }
 
 .charts-grid {
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
 }
 
 .full-width {
@@ -160,10 +160,24 @@ main {
     color: var(--text-dark);
 }
 
+.chart-container {
+  padding: 1.5rem;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  min-width: 0;
+}
+
 .chart-container h3 {
     font-size: 1.2rem;
     margin-top: 0;
     margin-bottom: 1.5rem;
+}
+
+.chart-container canvas {
+  width: 100% !important;
+  height: 320px !important; /* o el alto que prefieras */
+  max-width: 100%;
 }
 
 #cal-heatmap {
@@ -205,9 +219,9 @@ main {
 }
 
 @media (max-width: 900px) {
-    .charts-grid {
-        grid-template-columns: 1fr;
-    }
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 768px) {
