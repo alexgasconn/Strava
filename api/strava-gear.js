@@ -1,5 +1,60 @@
-// /api/strava-gear.js
+import fetch from 'node-fetch';
 
+// --- Utilidad para refrescar el access token ---
+async function refreshAccessToken(refreshToken) {
+  const response = await fetch('https://www.strava.com/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      client_id: process.env.STRAVA_CLIENT_ID,
+      client_secret: process.env.STRAVA_CLIENT_SECRET,
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken
+    })
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    console.error('Failed to refresh token:', text);
+    throw new Error('Token refresh failed');
+  }
+
+  return await response.json();
+}
+
+// --- Utilidad para obtener un access_token válido ---
+async function getValidAccessToken(req) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    throw new Error('Missing or invalid Authorization header');
+  }
+
+  const payloadRaw = authHeader.split(' ')[1];
+  const tokenData = JSON.parse(Buffer.from(payloadRaw, 'base64').toString());
+  const { access_token, refresh_token, expires_at } = tokenData;
+
+  if (!access_token || !refresh_token || !expires_at) {
+    throw new Error('Incomplete token data');
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  if (expires_at > now) {
+    return { access_token, updatedTokens: null };
+  }
+
+  // Token expired, refresh
+  const refreshed = await refreshAccessToken(refresh_token);
+  return {
+    access_token: refreshed.access_token,
+    updatedTokens: {
+      access_token: refreshed.access_token,
+      refresh_token: refreshed.refresh_token,
+      expires_at: refreshed.expires_at
+    }
+  };
+}
+
+// --- Handler principal ---
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
@@ -7,26 +62,17 @@ export default async function handler(req, res) {
   }
 
   const { id } = req.query;
-
   if (!id) {
     return res.status(400).json({ error: 'Gear ID is required' });
   }
 
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Missing or invalid authorization header' });
-  }
-
-  const accessToken = atob(authHeader.split(' ')[1]); // decode base64 token payload
-  const parsed = JSON.parse(accessToken);
-  const token = parsed.access_token;
-
-  const gearUrl = `https://www.strava.com/api/v3/gear/${id}`;
-
   try {
+    const { access_token, updatedTokens } = await getValidAccessToken(req);
+
+    const gearUrl = `https://www.strava.com/api/v3/gear/${id}`;
     const response = await fetch(gearUrl, {
       headers: {
-        Authorization: `Bearer ${token}`
+        Authorization: `Bearer ${access_token}`
       }
     });
 
@@ -36,10 +82,11 @@ export default async function handler(req, res) {
       return res.status(response.status).json({ error: data.message });
     }
 
-    res.status(200).json(data);
+    // Devuelve también los tokens actualizados si los hay
+    res.status(200).json({ ...data, tokens: updatedTokens });
   } catch (err) {
     console.error('Error fetching gear:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: err.message || 'Internal server error' });
   }
 }
 
