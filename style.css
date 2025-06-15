@@ -130,7 +130,15 @@ main {
 }
 
 .charts-grid {
-    grid-template-columns: repeat(3, 1fr);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+    /* Dos gráficas por fila en pantallas grandes */
+    gap: 2.5rem;
+    margin-bottom: 2rem;
+    width: 100vw;
+    max-width: 100vw;
+    box-sizing: border-box;
+    padding: 0;
 }
 
 .full-width {
@@ -161,11 +169,15 @@ main {
 }
 
 .chart-container {
-  padding: 1.5rem;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  min-width: 0;
+    width: 100vw;
+    max-width: 100vw;
+    margin-left: 50%;
+    transform: translateX(-50%);
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    padding: 2rem 1rem;
+    min-width: 0;
 }
 
 .chart-container h3 {
@@ -175,9 +187,11 @@ main {
 }
 
 .chart-container canvas {
-  width: 100% !important;
-  height: 320px !important; /* o el alto que prefieras */
-  max-width: 100%;
+    width: 100% !important;
+    height: 420px !important;
+    /* Más alto */
+    max-width: 100vw;
+    display: block;
 }
 
 #cal-heatmap {
@@ -219,14 +233,28 @@ main {
 }
 
 @media (max-width: 900px) {
-  .charts-grid {
-    grid-template-columns: 1fr;
-  }
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 768px) {
     body {
         padding: 1rem;
+    }
+}
+
+@media (max-width: 700px) {
+    .chart-container {
+        padding: 1rem 0.2rem;
+    }
+
+    .charts-grid {
+        gap: 1.2rem;
+    }
+
+    .chart-container canvas {
+        height: 260px !important;
     }
 }
 
