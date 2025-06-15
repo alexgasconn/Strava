@@ -21,7 +21,7 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
-    background-color: var(--bg-main);
+    background: linear-gradient(120deg, #f8fafc 0%, #e9f0f7 100%);
     color: var(--text-medium);
     margin: 0;
     padding: 2rem;
@@ -131,12 +131,10 @@ main {
 
 .charts-grid {
     display: grid;
-    grid-template-columns: 1fr;
-    /* Una gráfica por fila */
-    gap: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+    gap: 2.2rem;
     margin: 0 auto 2rem auto;
-    max-width: 1300px;
-    /* Máximo ancho del dashboard */
+    max-width: 1200px;
     width: 100%;
     box-sizing: border-box;
     padding: 0 1rem;
@@ -172,26 +170,33 @@ main {
 .chart-container {
     background: #fff;
     border-radius: 14px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-    padding: 2rem 1.5rem;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
+    padding: 1.5rem 1rem 2.2rem 1rem;
     min-width: 0;
     width: 100%;
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    border: 1px solid #e5e7eb;
 }
 
 .chart-container h3 {
-    font-size: 1.2rem;
-    margin-top: 0;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.2rem;
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #222;
+    text-align: left;
 }
 
 .chart-container canvas {
     width: 100% !important;
-    height: 380px !important;
-    /* Más alto pero razonable */
+    height: 320px !important;
     max-width: 100%;
     display: block;
     margin: 0 auto;
+    background: #fafbfc;
+    border-radius: 8px;
 }
 
 #cal-heatmap {
@@ -260,16 +265,19 @@ main {
 }
 
 @media (max-width: 700px) {
-    .chart-container {
-        padding: 1rem 0.2rem;
+    .charts-grid {
+        grid-template-columns: 1fr;
+        gap: 1.2rem;
+        padding: 0 0.2rem;
+        max-width: 100vw;
     }
 
-    .charts-grid {
-        gap: 1.2rem;
+    .chart-container {
+        padding: 1rem 0.2rem 1.5rem 0.2rem;
     }
 
     .chart-container canvas {
-        height: 260px !important;
+        height: 180px !important;
     }
 }
 
