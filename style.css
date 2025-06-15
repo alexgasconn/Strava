@@ -131,14 +131,15 @@ main {
 
 .charts-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
-    /* Dos gráficas por fila en pantallas grandes */
-    gap: 2.5rem;
-    margin-bottom: 2rem;
-    width: 100vw;
-    max-width: 100vw;
+    grid-template-columns: 1fr;
+    /* Una gráfica por fila */
+    gap: 2rem;
+    margin: 0 auto 2rem auto;
+    max-width: 1300px;
+    /* Máximo ancho del dashboard */
+    width: 100%;
     box-sizing: border-box;
-    padding: 0;
+    padding: 0 1rem;
 }
 
 .full-width {
@@ -169,15 +170,13 @@ main {
 }
 
 .chart-container {
-    width: 100vw;
-    max-width: 100vw;
-    margin-left: 50%;
-    transform: translateX(-50%);
     background: #fff;
     border-radius: 14px;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-    padding: 2rem 1rem;
+    padding: 2rem 1.5rem;
     min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .chart-container h3 {
@@ -188,10 +187,11 @@ main {
 
 .chart-container canvas {
     width: 100% !important;
-    height: 420px !important;
-    /* Más alto */
-    max-width: 100vw;
+    height: 380px !important;
+    /* Más alto pero razonable */
+    max-width: 100%;
     display: block;
+    margin: 0 auto;
 }
 
 #cal-heatmap {
@@ -235,6 +235,21 @@ main {
 @media (max-width: 900px) {
     .charts-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 800px) {
+    .charts-grid {
+        max-width: 100vw;
+        padding: 0 0.2rem;
+    }
+
+    .chart-container {
+        padding: 1rem 0.2rem;
+    }
+
+    .chart-container canvas {
+        height: 220px !important;
     }
 }
 
