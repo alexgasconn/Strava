@@ -1,61 +1,89 @@
-// api/strava-activities.js
+async function refreshAccessToken(refreshToken) {
+  const response = await fetch('https://www.strava.com/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      client_id: process.env.STRAVA_CLIENT_ID,
+      client_secret: process.env.STRAVA_CLIENT_SECRET,
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken
+    })
+  });
 
-// Esta función obtiene un token de acceso válido, refrescándolo si es necesario.
-// (Añadiremos la lógica del refresh token más adelante. Por ahora, solo usa el que tiene)
+  if (!response.ok) {
+    const text = await response.text();
+    console.error('Failed to refresh token:', text);
+    throw new Error('Token refresh failed');
+  }
+
+  return await response.json(); // returns new access_token, refresh_token, expires_at
+}
+
 async function getValidAccessToken(req) {
-  // Por ahora, asumimos que el frontend nos envía un token válido.
-  // La autenticación ya debería haber ocurrido.
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw new Error('Authorization header is missing or invalid');
+    throw new Error('Missing or invalid Authorization header');
   }
-  return authHeader.split(' ')[1]; // Extrae el token
+
+  const payloadRaw = authHeader.split(' ')[1];
+  const tokenData = JSON.parse(Buffer.from(payloadRaw, 'base64').toString());
+  const { access_token, refresh_token, expires_at } = tokenData;
+
+  if (!access_token || !refresh_token || !expires_at) {
+    throw new Error('Incomplete token data');
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  if (expires_at > now) {
+    return { access_token, updatedTokens: null };
+  }
+
+  // Token expired, refresh
+  const refreshed = await refreshAccessToken(refresh_token);
+  return {
+    access_token: refreshed.access_token,
+    updatedTokens: {
+      access_token: refreshed.access_token,
+      refresh_token: refreshed.refresh_token,
+      expires_at: refreshed.expires_at
+    }
+  };
 }
 
 export default async function handler(req, res) {
   try {
-    const accessToken = await getValidAccessToken(req);
-    
+    const { access_token, updatedTokens } = await getValidAccessToken(req);
+
     const activitiesUrl = 'https://www.strava.com/api/v3/athlete/activities';
     let allActivities = [];
     let page = 1;
-    const perPage = 100; // Pedimos 100 actividades por página para ser eficientes
+    const perPage = 100;
     let hasMore = true;
 
-    console.log('Fetching activities from Strava...');
-
-    // Bucle para obtener todas las páginas de actividades
     while (hasMore) {
       const url = `${activitiesUrl}?page=${page}&per_page=${perPage}`;
-      
       const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
+        headers: { Authorization: `Bearer ${access_token}` }
       });
 
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Strava API error:', errorData);
-        throw new Error(`Error from Strava API: ${errorData.message}`);
+        throw new Error(`Strava API: ${errorData.message}`);
       }
 
       const pageActivities = await response.json();
-
-      if (pageActivities.length > 0) {
-        allActivities = allActivities.concat(pageActivities);
+      if (pageActivities.length === 0) hasMore = false;
+      else {
+        allActivities.push(...pageActivities);
         page++;
-        console.log(`Fetched page ${page - 1}, ${pageActivities.length} activities. Total so far: ${allActivities.length}`);
-      } else {
-        hasMore = false; // No hay más actividades, salimos del bucle
       }
     }
-    
-    console.log(`Finished fetching. Total activities found: ${allActivities.length}`);
-    res.status(200).json(allActivities);
+
+    return res.status(200).json({ activities: allActivities, tokens: updatedTokens });
 
   } catch (error) {
-    console.error('Error in strava-activities function:', error);
-    res.status(500).json({ error: error.message });
+    console.error('Error in strava-activities:', error);
+    return res.status(500).json({ error: error.message });
   }
 }

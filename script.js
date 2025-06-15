@@ -624,57 +624,74 @@ function renderDashboard(activities) {
 }
 
 // --- 6. INITIALIZATION AND AUTHENTICATION ---
-async function initializeApp(accessToken) {
-    try {
-        let activities;
-        const cachedActivities = localStorage.getItem(CACHE_KEY);
-        if (cachedActivities) {
-            activities = JSON.parse(cachedActivities);
-        } else {
-            showLoading('Fetching activity history...');
-            const response = await fetch('/api/strava-activities', { headers: { 'Authorization': `Bearer ${accessToken}` } });
-            if (!response.ok) throw new Error((await response.json()).error || 'API failure');
-            activities = await response.json();
-            localStorage.setItem(CACHE_KEY, JSON.stringify(activities));
-        }
+async function initializeApp(encodedTokenPayload) {
+  try {
+    const response = await fetch('/api/strava-activities', {
+      headers: {
+        Authorization: `Bearer ${btoa(encodedTokenPayload)}`
+      }
+    });
 
-        loginSection.classList.add('hidden');
-        appSection.classList.remove('hidden');
-        const athleteInfo = activities.find(a => a.athlete)?.athlete || { firstname: 'Athlete' };
-        athleteName.textContent = `Dashboard for ${athleteInfo.firstname}`;
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error);
 
-        allActivities = activities; // Save all for filtering
-        renderDashboard(activities);
-    } catch (error) {
-        handleError("Error initializing the app", error);
-    } finally {
-        hideLoading();
+    // Actualiza tokens si se han renovado
+    if (result.tokens) {
+      localStorage.setItem('strava_tokens', JSON.stringify(result.tokens));
     }
+
+    const activities = result.activities;
+    loginSection.classList.add('hidden');
+    appSection.classList.remove('hidden');
+    const athleteInfo = activities.find(a => a.athlete)?.athlete || { firstname: 'Athlete' };
+    athleteName.textContent = `Dashboard for ${athleteInfo.firstname}`;
+
+    allActivities = activities;
+    renderDashboard(activities);
+  } catch (error) {
+    handleError("Error initializing the app", error);
+  } finally {
+    hideLoading();
+  }
 }
+
 
 async function handleAuth() {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
-    let accessToken = localStorage.getItem('strava_access_token');
-    if (code) {
-        showLoading('Authenticating...');
-        try {
-            const response = await fetch('/api/strava-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
-            if (!response.ok) throw new Error((await response.json()).error);
-            const data = await response.json();
-            accessToken = data.access_token;
-            localStorage.setItem('strava_access_token', accessToken);
-            window.history.replaceState({}, '', window.location.pathname);
-        } catch (error) {
-            return handleError('Authentication failed', error);
-        }
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+
+  if (code) {
+    showLoading('Authenticating...');
+    try {
+      const response = await fetch('/api/strava-auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code })
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+
+      localStorage.setItem('strava_tokens', JSON.stringify({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+        expires_at: data.expires_at
+      }));
+
+      window.history.replaceState({}, '', window.location.pathname);
+    } catch (error) {
+      return handleError('Authentication failed', error);
     }
-    if (accessToken) {
-        initializeApp(accessToken);
-    } else {
-        hideLoading();
-    }
+  }
+
+  const tokenData = localStorage.getItem('strava_tokens');
+  if (tokenData) {
+    await initializeApp(tokenData);
+  } else {
+    hideLoading();
+  }
 }
+
 
 // --- APP ENTRY POINT ---
 loginButton.addEventListener('click', redirectToStravaAuthorize);
