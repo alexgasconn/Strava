@@ -93,6 +93,7 @@ export function renderDashboard(allActivities, dateFilterFrom, dateFilterTo) {
     renderAllRunsTable(runs);
     renderGearInfo(runs);
     renderStreaks(runs);
+    renderPersonalBests(runs);
 }
 
 
@@ -246,5 +247,73 @@ function renderStreaks(runs) {
           <div><b>Consecutive Days:</b> ${currentDayStreakValue}</div>
         </div>
       </div>
+    `;
+}
+
+function renderPersonalBests(runs) {
+    const distances = [
+        { name: 'Mile', km: 1.609 },
+        { name: '5K', km: 5 },
+        { name: '10K', km: 10 },
+        { name: 'Half Marathon', km: 21.097 },
+        { name: 'Marathon', km: 42.195 }
+    ];
+    const margin = 0.05; // 5%
+
+    const bests = distances.map(d => {
+        // Find runs within ±5% of the target distance
+        const min = d.km * (1 - margin);
+        const max = d.km * (1 + margin);
+        const candidates = runs.filter(a => {
+            const distKm = a.distance / 1000;
+            return distKm >= min && distKm <= max && a.moving_time > 0;
+        });
+        if (candidates.length === 0) return { ...d, pace: null, date: null, id: null };
+
+        // Best pace = lowest moving_time / distance
+        const best = candidates.reduce((prev, curr) => {
+            const prevPace = prev.moving_time / (prev.distance / 1000);
+            const currPace = curr.moving_time / (curr.distance / 1000);
+            return currPace < prevPace ? curr : prev;
+        });
+        const paceSec = best.moving_time / (best.distance / 1000);
+        const minPace = Math.floor(paceSec / 60);
+        const secPace = Math.round(paceSec % 60);
+        return {
+            ...d,
+            pace: `${minPace}:${secPace.toString().padStart(2, '0')} /km`,
+            date: best.start_date_local.substring(0, 10),
+            id: best.id
+        };
+    });
+
+    // Render table
+    const container = document.getElementById('personal-bests');
+    if (!container) return;
+    container.innerHTML = `
+        <table>
+            <thead>
+                <tr>
+                    <th>Distance</th>
+                    <th>Best Pace</th>
+                    <th>Date</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${bests.map(b => b.pace
+                    ? `<tr>
+                        <td>${b.name}</td>
+                        <td>${b.pace}</td>
+                        <td>${b.date}</td>
+                        <td><a href="activity.html?id=${b.id}" target="_blank"><button>View</button></a></td>
+                    </tr>`
+                    : `<tr>
+                        <td>${b.name}</td>
+                        <td colspan="3">No result</td>
+                    </tr>`
+                ).join('')}
+            </tbody>
+        </table>
     `;
 }
