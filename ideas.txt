@@ -3,86 +3,93 @@
 🟢 DONE
 
 
-
-
 Running:
-    Gears:
-        -First Use
-        -price🔴
-        -duration🔴 (predeterminat a 700km, customizable)
-        -% of Durability (Alerts)🔴 
-        -Gantt🟡
-        -current km🟡
-        -Num Uses🟡
-        -€ per km
+    -Gears:
+        -All gears:
+            -Short description(name, km...)🟡
+            -Gantt🟡
+            -stacked area chart🟢
 
-    Best activities:
-        -PERSONA BESTS Top 3 times per distance (mile, 5k, 10k, 21k, 42k)
-        -Predict time with riegel
+        -Single Gear:
+            -First Use🔴
+            -price🔴
+            -duration🔴 
+            -(predeterminat a 700km, customizable)🔴
+            -% of Durability (Alerts)🔴 
+            -current km🟡
+            -Num Uses🟡
+            -€ per km🔴
+            -€ per dia🔴
+            -km per dia🔴
+
+    -Best activities:
+        -PERSONAL BESTS (mile, 5k, 10k, 21k, 42k)🔴
+        -Desplegable Top 3 times per distance (mile, 5k, 10k, 21k, 42k)🔴
+        -Predict time with riegel🔴
     
-    Totals: time, km, elevation, activities, avg Pace, avg VOmax
-    Compare with previosu SAME Period (+12%)🔴
+    -Overview:
+        -Totals: time, km, elevation, activities, avg Pace, avg VOmax🟡
+        -Compare with previosu SAME Period (+12%)🔴
+        -Streaks🟡
+        -Button 2024, 2025🔴
 
-    Scatter Pace vs Distance🟢
-    Distance Histogram🟢
-    Voxmax over time🟢
-    Vomax actual🔴
-    elevation gain histogram🟢
-    Scatter elevaiton gain vs distance🟢
-    Heatmap: year vs month, month vs day, day vs hour?🟡
-    Accum km over time🟢
-    Moving mean km over time🟡
-    TSB, CTL, ATL 🟢
-    km per month🟢
-    Streaks🟢
-    Heatmap total🔴
-    Button 2024, 2025🔴
-    Histogram of pace per km! all runs!!!🔴
-
-    
+    -Graphics:
+        -Scatter Pace vs Distance🟢
+        -Distance Histogram🟢
+        -Voxmax over time🟢
+        -Vomax actual🔴
+        -elevation gain histogram🟢
+        -Scatter elevaiton gain vs distance🟢
+        -Heatmap: year vs month, month vs day, day vs hour?🟡
+        -Accum km over time🟢
+        -Moving mean km over time🟡
+        -TSB, CTL, ATL 🟢
+        -km per month🟢
+        -Heatmap total🔴
+        -Histogram of pace per km! all runs!!!🔴
 
 
-Activity:🔴
-    -info:
-        -title🟡
-        -subtitle/description🟡
-        -timestamp🟡
-        -Location (City, neighbourhood)🔴
-        -acitivty type (race/workout)🔴
-        -Gear (and total km of gear)🟡
-        -Weather: Temperature, Pressure, Wind (i un coefficient?) Hard, soft (escala beauffort)🔴
-        -comments/kudos🔴
+    -Activity:🔴
+        -info:
+            -title🟡
+            -subtitle/description🟡
+            -timestamp🟡
+            -Location (City, neighbourhood)🔴
+            -acitivty type (race/workout)🔴
+            -Gear (and total km of gear)🟡
+            -Weather: Temperature, Pressure, Wind (i un coefficient?) Hard, soft (escala beauffort)🔴
+            -comments/kudos🔴
 
-    -stats:
-        -duration🟡
-        -distance🟡
-        -pace🟡
-        -elevation gain🔴
-        -calories🔴
-        -HR avg
-        -HR max🔴
+        -stats:
+            -duration🟡
+            -distance🟡
+            -pace🟡
+            -elevation gain🔴
+            -calories🔴
+            -HR avg🟡
+            -HR max🔴
 
-    -advanced stats:
-        -move ratio🔴
-        -effort🔴
-        -vomax est🔴
-        -% in each zone🔴
+        -advanced stats:
+            -move ratio🔴
+            -effort🔴
+            -vomax est🔴
+            -% in each zone🔴
 
-    -graphics:
-        -HR:
-            -histogram🔴
-            -AREA+Line (range) of HR🔴
-        -Elevation:
-            -histogram🔴
-            -Profile elevation🔴
-        -Pace:
-            -histogram🔴
-            -AREA+Line (range) of Pace🔴
-        -GPS:
-            -Track Overlay🔴
-            -GPX analyzer (buildings)🔴
+        -graphics:
+            -HR:
+                -histogram🔴
+                -AREA+Line (range) of HR🔴
+            -Elevation:
+                -histogram🔴
+                -Profile elevation🔴
+            -Pace:
+                -histogram🔴
+                -AREA+Line (range) of Pace🔴
+            -GPS:
+                -Track Overlay🔴
+                -GPX analyzer (buildings)🔴
 
-        -Segments🟡
+            -Segments🟡
 
 
 
