@@ -1208,17 +1208,17 @@ async function renderGearInfo(runs) {
     `).join('');
 }
 
-// --- 8. STREAKS RENDERING ---
+/**
+ * --- 8. STREAKS RENDERING ---
+ * Muestra la mejor racha histórica y la racha actual de días, semanas y meses consecutivos con actividad.
+ */
 function renderStreaks(runs) {
-    // 1. Obtener días con actividad
+    // --- DÍAS CONSECUTIVOS ---
     const daysSet = new Set(runs.map(a => a.start_date_local.substring(0, 10)));
     const allDays = Array.from(daysSet).sort();
 
-    // --- DÍAS CONSECUTIVOS ---
     let maxDayStreak = 0, currentDayStreak = 0, prevDay = null;
-    let today = new Date().toISOString().slice(0, 10);
-    let currentDayStreakActive = false;
-
+    let currentDayStreakValue = 0;
     for (let i = 0; i < allDays.length; i++) {
         const day = allDays[i];
         if (!prevDay) {
@@ -1236,15 +1236,32 @@ function renderStreaks(runs) {
         if (currentDayStreak > maxDayStreak) maxDayStreak = currentDayStreak;
         prevDay = day;
     }
-    // ¿Está la racha activa hoy?
-    if (allDays.length && allDays[allDays.length - 1] === today) {
-        currentDayStreakActive = true;
+    // Calcular racha actual de días (hasta hoy, hacia atrás)
+    let today = new Date().toISOString().slice(0, 10);
+    let idx = allDays.length - 1;
+    currentDayStreakValue = 0;
+    while (idx >= 0) {
+        if (allDays[idx] === today) {
+            currentDayStreakValue++;
+            today = new Date(new Date(today).getTime() - 86400000).toISOString().slice(0, 10);
+            idx--;
+        } else {
+            // Si la última actividad no es hoy, pero es consecutiva hacia atrás
+            const diff = (new Date(today) - new Date(allDays[idx])) / (1000 * 60 * 60 * 24);
+            if (diff === 1) {
+                currentDayStreakValue++;
+                today = allDays[idx];
+                today = new Date(new Date(today).getTime() - 86400000).toISOString().slice(0, 10);
+                idx--;
+            } else {
+                break;
+            }
+        }
     }
 
     // --- SEMANAS CONSECUTIVAS ---
     const weekSet = new Set(runs.map(a => {
         const d = new Date(a.start_date_local);
-        // Año + semana ISO
         const year = d.getFullYear();
         const week = getISOWeek(d);
         return `${year}-W${week}`;
@@ -1252,7 +1269,6 @@ function renderStreaks(runs) {
     const allWeeks = Array.from(weekSet).sort();
 
     let maxWeekStreak = 0, currentWeekStreak = 0, prevWeek = null;
-    let currentWeekStreakActive = false;
     for (let i = 0; i < allWeeks.length; i++) {
         const [year, weekStr] = allWeeks[i].split('-W');
         const week = parseInt(weekStr, 10);
@@ -1260,7 +1276,6 @@ function renderStreaks(runs) {
         if (!prevWeek) {
             currentWeekStreak = 1;
         } else {
-            // Si es la semana siguiente (puede cambiar de año)
             if (
                 (parseInt(year) === prev[0] && week === prev[1] + 1) ||
                 (parseInt(year) === prev[0] + 1 && prev[1] === 52 && week === 1)
@@ -1273,11 +1288,43 @@ function renderStreaks(runs) {
         if (currentWeekStreak > maxWeekStreak) maxWeekStreak = currentWeekStreak;
         prevWeek = allWeeks[i];
     }
-    // ¿Está la racha activa esta semana?
-    const now = new Date();
-    const thisWeek = `${now.getFullYear()}-W${getISOWeek(now)}`;
-    if (allWeeks.length && allWeeks[allWeeks.length - 1] === thisWeek) {
-        currentWeekStreakActive = true;
+    // Calcular racha actual de semanas (hasta esta semana, hacia atrás)
+    let now = new Date();
+    let thisWeekYear = now.getFullYear();
+    let thisWeekNum = getISOWeek(now);
+    let currentWeekStreakValue = 0;
+    let weekIdx = allWeeks.length - 1;
+    while (weekIdx >= 0) {
+        const [wYear, wNum] = allWeeks[weekIdx].split('-W').map(Number);
+        if (wYear === thisWeekYear && wNum === thisWeekNum) {
+            currentWeekStreakValue++;
+            // Retrocede una semana
+            if (thisWeekNum === 1) {
+                thisWeekYear -= 1;
+                thisWeekNum = 52;
+            } else {
+                thisWeekNum -= 1;
+            }
+            weekIdx--;
+        } else {
+            // Si la última semana no es la actual, pero es consecutiva hacia atrás
+            let expectedYear = thisWeekYear;
+            let expectedNum = thisWeekNum;
+            if (expectedNum === 1) {
+                expectedYear -= 1;
+                expectedNum = 52;
+            } else {
+                expectedNum -= 1;
+            }
+            if (wYear === expectedYear && wNum === expectedNum) {
+                currentWeekStreakValue++;
+                thisWeekYear = expectedYear;
+                thisWeekNum = expectedNum;
+                weekIdx--;
+            } else {
+                break;
+            }
+        }
     }
 
     // --- MESES CONSECUTIVOS ---
@@ -1285,7 +1332,6 @@ function renderStreaks(runs) {
     const allMonths = Array.from(monthSet).sort();
 
     let maxMonthStreak = 0, currentMonthStreak = 0, prevMonth = null;
-    let currentMonthStreakActive = false;
     for (let i = 0; i < allMonths.length; i++) {
         const [year, month] = allMonths[i].split('-').map(Number);
         const prev = prevMonth ? prevMonth.split('-').map(Number) : null;
@@ -1304,18 +1350,61 @@ function renderStreaks(runs) {
         if (currentMonthStreak > maxMonthStreak) maxMonthStreak = currentMonthStreak;
         prevMonth = allMonths[i];
     }
-    // ¿Está la racha activa este mes?
-    const thisMonth = new Date().toISOString().slice(0, 7);
-    if (allMonths.length && allMonths[allMonths.length - 1] === thisMonth) {
-        currentMonthStreakActive = true;
+    // Calcular racha actual de meses (hasta este mes, hacia atrás)
+    let thisMonthStr = new Date().toISOString().slice(0, 7);
+    let [curYear, curMonth] = thisMonthStr.split('-').map(Number);
+    let currentMonthStreakValue = 0;
+    let monthIdx = allMonths.length - 1;
+    while (monthIdx >= 0) {
+        const [mYear, mMonth] = allMonths[monthIdx].split('-').map(Number);
+        if (mYear === curYear && mMonth === curMonth) {
+            currentMonthStreakValue++;
+            // Retrocede un mes
+            if (curMonth === 1) {
+                curYear -= 1;
+                curMonth = 12;
+            } else {
+                curMonth -= 1;
+            }
+            monthIdx--;
+        } else {
+            // Si la última actividad no es este mes, pero es consecutiva hacia atrás
+            let expectedYear = curYear;
+            let expectedMonth = curMonth;
+            if (expectedMonth === 1) {
+                expectedYear -= 1;
+                expectedMonth = 12;
+            } else {
+                expectedMonth -= 1;
+            }
+            if (mYear === expectedYear && mMonth === expectedMonth) {
+                currentMonthStreakValue++;
+                curYear = expectedYear;
+                curMonth = expectedMonth;
+                monthIdx--;
+            } else {
+                break;
+            }
+        }
     }
 
-    // Renderiza el resultado
+    // Renderiza el resultado en dos columnas: Mejor racha histórica y racha actual
     const streaksInfo = document.getElementById('streaks-info');
     streaksInfo.innerHTML = `
-      <div><b>Max consecutive days running:</b> ${maxDayStreak} ${currentDayStreakActive ? '(current streak)' : ''}</div>
-      <div><b>Max consecutive weeks running:</b> ${maxWeekStreak} ${currentWeekStreakActive ? '(current streak)' : ''}</div>
-      <div><b>Max consecutive months running:</b> ${maxMonthStreak} ${currentMonthStreakActive ? '(current streak)' : ''}</div>
+      <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+        <div>
+          <h4>🏆 Mejor racha histórica</h4>
+          <div><b>Días consecutivos:</b> ${maxDayStreak}</div>
+          <div><b>Semanas consecutivas:</b> ${maxWeekStreak}</div>
+          <div><b>Meses consecutivos:</b> ${maxMonthStreak}</div>
+        </div>
+        <div>
+          <h4>🔥 Racha actual</h4>
+          <div><b>Días consecutivos:</b> ${currentDayStreakValue}</div>
+          <div><b>Semanas consecutivas:</b> ${currentWeekStreakValue}</div>
+          <div><b>Meses consecutivos:</b> ${currentMonthStreakValue}</div>
+        </div>
+      </div>
     `;
 }
 
