@@ -11,8 +11,21 @@ const loginSection = document.getElementById('login-section');
 const appSection = document.getElementById('app-section');
 
 // --- UI HELPERS (las que ya tenías) ---
-export function showLoading(message) { /*...*/ }
-export function hideLoading() { /*...*/ }
+export function showLoading(message) {
+    if (loadingOverlay) {
+        loadingMessage.textContent = message;
+        loadingOverlay.style.display = 'flex'; // O 'block', dependiendo de tu CSS para el overlay
+        loadingOverlay.classList.remove('hidden'); // Mantenemos la clase por si acaso
+    }
+}
+
+export function hideLoading() {
+    if (loadingOverlay) {
+        loadingOverlay.style.display = 'none'; // ¡La clave es esta línea!
+        loadingOverlay.classList.add('hidden'); // Mantenemos la clase por si acaso
+    }
+}
+
 export function handleError(message, error) { /*...*/ }
 export function setupDashboard(activities) { /*...*/ }
 
