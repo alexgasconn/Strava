@@ -627,6 +627,7 @@ function renderDashboard(activities) {
     plotStackedAreaGearChart(runs);   // Stacked area (Gear Usage by Month)
     plotGearGanttChart(runs);         // Mini Gantt (Gear Usage per Month)
     renderGearInfo(runs);
+    renderStreaks(runs);
 }
 
 // --- 6. INITIALIZATION AND AUTHENTICATION ---
@@ -852,37 +853,15 @@ function plotDistanceCharts(distanceStream, timeStream) {
     // Rolling mean (ventana de 10 puntos, puedes ajustar)
     const rolling = rollingMean(accumulated, 10);
 
-    // --- Incluir días sin actividad en el eje X (tiempo) ---
-    // Encuentra el rango de tiempo total (en minutos)
-    const totalMinutes = Math.ceil(timeStream[timeStream.length - 1] / 60);
-    // Crea un array de minutos desde 0 hasta el último minuto
-    const fullTimeLabels = Array.from({ length: totalMinutes + 1 }, (_, i) => i.toString());
-    // Mapea los valores acumulados y rolling a cada minuto, rellenando con el último valor conocido
-    const accumulatedPerMinute = [];
-    const rollingPerMinute = [];
-    let lastAccum = 0;
-    let lastRolling = 0;
-    let streamIdx = 0;
-    for (let min = 0; min <= totalMinutes; min++) {
-        // Avanza el índice del stream si corresponde
-        while (streamIdx < timeStream.length && (timeStream[streamIdx] / 60) <= min) {
-            lastAccum = accumulated[streamIdx];
-            lastRolling = rolling[streamIdx];
-            streamIdx++;
-        }
-        accumulatedPerMinute[min] = lastAccum;
-        rollingPerMinute[min] = lastRolling;
-    }
-
-    // Acumulado vs tiempo (incluyendo minutos sin actividad)
+    // Acumulado vs tiempo
     if (charts['accumulated-distance-chart']) charts['accumulated-distance-chart'].destroy();
     charts['accumulated-distance-chart'] = new Chart(document.getElementById('accumulated-distance-chart').getContext('2d'), {
         type: 'line',
         data: {
-            labels: fullTimeLabels,
+            labels: timeLabels,
             datasets: [{
                 label: 'Accumulated Distance (km)',
-                data: accumulatedPerMinute,
+                data: accumulated,
                 borderColor: 'rgba(54,162,235,1)',
                 backgroundColor: 'rgba(54,162,235,0.1)',
                 fill: true,
@@ -1190,11 +1169,8 @@ async function renderGearInfo(runs) {
     const gearInfoList = document.getElementById('gear-info-list');
     if (!gearInfoList) return;
 
-    console.log('Gear IDs found:', gearIds);
-
     if (gearIds.length === 0) {
         gearInfoList.innerHTML = '<p>No gear found.</p>';
-        console.log('No gear found for these runs.');
         return;
     }
 
@@ -1207,7 +1183,6 @@ async function renderGearInfo(runs) {
             // Calcula distancia total con ese gear
             const totalKm = runs.filter(a => a.gear_id === gearId)
                 .reduce((sum, a) => sum + a.distance, 0) / 1000;
-            console.log(`Fetched gear info for ${gearId}:`, gear, `Total distance: ${totalKm} km`);
             return {
                 id: gearId,
                 name: `${gear.brand_name} ${gear.model_name}`,
@@ -1216,13 +1191,10 @@ async function renderGearInfo(runs) {
                 nickname: gear.nickname || '',
                 retired: gear.retired ? 'Yes' : 'No'
             };
-        } catch (err) {
-            console.warn(`Failed to fetch gear info for ${gearId}:`, err);
+        } catch {
             return { id: gearId, name: 'Unknown', type: '', distance: '-', nickname: '', retired: '' };
         }
     }));
-
-    console.log('Gear details to render:', gearDetails);
 
     // Render cards
     gearInfoList.innerHTML = gearDetails.map(g => `
@@ -1234,4 +1206,124 @@ async function renderGearInfo(runs) {
         <div><span class="gear-label">Retired:</span> ${g.retired}</div>
       </div>
     `).join('');
+}
+
+// --- 8. STREAKS RENDERING ---
+function renderStreaks(runs) {
+    // 1. Obtener días con actividad
+    const daysSet = new Set(runs.map(a => a.start_date_local.substring(0, 10)));
+    const allDays = Array.from(daysSet).sort();
+
+    // --- DÍAS CONSECUTIVOS ---
+    let maxDayStreak = 0, currentDayStreak = 0, prevDay = null;
+    let today = new Date().toISOString().slice(0, 10);
+    let currentDayStreakActive = false;
+
+    for (let i = 0; i < allDays.length; i++) {
+        const day = allDays[i];
+        if (!prevDay) {
+            currentDayStreak = 1;
+        } else {
+            const prev = new Date(prevDay);
+            const curr = new Date(day);
+            const diff = (curr - prev) / (1000 * 60 * 60 * 24);
+            if (diff === 1) {
+                currentDayStreak++;
+            } else {
+                currentDayStreak = 1;
+            }
+        }
+        if (currentDayStreak > maxDayStreak) maxDayStreak = currentDayStreak;
+        prevDay = day;
+    }
+    // ¿Está la racha activa hoy?
+    if (allDays.length && allDays[allDays.length - 1] === today) {
+        currentDayStreakActive = true;
+    }
+
+    // --- SEMANAS CONSECUTIVAS ---
+    const weekSet = new Set(runs.map(a => {
+        const d = new Date(a.start_date_local);
+        // Año + semana ISO
+        const year = d.getFullYear();
+        const week = getISOWeek(d);
+        return `${year}-W${week}`;
+    }));
+    const allWeeks = Array.from(weekSet).sort();
+
+    let maxWeekStreak = 0, currentWeekStreak = 0, prevWeek = null;
+    let currentWeekStreakActive = false;
+    for (let i = 0; i < allWeeks.length; i++) {
+        const [year, weekStr] = allWeeks[i].split('-W');
+        const week = parseInt(weekStr, 10);
+        const prev = prevWeek ? prevWeek.split('-W').map(Number) : null;
+        if (!prevWeek) {
+            currentWeekStreak = 1;
+        } else {
+            // Si es la semana siguiente (puede cambiar de año)
+            if (
+                (parseInt(year) === prev[0] && week === prev[1] + 1) ||
+                (parseInt(year) === prev[0] + 1 && prev[1] === 52 && week === 1)
+            ) {
+                currentWeekStreak++;
+            } else {
+                currentWeekStreak = 1;
+            }
+        }
+        if (currentWeekStreak > maxWeekStreak) maxWeekStreak = currentWeekStreak;
+        prevWeek = allWeeks[i];
+    }
+    // ¿Está la racha activa esta semana?
+    const now = new Date();
+    const thisWeek = `${now.getFullYear()}-W${getISOWeek(now)}`;
+    if (allWeeks.length && allWeeks[allWeeks.length - 1] === thisWeek) {
+        currentWeekStreakActive = true;
+    }
+
+    // --- MESES CONSECUTIVOS ---
+    const monthSet = new Set(runs.map(a => a.start_date_local.substring(0, 7)));
+    const allMonths = Array.from(monthSet).sort();
+
+    let maxMonthStreak = 0, currentMonthStreak = 0, prevMonth = null;
+    let currentMonthStreakActive = false;
+    for (let i = 0; i < allMonths.length; i++) {
+        const [year, month] = allMonths[i].split('-').map(Number);
+        const prev = prevMonth ? prevMonth.split('-').map(Number) : null;
+        if (!prevMonth) {
+            currentMonthStreak = 1;
+        } else {
+            if (
+                (year === prev[0] && month === prev[1] + 1) ||
+                (year === prev[0] + 1 && prev[1] === 12 && month === 1)
+            ) {
+                currentMonthStreak++;
+            } else {
+                currentMonthStreak = 1;
+            }
+        }
+        if (currentMonthStreak > maxMonthStreak) maxMonthStreak = currentMonthStreak;
+        prevMonth = allMonths[i];
+    }
+    // ¿Está la racha activa este mes?
+    const thisMonth = new Date().toISOString().slice(0, 7);
+    if (allMonths.length && allMonths[allMonths.length - 1] === thisMonth) {
+        currentMonthStreakActive = true;
+    }
+
+    // Renderiza el resultado
+    const streaksInfo = document.getElementById('streaks-info');
+    streaksInfo.innerHTML = `
+      <div><b>Max consecutive days running:</b> ${maxDayStreak} ${currentDayStreakActive ? '(current streak)' : ''}</div>
+      <div><b>Max consecutive weeks running:</b> ${maxWeekStreak} ${currentWeekStreakActive ? '(current streak)' : ''}</div>
+      <div><b>Max consecutive months running:</b> ${maxMonthStreak} ${currentMonthStreakActive ? '(current streak)' : ''}</div>
+    `;
+}
+
+// Helper para semana ISO
+function getISOWeek(date) {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 }
