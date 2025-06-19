@@ -1,12 +1,6 @@
 // js/utils.js
 
-/**
- * Filtra actividades según el rango de fechas global.
- * @param {Array} activities - Array de actividades.
- * @param {string|null} from - Fecha de inicio (YYYY-MM-DD).
- * @param {string|null} to - Fecha de fin (YYYY-MM-DD).
- * @returns {Array} - Actividades filtradas.
- */
+// EXPORTADO: Ahora es accesible desde otros módulos.
 export function filterActivitiesByDate(activities, from, to) {
     if (!from && !to) return activities;
     return activities.filter(act => {
@@ -17,12 +11,7 @@ export function filterActivitiesByDate(activities, from, to) {
     });
 }
 
-/**
- * Calcula una media móvil sobre un array de números.
- * @param {Array<number>} arr - El array de datos.
- * @param {number} windowSize - El tamaño de la ventana.
- * @returns {Array<number>} - El array con la media móvil.
- */
+// EXPORTADO: Correcto.
 export function rollingMean(arr, windowSize) {
     const result = [];
     for (let i = 0; i < arr.length; i++) {
@@ -33,11 +22,7 @@ export function rollingMean(arr, windowSize) {
     return result;
 }
 
-/**
- * Calcula CTL, ATL y TSB a partir de un array de esfuerzos diarios.
- * @param {Array<number>} dailyEffort - Array de valores de esfuerzo por día.
- * @returns {Object} - Objeto con arrays para atl, ctl y tsb.
- */
+// EXPORTADO: Correcto.
 export function calculateFitness(dailyEffort) {
     function expMovingAvg(arr, lambda) {
         const result = [];
@@ -55,13 +40,14 @@ export function calculateFitness(dailyEffort) {
     return { atl, ctl, tsb };
 }
 
-
 /**
- * Obtiene el número de semana ISO para una fecha.
+ * ¡NUEVO Y CORREGIDO!
+ * La función getISOWeek estaba oculta dentro de renderStreaks en tu script original.
+ * Debe estar aquí, en utils.js, y ser exportada para que ui.js pueda usarla.
  * @param {Date} date - El objeto Date.
  * @returns {number} - El número de la semana.
  */
-function getISOWeek(date) {
+export function getISOWeek(date) {
     const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
     const dayNum = d.getUTCDay() || 7;
     d.setUTCDate(d.getUTCDate() + 4 - dayNum);
@@ -70,18 +56,5 @@ function getISOWeek(date) {
 }
 
 
-/**
- * Calcula las rachas de actividad (días, semanas, meses).
- * @param {Array} runs - Array de actividades de carrera.
- * @returns {Object} - Objeto con las rachas actuales e históricas.
- */
-export function calculateStreaks(runs) {
-    // Esta es la lógica de tu función renderStreaks, pero solo la parte de cálculo.
-    // ... (El código de cálculo de rachas de días, semanas y meses va aquí) ...
-    // ... (Es un bloque largo, lo omito para brevedad, pero es el mismo que tenías) ...
-    // Al final, en lugar de renderizar, devuelve un objeto:
-    // return { maxDayStreak, currentDayStreak, maxWeekStreak, ... };
-    // Por ahora, para simplificar, dejaremos el cálculo y renderizado juntos en ui.js
-    // pero idealmente, el cálculo puro iría aquí.
-    return {}; // Placeholder
-}
+// ELIMINADO: La función calculateStreaks la hemos movido por completo a ui.js
+// porque mezclaba cálculo y renderizado. Mantener este placeholder causaba confusión.
