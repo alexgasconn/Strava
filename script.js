@@ -91,6 +91,9 @@ function renderDashboard(activities) {
     const heatmapContainer = document.getElementById('cal-heatmap');
     if (heatmapContainer) {
         heatmapContainer.innerHTML = '';
+        // Set start to the first day of the month 11 months ago
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth() - 11, 1);
         cal.paint({
             itemSelector: heatmapContainer,
             domain: { type: "month", label: { text: "MMM" } },
@@ -98,7 +101,7 @@ function renderDashboard(activities) {
             range: 12,
             data: { source: Object.entries(aggregatedData).map(([date, value]) => ({ date, value })), x: 'date', y: 'value' },
             scale: { color: { type: 'threshold', range: ['#ebedf0', '#fcbba1', '#fc9272', '#fb6a4a', '#de2d26'], domain: [1, 2, 3, 4] } },
-            date: { start: new Date(new Date().setFullYear(new Date().getFullYear() - 1)) }
+            date: { start }
         });
     }
 
@@ -1165,8 +1168,11 @@ async function renderGearInfo(runs) {
     const gearInfoList = document.getElementById('gear-info-list');
     if (!gearInfoList) return;
 
+    console.log('Gear IDs found:', gearIds);
+
     if (gearIds.length === 0) {
         gearInfoList.innerHTML = '<p>No gear found.</p>';
+        console.log('No gear found for these runs.');
         return;
     }
 
@@ -1179,6 +1185,7 @@ async function renderGearInfo(runs) {
             // Calcula distancia total con ese gear
             const totalKm = runs.filter(a => a.gear_id === gearId)
                 .reduce((sum, a) => sum + a.distance, 0) / 1000;
+            console.log(`Fetched gear info for ${gearId}:`, gear, `Total distance: ${totalKm} km`);
             return {
                 id: gearId,
                 name: `${gear.brand_name} ${gear.model_name}`,
@@ -1187,10 +1194,13 @@ async function renderGearInfo(runs) {
                 nickname: gear.nickname || '',
                 retired: gear.retired ? 'Yes' : 'No'
             };
-        } catch {
+        } catch (err) {
+            console.warn(`Failed to fetch gear info for ${gearId}:`, err);
             return { id: gearId, name: 'Unknown', type: '', distance: '-', nickname: '', retired: '' };
         }
     }));
+
+    console.log('Gear details to render:', gearDetails);
 
     // Render cards
     gearInfoList.innerHTML = gearDetails.map(g => `
