@@ -1,31 +1,402 @@
 // js/charts.js
-// Aquí irían todas tus funciones `plot...` y `createChart`.
-// Por brevedad, solo pongo la estructura. Debes mover TODAS las funciones de gráficos aquí.
+import { calculateFitness, rollingMean as calculateRollingMean } from './utils.js';
 
-let charts = {}; // Almacén para las instancias de Chart.js
+let charts = {}; // Almacén global para las instancias de Chart.js
+let runsHeatmapMap = null; // Almacén para el mapa de Leaflet
+let runsHeatmapLayer = null; // Almacén para la capa de calor
 
+// --- UTILITY ---
 function createChart(canvasId, config) {
     const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
-    if (charts[canvasId]) charts[canvasId].destroy();
+    if (!canvas) {
+        console.error(`Canvas with id ${canvasId} not found.`);
+        return;
+    }
+    // Si ya existe un gráfico en ese canvas, lo destruimos primero
+    if (charts[canvasId]) {
+        charts[canvasId].destroy();
+    }
     charts[canvasId] = new Chart(canvas, config);
 }
 
+
+// --- CHART RENDERING FUNCTIONS ---
+
 export function renderConsistencyChart(runs) {
-    // ... tu código para CalHeatmap ...
+    const cal = new CalHeatmap();
+    const aggregatedData = runs.reduce((acc, act) => {
+        const date = act.start_date_local.substring(0, 10);
+        acc[date] = (acc[date] || 0) + 1; // O puedes sumar distancia, etc.
+        return acc;
+    }, {});
+    const heatmapContainer = document.getElementById('cal-heatmap');
+    if (heatmapContainer) {
+        heatmapContainer.innerHTML = '';
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+        cal.paint({
+            itemSelector: heatmapContainer,
+            domain: { type: "month", label: { text: "MMM" } },
+            subDomain: { type: "ghDay", radius: 2, width: 11, height: 11 },
+            range: 12,
+            data: { source: Object.entries(aggregatedData).map(([date, value]) => ({ date, value })), x: 'date', y: 'value' },
+            scale: { color: { type: 'threshold', range: ['#ebedf0', '#fcbba1', '#fc9272', '#fb6a4a', '#de2d26'], domain: [1, 2, 3, 4] } },
+            date: { start }
+        });
+    }
 }
 
 export function renderActivityTypeChart(runs) {
-    // ... tu código para el gráfico de barras de tipo de actividad ...
+    const p90Distance = runs.length > 0 ? [...runs].map(a => a.distance).sort((a,b)=>a-b)[Math.floor(0.9 * runs.length)] : 0;
+    runs.forEach(a => {
+        if (a.workout_type !== 1 && a.distance >= p90Distance) {
+            a.workout_type_classified = 2; // Long run
+        } else {
+            a.workout_type_classified = a.workout_type || 0;
+        }
+    });
+
+    const workoutTypeLabels = ['Workout', 'Race', 'Long Run'];
+    const workoutTypeCounts = [0, 0, 0];
+    runs.forEach(act => {
+        const wt = act.workout_type_classified;
+        if(workoutTypeCounts[wt] !== undefined) {
+          workoutTypeCounts[wt]++;
+        }
+    });
+
+    createChart('activity-type-barchart', {
+        type: 'bar',
+        data: {
+            labels: workoutTypeLabels,
+            datasets: [{
+                label: '# Activities',
+                data: workoutTypeCounts,
+                backgroundColor: 'rgba(252, 82, 0, 0.7)'
+            }]
+        },
+        options: { indexAxis: 'y', plugins: { legend: { display: false } } }
+    });
 }
 
 export function renderMonthlyDistanceChart(runs) {
-    // ... tu código para el gráfico de distancia mensual ...
+    const monthlyData = runs.reduce((acc, act) => {
+        const month = act.start_date_local.substring(0, 7);
+        if (!acc[month]) acc[month] = { distance: 0, count: 0 };
+        acc[month].distance += act.distance / 1000;
+        acc[month].count += 1;
+        return acc;
+    }, {});
+    
+    const sortedMonths = Object.keys(monthlyData).sort();
+    const monthlyDistances = sortedMonths.map(m => monthlyData[m].distance);
+    const monthlyCounts = sortedMonths.map(m => monthlyData[m].count);
+
+    createChart('monthly-distance-chart', {
+        type: 'bar',
+        data: {
+            labels: sortedMonths,
+            datasets: [
+                { type: 'line', label: 'Distance (km)', data: monthlyDistances, borderColor: '#FC5200', yAxisID: 'y' },
+                { type: 'bar', label: '# Runs', data: monthlyCounts, backgroundColor: 'rgba(54,162,235,0.25)', yAxisID: 'y1' }
+            ]
+        },
+        options: {
+            scales: {
+                y: { type: 'linear', position: 'left', title: { display: true, text: 'Distance (km)' } },
+                y1: { type: 'linear', position: 'right', title: { display: true, text: '# Runs' }, grid: { drawOnChartArea: false } }
+            }
+        }
+    });
 }
 
-// ... Y así sucesivamente para CADA gráfico ...
-// renderPaceVsDistanceChart, renderDistanceHistogram, renderVo2maxChart,
-// renderFitnessChart, renderGearCharts, renderHeatmap, etc.
+export function renderPaceVsDistanceChart(runs) {
+    const data = runs.filter(r => r.distance > 0).map(r => ({ 
+        x: r.distance / 1000, 
+        y: (r.moving_time / 60) / (r.distance / 1000) // Pace in min/km
+    }));
 
-// Mueve TODAS las funciones que empiezan con 'plot' o que crean un 'new Chart' aquí
-// y asegúrate de añadir 'export' delante de cada una.
+    createChart('pace-vs-distance-chart', {
+        type: 'scatter',
+        data: {
+            datasets: [{
+                label: 'Runs',
+                data: data,
+                backgroundColor: 'rgba(252, 82, 0, 0.7)'
+            }]
+        },
+        options: { 
+            scales: { 
+                x: { title: { display: true, text: 'Distance (km)' } }, 
+                y: { title: { display: true, text: 'Pace (min/km)' } } 
+            } 
+        }
+    });
+}
+
+export function renderDistanceHistogram(runs) {
+    const HISTOGRAM_BIN_SIZE_KM = 1;
+    const distances = runs.map(act => act.distance / 1000);
+    const maxDistance = Math.max(...distances, 0);
+    const binCount = Math.ceil(maxDistance / HISTOGRAM_BIN_SIZE_KM);
+    const bins = Array(binCount).fill(0);
+    distances.forEach(d => {
+        const idx = Math.floor(d / HISTOGRAM_BIN_SIZE_KM);
+        if (idx < binCount) bins[idx]++;
+    });
+
+    createChart('distance-histogram', {
+        type: 'bar',
+        data: {
+            labels: bins.map((_, i) => `${(i * HISTOGRAM_BIN_SIZE_KM).toFixed(0)}-${((i + 1) * HISTOGRAM_BIN_SIZE_KM).toFixed(0)}`),
+            datasets: [{ label: '# Activities', data: bins, backgroundColor: 'rgba(252, 82, 0, 0.5)' }]
+        },
+        options: {
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { title: { display: true, text: `Distance (bins of ${HISTOGRAM_BIN_SIZE_KM} km)` } },
+                y: { title: { display: true, text: 'Count' } }
+            }
+        }
+    });
+}
+
+export function renderVo2maxChart(runs) {
+    const USER_MAX_HR = 195;
+    const vo2maxData = runs
+        .filter(act => act.average_heartrate && act.moving_time > 0 && act.distance > 0)
+        .map(act => {
+            const vel_m_min = (act.distance / act.moving_time) * 60;
+            const vo2_at_pace = (vel_m_min * 0.2) + 3.5;
+            const vo2max = vo2_at_pace / (act.average_heartrate / USER_MAX_HR);
+            return { yearMonth: act.start_date_local.substring(0, 7), vo2max };
+        });
+
+    const vo2maxByMonth = vo2maxData.reduce((acc, d) => {
+        if (!acc[d.yearMonth]) acc[d.yearMonth] = [];
+        acc[d.yearMonth].push(d.vo2max);
+        return acc;
+    }, {});
+    
+    const months = Object.keys(vo2maxByMonth).sort();
+    const vo2maxMonthlyAvg = months.map(m => vo2maxByMonth[m].reduce((a, b) => a + b, 0) / vo2maxByMonth[m].length);
+    const vo2maxRolling = calculateRollingMean(vo2maxMonthlyAvg, 3); // Rolling window of 3 months
+
+    createChart('vo2max-over-time', {
+        type: 'line',
+        data: {
+            labels: months,
+            datasets: [{ label: 'Estimated VO₂max (3-month rolling mean)', data: vo2maxRolling, borderColor: 'rgba(54, 162, 235, 1)', tension: 0.2 }]
+        },
+        options: { scales: { y: { title: { display: true, text: 'VO₂max' } } } }
+    });
+}
+
+export function renderFitnessChart(runs) {
+    const effortByDay = runs.reduce((acc, act) => {
+        const date = act.start_date_local.substring(0, 10);
+        acc[date] = (acc[date] || 0) + (act.perceived_exertion ?? act.suffer_score ?? 0);
+        return acc;
+    }, {});
+    
+    const allEffortDays = Object.keys(effortByDay).sort();
+    if (allEffortDays.length === 0) return;
+
+    const startDate = new Date(allEffortDays[0]);
+    const endDate = new Date(allEffortDays[allEffortDays.length - 1]);
+    const days = [];
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        days.push(d.toISOString().slice(0, 10));
+    }
+    
+    const dailyEffort = days.map(date => effortByDay[date] || 0);
+    const { atl, ctl, tsb } = calculateFitness(dailyEffort);
+
+    createChart('ctl-atl-tsb', {
+        type: 'line',
+        data: {
+            labels: days,
+            datasets: [
+                { label: 'ATL (Fatigue)', data: atl, borderColor: '#FC5200', fill: false, tension: 0.2, pointRadius: 0 },
+                { label: 'CTL (Fitness)', data: ctl, borderColor: '#0074D9', fill: true, backgroundColor: 'rgba(0,116,217,0.1)', tension: 0.2, pointRadius: 0 },
+                { label: 'TSB (Form)', data: tsb, borderColor: '#2ECC40', fill: false, tension: 0.2, pointRadius: 0 }
+            ]
+        },
+        options: { scales: { y: { title: { display: true, text: 'Load' } } } }
+    });
+}
+
+export function renderStackedAreaGearChart(runs) {
+    const gearMonthKm = runs.reduce((acc, a) => {
+        if (!a.gear_id) return acc;
+        const gearName = a.gear?.name || a.gear_id;
+        const month = a.start_date_local.substring(0, 7);
+        if (!acc[month]) acc[month] = {};
+        acc[month][gearName] = (acc[month][gearName] || 0) + a.distance / 1000;
+        return acc;
+    }, {});
+
+    const allMonths = Object.keys(gearMonthKm).sort();
+    const allGears = Array.from(new Set(runs.map(a => a.gear?.name || a.gear_id).filter(Boolean)));
+    
+    const datasets = allGears.map((gear, idx) => ({
+        label: gear,
+        data: allMonths.map(month => gearMonthKm[month]?.[gear] || 0),
+        backgroundColor: `hsl(${(idx * 60)}, 70%, 60%)`, // Different colors
+        fill: true,
+        borderWidth: 1,
+        tension: 0.2
+    }));
+
+    createChart('stacked-area-chart', {
+        type: 'line',
+        data: { labels: allMonths, datasets: datasets },
+        options: {
+            scales: {
+                x: { stacked: true, title: { display: true, text: 'Year-Month' } },
+                y: { stacked: true, title: { display: true, text: 'Distance (km)' } }
+            }
+        }
+    });
+}
+
+export function renderGearGanttChart(runs) {
+    const gearMonthKm = runs.reduce((acc, a) => {
+        if (!a.gear_id) return acc;
+        const gearName = a.gear?.name || a.gear_id;
+        const month = a.start_date_local.substring(0, 7);
+        if (!acc[month]) acc[month] = {};
+        acc[month][gearName] = (acc[month][gearName] || 0) + a.distance / 1000;
+        return acc;
+    }, {});
+
+    const allMonths = Object.keys(gearMonthKm).sort();
+    const allGears = Array.from(new Set(runs.map(a => a.gear?.name || a.gear_id).filter(Boolean)));
+
+    const datasets = allGears.map((gear, idx) => ({
+        label: gear,
+        data: allMonths.map(month => gearMonthKm[month]?.[gear] || 0),
+        backgroundColor: `hsl(${(idx * 60)}, 70%, 60%)`
+    }));
+
+    createChart('gear-gantt-chart', {
+        type: 'bar',
+        data: { labels: allMonths, datasets },
+        options: {
+            indexAxis: 'y',
+            scales: {
+                x: { stacked: true, title: { display: true, text: 'Distance (km)' } },
+                y: { stacked: true, title: { display: true, text: 'Year-Month' } }
+            }
+        }
+    });
+}
+
+export function renderDistanceVsElevationChart(runs) {
+    const data = runs.map(r => ({
+        x: r.distance / 1000,
+        y: r.total_elevation_gain || 0
+    }));
+    createChart('distance-vs-elevation-chart', {
+        type: 'scatter',
+        data: {
+            datasets: [{
+                label: 'Runs',
+                data,
+                backgroundColor: 'rgba(54,162,235,0.7)'
+            }]
+        },
+        options: {
+            scales: {
+                x: { title: { display: true, text: 'Distance (km)' } },
+                y: { title: { display: true, text: 'Elevation Gain (m)' } }
+            }
+        }
+    });
+}
+
+export function renderElevationHistogram(runs) {
+    const values = runs.map(r => r.total_elevation_gain || 0);
+    const binSize = 20;
+    const maxVal = Math.max(...values, 0);
+    const binCount = Math.ceil(maxVal / binSize);
+    const bins = Array(binCount).fill(0);
+    values.forEach(v => {
+        const idx = Math.floor(v / binSize);
+        if (idx < binCount) bins[idx]++;
+    });
+    
+    createChart('elevation-histogram', {
+        type: 'bar',
+        data: {
+            labels: bins.map((_, i) => `${i * binSize}-${(i + 1) * binSize}`),
+            datasets: [{
+                label: '# Activities',
+                data: bins,
+                backgroundColor: 'rgba(252, 82, 0, 0.5)'
+            }]
+        },
+        options: { scales: { x: { title: { display: true, text: 'Elevation Gain (m)' } } } }
+    });
+}
+
+export function renderAccumulatedDistanceChart(runs) {
+    const sorted = [...runs].sort((a, b) => new Date(a.start_date_local) - new Date(b.start_date_local));
+    const labels = sorted.map(a => a.start_date_local.substring(0, 10));
+    const distances = sorted.map(a => a.distance / 1000);
+    const accumulated = [];
+    distances.reduce((acc, d, i) => accumulated[i] = acc + d, 0);
+
+    createChart('accumulated-distance-chart', {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{ label: 'Accumulated Distance (km)', data: accumulated, borderColor: 'rgba(54,162,235,1)', pointRadius: 0, tension: 0.1 }]
+        },
+        options: { scales: { y: { title: { display: true, text: 'Distance (km)' } } } }
+    });
+}
+
+export function renderRollingMeanDistanceChart(runs) {
+    const sorted = [...runs].sort((a, b) => new Date(a.start_date_local) - new Date(b.start_date_local));
+    const labels = sorted.map(a => a.start_date_local.substring(0, 10));
+    const distances = sorted.map(a => a.distance / 1000);
+    const rolling = calculateRollingMean(distances, 10); // Window of 10 runs
+
+    createChart('rolling-mean-distance-chart', {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{ label: 'Rolling Mean Distance (10 runs)', data: rolling, borderColor: 'rgba(255,99,132,1)', pointRadius: 0, tension: 0.1 }]
+        },
+        options: { scales: { y: { title: { display: true, text: 'Distance (km)' } } } }
+    });
+}
+
+export function renderRunsHeatmap(runs) {
+    if (!window.L) return; // Leaflet not loaded
+    const points = runs.flatMap(act => {
+        if (!act.map?.summary_polyline) return [];
+        // A simple decode function might be needed if not present elsewhere
+        // For now, let's assume it's available or handle the error
+        try {
+            return L.Polyline.fromEncoded(act.map.summary_polyline).getLatLngs();
+        } catch(e) {
+            return act.start_latlng ? [[act.start_latlng[0], act.start_latlng[1]]] : [];
+        }
+    });
+
+    if (!runsHeatmapMap) {
+        runsHeatmapMap = L.map('runs-heatmap').setView([40, -3], 2); // Default view
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(runsHeatmapMap);
+    }
+    if (runsHeatmapLayer) {
+        runsHeatmapMap.removeLayer(runsHeatmapLayer);
+    }
+    if (points.length > 0) {
+        runsHeatmapLayer = L.heatLayer(points.map(p => [p.lat, p.lng]), { radius: 15, blur: 20, maxZoom: 12 }).addTo(runsHeatmapMap);
+        runsHeatmapMap.fitBounds(L.latLngBounds(points));
+    }
+}
