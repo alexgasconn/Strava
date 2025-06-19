@@ -55,6 +55,10 @@ async function getValidAccessToken(req) {
 
 // --- HANDLER PRINCIPAL ---
 export default async function handler(req, res) {
+    if (!process.env.STRAVA_CLIENT_ID || !process.env.STRAVA_CLIENT_SECRET) {
+          console.error("Server configuration error: Strava environment variables are not set.");
+          return res.status(500).json({ error: "Server configuration error. Please contact the administrator." });
+      }
     if (req.method !== 'GET') {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
