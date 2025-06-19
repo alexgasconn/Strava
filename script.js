@@ -852,42 +852,37 @@ function plotDistanceCharts(distanceStream, timeStream) {
     // Rolling mean (ventana de 10 puntos, puedes ajustar)
     const rolling = rollingMean(accumulated, 10);
 
-    // Rellenar todos los días desde el primer hasta el último timestamp
-    // Convertimos los timeStream a fechas absolutas si es posible
-    // Suponemos que timeStream[0] es 0 y representa el inicio de la actividad
-    // Si quieres rellenar días entre streams de varias actividades, necesitarías la fecha base
+    // --- Incluir días sin actividad en el eje X (tiempo) ---
+    // Encuentra el rango de tiempo total (en minutos)
+    const totalMinutes = Math.ceil(timeStream[timeStream.length - 1] / 60);
+    // Crea un array de minutos desde 0 hasta el último minuto
+    const fullTimeLabels = Array.from({ length: totalMinutes + 1 }, (_, i) => i.toString());
+    // Mapea los valores acumulados y rolling a cada minuto, rellenando con el último valor conocido
+    const accumulatedPerMinute = [];
+    const rollingPerMinute = [];
+    let lastAccum = 0;
+    let lastRolling = 0;
+    let streamIdx = 0;
+    for (let min = 0; min <= totalMinutes; min++) {
+        // Avanza el índice del stream si corresponde
+        while (streamIdx < timeStream.length && (timeStream[streamIdx] / 60) <= min) {
+            lastAccum = accumulated[streamIdx];
+            lastRolling = rolling[streamIdx];
+            streamIdx++;
+        }
+        accumulatedPerMinute[min] = lastAccum;
+        rollingPerMinute[min] = lastRolling;
+    }
 
-    // Para un stream de una sola actividad, simplemente mostramos los puntos tal cual,
-    // pero si quieres que se noten los periodos con 0 km en un rango de días, necesitas el rango de fechas
-
-    // Aquí tienes un ejemplo para rellenar todos los días entre el primer y último día con 0 si falta alguno:
-    // Suponemos que tienes un array de fechas (YYYY-MM-DD) y distancias por día
-
-    // Si distanceStream y timeStream son de una sola actividad, no hay días intermedios vacíos.
-    // Si quieres hacerlo para varias actividades, deberías agrupar por día.
-
-    // Ejemplo para un stream de varias actividades agrupadas por día:
-    // (esto es solo plantilla, ajusta según tu estructura de datos)
-
-    // --- Si distanceStream es por día (no por punto de actividad) ---
-    // const allDates = getAllDatesBetween(minDate, maxDate);
-    // const distanceByDate = {}; // { 'YYYY-MM-DD': km }
-    // allDates.forEach(date => {
-    //     if (!distanceByDate[date]) distanceByDate[date] = 0;
-    // });
-    // const accumulated = [];
-    // allDates.reduce((acc, date, i) => accumulated[i] = acc + distanceByDate[date], 0);
-
-    // --- Para el stream de una sola actividad (no hay días vacíos) ---
-    // Acumulado vs tiempo
+    // Acumulado vs tiempo (incluyendo minutos sin actividad)
     if (charts['accumulated-distance-chart']) charts['accumulated-distance-chart'].destroy();
     charts['accumulated-distance-chart'] = new Chart(document.getElementById('accumulated-distance-chart').getContext('2d'), {
         type: 'line',
         data: {
-            labels: timeLabels,
+            labels: fullTimeLabels,
             datasets: [{
                 label: 'Accumulated Distance (km)',
-                data: accumulated,
+                data: accumulatedPerMinute,
                 borderColor: 'rgba(54,162,235,1)',
                 backgroundColor: 'rgba(54,162,235,0.1)',
                 fill: true,
