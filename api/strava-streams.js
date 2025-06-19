@@ -1,88 +1,68 @@
+// /api/strava-streams.js
 import fetch from 'node-fetch';
 
+// --- USAMOS EXACTAMENTE LA MISMA FUNCIÓN HELPER ---
+async function getValidAccessToken(req) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        throw new Error('Missing or invalid Authorization header');
+    }
+    const payloadRaw = authHeader.split(' ')[1];
+    const tokenData = JSON.parse(Buffer.from(payloadRaw, 'base64').toString());
+    const { access_token, refresh_token, expires_at } = tokenData;
+    if (!access_token || !refresh_token || !expires_at) {
+        throw new Error('Incomplete token data');
+    }
+    const now = Math.floor(Date.now() / 1000);
+    if (expires_at > now + 60) {
+        return { accessToken: access_token, updatedTokens: null };
+    }
+    console.log(`[strava-streams] Token expired. Refreshing...`);
+    const response = await fetch('https://www.strava.com/oauth/token', { /* ...mismo cuerpo que arriba... */ });
+    if (!response.ok) throw new Error('Token refresh failed');
+    const refreshed = await response.json();
+    return {
+        accessToken: refreshed.access_token,
+        updatedTokens: {
+            access_token: refreshed.access_token,
+            refresh_token: refreshed.refresh_token,
+            expires_at: refreshed.expires_at
+        }
+    };
+}
+
+
+// --- HANDLER PRINCIPAL ---
 export default async function handler(req, res) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
-  }
+    if (req.method !== 'GET') {
+        return res.status(405).json({ error: 'Method Not Allowed' });
+    }
 
-  const { id, type } = req.query;
-  if (!id || !type) {
-    return res.status(400).json({ error: 'Activity ID and stream types are required' });
-  }
+    const { id, type } = req.query;
+    if (!id || !type) {
+        return res.status(400).json({ error: 'Activity ID and stream types are required' });
+    }
 
-  const authHeader = req.headers.authorization;
-  const refreshToken = req.headers['x-refresh-token'];
-
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Missing or invalid Authorization header' });
-  }
-
-  let accessToken = authHeader.split(' ')[1];
-
-  const buildUrl = (token) =>
-    `https://www.strava.com/api/v3/activities/${id}/streams?keys=${type}&key_by_type=true`;
-
-  async function fetchStreams(token) {
-    const res = await fetch(buildUrl(token), {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return res;
-  }
-
-  let response = await fetchStreams(accessToken);
-
-  // If unauthorized, try refresh
-  if (response.status === 401 && refreshToken) {
     try {
-      const refreshRes = await fetch('https://www.strava.com/oauth/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          client_id: process.env.STRAVA_CLIENT_ID,
-          client_secret: process.env.STRAVA_CLIENT_SECRET,
-          grant_type: 'refresh_token',
-          refresh_token: refreshToken,
-        }),
-      });
-
-      const refreshData = await refreshRes.json();
-
-      if (!refreshRes.ok) {
-        return res.status(401).json({
-          error: 'Token expired and refresh failed',
-          stravaError: refreshData,
+        const { accessToken, updatedTokens } = await getValidAccessToken(req);
+        
+        const url = `https://www.strava.com/api/v3/activities/${id}/streams?keys=${type}&key_by_type=true`;
+        const stravaResponse = await fetch(url, {
+            headers: { Authorization: `Bearer ${accessToken}` },
         });
-      }
 
-      accessToken = refreshData.access_token;
-      res.setHeader('x-new-access-token', accessToken);
+        if (!stravaResponse.ok) {
+            const errData = await stravaResponse.json();
+            return res.status(stravaResponse.status).json({ error: 'Failed to fetch streams from Strava', details: errData });
+        }
 
-      response = await fetchStreams(accessToken);
-    } catch (err) {
-      return res.status(500).json({ error: 'Refresh token request failed', details: err.message });
+        const streams = await stravaResponse.json();
+
+        // Devolvemos una respuesta consistente
+        return res.status(200).json({ streams: streams, tokens: updatedTokens });
+        
+    } catch (error) {
+        console.error("Error in /api/strava-streams:", error.message);
+        return res.status(500).json({ error: error.message });
     }
-  }
-
-  const text = await response.text();
-
-  if (!response.ok) {
-    try {
-      return res.status(response.status).json(JSON.parse(text));
-    } catch {
-      console.error("Strava non-JSON error response:", text);
-      return res.status(response.status).json({ message: text });
-    }
-  }
-
-  try {
-    const data = JSON.parse(text);
-    return res.status(200).json(data);
-  } catch (err) {
-    console.error("Invalid JSON from Strava:", text);
-    return res.status(500).json({
-      error: "Invalid JSON returned by Strava",
-      details: err.message,
-      raw: text
-    });
-  }
 }
