@@ -260,30 +260,44 @@ function renderPersonalBests(runs) {
     ];
     const margin = 0.05; // 5%
 
+    // Helper to format pace
+    function formatPace(secPerKm) {
+        if (!isFinite(secPerKm) || secPerKm <= 0) return '-';
+        const min = Math.floor(secPerKm / 60);
+        const sec = Math.round(secPerKm % 60);
+        return `${min}:${sec.toString().padStart(2, '0')} /km`;
+    }
+
+    // Find bests and top 3 for each distance
     const bests = distances.map(d => {
-        // Find runs within ±5% of the target distance
         const min = d.km * (1 - margin);
         const max = d.km * (1 + margin);
         const candidates = runs.filter(a => {
             const distKm = a.distance / 1000;
             return distKm >= min && distKm <= max && a.moving_time > 0;
         });
-        if (candidates.length === 0) return { ...d, pace: null, date: null, id: null };
+        if (candidates.length === 0) return { ...d, best: null, top3: [] };
 
-        // Best pace = lowest moving_time / distance
-        const best = candidates.reduce((prev, curr) => {
-            const prevPace = prev.moving_time / (prev.distance / 1000);
-            const currPace = curr.moving_time / (curr.distance / 1000);
-            return currPace < prevPace ? curr : prev;
+        // Sort by best pace (lowest time/km)
+        const sorted = [...candidates].sort((a, b) => 
+            (a.moving_time / (a.distance / 1000)) - (b.moving_time / (b.distance / 1000))
+        );
+        const best = sorted[0];
+        const top3 = sorted.slice(0, 3).map(act => {
+            const paceSec = act.moving_time / (act.distance / 1000);
+            return {
+                id: act.id,
+                date: act.start_date_local.substring(0, 10),
+                pace: formatPace(paceSec),
+                name: act.name || '',
+                dist: (act.distance / 1000).toFixed(2),
+                time: new Date(act.moving_time * 1000).toISOString().substr(11, 8)
+            };
         });
-        const paceSec = best.moving_time / (best.distance / 1000);
-        const minPace = Math.floor(paceSec / 60);
-        const secPace = Math.round(paceSec % 60);
         return {
             ...d,
-            pace: `${minPace}:${secPace.toString().padStart(2, '0')} /km`,
-            date: best.start_date_local.substring(0, 10),
-            id: best.id
+            best: top3[0],
+            top3
         };
     });
 
@@ -291,26 +305,59 @@ function renderPersonalBests(runs) {
     const container = document.getElementById('personal-bests');
     if (!container) return;
     container.innerHTML = `
-        <table>
+        <table class="df-table">
             <thead>
                 <tr>
                     <th>Distance</th>
                     <th>Best Pace</th>
                     <th>Date</th>
                     <th>Details</th>
+                    <th>Top 3</th>
                 </tr>
             </thead>
             <tbody>
-                ${bests.map(b => b.pace
+                ${bests.map((b, idx) => b.best
                     ? `<tr>
                         <td>${b.name}</td>
-                        <td>${b.pace}</td>
-                        <td>${b.date}</td>
-                        <td><a href="activity.html?id=${b.id}" target="_blank"><button>View</button></a></td>
+                        <td>${b.best.pace}</td>
+                        <td>${b.best.date}</td>
+                        <td><a href="activity.html?id=${b.best.id}" target="_blank"><button>View</button></a></td>
+                        <td>
+                            <select onchange="this.nextElementSibling.style.display=this.value?'block':'none'">
+                                <option value="">Show Top 3</option>
+                                <option value="show">Show</option>
+                            </select>
+                            <div style="display:none;position:relative;z-index:2;background:#fff;border:1px solid #ccc;padding:0.5em;">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Date</th>
+                                            <th>Pace</th>
+                                            <th>Distance (km)</th>
+                                            <th>Time</th>
+                                            <th>Details</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${b.top3.map((t, i) => `
+                                            <tr>
+                                                <td>${i + 1}</td>
+                                                <td>${t.date}</td>
+                                                <td>${t.pace}</td>
+                                                <td>${t.dist}</td>
+                                                <td>${t.time}</td>
+                                                <td><a href="activity.html?id=${t.id}" target="_blank"><button>View</button></a></td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </td>
                     </tr>`
                     : `<tr>
                         <td>${b.name}</td>
-                        <td colspan="3">No result</td>
+                        <td colspan="4">No result</td>
                     </tr>`
                 ).join('')}
             </tbody>

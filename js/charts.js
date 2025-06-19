@@ -317,7 +317,7 @@ export function renderDistanceVsElevationChart(runs) {
 
 export function renderElevationHistogram(runs) {
     const values = runs.map(r => r.total_elevation_gain || 0);
-    const binSize = 20;
+    const binSize = 10;
     const maxVal = Math.max(...values, 0);
     const binCount = Math.ceil(maxVal / binSize);
     const bins = Array(binCount).fill(0);
