@@ -1,74 +1,102 @@
+🔴 TO DO 
+🟡 IN PROGRESS
+🟢 DONE
+
+
+
+
 Running:
     Gears:
-        -price
-        -duration
-        -% of Use (Alerts)
-        -Gantt
+        -First Use
+        -price🔴
+        -duration🔴 (predeterminat a 700km, customizable)
+        -% of Durability (Alerts)🔴 
+        -Gantt🟡
+        -current km🟡
+        -Num Uses🟡
+        -€ per km
 
     Best activities:
-        -Top 3 times per distance (mile, 5k, 10k, 21k, 42k)
+        -PERSONA BESTS Top 3 times per distance (mile, 5k, 10k, 21k, 42k)
         -Predict time with riegel
     
-    Totals: time, km, elevation, activities
-    Scatter Pace vs Distance
-    Distance Histogram
-    Voxmax over timeVomax actual
-    elevation gain histogram
-    Scatter elevaiton gain vs distance
-    Heatmap: year vs month, month vs day, day vs hour?
-    Accum km over time
-    Moving mean km over time
-    TSB, CTL, ATL 
-    km per month
-    Streaks
-    Heatmap total
-    Button 2024, 2025
-    Histogram of pace per km! all runs!!!
+    Totals: time, km, elevation, activities, avg Pace, avg VOmax
+    Compare with previosu SAME Period (+12%)🔴
+
+    Scatter Pace vs Distance🟢
+    Distance Histogram🟢
+    Voxmax over time🟢
+    Vomax actual🔴
+    elevation gain histogram🟢
+    Scatter elevaiton gain vs distance🟢
+    Heatmap: year vs month, month vs day, day vs hour?🟡
+    Accum km over time🟢
+    Moving mean km over time🟡
+    TSB, CTL, ATL 🟢
+    km per month🟢
+    Streaks🟢
+    Heatmap total🔴
+    Button 2024, 2025🔴
+    Histogram of pace per km! all runs!!!🔴
+
+    
 
 
-
-Activity:
+Activity:🔴
     -info:
-        -title
-        -subtitle/description
-        -timestamp
-        -Location (City, neighbourhood)
-        -acitivty type (race/workout)
-        -gear
-        -weather
-        -comments/kudos
+        -title🟡
+        -subtitle/description🟡
+        -timestamp🟡
+        -Location (City, neighbourhood)🔴
+        -acitivty type (race/workout)🔴
+        -Gear (and total km of gear)🟡
+        -Weather: Temperature, Pressure, Wind (i un coefficient?) Hard, soft (escala beauffort)🔴
+        -comments/kudos🔴
 
     -stats:
-        -duration
-        -distance
-        -pace
-        -elevation gain
-        -calories
+        -duration🟡
+        -distance🟡
+        -pace🟡
+        -elevation gain🔴
+        -calories🔴
         -HR avg
-        -HR max
+        -HR max🔴
 
     -advanced stats:
-        -move ratio
-        -effort
-        -vomax est
-        -% in each zone
+        -move ratio🔴
+        -effort🔴
+        -vomax est🔴
+        -% in each zone🔴
 
     -graphics:
         -HR:
-            -histogram
-            -AREA+Line (range) of HR
+            -histogram🔴
+            -AREA+Line (range) of HR🔴
         -Elevation:
-            -histogram
-            -Profile elevation
+            -histogram🔴
+            -Profile elevation🔴
         -Pace:
-            -histogram
-            -AREA+Line (range) of Pace
+            -histogram🔴
+            -AREA+Line (range) of Pace🔴
         -GPS:
-            -Track Overlay
-            -GPX analyzer (buildings)
+            -Track Overlay🔴
+            -GPX analyzer (buildings)🔴
 
-        -Segments
-        
+        -Segments🟡
+
+
+
+Swimming: TBD
+    -TBD
+    -TBD
+    -TBD
+
+
+
+Cycling: TBD
+    -TBD
+    -TBD
+    -TBD           
         
         
         
