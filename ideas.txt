@@ -1,0 +1,74 @@
+Running:
+    Gears:
+        -price
+        -duration
+        -% of Use (Alerts)
+        -Gantt
+
+    Best activities:
+        -Top 3 times per distance (mile, 5k, 10k, 21k, 42k)
+        -Predict time with riegel
+    
+    Totals: time, km, elevation, activities
+    Scatter Pace vs Distance
+    Distance Histogram
+    Voxmax over timeVomax actual
+    elevation gain histogram
+    Scatter elevaiton gain vs distance
+    Heatmap: year vs month, month vs day, day vs hour?
+    Accum km over time
+    Moving mean km over time
+    TSB, CTL, ATL 
+    km per month
+    Streaks
+    Heatmap total
+    Button 2024, 2025
+    Histogram of pace per km! all runs!!!
+
+
+
+Activity:
+    -info:
+        -title
+        -subtitle/description
+        -timestamp
+        -Location (City, neighbourhood)
+        -acitivty type (race/workout)
+        -gear
+        -weather
+        -comments/kudos
+
+    -stats:
+        -duration
+        -distance
+        -pace
+        -elevation gain
+        -calories
+        -HR avg
+        -HR max
+
+    -advanced stats:
+        -move ratio
+        -effort
+        -vomax est
+        -% in each zone
+
+    -graphics:
+        -HR:
+            -histogram
+            -AREA+Line (range) of HR
+        -Elevation:
+            -histogram
+            -Profile elevation
+        -Pace:
+            -histogram
+            -AREA+Line (range) of Pace
+        -GPS:
+            -Track Overlay
+            -GPX analyzer (buildings)
+
+        -Segments
+        
+        
+        
+        
