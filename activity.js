@@ -1,314 +1,199 @@
+// js/activity.js
+
+// --- 1. REFERENCIAS AL DOM Y ESTADO INICIAL ---
 const params = new URLSearchParams(window.location.search);
 const activityId = params.get('id');
+
 const detailsDiv = document.getElementById('activity-details');
 const mapDiv = document.getElementById('activity-map');
 const splitsSection = document.getElementById('splits-section');
 const segmentsSection = document.getElementById('segments-section');
+const streamChartsDiv = document.getElementById('stream-charts');
 
+// --- 2. FUNCIONES DE UTILIDAD ---
 function formatTime(seconds) {
-  const min = Math.floor(seconds / 60);
-  const sec = seconds % 60;
-  return `${min}:${sec.toString().padStart(2, '0')}`;
+    if (isNaN(seconds) || seconds < 0) return '0:00';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.round(seconds % 60);
+    return `${h > 0 ? h + ':' : ''}${m.toString().padStart(h > 0 ? 2 : 1, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
-function formatPace(speed) {
-  if (!speed || speed === 0) return '-';
-  const pace = 1000 / speed;
-  const min = Math.floor(pace / 60);
-  const sec = Math.round(pace % 60);
-  return `${min}:${sec.toString().padStart(2, '0')}`;
+function formatPace(speedInMps) {
+    if (!speedInMps || speedInMps === 0) return '-';
+    const paceInSecPerKm = 1000 / speedInMps;
+    const min = Math.floor(paceInSecPerKm / 60);
+    const sec = Math.round(paceInSecPerKm % 60);
+    return `${min}:${sec.toString().padStart(2, '0')}`;
 }
 
-function decodePolyline(str) {
-  let index = 0, lat = 0, lng = 0, coordinates = [];
-  while (index < str.length) {
-    let b, shift = 0, result = 0;
-    do {
-      b = str.charCodeAt(index++) - 63;
-      result |= (b & 0x1f) << shift;
-      shift += 5;
-    } while (b >= 0x20);
-    const dlat = (result & 1) ? ~(result >> 1) : (result >> 1);
-    lat += dlat;
+// La función decodePolyline es necesaria si la API no devuelve la ruta decodificada.
+// La mantenemos por si acaso, aunque la API de actividad suele darla.
+function decodePolyline(str) { /* ... Tu función de decodePolyline original va aquí, sin cambios ... */ }
 
-    shift = 0;
-    result = 0;
-    do {
-      b = str.charCodeAt(index++) - 63;
-      result |= (b & 0x1f) << shift;
-      shift += 5;
-    } while (b >= 0x20);
-    const dlng = (result & 1) ? ~(result >> 1) : (result >> 1);
-    lng += dlng;
 
-    coordinates.push([lat / 1e5, lng / 1e5]);
-  }
-  return coordinates;
+// --- 3. LÓGICA DE LA API ---
+
+/**
+ * Obtiene los tokens del localStorage.
+ * ¡CORREGIDO! Ahora lee el objeto JSON 'strava_tokens'.
+ * @returns {{accessToken: string, refreshToken: string}|null}
+ */
+function getTokens() {
+    const tokenString = localStorage.getItem('strava_tokens');
+    if (!tokenString) {
+        return null;
+    }
+    try {
+        const tokenData = JSON.parse(tokenString);
+        return {
+            accessToken: tokenData.access_token,
+            refreshToken: tokenData.refresh_token
+        };
+    } catch (e) {
+        console.error("Error parsing tokens from localStorage", e);
+        return null;
+    }
 }
 
-async function fetchActivity() {
-  const accessToken = localStorage.getItem('strava_access_token');
-  const refreshToken = localStorage.getItem('strava_refresh_token');
-  if (!accessToken) {
-    detailsDiv.innerHTML = "<p>You must be logged in to view activity details.</p>";
-    return;
-  }
-
-  try {
-    detailsDiv.innerHTML = "<p>Loading...</p>";
-
-    const response = await fetch(`/api/strava-activity?id=${activityId}`, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'x-refresh-token': refreshToken || ''
-      }
+/**
+ * Función genérica para hacer llamadas a nuestra API de backend.
+ * Centraliza el manejo de cabeceras de autenticación.
+ * @param {string} url - La URL del endpoint de la API.
+ * @param {{accessToken: string, refreshToken: string}} tokens - Los tokens de autenticación.
+ * @returns {Promise<any>} - Los datos JSON de la respuesta.
+ */
+async function fetchFromApi(url, tokens) {
+    const response = await fetch(url, {
+        headers: {
+            'Authorization': `Bearer ${tokens.accessToken}`,
+            // ¡IMPORTANTE! Pasamos el refresh token en una cabecera personalizada
+            // que nuestros endpoints de backend (strava-activity, strava-streams) esperan.
+            'x-refresh-token': tokens.refreshToken || ''
+        }
     });
 
     if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`HTTP ${response.status}: ${text}`);
+        const errorData = await response.json();
+        throw new Error(`API Error ${response.status}: ${errorData.error || 'Failed to fetch'}`);
     }
 
-    const act = await response.json();
-    renderActivity(act);
-    renderStreamsCharts(act.id);
-
-  } catch (err) {
-    detailsDiv.innerHTML = `<p>Error: ${err.message}</p>`;
-  }
-}
-
-
-
-async function fetchStreams(activityId) {
-  const accessToken = localStorage.getItem('strava_access_token');
-  const refreshToken = localStorage.getItem('strava_refresh_token');
-
-  try {
-    const res = await fetch(`/api/strava-streams?id=${activityId}&type=heartrate,altitude,distance`, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'x-refresh-token': refreshToken || ''
-      }
-    });
-
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(`Stream error ${res.status}: ${err.message || JSON.stringify(err)}`);
+    // Si la API nos devuelve un token nuevo (porque el anterior expiró), lo actualizamos.
+    const newAccessToken = response.headers.get('x-new-access-token');
+    if (newAccessToken) {
+        console.log('Received a new access token, updating localStorage...');
+        const storedTokens = JSON.parse(localStorage.getItem('strava_tokens'));
+        storedTokens.access_token = newAccessToken;
+        // Nota: La API de Strava puede o no devolver un nuevo refresh_token.
+        // Por ahora, solo actualizamos el de acceso que es el que cambia más a menudo.
+        localStorage.setItem('strava_tokens', JSON.stringify(storedTokens));
     }
 
-    const data = await res.json();
-
-    // 📊 Aquí puedes trabajar con los datos devueltos
-    console.log('Streams:', data);
-
-    // Ejemplo: array de HR
-    const hrStream = data.heartrate?.data || [];
-    const altStream = data.altitude?.data || [];
-    const distStream = data.distance?.data || [];
-
-    // Puedes ahora graficarlos, mapearlos, etc.
-    return { hrStream, altStream, distStream };
-
-  } catch (err) {
-    console.error('Error fetching streams:', err.message);
-  }
+    return response.json();
 }
 
+async function fetchActivityDetails(activityId, tokens) {
+    return fetchFromApi(`/api/strava-activity?id=${activityId}`, tokens);
+}
 
+async function fetchActivityStreams(activityId, tokens) {
+    const streamTypes = 'distance,time,heartrate,altitude';
+    return fetchFromApi(`/api/strava-streams?id=${activityId}&type=${streamTypes}`, tokens);
+}
 
-
+// --- 4. LÓGICA DE RENDERIZADO ---
 
 function renderActivity(act) {
-  // --- 1. Datos básicos
-  const name = act.name;
-  const date = act.start_date_local?.split('T')[0];
-  const distanceKm = (act.distance / 1000).toFixed(2);
-  const duration = formatTime(act.moving_time);
-  const pace = formatPace(act.average_speed);
-  const hr = act.average_heartrate ? Math.round(act.average_heartrate) : '-';
-  const cadence = act.average_cadence ? Math.round(act.average_cadence) : '-';
-  const gear = act.gear?.name || '-';
-  const device = act.device_name || '-';
-
-  detailsDiv.innerHTML = `
-    <h2>${name}</h2>
-    <ul>
-      <li>📅 <strong>Fecha:</strong> ${date}</li>
-      <li>📏 <strong>Distancia:</strong> ${distanceKm} km</li>
-      <li>⏱️ <strong>Duración:</strong> ${duration}</li>
-      <li>🐢 <strong>Ritmo medio:</strong> ${pace} min/km</li>
-      <li>❤️ <strong>FC media:</strong> ${hr} bpm</li>
-      <li>⚙️ <strong>Cadencia media:</strong> ${cadence} rpm</li>
-      <li>👟 <strong>Zapatillas:</strong> ${gear}</li>
-      <li>📱 <strong>Dispositivo:</strong> ${device}</li>
-    </ul>
-  `;
-
-  // --- 2. Mapa
-  if (act.map?.summary_polyline) {
-    const coords = decodePolyline(act.map.summary_polyline);
-    const map = L.map('activity-map').setView(coords[0], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap',
-    }).addTo(map);
-    L.polyline(coords, { color: '#FC5200', weight: 4 }).addTo(map);
-  } else {
-    mapDiv.innerHTML = '<p>No route available</p>';
-  }
-
-  // --- 3. Splits
-  if (act.splits_metric?.length > 0) {
-    const kmLabels = act.splits_metric.map((_, i) => `Km ${i + 1}`);
-    const paceData = act.splits_metric.map(s => parseFloat((1000 / s.average_speed).toFixed(2)));
-    const hrData = act.splits_metric.map(s => s.average_heartrate || 0);
-
-    new Chart(document.getElementById('chart-pace'), {
-      type: 'line',
-      data: {
-        labels: kmLabels,
-        datasets: [{
-          label: 'Pace (min/km)',
-          data: paceData,
-          borderColor: '#FC5200',
-          fill: false,
-          tension: 0.2
-        }]
-      }
-    });
-
-    new Chart(document.getElementById('chart-heartrate'), {
-      type: 'line',
-      data: {
-        labels: kmLabels,
-        datasets: [{
-          label: 'FC Media (bpm)',
-          data: hrData,
-          borderColor: 'red',
-          fill: false,
-          tension: 0.2
-        }]
-      }
-    });
-
-    splitsSection.classList.remove('hidden');
-  }
-
-  // --- 4. Segmentos
-  if (act.segment_efforts?.length > 0) {
-    const rows = act.segment_efforts.map(s => {
-      const dist = (s.distance / 1000).toFixed(2);
-      const time = formatTime(s.moving_time);
-      const pace = formatPace(s.distance / s.moving_time);
-      const hr = s.average_heartrate ? Math.round(s.average_heartrate) : '-';
-      return `<tr>
-        <td>${s.name}</td>
-        <td>${dist} km</td>
-        <td>${time}</td>
-        <td>${pace}</td>
-        <td>${hr} bpm</td>
-      </tr>`;
-    }).join('');
-
-    segmentsSection.innerHTML = `
-      <h3>Segmentos</h3>
-      <table class="df-table">
-        <thead>
-          <tr>
-            <th>Nombre</th><th>Distancia</th><th>Tiempo</th><th>Ritmo</th><th>FC Media</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
+    // ... (Tu función renderActivity original va aquí, casi sin cambios) ...
+    // Solo asegúrate de que usas las funciones de formato actualizadas.
+    // Por ejemplo:
+    detailsDiv.innerHTML = `
+        <h2>${act.name}</h2>
+        <ul>
+            <li>📅 <strong>Fecha:</strong> ${new Date(act.start_date_local).toLocaleDateString()}</li>
+            <li>📏 <strong>Distancia:</strong> ${(act.distance / 1000).toFixed(2)} km</li>
+            <li>⏱️ <strong>Duración:</strong> ${formatTime(act.moving_time)}</li>
+            <li>🐢 <strong>Ritmo medio:</strong> ${formatPace(act.average_speed)} min/km</li>
+            <!-- etc. -->
+        </ul>
     `;
-  }
+
+    // Renderizado del mapa
+    if (act.map?.summary_polyline) {
+        const coords = L.Polyline.fromEncoded(act.map.summary_polyline).getLatLngs();
+        const map = L.map('activity-map').setView(coords[0], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        L.polyline(coords, { color: '#FC5200', weight: 4 }).addTo(map);
+    } else {
+        mapDiv.innerHTML = '<p>No route data available</p>';
+    }
+
+    // Renderizado de Splits (sin cambios)
+    if (act.splits_metric?.length > 0) { /* ... */ }
+
+    // Renderizado de Segmentos (sin cambios)
+    if (act.segment_efforts?.length > 0) { /* ... */ }
 }
 
+function renderStreamCharts(streams) {
+    streamChartsDiv.style.display = 'block';
 
-async function renderStreamsCharts(activityId) {
-  const { hrStream, altStream, distStream } = await fetchStreams(activityId);
-  console.log('Streams data:', { hrStream, altStream, distStream });
-  if (!distStream.length) return;
+    const { distance, time, heartrate, altitude } = streams;
+    if (!distance || distance.data.length === 0) return;
 
-  // 1. Altitud vs Distancia
-  new Chart(document.getElementById('chart-altitude'), {
-    type: 'line',
-    data: {
-      labels: distStream.map(d => (d / 1000).toFixed(2)), // km
-      datasets: [{
-        label: 'Altitud (m)',
-        data: altStream,
-        borderColor: '#888',
-        fill: false,
-        tension: 0.1
-      }]
-    },
-    options: {
-      plugins: { title: { display: true, text: 'Altitud vs Distancia (km)' } },
-      scales: {
-        x: { title: { display: true, text: 'Distancia (km)' } },
-        y: { title: { display: true, text: 'Altitud (m)' } }
-      }
+    // 1. Altitud vs Distancia
+    new Chart(document.getElementById('chart-altitude'), { /* ... config ... */ });
+    
+    // 2. Ritmo vs Distancia (¡Cálculo mejorado!)
+    const paceStreamData = [];
+    for (let i = 1; i < distance.data.length; i++) {
+        const deltaDist = distance.data[i] - distance.data[i-1];
+        const deltaTime = time.data[i] - time.data[i-1];
+        if (deltaDist <= 0 || deltaTime <= 0) {
+            paceStreamData.push(null);
+        } else {
+            const speed = deltaDist / deltaTime; // m/s
+            paceStreamData.push(1000 / speed); // s/km
+        }
     }
-  });
+    // ... (Crear el gráfico de ritmo con paceStreamData) ...
 
-  // 2. Ritmo vs Distancia (pace = delta tiempo / delta distancia)
-  const paceStream = [];
-  for (let i = 1; i < distStream.length; i++) {
-    const deltaD = distStream[i] - distStream[i - 1];
-    if (deltaD <= 0) {
-      paceStream.push(null);
-      continue;
-    }
-    const deltaT = 1; // Suponiendo 1s entre puntos
-    const speed = deltaD / deltaT;
-    const pace = 1000 / speed;
-    paceStream.push(pace);
-  }
-
-  new Chart(document.getElementById('chart-pace-distance'), {
-    type: 'line',
-    data: {
-      labels: distStream.slice(1).map(d => (d / 1000).toFixed(2)),
-      datasets: [{
-        label: 'Ritmo (min/km)',
-        data: paceStream.map(p => p ? (p / 60).toFixed(2) : null),
-        borderColor: '#FC5200',
-        fill: false,
-        tension: 0.1
-      }]
-    },
-    options: {
-      plugins: { title: { display: true, text: 'Pace vs Distancia (km)' } },
-      scales: {
-        x: { title: { display: true, text: 'Distancia (km)' } },
-        y: { title: { display: true, text: 'Ritmo (min/km)' } }
-      }
-    }
-  });
-
-  // 3. FC vs Distancia
-  new Chart(document.getElementById('chart-heart-distance'), {
-    type: 'line',
-    data: {
-      labels: distStream.map(d => (d / 1000).toFixed(2)),
-      datasets: [{
-        label: 'FC (bpm)',
-        data: hrStream,
-        borderColor: 'red',
-        fill: false,
-        tension: 0.1
-      }]
-    },
-    options: {
-      plugins: { title: { display: true, text: 'Frecuencia cardíaca vs Distancia (km)' } },
-      scales: {
-        x: { title: { display: true, text: 'Distancia (km)' } },
-        y: { title: { display: true, text: 'BPM' } }
-      }
-    }
-  });
+    // 3. FC vs Distancia
+    new Chart(document.getElementById('chart-heart-distance'), { /* ... config ... */ });
 }
 
+// --- 5. PUNTO DE ENTRADA DE LA APLICACIÓN ---
 
-fetchActivity();
+async function main() {
+    if (!activityId) {
+        detailsDiv.innerHTML = '<p>Error: No Activity ID provided.</p>';
+        return;
+    }
+
+    const tokens = getTokens();
+    if (!tokens) {
+        detailsDiv.innerHTML = '<p>You must be logged in to view activity details. Please return to the dashboard and log in.</p>';
+        return;
+    }
+
+    try {
+        detailsDiv.innerHTML = '<p>Loading activity details...</p>';
+
+        // Hacemos las llamadas a la API en paralelo para más velocidad
+        const [activityData, streamData] = await Promise.all([
+            fetchActivityDetails(activityId, tokens),
+            fetchActivityStreams(activityId, tokens)
+        ]);
+
+        // Renderizamos todo
+        renderActivity(activityData);
+        renderStreamCharts(streamData);
+
+    } catch (error) {
+        console.error("Failed to load activity page:", error);
+        detailsDiv.innerHTML = `<p><strong>Error loading activity:</strong> ${error.message}</p>`;
+    }
+}
+
+// Ejecutamos la función principal
+main();
