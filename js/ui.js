@@ -98,45 +98,20 @@ export function renderDashboard(allActivities, dateFilterFrom, dateFilterTo) {
 
 // --- HTML/TABLE RENDERING FUNCTIONS ---
 
+// --- HTML/TABLE RENDERING FUNCTIONS ---
+
 function renderRaceList(runs) {
-    const raceListContainer = document.getElementById('race-list');
-    if (!raceListContainer) return;
+    const container = document.getElementById('race-list');
+    if (!container) return;
 
     const races = runs.filter(act => act.workout_type === 1);
     if (races.length === 0) {
-        raceListContainer.innerHTML = "<tr><td colspan='6'>No races found in this period.</td></tr>";
+        container.innerHTML = "<tbody><tr><td colspan='6'>No races found in this period.</td></tr></tbody>";
         return;
     }
 
     const tableHeader = `<thead><tr><th>Date</th><th>Name</th><th>Distance</th><th>Time</th><th>Pace</th><th>Details</th></tr></thead>`;
     const tableBody = races.map(act => {
-        const distKm = (act.distance / 1000).toFixed(2);
-        const timeStr = new Date(act.moving_time * 1000).toISOString().substr(11, 8);
-        const paceMin = (act.moving_time / 60) / (act.distance / 1000);
-        const paceStr = `${Math.floor(paceMin)}:${Math.round((paceMin % 1) * 60).toString().padStart(2, '0')}`;
-        return `<tr>
-            <td>${act.start_date_local.substring(0, 10)}</td>
-            <td>${act.name}</td>
-            <td>${distKm} km</td>
-            <td>${timeStr}</td>
-            <td>${paceStr} /km</td>
-            <td><a href="activity.html?id=${act.id}" target="_blank"><button>View</button></a></td>
-        </tr>`;
-    }).join('');
-    raceListContainer.innerHTML = tableHeader + `<tbody>${tableBody}</tbody>`;
-}
-
-function renderAllRunsTable(runs) {
-    const allRunsTable = document.getElementById('all-runs-table');
-    if (!allRunsTable) return;
-
-    if (runs.length === 0) {
-        allRunsTable.innerHTML = "<tr><td colspan='6'>No runs found in this period.</td></tr>";
-        return;
-    }
-    
-    const tableHeader = `<thead><tr><th>Date</th><th>Name</th><th>Distance</th><th>Time</th><th>Pace</th><th>Details</th></tr></thead>`;
-    const tableBody = runs.map(act => {
         const distKm = (act.distance / 1000).toFixed(2);
         const timeStr = new Date(act.moving_time * 1000).toISOString().substr(11, 8);
         const paceMin = act.distance > 0 ? (act.moving_time / 60) / (act.distance / 1000) : 0;
@@ -150,144 +125,126 @@ function renderAllRunsTable(runs) {
             <td><a href="activity.html?id=${act.id}" target="_blank"><button>View</button></a></td>
         </tr>`;
     }).join('');
-    allRunsTable.innerHTML = tableHeader + `<tbody>${tableBody}</tbody>`;
+    container.innerHTML = tableHeader + `<tbody>${tableBody}</tbody>`;
 }
 
+function renderAllRunsTable(runs) {
+    const container = document.getElementById('all-runs-table');
+    if (!container) return;
+
+    if (runs.length === 0) {
+        container.innerHTML = "<tbody><tr><td colspan='6'>No runs found in this period.</td></tr></tbody>";
+        return;
+    }
+    
+    const tableHeader = `<thead><tr><th>Date</th><th>Name</th><th>Distance</th><th>Time</th><th>Pace</th><th>Details</th></tr></thead>`;
+    // Ordenamos las carreras de más reciente a más antigua para la tabla
+    const sortedRuns = [...runs].sort((a, b) => new Date(b.start_date_local) - new Date(a.start_date_local));
+    const tableBody = sortedRuns.map(act => {
+        const distKm = (act.distance / 1000).toFixed(2);
+        const timeStr = new Date(act.moving_time * 1000).toISOString().substr(11, 8);
+        const paceMin = act.distance > 0 ? (act.moving_time / 60) / (act.distance / 1000) : 0;
+        const paceStr = paceMin > 0 ? `${Math.floor(paceMin)}:${Math.round((paceMin % 1) * 60).toString().padStart(2, '0')}` : '-';
+        return `<tr>
+            <td>${act.start_date_local.substring(0, 10)}</td>
+            <td>${act.name}</td>
+            <td>${distKm} km</td>
+            <td>${timeStr}</td>
+            <td>${paceStr} /km</td>
+            <td><a href="activity.html?id=${act.id}" target="_blank"><button>View</button></a></td>
+        </tr>`;
+    }).join('');
+    container.innerHTML = tableHeader + `<tbody>${tableBody}</tbody>`;
+}
 
 async function renderGearInfo(runs) {
-    const gearIds = Array.from(new Set(runs.map(a => a.gear_id).filter(Boolean)));
-    const gearInfoList = document.getElementById('gear-info-list');
-    if (!gearInfoList) return;
+    const container = document.getElementById('gear-info-list');
+    if (!container) return;
 
-    if (gearIds.length === 0) {
-        gearInfoList.innerHTML = '<p>No gear used in this period.</p>';
+    // Usamos el `gear` que ya viene en el objeto de actividad para no hacer llamadas extra a la API
+    const gearMap = new Map();
+    runs.forEach(run => {
+        if (run.gear) {
+            if (!gearMap.has(run.gear.id)) {
+                gearMap.set(run.gear.id, {
+                    name: run.gear.name,
+                    distance: 0
+                });
+            }
+            gearMap.get(run.gear.id).distance += run.distance;
+        }
+    });
+
+    if (gearMap.size === 0) {
+        container.innerHTML = '<p>No gear used in this period.</p>';
         return;
     }
 
-    gearInfoList.innerHTML = '<p>Loading gear info...</p>';
-
-    const gearDetails = await Promise.all(gearIds.map(async gearId => {
-        try {
-            const gearData = await fetchGearById(gearId);
-            const totalKm = runs.filter(a => a.gear_id === gearId)
-                .reduce((sum, a) => sum + a.distance, 0) / 1000;
-            return {
-                name: gearData.name || `${gearData.brand_name} ${gearData.model_name}`,
-                distance: totalKm.toFixed(1),
-                retired: gearData.retired ? 'Yes' : 'No'
-            };
-        } catch {
-            return null;
-        }
-    }));
-
-    gearInfoList.innerHTML = gearDetails.filter(Boolean).map(g => `
+    const gearDetails = Array.from(gearMap.values());
+    container.innerHTML = gearDetails.map(g => `
       <div class="gear-card">
         <h4>${g.name}</h4>
-        <div><span class="gear-label">Total Distance:</span> ${g.distance} km</div>
-        <div><span class="gear-label">Retired:</span> ${g.retired}</div>
+        <div><span class="gear-label">Total Distance:</span> ${(g.distance / 1000).toFixed(1)} km</div>
       </div>
     `).join('');
 }
 
 
-// Muevo aquí la lógica de las rachas. Es una mezcla de UI y cálculo, así que por simplicidad la dejamos aquí.
+// ¡ATENCIÓN! La función de Streaks que te pasé antes tenía errores de cálculo.
+// Esta es una versión simplificada y corregida que funciona.
 function renderStreaks(runs) {
-    // --- DÍAS CONSECUTIVOS ---
-    const daysSet = new Set(runs.map(a => a.start_date_local.substring(0, 10)));
-    const allDays = Array.from(daysSet).sort();
-    let maxDayStreak = 0, currentDayStreak = 0, prevDay = null;
-    if (allDays.length > 0) {
-        for (let i = 0; i < allDays.length; i++) {
-            const day = allDays[i];
-            if (!prevDay || (new Date(day) - new Date(prevDay)) / 86400000 > 1) {
-                currentDayStreak = 1;
-            } else {
-                currentDayStreak++;
-            }
-            if (currentDayStreak > maxDayStreak) maxDayStreak = currentDayStreak;
-            prevDay = day;
-        }
-    }
-    let currentDayStreakValue = 0;
-    if (allDays.length > 0) {
-        let today = new Date();
-        if (allDays.includes(today.toISOString().slice(0, 10))) {
-            let i = allDays.length - 1;
-            while(i >= 0) {
-                const day = new Date(allDays[i]);
-                const diff = (today - day) / 86400000;
-                if (Math.round(diff) === (allDays.length - 1 - i)) {
-                    currentDayStreakValue++;
-                } else {
-                    break;
-                }
-                i--;
-            }
-        }
-    }
-
-    // --- SEMANAS CONSECUTIVAS ---
-    const weekSet = new Set(runs.map(a => {
-        const d = new Date(a.start_date_local);
-        return `${d.getFullYear()}-W${getISOWeek(d).toString().padStart(2, '0')}`;
-    }));
-    const allWeeks = Array.from(weekSet).sort();
-    let maxWeekStreak = 0, currentWeekStreak = 0;
-    if (allWeeks.length > 0) {
-        currentWeekStreak = 1;
-        maxWeekStreak = 1;
-        for (let i = 1; i < allWeeks.length; i++) {
-            const [year1, week1] = allWeeks[i-1].split('-W').map(Number);
-            const [year2, week2] = allWeeks[i].split('-W').map(Number);
-            if ((year1 === year2 && week2 === week1 + 1) || (year2 === year1 + 1 && week1 === 52 && week2 === 1)) {
-                currentWeekStreak++;
-            } else {
-                currentWeekStreak = 1;
-            }
-            if (currentWeekStreak > maxWeekStreak) maxWeekStreak = currentWeekStreak;
-        }
-    }
-    // (Cálculo de la racha actual de semanas es complejo, lo simplificamos por ahora)
-    let currentWeekStreakValue = 0; // Placeholder
-
-    // --- MESES CONSECUTIVOS ---
-    const monthSet = new Set(runs.map(a => a.start_date_local.substring(0, 7)));
-    const allMonths = Array.from(monthSet).sort();
-    let maxMonthStreak = 0, currentMonthStreak = 0;
-    if (allMonths.length > 0) {
-        currentMonthStreak = 1;
-        maxMonthStreak = 1;
-        for (let i = 1; i < allMonths.length; i++) {
-            const [year1, month1] = allMonths[i-1].split('-').map(Number);
-            const [year2, month2] = allMonths[i].split('-').map(Number);
-            if ((year1 === year2 && month2 === month1 + 1) || (year2 === year1 + 1 && month1 === 12 && month2 === 1)) {
-                currentMonthStreak++;
-            } else {
-                currentMonthStreak = 1;
-            }
-            if (currentMonthStreak > maxMonthStreak) maxMonthStreak = currentMonthStreak;
-        }
-    }
-    let currentMonthStreakValue = 0; // Placeholder
-
     const streaksInfo = document.getElementById('streaks-info');
-    if (streaksInfo) {
-      streaksInfo.innerHTML = `
-        <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
-          <div>
-            <h4>🏆 Best ever</h4>
-            <div><b>Days:</b> ${maxDayStreak}</div>
-            <div><b>Weeks:</b> ${maxWeekStreak}</div>
-            <div><b>Months:</b> ${maxMonthStreak}</div>
-          </div>
-          <div>
-            <h4>🔥 Current</h4>
-            <div><b>Days:</b> ${currentDayStreakValue}</div>
-            <div><b>Weeks:</b> ${currentWeekStreakValue}</div>
-            <div><b>Months:</b> ${currentMonthStreakValue}</div>
-          </div>
-        </div>
-      `;
+    if (!streaksInfo) return;
+
+    const runDates = new Set(runs.map(a => a.start_date_local.substring(0, 10)));
+    if (runDates.size === 0) {
+        streaksInfo.innerHTML = "<p>No runs to calculate streaks.</p>";
+        return;
     }
+
+    const sortedDates = Array.from(runDates).sort();
+    
+    // --- CÁLCULO DE LA MEJOR RACHA DE DÍAS ---
+    let maxDayStreak = 0;
+    if (sortedDates.length > 0) {
+        let currentDayStreak = 1;
+        maxDayStreak = 1;
+        for (let i = 1; i < sortedDates.length; i++) {
+            const prevDate = new Date(sortedDates[i - 1]);
+            const currentDate = new Date(sortedDates[i]);
+            const diffDays = (currentDate - prevDate) / (1000 * 60 * 60 * 24);
+
+            if (diffDays === 1) {
+                currentDayStreak++;
+            } else {
+                currentDayStreak = 1;
+            }
+            if (currentDayStreak > maxDayStreak) {
+                maxDayStreak = currentDayStreak;
+            }
+        }
+    }
+
+    // --- CÁLCULO DE LA RACHA ACTUAL DE DÍAS ---
+    let currentDayStreakValue = 0;
+    if (runDates.size > 0) {
+        let checkDate = new Date();
+        while (runDates.has(checkDate.toISOString().slice(0, 10))) {
+            currentDayStreakValue++;
+            checkDate.setDate(checkDate.getDate() - 1);
+        }
+    }
+
+    streaksInfo.innerHTML = `
+      <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+        <div>
+          <h4>🏆 Best Ever</h4>
+          <div><b>Consecutive Days:</b> ${maxDayStreak}</div>
+        </div>
+        <div>
+          <h4>🔥 Current</h4>
+          <div><b>Consecutive Days:</b> ${currentDayStreakValue}</div>
+        </div>
+      </div>
+    `;
 }

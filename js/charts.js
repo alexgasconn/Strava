@@ -374,29 +374,51 @@ export function renderRollingMeanDistanceChart(runs) {
 }
 
 export function renderRunsHeatmap(runs) {
-    if (!window.L) return; // Leaflet not loaded
-    const points = runs.flatMap(act => {
-        if (!act.map?.summary_polyline) return [];
-        // A simple decode function might be needed if not present elsewhere
-        // For now, let's assume it's available or handle the error
-        try {
-            return L.Polyline.fromEncoded(act.map.summary_polyline).getLatLngs();
-        } catch(e) {
-            return act.start_latlng ? [[act.start_latlng[0], act.start_latlng[1]]] : [];
-        }
-    });
+    if (!window.L) {
+        console.error("Leaflet.js no está cargado. No se puede renderizar el mapa de calor.");
+        return; 
+    }
 
+    // 1. Filtramos las actividades que tienen datos de mapa.
+    const points = runs
+        .filter(act => act.start_latlng && Array.isArray(act.start_latlng) && act.start_latlng.length === 2)
+        .map(act => [act.start_latlng[0], act.start_latlng[1]]); // <-- CREAMOS UN ARRAY [lat, lng]
+
+    const heatmapDiv = document.getElementById('runs-heatmap');
+    if (!heatmapDiv) return;
+
+    // 2. Si no hay puntos, lo indicamos y salimos.
+    if (points.length === 0) {
+        heatmapDiv.innerHTML = '<p>No map data available for this period.</p>';
+        // Si el mapa ya existía, limpiamos la capa anterior.
+        if (runsHeatmapMap && runsHeatmapLayer) {
+            runsHeatmapMap.removeLayer(runsHeatmapLayer);
+            runsHeatmapLayer = null;
+        }
+        return;
+    }
+
+    // 3. Si el mapa no existe, lo creamos.
     if (!runsHeatmapMap) {
-        runsHeatmapMap = L.map('runs-heatmap').setView([40, -3], 2); // Default view
+        runsHeatmapMap = L.map('runs-heatmap').setView([40, -3], 2); // Vista inicial
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(runsHeatmapMap);
     }
+
+    // 4. Si ya existía una capa de calor, la eliminamos.
     if (runsHeatmapLayer) {
         runsHeatmapMap.removeLayer(runsHeatmapLayer);
     }
-    if (points.length > 0) {
-        runsHeatmapLayer = L.heatLayer(points.map(p => [p.lat, p.lng]), { radius: 15, blur: 20, maxZoom: 12 }).addTo(runsHeatmapMap);
-        runsHeatmapMap.fitBounds(L.latLngBounds(points));
+
+    // 5. Creamos la nueva capa de calor. L.heatLayer espera un array de arrays [lat, lng, intensity?].
+    // Nuestro formato [lat, lng] es perfecto.
+    runsHeatmapLayer = L.heatLayer(points, { radius: 20, blur: 25, maxZoom: 11 }).addTo(runsHeatmapMap);
+
+    // 6. Ajustamos la vista del mapa para que se vean todos los puntos.
+    try {
+        runsHeatmapMap.fitBounds(points);
+    } catch (e) {
+        console.error("No se pudo ajustar el mapa a los límites.", e);
     }
 }
