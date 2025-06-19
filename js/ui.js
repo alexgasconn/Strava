@@ -279,7 +279,7 @@ function renderPersonalBests(runs) {
         if (candidates.length === 0) return { ...d, best: null, top3: [] };
 
         // Sort by best pace (lowest time/km)
-        const sorted = [...candidates].sort((a, b) => 
+        const sorted = [...candidates].sort((a, b) =>
             (a.moving_time / (a.distance / 1000)) - (b.moving_time / (b.distance / 1000))
         );
         const best = sorted[0];
@@ -301,66 +301,84 @@ function renderPersonalBests(runs) {
         };
     });
 
-    // Render table
+    // Render: one table per distance, with a button to show/hide top 3
     const container = document.getElementById('personal-bests');
     if (!container) return;
-    container.innerHTML = `
-        <table class="df-table">
-            <thead>
-                <tr>
-                    <th>Distance</th>
-                    <th>Best Pace</th>
-                    <th>Date</th>
-                    <th>Details</th>
-                    <th>Top 3</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${bests.map((b, idx) => b.best
-                    ? `<tr>
-                        <td>${b.name}</td>
-                        <td>${b.best.pace}</td>
-                        <td>${b.best.date}</td>
-                        <td><a href="activity.html?id=${b.best.id}" target="_blank"><button>View</button></a></td>
-                        <td>
-                            <select onchange="this.nextElementSibling.style.display=this.value?'block':'none'">
-                                <option value="">Show Top 3</option>
-                                <option value="show">Show</option>
-                            </select>
-                            <div style="display:none;position:relative;z-index:2;background:#fff;border:1px solid #ccc;padding:0.5em;">
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>#</th>
-                                            <th>Date</th>
-                                            <th>Pace</th>
-                                            <th>Distance (km)</th>
-                                            <th>Time</th>
-                                            <th>Details</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        ${b.top3.map((t, i) => `
-                                            <tr>
-                                                <td>${i + 1}</td>
-                                                <td>${t.date}</td>
-                                                <td>${t.pace}</td>
-                                                <td>${t.dist}</td>
-                                                <td>${t.time}</td>
-                                                <td><a href="activity.html?id=${t.id}" target="_blank"><button>View</button></a></td>
-                                            </tr>
-                                        `).join('')}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </td>
-                    </tr>`
-                    : `<tr>
-                        <td>${b.name}</td>
-                        <td colspan="4">No result</td>
-                    </tr>`
-                ).join('')}
-            </tbody>
-        </table>
-    `;
+    container.innerHTML = bests.map((b, idx) => {
+        if (!b.best) {
+            return `
+                <div class="personal-best-table">
+                    <h4>${b.name}</h4>
+                    <table class="df-table">
+                        <thead>
+                            <tr>
+                                <th>Best Pace</th>
+                                <th>Date</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="3">No result</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+        const tableId = `top3-${b.name.replace(/\s/g, '').toLowerCase()}`;
+        return `
+            <div class="personal-best-table" style="margin-bottom:2em;">
+                <h4>${b.name}</h4>
+                <table class="df-table">
+                    <thead>
+                        <tr>
+                            <th>Best Pace</th>
+                            <th>Date</th>
+                            <th>Details</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>${b.best.pace}</td>
+                            <td>${b.best.date}</td>
+                            <td><a href="activity.html?id=${b.best.id}" target="_blank"><button>View</button></a></td>
+                            <td>
+                                <button onclick="document.getElementById('${tableId}').style.display = (document.getElementById('${tableId}').style.display === 'none' ? 'block' : 'none')">
+                                    Show Top 3
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div id="${tableId}" style="display:none; margin-top:0.5em;">
+                    <table class="df-table" style="background:#f9f9f9;">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Date</th>
+                                <th>Pace</th>
+                                <th>Distance (km)</th>
+                                <th>Time</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${b.top3.map((t, i) => `
+                                <tr>
+                                    <td>${i + 1}</td>
+                                    <td>${t.date}</td>
+                                    <td>${t.pace}</td>
+                                    <td>${t.dist}</td>
+                                    <td>${t.time}</td>
+                                    <td><a href="activity.html?id=${t.id}" target="_blank"><button>View</button></a></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }).join('');
 }
