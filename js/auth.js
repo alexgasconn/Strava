@@ -1,8 +1,8 @@
 // js/auth.js
-import { showLoading, handleError } from './ui.js';
-import { initializeApp } from './main.js';
+import { showLoading, handleError, hideLoading } from './ui.js'; // Añadimos hideLoading
+// YA NO importamos initializeApp desde main.js
 
-const STRAVA_CLIENT_ID = '143540'; // Tu Client ID
+const STRAVA_CLIENT_ID = '143540';
 const REDIRECT_URI = window.location.origin + window.location.pathname;
 
 export function redirectToStrava() {
@@ -31,15 +31,16 @@ async function getTokensFromCode(code) {
             refresh_token: data.refresh_token,
             expires_at: data.expires_at
         }));
-        // Limpia el código de la URL
+        
         window.history.replaceState({}, '', window.location.pathname);
     } catch (error) {
         handleError('Authentication failed', error);
-        throw error; // Propaga el error para detener la ejecución
+        throw error;
     }
 }
 
-export async function handleAuth() {
+// Ahora handleAuth acepta una función como argumento
+export async function handleAuth(onAuthenticated) {
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
 
@@ -50,6 +51,10 @@ export async function handleAuth() {
 
     const tokenData = localStorage.getItem('strava_tokens');
     if (tokenData) {
-        await initializeApp(tokenData);
+        // Si estamos autenticados, llamamos a la función que nos pasaron
+        await onAuthenticated(tokenData);
+    } else {
+        // Si no estamos autenticados, nos aseguramos de que la pantalla de carga se oculte
+        hideLoading();
     }
 }
