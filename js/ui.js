@@ -99,8 +99,6 @@ export function renderDashboard(allActivities, dateFilterFrom, dateFilterTo) {
 
 // --- HTML/TABLE RENDERING FUNCTIONS ---
 
-// --- HTML/TABLE RENDERING FUNCTIONS ---
-
 function renderRaceList(runs) {
     const container = document.getElementById('race-list');
     if (!container) return;
@@ -188,6 +186,65 @@ async function renderGearInfo(runs) {
         <div><span class="gear-label">Total Distance:</span> ${(g.distance / 1000).toFixed(1)} km</div>
       </div>
     `).join('');
+}
+
+async function renderGearSection(runs) {
+    const container = document.getElementById('gear-info-list');
+    if (!container) return;
+
+    // 1. OBTENER IDs ÚNICOS
+    // Sacamos todos los gear_id de las actividades filtradas y eliminamos duplicados.
+    const gearIds = Array.from(new Set(runs.map(a => a.gear_id).filter(Boolean)));
+    
+    if (gearIds.length === 0) {
+        container.innerHTML = '<p>No gear used in this period.</p>';
+        return;
+    }
+
+    container.innerHTML = '<p>Loading detailed gear info...</p>';
+
+    try {
+        // 2. LLAMAR A LA API PARA CADA ID
+        // Creamos un array de promesas, donde cada una es una llamada a nuestra API de backend.
+        const gearDetailsPromises = gearIds.map(id => fetchGearById(id));
+        // `Promise.all` espera a que TODAS las llamadas terminen.
+        const results = await Promise.all(gearDetailsPromises);
+
+        // 3. PROCESAR Y RENDERIZAR LOS DATOS
+        // Iteramos sobre los resultados (que contienen el objeto `DetailedGear`).
+        const gearHtml = results.map(result => {
+            const gear = result.gear; // Este es el objeto `DetailedGear` que nos devolvió la API
+            
+            // --- Lógica de negocio para la durabilidad ---
+            const DURABILITY_GOAL_KM = 700; // Objetivo de durabilidad
+            const totalKm = gear.distance / 1000; // Convertimos metros a KM
+            const durabilityPercent = Math.min((totalKm / DURABILITY_GOAL_KM) * 100, 100);
+
+            // Asignamos un color a la barra según el desgaste
+            let durabilityColor = '#28a745'; // verde
+            if (durabilityPercent > 90) durabilityColor = '#dc3545'; // rojo
+            else if (durabilityPercent > 70) durabilityColor = '#ffc107'; // naranja
+
+            // Generamos el HTML para esta tarjeta de gear
+            return `
+              <div class="gear-card ${gear.retired ? 'retired' : ''}">
+                ${gear.retired ? '<span class="retired-badge">RETIRADO</span>' : ''}
+                <h4>${gear.name}</h4>
+                <p class="gear-distance">${totalKm.toFixed(0)} km</p>
+                <div class="durability-bar" title="${durabilityPercent.toFixed(0)}% de ${DURABILITY_GOAL_KM} km">
+                    <div class="durability-progress" style="width: ${durabilityPercent}%; background-color: ${durabilityColor};"></div>
+                </div>
+                <small>${durabilityPercent.toFixed(0)}% de ${DURABILITY_GOAL_KM} km recorridos</small>
+              </div>
+            `;
+        }).join('');
+
+        container.innerHTML = gearHtml;
+
+    } catch (error) {
+        console.error("Failed to fetch gear details:", error);
+        container.innerHTML = '<p>Error loading gear details. Check the console.</p>';
+    }
 }
 
 

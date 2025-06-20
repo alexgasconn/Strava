@@ -369,3 +369,83 @@ main {
     margin-top: 0;
     color: #fc4c02;
 }
+
+.gear-info-list {
+    display: grid; /* Usamos grid para un layout más robusto */
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.gear-card {
+    position: relative; /* Para el badge de retirado */
+    background: #fff;
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow);
+    border-left: 5px solid var(--strava-orange);
+    padding: 1.2em 1.5em;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.gear-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+
+.gear-card.retired {
+    opacity: 0.65;
+    border-left-color: var(--text-light);
+}
+
+.gear-card.retired:hover {
+    transform: none;
+}
+
+.gear-card h4 {
+    margin: 0 0 0.5em 0;
+    color: var(--text-dark);
+    font-size: 1.1em;
+}
+
+p.gear-distance {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--strava-orange);
+    margin: 0.2rem 0;
+}
+
+.durability-bar {
+    width: 100%;
+    height: 8px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 0.75rem;
+}
+
+.durability-progress {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease-out;
+}
+
+.gear-card small {
+    color: var(--text-light);
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+
+.retired-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background-color: var(--text-medium);
+    color: white;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
