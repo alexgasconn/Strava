@@ -267,8 +267,8 @@ export function renderStackedAreaGearChart(runs, gearIdToName = {}) {
     });
 }
 
-export function renderGearGanttChart(runs) {
-    const gearMonthKm = runs.reduce((acc, a) => {
+export function renderGearGanttChart(runs, gearIdToName = {}) {
+        const gearMonthKm = runs.reduce((acc, a) => {
         if (!a.gear_id) return acc;
         const gearKey = a.gear_id;
         const month = a.start_date_local.substring(0, 7);
