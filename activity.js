@@ -93,29 +93,70 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // ¡CORREGIDO! Ahora esta función está definida ANTES de que main la llame.
     function renderActivity(act) {
+        // --- Info principales ---
         const name = act.name;
-        const date = new Date(act.start_date_local).toLocaleDateString();
+        const description = act.description || '';
+        const date = new Date(act.start_date_local).toLocaleString();
+        const typeLabels = ['Workout', 'Race', 'Long Run', 'Workout'];
+        const activityType = act.workout_type !== undefined ? typeLabels[act.workout_type] || 'Other' : (act.type || 'Other');
+        const gear = act.gear?.name || 'N/A';
+        const kudos = act.kudos_count || 0;
+        const commentCount = act.comment_count || 0;
+
+        // Weather (si tienes estos datos en act)
+        let weatherStr = 'Not available';
+        if (act.temperature || act.pressure || act.wind_speed) {
+            weatherStr = [
+                act.temperature ? `🌡️ ${act.temperature}°C` : '',
+                act.pressure ? `⏲️ ${act.pressure} hPa` : '',
+                act.wind_speed ? `💨 ${act.wind_speed} m/s` : ''
+            ].filter(Boolean).join(' | ');
+        }
+
+        // --- Stats ---
         const distanceKm = (act.distance / 1000).toFixed(2);
         const duration = formatTime(act.moving_time);
         const pace = formatPace(act.average_speed);
-        const hr = act.average_heartrate ? Math.round(act.average_heartrate) : '-';
-        const gear = act.gear?.name || 'N/A';
-        const device = act.device_name || 'N/A';
+        const elevation = act.total_elevation_gain !== undefined ? act.total_elevation_gain : '-';
+        const calories = act.calories !== undefined ? act.calories : '-';
+        const hrAvg = act.average_heartrate ? Math.round(act.average_heartrate) : '-';
+        const hrMax = act.max_heartrate ? Math.round(act.max_heartrate) : '-';
+
+        // --- Advanced stats ---
+        const moveRatio = act.elapsed_time ? (act.moving_time / act.elapsed_time).toFixed(2) : '-';
+        const effort = act.suffer_score !== undefined ? act.suffer_score : (act.perceived_exertion !== undefined ? act.perceived_exertion : '-');
+        const vo2max = act.vo2max_est ? act.vo2max_est.toFixed(1) : '-';
 
         detailsDiv.innerHTML = `
             <h2>${name}</h2>
+            ${description ? `<p>${description}</p>` : ''}
             <ul>
-                <li>📅 <strong>Fecha:</strong> ${date}</li>
-                <li>📏 <strong>Distancia:</strong> ${distanceKm} km</li>
-                <li>⏱️ <strong>Duración:</strong> ${duration}</li>
-                <li>🐢 <strong>Ritmo medio:</strong> ${pace} min/km</li>
-                <li>❤️ <strong>FC media:</strong> ${hr} bpm</li>
-                <li>👟 <strong>Zapatillas:</strong> ${gear}</li>
-                <li>📱 <strong>Dispositivo:</strong> ${device}</li>
+                <li>📅 <strong>Date:</strong> ${date}</li>
+                <li>🏷️ <strong>Type:</strong> ${activityType}</li>
+                <li>👟 <strong>Gear:</strong> ${gear}</li>
+                <li>🌦️ <strong>Weather:</strong> ${weatherStr}</li>
+                <li>💬 <strong>Comments:</strong> ${commentCount}</li>
+                <li>👍 <strong>Kudos:</strong> ${kudos}</li>
+            </ul>
+            <h3>Stats</h3>
+            <ul>
+                <li>⏱️ <strong>Duration:</strong> ${duration}</li>
+                <li>📏 <strong>Distance:</strong> ${distanceKm} km</li>
+                <li>🐢 <strong>Pace:</strong> ${pace} min/km</li>
+                <li>⛰️ <strong>Elevation Gain:</strong> ${elevation} m</li>
+                <li>🔥 <strong>Calories:</strong> ${calories}</li>
+                <li>❤️ <strong>HR Avg:</strong> ${hrAvg} bpm</li>
+                <li>❤️‍🔥 <strong>HR Max:</strong> ${hrMax} bpm</li>
+            </ul>
+            <h3>Advanced Stats</h3>
+            <ul>
+                <li>🚦 <strong>Move Ratio:</strong> ${moveRatio}</li>
+                <li>💪 <strong>Effort:</strong> ${effort}</li>
+                <li>🧬 <strong>VO₂max (est):</strong> ${vo2max}</li>
             </ul>
         `;
 
-        // Renderizado del mapa
+        // --- Renderizado del mapa ---
         if (act.map?.summary_polyline && window.L) {
             const coords = decodePolyline(act.map.summary_polyline);
             if (coords.length > 0) {
@@ -127,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
             mapDiv.innerHTML = '<p>No route data available</p>';
         }
 
-        // Renderizado de Splits
+        // --- Renderizado de Splits ---
         if (act.splits_metric && act.splits_metric.length > 0) {
             splitsSection.classList.remove('hidden');
             const kmLabels = act.splits_metric.map((_, i) => `Km ${i + 1}`);
