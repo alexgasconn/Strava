@@ -87,7 +87,7 @@ export function renderDashboard(allActivities, dateFilterFrom, dateFilterTo) {
     charts.renderDistanceVsElevationChart(runs);
     charts.renderElevationHistogram(runs);
     charts.renderRunsHeatmap(runs);
-    
+
     // 3. Render Tables and other info
     renderRaceList(runs);
     renderAllRunsTable(runs);
@@ -135,7 +135,7 @@ function renderAllRunsTable(runs) {
         container.innerHTML = "<tbody><tr><td colspan='6'>No runs found in this period.</td></tr></tbody>";
         return;
     }
-    
+
     const tableHeader = `<thead><tr><th>Date</th><th>Name</th><th>Distance</th><th>Time</th><th>Pace</th><th>Details</th></tr></thead>`;
     // Ordenamos las carreras de más reciente a más antigua para la tabla
     const sortedRuns = [...runs].sort((a, b) => new Date(b.start_date_local) - new Date(a.start_date_local));
@@ -158,63 +158,92 @@ function renderAllRunsTable(runs) {
 
 
 async function renderGearInfo(runs) {
-    const container = document.getElementById('gear-info-list');
-    if (!container) return;
-
-    // 1. OBTENER IDs ÚNICOS
-    // Sacamos todos los gear_id de las actividades filtradas y eliminamos duplicados.
     const gearIds = Array.from(new Set(runs.map(a => a.gear_id).filter(Boolean)));
-    
+    const gearInfoList = document.getElementById('gear-info-list');
+    if (!gearInfoList) return;
+
     if (gearIds.length === 0) {
-        container.innerHTML = '<p>No gear used in this period.</p>';
+        gearInfoList.innerHTML = '<p>No gear found.</p>';
         return;
     }
 
-    container.innerHTML = '<p>Loading detailed gear info...</p>';
+    gearInfoList.innerHTML = '<p>Loading gear info...</p>';
 
-    try {
-        // 2. LLAMAR A LA API PARA CADA ID
-        // Creamos un array de promesas, donde cada una es una llamada a nuestra API de backend.
-        const gearDetailsPromises = gearIds.map(id => fetchGearById(id));
-        // `Promise.all` espera a que TODAS las llamadas terminen.
-        const results = await Promise.all(gearDetailsPromises);
-        console.log("Gear details fetched:", results);
+    // Configuración por defecto
+    const DEFAULT_PRICE = 100; // €
+    const DEFAULT_DURATION_KM = 700; // km
 
-        // 3. PROCESAR Y RENDERIZAR LOS DATOS
-        // Iteramos sobre los resultados (que contienen el objeto `DetailedGear`).
-        const gearHtml = results.map(result => {
-            const gear = result.gear; // Este es el objeto `DetailedGear` que nos devolvió la API
-            
-            // --- Lógica de negocio para la durabilidad ---
-            const DURABILITY_GOAL_KM = 700; // Objetivo de durabilidad
-            const totalKm = gear.distance / 1000; // Convertimos metros a KM
-            const durabilityPercent = Math.min((totalKm / DURABILITY_GOAL_KM) * 100, 100);
+    // Fetch info for each gear
+    const gearDetails = await Promise.all(gearIds.map(async gearId => {
+        try {
+            const gear = await fetchGearById(gearId);
+            // Filtra actividades de este gear
+            const gearRuns = runs.filter(a => a.gear_id === gearId);
+            const totalKm = gearRuns.reduce((sum, a) => sum + a.distance, 0) / 1000;
+            const numUses = gearRuns.length;
+            const firstUse = gearRuns.length ? gearRuns.map(a => a.start_date_local).sort()[0].substring(0, 10) : '-';
 
-            // Asignamos un color a la barra según el desgaste
-            let durabilityColor = '#28a745'; // verde
-            if (durabilityPercent > 90) durabilityColor = '#dc3545'; // rojo
-            else if (durabilityPercent > 70) durabilityColor = '#ffc107'; // naranja
+            // Personalización (puedes guardar en localStorage por gearId si quieres)
+            const price = gear.price ?? DEFAULT_PRICE;
+            const durationKm = gear.duration_km ?? DEFAULT_DURATION_KM;
 
-            // Generamos el HTML para esta tarjeta de gear
-            return `
-              <div class="gear-card ${gear.retired ? 'retired' : ''}">
-                ${gear.retired ? '<span class="retired-badge">RETIRADO</span>' : ''}
-                <h4>${gear.name}</h4>
-                <p class="gear-distance">${totalKm.toFixed(0)} km</p>
-                <div class="durability-bar" title="${durabilityPercent.toFixed(0)}% de ${DURABILITY_GOAL_KM} km">
-                    <div class="durability-progress" style="width: ${durabilityPercent}%; background-color: ${durabilityColor};"></div>
-                </div>
-                <small>${durabilityPercent.toFixed(0)}% de ${DURABILITY_GOAL_KM} km recorridos</small>
-              </div>
-            `;
-        }).join('');
+            // Cálculos
+            const durabilityPercent = Math.min((totalKm / durationKm) * 100, 100);
+            const euroPerKm = price && totalKm ? (price / totalKm).toFixed(2) : '-';
+            const daysUsed = gearRuns.length
+                ? (Math.ceil((new Date(gearRuns[gearRuns.length - 1].start_date_local) - new Date(firstUse)) / (1000 * 60 * 60 * 24)) + 1)
+                : 0;
+            const euroPerDay = price && daysUsed ? (price / daysUsed).toFixed(2) : '-';
+            const kmPerDay = daysUsed ? (totalKm / daysUsed).toFixed(2) : '-';
 
-        container.innerHTML = gearHtml;
+            // Alertas
+            const needsReplacement = durabilityPercent >= 100;
 
-    } catch (error) {
-        console.error("Failed to fetch gear details:", error);
-        container.innerHTML = '<p>Error loading gear details. Check the console.</p>';
-    }
+            return {
+                id: gearId,
+                name: `${gear.brand_name} ${gear.model_name}`,
+                nickname: gear.nickname || '',
+                type: gear.type,
+                totalKm: totalKm.toFixed(1),
+                numUses,
+                firstUse,
+                price,
+                durationKm,
+                durabilityPercent,
+                euroPerKm,
+                euroPerDay,
+                kmPerDay,
+                retired: gear.retired,
+                primary: gear.primary,
+                needsReplacement
+            };
+        } catch {
+            return { id: gearId, name: 'Unknown', type: '', totalKm: '-', numUses: '-', firstUse: '-', price: '-', durationKm: '-', durabilityPercent: '-', euroPerKm: '-', euroPerDay: '-', kmPerDay: '-', retired: false, primary: false, needsReplacement: false };
+        }
+    }));
+
+    // Render cards
+    gearInfoList.innerHTML = gearDetails.map(g => `
+      <div class="gear-card${g.primary ? ' primary-gear' : ''}${g.retired ? ' retired' : ''}">
+        ${g.retired ? '<span class="retired-badge">RETIRADO</span>' : ''}
+        ${g.primary ? '<span class="primary-badge">PRIMARY</span>' : ''}
+        <h4>${g.name}</h4>
+        ${g.nickname ? `<div><span class="gear-label">Nickname:</span> ${g.nickname}</div>` : ''}
+        <div><span class="gear-label">First Use:</span> ${g.firstUse}</div>
+        <div><span class="gear-label">Price:</span> ${g.price} €</div>
+        <div><span class="gear-label">Duration:</span> ${g.durationKm} km</div>
+        <div><span class="gear-label">Current km:</span> ${g.totalKm} km</div>
+        <div><span class="gear-label">Num Uses:</span> ${g.numUses}</div>
+        <div><span class="gear-label">€ per km:</span> ${g.euroPerKm}</div>
+        <div><span class="gear-label">€ per day:</span> ${g.euroPerDay}</div>
+        <div><span class="gear-label">km per day:</span> ${g.kmPerDay}</div>
+        <div class="durability-bar" title="${g.durabilityPercent.toFixed(0)}% of ${g.durationKm} km">
+            <div class="durability-progress" style="width: ${g.durabilityPercent}%; background-color: ${g.durabilityPercent > 90 ? '#dc3545' : g.durabilityPercent > 70 ? '#ffc107' : '#28a745'};"></div>
+        </div>
+        <small>${g.durabilityPercent.toFixed(0)}% of ${g.durationKm} km used</small>
+        ${g.needsReplacement ? '<div class="alert alert-danger">Needs replacement!</div>' : ''}
+      </div>
+    `).join('');
 }
 
 
@@ -231,7 +260,7 @@ function renderStreaks(runs) {
     }
 
     const sortedDates = Array.from(runDates).sort();
-    
+
     // --- CÁLCULO DE LA MEJOR RACHA DE DÍAS ---
     let maxDayStreak = 0;
     if (sortedDates.length > 0) {

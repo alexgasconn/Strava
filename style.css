@@ -371,14 +371,16 @@ main {
 }
 
 .gear-info-list {
-    display: grid; /* Usamos grid para un layout más robusto */
+    display: grid;
+    /* Usamos grid para un layout más robusto */
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 1.5rem;
     margin-top: 1rem;
 }
 
 .gear-card {
-    position: relative; /* Para el badge de retirado */
+    position: relative;
+    /* Para el badge de retirado */
     background: #fff;
     border-radius: var(--border-radius-md);
     box-shadow: var(--shadow);
@@ -391,7 +393,7 @@ main {
 
 .gear-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 
 .gear-card.retired {
@@ -448,4 +450,33 @@ p.gear-distance {
     font-size: 0.7rem;
     font-weight: bold;
     text-transform: uppercase;
+}
+
+.primary-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background-color: #fc4c02;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    z-index: 2;
+}
+
+.gear-card.primary-gear {
+    border: 2px solid #fc4c02;
+    box-shadow: 0 0 0 2px #fc4c0233;
+}
+
+.alert-danger {
+    color: #fff;
+    background: #dc3545;
+    border-radius: 6px;
+    padding: 0.3em 0.7em;
+    margin-top: 0.7em;
+    font-weight: bold;
+    display: inline-block;
 }

@@ -15,8 +15,8 @@ Running:
             -price🔴
             -duration🔴 
             -(predeterminat a 700km, customizable)🔴
-            -% of Durability (Alerts)🔴 
-            -current km🟡
+            -% of Durability (Alerts)🟢
+            -current km🟢
             -Num Uses🟡
             -€ per km🔴
             -€ per dia🔴
