@@ -156,39 +156,8 @@ function renderAllRunsTable(runs) {
     container.innerHTML = tableHeader + `<tbody>${tableBody}</tbody>`;
 }
 
+
 async function renderGearInfo(runs) {
-    const container = document.getElementById('gear-info-list');
-    if (!container) return;
-
-    // Usamos el `gear` que ya viene en el objeto de actividad para no hacer llamadas extra a la API
-    const gearMap = new Map();
-    runs.forEach(run => {
-        if (run.gear) {
-            if (!gearMap.has(run.gear.id)) {
-                gearMap.set(run.gear.id, {
-                    name: run.gear.name,
-                    distance: 0
-                });
-            }
-            gearMap.get(run.gear.id).distance += run.distance;
-        }
-    });
-
-    if (gearMap.size === 0) {
-        container.innerHTML = '<p>No gear used in this period.</p>';
-        return;
-    }
-
-    const gearDetails = Array.from(gearMap.values());
-    container.innerHTML = gearDetails.map(g => `
-      <div class="gear-card">
-        <h4>${g.name}</h4>
-        <div><span class="gear-label">Total Distance:</span> ${(g.distance / 1000).toFixed(1)} km</div>
-      </div>
-    `).join('');
-}
-
-async function renderGearSection(runs) {
     const container = document.getElementById('gear-info-list');
     if (!container) return;
 
