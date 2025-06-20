@@ -35,10 +35,10 @@ export function renderConsistencyChart(runs) {
         return;
     }
     
-    // 2. Agregación de datos: Contamos las actividades por día.
+    // 2. Agregación de datos: Sumamos la distancia total (en km) por día.
     const aggregatedData = runs.reduce((acc, act) => {
         const date = act.start_date_local.substring(0, 10);
-        acc[date] = (acc[date] || 0) + 1;
+        acc[date] = (acc[date] || 0) + (act.distance ? act.distance / 1000 : 0);
         return acc;
     }, {});
     
@@ -47,15 +47,26 @@ export function renderConsistencyChart(runs) {
     heatmapContainer.innerHTML = ''; // Limpiamos el contenedor antes de dibujar
 
     // 4. Determinamos el rango de fechas dinámicamente
-    // Buscamos la fecha de la última actividad en el array `runs`
     const lastDateStr = runs.reduce((max, act) => act.start_date_local > max ? act.start_date_local : max, runs[0].start_date_local);
     const lastDate = new Date(lastDateStr);
 
     // La fecha de inicio del calendario será 365 días ANTES de la última actividad
     const startDate = new Date(lastDate);
     startDate.setDate(startDate.getDate() - 365);
-    
-    // 5. Renderizado del heatmap
+
+    // 5. Calculamos los umbrales de color en función de los datos (percentiles)
+    const kmValues = Object.values(aggregatedData).filter(v => v > 0).sort((a, b) => a - b);
+    // Si hay pocos datos, usamos valores fijos razonables
+    const thresholds = kmValues.length >= 5
+        ? [
+            kmValues[Math.floor(0.2 * kmValues.length)],
+            kmValues[Math.floor(0.4 * kmValues.length)],
+            kmValues[Math.floor(0.6 * kmValues.length)],
+            kmValues[Math.floor(0.8 * kmValues.length)]
+        ]
+        : [2, 5, 10, 15];
+
+    // 6. Renderizado del heatmap
     cal.paint({
         itemSelector: heatmapContainer,
         domain: { 
@@ -80,7 +91,7 @@ export function renderConsistencyChart(runs) {
             color: { 
                 type: 'threshold', 
                 range: ['#ebedf0', '#fcbba1', '#fc9272', '#fb6a4a', '#de2d26'], 
-                domain: [1, 2, 3, 4] 
+                domain: thresholds
             } 
         },
         date: { 
