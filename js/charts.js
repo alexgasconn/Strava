@@ -25,10 +25,12 @@ function createChart(canvasId, config) {
 export function renderConsistencyChart(runs) {
     if (!runs.length) return;
     const cal = new CalHeatmap();
-    // Aggregate by date: sum distance (in km) per day
+    // Aggregate by date: sum distance (in km) per day, using timestamp (seconds)
     const aggregatedData = runs.reduce((acc, act) => {
         const date = act.start_date_local.substring(0, 10);
-        acc[date] = (acc[date] || 0) + (act.distance / 1000);
+        // Convert date string to timestamp in seconds
+        const timestamp = Math.floor(new Date(date).getTime() / 1000);
+        acc[timestamp] = (acc[timestamp] || 0) + (act.distance / 1000);
         return acc;
     }, {});
     const heatmapContainer = document.getElementById('cal-heatmap');
@@ -44,7 +46,7 @@ export function renderConsistencyChart(runs) {
             domain: { type: "month", label: { text: "MMM yyyy" } }, // Show month and year
             subDomain: { type: "ghDay", radius: 2, width: 11, height: 11 },
             range: 12,
-            data: { source: Object.entries(aggregatedData).map(([date, value]) => ({ date, value })), x: 'date', y: 'value' },
+            data: { source: aggregatedData },
             scale: { 
                 color: { 
                     type: 'threshold', 
