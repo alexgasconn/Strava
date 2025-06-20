@@ -161,6 +161,8 @@ async function renderGearInfo(runs) {
     const gearIds = Array.from(new Set(runs.map(a => a.gear_id).filter(Boolean)));
     const gearInfoList = document.getElementById('gear-info-list');
     if (!gearInfoList) return;
+    console.log(`[strava-gear] Found ${gearIds.length} unique gear items.`);
+    console.log(gearInfoList);
 
     if (gearIds.length === 0) {
         gearInfoList.innerHTML = '<p>No gear found.</p>';
@@ -220,7 +222,7 @@ async function renderGearInfo(runs) {
 
     // Render cards
     document.getElementById('gear-cards-list').innerHTML = gearDetails.map(g => `
-      <div class="gear-card${g.primary ? ' primary-gear' : ''}${g.retired ? ' retired' : ''}">
+      <div class="gear-card${g.primary ? '' : ' not-primary'}${g.retired ? ' retired' : ''}">
         ${g.retired ? '<span class="retired-badge">RETIRADO</span>' : ''}
         ${g.primary ? '<span class="primary-badge">PRIMARY</span>' : ''}
         <h4>${g.name}</h4>
