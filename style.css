@@ -195,6 +195,14 @@ main {
     margin-top: 1rem;
 }
 
+#activity-map {
+    height: 340px;
+    margin-bottom: 2rem;
+    border-radius: 14px;
+    overflow: hidden;
+    min-width: 200px;
+}
+
 /* --- PANTALLA DE CARGA Y RESPONSIVE --- */
 #loading-overlay {
     position: fixed;

@@ -159,6 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (act.map?.summary_polyline && window.L) {
             const coords = decodePolyline(act.map.summary_polyline);
             if (coords.length > 0) {
+                mapDiv.innerHTML = ""; // Añade esto antes de L.map(...)
                 const map = L.map('activity-map').setView(coords[0], 13);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
                 L.polyline(coords, { color: '#FC5200', weight: 4 }).addTo(map);
