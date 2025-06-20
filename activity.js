@@ -348,7 +348,7 @@ function rollingMean(arr, windowSize = 5) {
 }
 
 // Aplica rolling mean a los streams numéricos
-const windowSize = 7; // Puedes ajustar el tamaño de la ventana
+const windowSize = 50; // Puedes ajustar el tamaño de la ventana
 ['heartrate', 'altitude', 'cadence'].forEach(key => {
     if (streamData[key] && Array.isArray(streamData[key].data)) {
         streamData[key].data = rollingMean(streamData[key].data, windowSize);
