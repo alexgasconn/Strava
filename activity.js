@@ -323,7 +323,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 fetchActivityStreams(activityId, authPayload)
             ]);
 
-            // ¡Ahora estas llamadas funcionarán porque las funciones ya están definidas!
+            // --- AQUI aplica rolling mean ---
+            const windowSize = 25; // Puedes ajustar el tamaño de la ventana
+            ['heartrate', 'altitude', 'cadence'].forEach(key => {
+                if (streamData[key] && Array.isArray(streamData[key].data)) {
+                    streamData[key].data = rollingMean(streamData[key].data, windowSize);
+                }
+            });
+
             renderActivity(activityData);
             renderStreamCharts(streamData, activityData);
 
@@ -366,10 +373,10 @@ function rollingMean(arr, windowSize = 25) {
     return result;
 }
 
-// Aplica rolling mean a los streams numéricos
-const windowSize = 25; // Puedes ajustar el tamaño de la ventana
-['heartrate', 'altitude', 'cadence'].forEach(key => {
-    if (streamData[key] && Array.isArray(streamData[key].data)) {
-        streamData[key].data = rollingMean(streamData[key].data, windowSize);
-    }
-});
+// // Aplica rolling mean a los streams numéricos
+// const windowSize = 25; // Puedes ajustar el tamaño de la ventana
+// ['heartrate', 'altitude', 'cadence'].forEach(key => {
+//     if (streamData[key] && Array.isArray(streamData[key].data)) {
+//         streamData[key].data = rollingMean(streamData[key].data, windowSize);
+//     }
+// });
