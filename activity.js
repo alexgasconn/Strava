@@ -29,6 +29,33 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${min}:${sec.toString().padStart(2, '0')}`;
     }
 
+    function decodePolyline(str) {
+        let index = 0, lat = 0, lng = 0, coordinates = [];
+        while (index < str.length) {
+            let b, shift = 0, result = 0;
+            do {
+            b = str.charCodeAt(index++) - 63;
+            result |= (b & 0x1f) << shift;
+            shift += 5;
+            } while (b >= 0x20);
+            const dlat = (result & 1) ? ~(result >> 1) : (result >> 1);
+            lat += dlat;
+
+            shift = 0;
+            result = 0;
+            do {
+            b = str.charCodeAt(index++) - 63;
+            result |= (b & 0x1f) << shift;
+            shift += 5;
+            } while (b >= 0x20);
+            const dlng = (result & 1) ? ~(result >> 1) : (result >> 1);
+            lng += dlng;
+
+            coordinates.push([lat / 1e5, lng / 1e5]);
+        }
+        return coordinates;
+        }
+
     // --- 3. LÓGICA DE LA API ---
     function getAuthPayload() {
         const tokenString = localStorage.getItem('strava_tokens');
@@ -90,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Renderizado del mapa
         if (act.map?.summary_polyline && window.L) {
-            const coords = L.Polyline.fromEncoded(act.map.summary_polyline).getLatLngs();
+            const coords = decodePolyline(act.map.summary_polyline);
             if (coords.length > 0) {
                 const map = L.map('activity-map').setView(coords[0], 13);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
