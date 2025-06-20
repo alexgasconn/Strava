@@ -91,7 +91,6 @@ export function renderDashboard(allActivities, dateFilterFrom, dateFilterTo) {
     // 3. Render Tables and other info
     renderRaceList(runs);
     renderAllRunsTable(runs);
-    renderGearInfo(runs);
     renderStreaks(runs);
     renderPersonalBests(runs);
     renderGearSection(runs);
