@@ -329,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ]);
 
             // --- AQUI aplica rolling mean ---
-            const windowSize = 25; // Puedes ajustar el tamaño de la ventana
+            const windowSize = 100; // Puedes ajustar el tamaño de la ventana
             ['heartrate', 'altitude', 'cadence'].forEach(key => {
                 if (streamData[key] && Array.isArray(streamData[key].data)) {
                     streamData[key].data = rollingMean(streamData[key].data, windowSize);
