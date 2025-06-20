@@ -86,6 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function fetchActivityStreams(activityId, authPayload) {
         const streamTypes = 'distance,time,heartrate,altitude,cadence';
         const result = await fetchFromApi(`/api/strava-streams?id=${activityId}&type=${streamTypes}`, authPayload);
+        console.log('Fetched streams:', result);
         return result.streams;
     }
 
@@ -194,20 +195,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ¡CORREGIDO! Ahora esta función está definida ANTES de que main la llame.
-    function renderStreamCharts(streams) {
+    function renderStreamCharts(streams, act) {
         if (!streams || !streams.distance || !streams.distance.data || streams.distance.data.length === 0) {
             streamChartsDiv.innerHTML = '<p>No detailed stream data available for this activity.</p>';
             return;
         }
 
-        streamChartsDiv.style.display = 'block'; // Aseguramos que sea visible
+        // Limpia los gráficos previos si los hay
+        ['chart-altitude', 'chart-pace-distance', 'chart-heart-distance', 'chart-cadence-distance'].forEach(id => {
+            const canvas = document.getElementById(id);
+            if (canvas && canvas.chartInstance) {
+                canvas.chartInstance.destroy();
+                canvas.chartInstance = null;
+            }
+        });
 
         const { distance, time, heartrate, altitude, cadence } = streams;
         const distLabels = distance.data.map(d => (d / 1000).toFixed(2)); // Eje X para todos los gráficos
 
-        // Helper para crear gráficos y evitar código repetido
-        const createStreamChart = (canvasId, label, data, color, yAxisReverse = false) => {
-            new Chart(document.getElementById(canvasId), {
+        // Helper para crear gráficos bonitos y limpios
+        function createStreamChart(canvasId, label, data, color, yAxisReverse = false) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            if (ctx.canvas.chartInstance) ctx.canvas.chartInstance.destroy();
+            ctx.canvas.chartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: distLabels,
@@ -215,21 +225,24 @@ document.addEventListener('DOMContentLoaded', () => {
                         label: label,
                         data: data,
                         borderColor: color,
-                        backgroundColor: `${color}33`, // Color con opacidad
-                        fill: true,
+                        backgroundColor: 'rgba(252, 82, 0, 0.07)',
+                        fill: false,
                         pointRadius: 0,
-                        borderWidth: 1.5,
-                        tension: 0.2
+                        borderWidth: 2,
+                        tension: 0.3
                     }]
                 },
                 options: {
+                    plugins: {
+                        legend: { display: false }
+                    },
                     scales: {
                         x: { title: { display: true, text: 'Distancia (km)' } },
                         y: { reverse: yAxisReverse, title: { display: true, text: label } }
                     }
                 }
             });
-        };
+        }
 
         // 1. Altitud vs Distancia
         if (altitude && altitude.data) {
@@ -249,20 +262,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     paceStreamData.push(null);
                 }
             }
-            // Para el ritmo, el eje X debe ser más corto
             const paceLabels = distLabels.slice(1);
-            new Chart(document.getElementById('chart-pace-distance'), {
+            const ctx = document.getElementById('chart-pace-distance').getContext('2d');
+            if (ctx.canvas.chartInstance) ctx.canvas.chartInstance.destroy();
+            ctx.canvas.chartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: paceLabels,
                     datasets: [{
                         label: 'Ritmo (min/km)',
                         data: paceStreamData,
-                        borderColor: '#FC5200', backgroundColor: '#FC520033',
-                        fill: true, pointRadius: 0, borderWidth: 1.5, tension: 0.2
+                        borderColor: '#FC5200',
+                        backgroundColor: 'rgba(252, 82, 0, 0.07)',
+                        fill: false,
+                        pointRadius: 0,
+                        borderWidth: 2,
+                        tension: 0.3
                     }]
                 },
                 options: {
+                    plugins: { legend: { display: false } },
                     scales: {
                         x: { title: { display: true, text: 'Distancia (km)' } },
                         y: { reverse: true, title: { display: true, text: 'Ritmo (min/km)' } }
@@ -276,7 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
             createStreamChart('chart-heart-distance', 'FC (bpm)', heartrate.data, 'red');
         }
 
-        // 4. ¡NUEVO! Cadencia vs Distancia
+        // 4. Cadencia vs Distancia
         if (cadence && cadence.data) {
             // La cadencia de carrera se multiplica por 2 (es por pierna)
             const cadenceData = act.type === 'Run' ? cadence.data.map(c => c * 2) : cadence.data;
@@ -334,7 +353,7 @@ function estimateVO2max(act, userMaxHr = USER_MAX_HR) {
     return vo2max.toFixed(1);
 }
 
-function rollingMean(arr, windowSize = 5) {
+function rollingMean(arr, windowSize = 25) {
     if (!Array.isArray(arr) || arr.length === 0) return [];
     const result = [];
     for (let i = 0; i < arr.length; i++) {
@@ -348,7 +367,7 @@ function rollingMean(arr, windowSize = 5) {
 }
 
 // Aplica rolling mean a los streams numéricos
-const windowSize = 50; // Puedes ajustar el tamaño de la ventana
+const windowSize = 25; // Puedes ajustar el tamaño de la ventana
 ['heartrate', 'altitude', 'cadence'].forEach(key => {
     if (streamData[key] && Array.isArray(streamData[key].data)) {
         streamData[key].data = rollingMean(streamData[key].data, windowSize);

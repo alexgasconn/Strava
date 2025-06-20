@@ -126,14 +126,10 @@ main {
 }
 
 .charts-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
-    gap: 2.2rem;
-    margin: 0 auto 2rem auto;
-    max-width: 1200px;
-    width: 100%;
-    box-sizing: border-box;
-    padding: 0 1rem;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2rem;
+  margin-bottom: 2.5rem;
 }
 
 .full-width {
@@ -185,15 +181,14 @@ main {
 }
 
 .chart-container canvas {
-    width: 100%;
-    max-width: 100%;
-    display: block;
-    margin: 0 auto;
-    background: #fff;
-    /* Fondo igual que el recipiente */
-    border-radius: 10px;
-    border: 1.5px solid #f5e7e0;
-    /* NO forzamos height, Chart.js lo gestiona */
+  width: 100% !important;
+  max-width: 100%;
+  display: block;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 10px;
+  border: 1.5px solid #f5e7e0;
+  box-shadow: none;
 }
 
 #cal-heatmap {
@@ -235,14 +230,10 @@ main {
 }
 
 @media (max-width: 900px) {
-    .charts-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .activity-details-row {
-        flex-direction: column;
-        gap: 1rem;
-    }
+  .charts-grid {
+    grid-template-columns: 1fr;
+    gap: 1.2rem;
+  }
 }
 
 @media (max-width: 800px) {
