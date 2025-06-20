@@ -5,11 +5,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 1. REFERENCIAS AL DOM Y ESTADO INICIAL ---
     const params = new URLSearchParams(window.location.search);
     const activityId = params.get('id');
-
-    const detailsDiv = document.getElementById('activity-details');
+    const activityInfoDiv = document.getElementById('activity-info');
+    const activityStatsDiv = document.getElementById('activity-stats');
+    const activityAdvancedDiv = document.getElementById('activity-advanced');
     const mapDiv = document.getElementById('activity-map');
     const splitsSection = document.getElementById('splits-section');
-    const segmentsSection = document.getElementById('segments-section');
     const streamChartsDiv = document.getElementById('stream-charts');
     
     // --- 2. FUNCIONES DE UTILIDAD ---
@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function fetchActivityStreams(activityId, authPayload) {
-        const streamTypes = 'distance,time,heartrate,altitude';
+        const streamTypes = 'distance,time,heartrate,altitude,cadence';
         const result = await fetchFromApi(`/api/strava-streams?id=${activityId}&type=${streamTypes}`, authPayload);
         return result.streams;
     }
@@ -196,44 +196,93 @@ document.addEventListener('DOMContentLoaded', () => {
     // ¡CORREGIDO! Ahora esta función está definida ANTES de que main la llame.
     function renderStreamCharts(streams) {
         if (!streams || !streams.distance || !streams.distance.data || streams.distance.data.length === 0) {
-            streamChartsDiv.innerHTML = '<p>No detailed stream data available.</p>';
+            streamChartsDiv.innerHTML = '<p>No detailed stream data available for this activity.</p>';
             return;
         }
 
-        const { distance, time, heartrate, altitude } = streams;
-        const distLabels = distance.data.map(d => (d/1000).toFixed(2));
+        streamChartsDiv.style.display = 'block'; // Aseguramos que sea visible
+
+        const { distance, time, heartrate, altitude, cadence } = streams;
+        const distLabels = distance.data.map(d => (d/1000).toFixed(2)); // Eje X para todos los gráficos
+
+        // Helper para crear gráficos y evitar código repetido
+        const createStreamChart = (canvasId, label, data, color, yAxisReverse = false) => {
+            new Chart(document.getElementById(canvasId), {
+                type: 'line',
+                data: {
+                    labels: distLabels,
+                    datasets: [{
+                        label: label,
+                        data: data,
+                        borderColor: color,
+                        backgroundColor: `${color}33`, // Color con opacidad
+                        fill: true,
+                        pointRadius: 0,
+                        borderWidth: 1.5,
+                        tension: 0.2
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: { title: { display: true, text: 'Distancia (km)' } },
+                        y: { reverse: yAxisReverse, title: { display: true, text: label } }
+                    }
+                }
+            });
+        };
 
         // 1. Altitud vs Distancia
-        new Chart(document.getElementById('chart-altitude'), {
-            type: 'line',
-            data: { labels: distLabels, datasets: [{ label: 'Altitud (m)', data: altitude.data, borderColor: '#888', pointRadius: 0 }] }
-        });
-        
-        // 2. Ritmo vs Distancia
-        const paceStreamData = [];
-        for (let i = 1; i < distance.data.length; i++) {
-            const deltaDist = distance.data[i] - distance.data[i-1];
-            const deltaTime = time.data[i] - time.data[i-1];
-            if (deltaDist > 0 && deltaTime > 0) {
-                const speed = deltaDist / deltaTime; // m/s
-                paceStreamData.push(1000 / speed); // s/km
-            } else {
-                paceStreamData.push(null);
-            }
+        if (altitude && altitude.data) {
+            createStreamChart('chart-altitude', 'Altitud (m)', altitude.data, '#888');
         }
-        new Chart(document.getElementById('chart-pace-distance'), {
-            type: 'line',
-            data: { labels: distLabels.slice(1), datasets: [{ label: 'Ritmo (s/km)', data: paceStreamData, borderColor: '#FC5200', pointRadius: 0 }] },
-            options: { scales: { y: { reverse: true } } } // Invertir eje Y para que ritmos más rápidos estén arriba
-        });
+        
+        // 2. Ritmo vs Distancia (Cálculo corregido)
+        if (time && time.data) {
+            const paceStreamData = [];
+            for (let i = 1; i < distance.data.length; i++) {
+                const deltaDist = distance.data[i] - distance.data[i-1];
+                const deltaTime = time.data[i] - time.data[i-1];
+                if (deltaDist > 0 && deltaTime > 0) {
+                    const speed = deltaDist / deltaTime; // m/s
+                    paceStreamData.push(1000 / speed / 60); // Ritmo en min/km
+                } else {
+                    paceStreamData.push(null);
+                }
+            }
+            // Para el ritmo, el eje X debe ser más corto
+            const paceLabels = distLabels.slice(1);
+            new Chart(document.getElementById('chart-pace-distance'), {
+                type: 'line',
+                data: {
+                    labels: paceLabels,
+                    datasets: [{
+                        label: 'Ritmo (min/km)',
+                        data: paceStreamData,
+                        borderColor: '#FC5200', backgroundColor: '#FC520033',
+                        fill: true, pointRadius: 0, borderWidth: 1.5, tension: 0.2
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: { title: { display: true, text: 'Distancia (km)' } },
+                        y: { reverse: true, title: { display: true, text: 'Ritmo (min/km)' } }
+                    }
+                }
+            });
+        }
 
-        // 3. FC vs Distancia
-        new Chart(document.getElementById('chart-heart-distance'), {
-            type: 'line',
-            data: { labels: distLabels, datasets: [{ label: 'FC (bpm)', data: heartrate.data, borderColor: 'red', pointRadius: 0 }] }
-        });
+        // 3. Frecuencia Cardíaca vs Distancia
+        if (heartrate && heartrate.data) {
+            createStreamChart('chart-heart-distance', 'FC (bpm)', heartrate.data, 'red');
+        }
+
+        // 4. ¡NUEVO! Cadencia vs Distancia
+        if (cadence && cadence.data) {
+            // La cadencia de carrera se multiplica por 2 (es por pierna)
+            const cadenceData = act.type === 'Run' ? cadence.data.map(c => c * 2) : cadence.data;
+            createStreamChart('chart-cadence-distance', 'Cadencia (spm)', cadenceData, '#0074D9');
+        }
     }
-
 
     // --- 5. PUNTO DE ENTRADA DE LA APLICACIÓN ---
     async function main() {
@@ -248,7 +297,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            detailsDiv.innerHTML = '<p>Loading activity details...</p>';
             streamChartsDiv.style.display = 'none';
 
             const [activityData, streamData] = await Promise.all([
@@ -258,7 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // ¡Ahora estas llamadas funcionarán porque las funciones ya están definidas!
             renderActivity(activityData);
-            renderStreamCharts(streamData);
+            renderStreamCharts(streamData, activityData);
 
         } catch (error) {
             console.error("Failed to load activity page:", error);

@@ -51,29 +51,33 @@ Running:
 
     -Activity:🔴
         -info:
-            -title🟡
-            -subtitle/description🟡
-            -timestamp🟡
+            -title🟢
+            -subtitle/descriptionv🟢
+            -timestamp🟢
             -Location (City, neighbourhood)🔴
-            -acitivty type (race/workout)🔴
+            -acitivty type (race/workout)🟢
             -Gear (and total km of gear)🟡
-            -Weather: Temperature, Pressure, Wind (i un coefficient?) Hard, soft (escala beauffort)🔴
-            -comments/kudos🔴
+            -Weather: average_temp🔴
+            -comments/kudos🟢
 
         -stats:
-            -duration🟡
-            -distance🟡
-            -pace🟡
-            -elevation gain🔴
-            -calories🔴
-            -HR avg🟡
-            -HR max🔴
+            -duration🟢
+            -distance🟢
+            -pace🟢
+            -elevation gain🟢
+            -calories🟢
+            -HR avg🟢
+            -HR max🟢
 
         -advanced stats:
-            -move ratio🔴
-            -effort🔴
-            -vomax est🔴
+            -move ratio🟢
+            -effort🟢
+            -vomax est🟢
             -% in each zone🔴
+            -pr_count🔴
+            -athlete_count🔴
+            -achievement_count🔴
+
 
         -graphics:
             -HR:
