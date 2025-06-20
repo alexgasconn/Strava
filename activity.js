@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const mapDiv = document.getElementById('activity-map');
     const splitsSection = document.getElementById('splits-section');
     const streamChartsDiv = document.getElementById('stream-charts');
-    
+
     // --- 2. FUNCIONES DE UTILIDAD ---
     function formatTime(seconds) {
         if (isNaN(seconds) || seconds < 0) return '0:00';
@@ -34,9 +34,9 @@ document.addEventListener('DOMContentLoaded', () => {
         while (index < str.length) {
             let b, shift = 0, result = 0;
             do {
-            b = str.charCodeAt(index++) - 63;
-            result |= (b & 0x1f) << shift;
-            shift += 5;
+                b = str.charCodeAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
             } while (b >= 0x20);
             const dlat = (result & 1) ? ~(result >> 1) : (result >> 1);
             lat += dlat;
@@ -44,9 +44,9 @@ document.addEventListener('DOMContentLoaded', () => {
             shift = 0;
             result = 0;
             do {
-            b = str.charCodeAt(index++) - 63;
-            result |= (b & 0x1f) << shift;
-            shift += 5;
+                b = str.charCodeAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
             } while (b >= 0x20);
             const dlng = (result & 1) ? ~(result >> 1) : (result >> 1);
             lng += dlng;
@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
             coordinates.push([lat / 1e5, lng / 1e5]);
         }
         return coordinates;
-        }
+    }
 
     // --- 3. LÓGICA DE LA API ---
     function getAuthPayload() {
@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- 4. LÓGICA DE RENDERIZADO ---
-    
+
     // ¡CORREGIDO! Ahora esta función está definida ANTES de que main la llame.
     function renderActivity(act) {
         console.log('Rendering activity:', act);
@@ -192,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     }
-    
+
     // ¡CORREGIDO! Ahora esta función está definida ANTES de que main la llame.
     function renderStreamCharts(streams) {
         if (!streams || !streams.distance || !streams.distance.data || streams.distance.data.length === 0) {
@@ -203,7 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
         streamChartsDiv.style.display = 'block'; // Aseguramos que sea visible
 
         const { distance, time, heartrate, altitude, cadence } = streams;
-        const distLabels = distance.data.map(d => (d/1000).toFixed(2)); // Eje X para todos los gráficos
+        const distLabels = distance.data.map(d => (d / 1000).toFixed(2)); // Eje X para todos los gráficos
 
         // Helper para crear gráficos y evitar código repetido
         const createStreamChart = (canvasId, label, data, color, yAxisReverse = false) => {
@@ -235,13 +235,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (altitude && altitude.data) {
             createStreamChart('chart-altitude', 'Altitud (m)', altitude.data, '#888');
         }
-        
+
         // 2. Ritmo vs Distancia (Cálculo corregido)
         if (time && time.data) {
             const paceStreamData = [];
             for (let i = 1; i < distance.data.length; i++) {
-                const deltaDist = distance.data[i] - distance.data[i-1];
-                const deltaTime = time.data[i] - time.data[i-1];
+                const deltaDist = distance.data[i] - distance.data[i - 1];
+                const deltaTime = time.data[i] - time.data[i - 1];
                 if (deltaDist > 0 && deltaTime > 0) {
                     const speed = deltaDist / deltaTime; // m/s
                     paceStreamData.push(1000 / speed / 60); // Ritmo en min/km
@@ -333,3 +333,24 @@ function estimateVO2max(act, userMaxHr = USER_MAX_HR) {
     const vo2max = vo2_at_pace / percent_max_hr;
     return vo2max.toFixed(1);
 }
+
+function rollingMean(arr, windowSize = 5) {
+    if (!Array.isArray(arr) || arr.length === 0) return [];
+    const result = [];
+    for (let i = 0; i < arr.length; i++) {
+        const start = Math.max(0, i - Math.floor(windowSize / 2));
+        const end = Math.min(arr.length, i + Math.ceil(windowSize / 2));
+        const window = arr.slice(start, end);
+        const mean = window.reduce((a, b) => a + b, 0) / window.length;
+        result.push(mean);
+    }
+    return result;
+}
+
+// Aplica rolling mean a los streams numéricos
+const windowSize = 7; // Puedes ajustar el tamaño de la ventana
+['heartrate', 'altitude', 'cadence'].forEach(key => {
+    if (streamData[key] && Array.isArray(streamData[key].data)) {
+        streamData[key].data = rollingMean(streamData[key].data, windowSize);
+    }
+});
