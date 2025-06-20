@@ -94,7 +94,7 @@ function renderAllCharts(runs) {
 }
 
 
-// --- HTML/TABLE RENDERING FUNCTIONS ---
+// --- HTML/TABLE RENDERING FUNCTIONS ----
 
 function renderRaceList(runs) {
     const container = document.getElementById('race-list');
