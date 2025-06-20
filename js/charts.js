@@ -23,17 +23,21 @@ function createChart(canvasId, config) {
 // --- CHART RENDERING FUNCTIONS ---
 
 export function renderConsistencyChart(runs) {
+    if (!runs.length) return;
     const cal = new CalHeatmap();
     const aggregatedData = runs.reduce((acc, act) => {
         const date = act.start_date_local.substring(0, 10);
-        acc[date] = (acc[date] || 0) + 1; // O puedes sumar distancia, etc.
+        acc[date] = (acc[date] || 0) + 1;
         return acc;
     }, {});
     const heatmapContainer = document.getElementById('cal-heatmap');
     if (heatmapContainer) {
         heatmapContainer.innerHTML = '';
-        const now = new Date();
-        const start = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+        // Find last date in runs
+        const lastDateStr = runs.reduce((max, act) => act.start_date_local > max ? act.start_date_local : max, runs[0].start_date_local);
+        const lastDate = new Date(lastDateStr.substring(0, 10));
+        const start = new Date(lastDate);
+        start.setDate(start.getDate() - 365);
         cal.paint({
             itemSelector: heatmapContainer,
             domain: { type: "month", label: { text: "MMM" } },
