@@ -167,43 +167,39 @@ async function renderGearInfo(runs) {
         return;
     }
 
-    gearInfoList.innerHTML = '<p>Loading gear info...</p>';
+    // Botón de edición general
+    let isEditMode = localStorage.getItem('gearEditMode') === 'true';
+    gearInfoList.innerHTML = `
+      <div style="text-align:right;">
+        <button id="toggle-gear-edit">${isEditMode ? '✅ Done' : '✏️ Edit'}</button>
+      </div>
+      <div id="gear-cards-list"></div>
+    `;
 
-    // Configuración por defecto
-    const DEFAULT_PRICE = 100; // €
-    const DEFAULT_DURATION_KM = 700; // km
+    const DEFAULT_PRICE = 100;
+    const DEFAULT_DURATION_KM = 700;
 
-    // Fetch info for each gear
     const gearDetails = await Promise.all(gearIds.map(async gearId => {
         try {
             const gear = await fetchGearById(gearId);
-            // Filtra actividades de este gear
             const gearRuns = runs.filter(a => a.gear_id === gearId);
             const totalKm = gearRuns.reduce((sum, a) => sum + a.distance, 0) / 1000;
             const numUses = gearRuns.length;
             const firstUse = gearRuns.length ? gearRuns.map(a => a.start_date_local).sort()[0].substring(0, 10) : '-';
 
-            // Personalización (puedes guardar en localStorage por gearId si quieres)
+            // Personalización
             const localKey = `gear-custom-${gearId}`;
             const custom = JSON.parse(localStorage.getItem(localKey) || '{}');
             const price = custom.price ?? gear.price ?? DEFAULT_PRICE;
             const durationKm = custom.durationKm ?? gear.duration_km ?? DEFAULT_DURATION_KM;
 
-            // Cálculos
             const durabilityPercent = Math.min((totalKm / durationKm) * 100, 100);
             const euroPerKm = price && totalKm ? (price / totalKm).toFixed(2) : '-';
-            const daysUsed = gearRuns.length
-                ? (Math.ceil((new Date(gearRuns[gearRuns.length - 1].start_date_local) - new Date(firstUse)) / (1000 * 60 * 60 * 24)) + 1)
-                : 0;
-            const euroPerDay = price && daysUsed ? (price / daysUsed).toFixed(2) : '-';
-            const kmPerDay = daysUsed ? (totalKm / daysUsed).toFixed(2) : '-';
-
-            // Alertas
             const needsReplacement = durabilityPercent >= 100;
 
             return {
                 id: gearId,
-                name: `${gear.brand_name} ${gear.model_name}`,
+                name: [gear.brand_name, gear.model_name].filter(Boolean).join(' '),
                 nickname: gear.nickname || '',
                 type: gear.type,
                 totalKm: totalKm.toFixed(1),
@@ -213,19 +209,17 @@ async function renderGearInfo(runs) {
                 durationKm,
                 durabilityPercent,
                 euroPerKm,
-                euroPerDay,
-                kmPerDay,
                 retired: gear.retired,
                 primary: gear.primary,
                 needsReplacement
             };
         } catch {
-            return { id: gearId, name: 'Unknown', type: '', totalKm: '-', numUses: '-', firstUse: '-', price: '-', durationKm: '-', durabilityPercent: '-', euroPerKm: '-', euroPerDay: '-', kmPerDay: '-', retired: false, primary: false, needsReplacement: false };
+            return { id: gearId, name: 'Unknown', type: '', totalKm: '-', numUses: '-', firstUse: '-', price: '-', durationKm: '-', durabilityPercent: '-', euroPerKm: '-', retired: false, primary: false, needsReplacement: false };
         }
     }));
 
     // Render cards
-    gearInfoList.innerHTML = gearDetails.map(g => `
+    document.getElementById('gear-cards-list').innerHTML = gearDetails.map(g => `
       <div class="gear-card${g.primary ? ' primary-gear' : ''}${g.retired ? ' retired' : ''}">
         ${g.retired ? '<span class="retired-badge">RETIRADO</span>' : ''}
         ${g.primary ? '<span class="primary-badge">PRIMARY</span>' : ''}
@@ -234,38 +228,46 @@ async function renderGearInfo(runs) {
         <div><span class="gear-label">First Use:</span> ${g.firstUse}</div>
         <div>
           <span class="gear-label">Price:</span>
-          <input type="number" min="0" step="1" value="${g.price}" id="price-${g.id}" style="width:70px"> €
+          <input type="number" min="0" step="1" value="${g.price}" id="price-${g.id}" style="width:70px" ${isEditMode ? '' : 'disabled'}>
+          €
         </div>
         <div>
           <span class="gear-label">Duration:</span>
-          <input type="number" min="1" step="1" value="${g.durationKm}" id="duration-${g.id}" style="width:70px"> km
+          <input type="number" min="1" step="1" value="${g.durationKm}" id="duration-${g.id}" style="width:70px" ${isEditMode ? '' : 'disabled'}>
+          km
         </div>
         <div><span class="gear-label">Current km:</span> ${g.totalKm} km</div>
         <div><span class="gear-label">Num Uses:</span> ${g.numUses}</div>
-        <div><span class="gear-label">€ per km:</span> ${g.price && g.totalKm ? (g.price / g.totalKm).toFixed(2) : '-'}</div>
-        <div><span class="gear-label">€ per day:</span> ${g.price && g.daysUsed ? (g.price / g.daysUsed).toFixed(2) : '-'}</div>
-        <div><span class="gear-label">km per day:</span> ${g.daysUsed ? (g.totalKm / g.daysUsed).toFixed(2) : '-'}</div>
+        <div><span class="gear-label">€ per km:</span> ${g.euroPerKm}</div>
         <div class="durability-bar" title="${g.durabilityPercent.toFixed(0)}% of ${g.durationKm} km">
             <div class="durability-progress" style="width: ${g.durabilityPercent}%; background-color: ${g.durabilityPercent > 90 ? '#dc3545' : g.durabilityPercent > 70 ? '#ffc107' : '#28a745'};"></div>
         </div>
         <small>${g.durabilityPercent.toFixed(0)}% of ${g.durationKm} km used</small>
         ${g.needsReplacement ? '<div class="alert alert-danger">Needs replacement!</div>' : ''}
-        <button class="save-gear-btn" data-gearid="${g.id}">💾 Save</button>
+        ${isEditMode ? `<button class="save-gear-btn" data-gearid="${g.id}">💾 Save</button>` : ''}
       </div>
     `).join('');
 
-    gearInfoList.querySelectorAll('.save-gear-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const gearId = btn.getAttribute('data-gearid');
-            const price = parseFloat(document.getElementById(`price-${gearId}`).value);
-            const durationKm = parseInt(document.getElementById(`duration-${gearId}`).value, 10);
-            localStorage.setItem(`gear-custom-${gearId}`, JSON.stringify({ price, durationKm }));
-            btn.textContent = '✅ Saved!';
-            setTimeout(() => btn.textContent = '💾 Save', 1200);
-            // Opcional: recargar la sección para recalcular los datos
-            renderGearInfo(runs);
+    // Botón de editar
+    document.getElementById('toggle-gear-edit').onclick = () => {
+        localStorage.setItem('gearEditMode', !isEditMode);
+        renderGearInfo(runs);
+    };
+
+    // Botones de guardar (solo en modo edición)
+    if (isEditMode) {
+        document.querySelectorAll('.save-gear-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const gearId = btn.getAttribute('data-gearid');
+                const price = parseFloat(document.getElementById(`price-${gearId}`).value);
+                const durationKm = parseInt(document.getElementById(`duration-${gearId}`).value, 10);
+                localStorage.setItem(`gear-custom-${gearId}`, JSON.stringify({ price, durationKm }));
+                btn.textContent = '✅ Saved!';
+                setTimeout(() => btn.textContent = '💾 Save', 1200);
+                renderGearInfo(runs);
+            });
         });
-    });
+    }
 }
 
 
