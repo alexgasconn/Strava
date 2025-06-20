@@ -209,6 +209,7 @@ async function renderGearSection(runs) {
         const gearDetailsPromises = gearIds.map(id => fetchGearById(id));
         // `Promise.all` espera a que TODAS las llamadas terminen.
         const results = await Promise.all(gearDetailsPromises);
+        console.log("Gear details fetched:", results);
 
         // 3. PROCESAR Y RENDERIZAR LOS DATOS
         // Iteramos sobre los resultados (que contienen el objeto `DetailedGear`).
