@@ -49,7 +49,7 @@ Running:
         -Histogram of pace per km! all runs!!!🔴
 
 
-    -Activity:🔴
+    -Activity:🟡
         -info:
             -title🟢
             -subtitle/descriptionv🟢

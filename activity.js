@@ -105,14 +105,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const kudos = act.kudos_count || 0;
         const commentCount = act.comment_count || 0;
 
-        // Weather (si tienes estos datos en act)
-        let weatherStr = 'Not available';
-        if (act.temperature || act.pressure || act.wind_speed) {
-            weatherStr = [
-                act.temperature ? `🌡️ ${act.temperature}°C` : '',
-                act.pressure ? `⏲️ ${act.pressure} hPa` : '',
-                act.wind_speed ? `💨 ${act.wind_speed} m/s` : ''
-            ].filter(Boolean).join(' | ');
+        // Temperature (average)
+        let tempStr = 'Not available';
+        if (act.average_temp !== undefined && act.average_temp !== null) {
+            tempStr = `${act.average_temp}°C`;
         }
 
         // --- Stats ---
@@ -129,6 +125,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const effort = act.suffer_score !== undefined ? act.suffer_score : (act.perceived_exertion !== undefined ? act.perceived_exertion : '-');
         const vo2max = estimateVO2max(act);
 
+        const prCount = act.pr_count !== undefined ? act.pr_count : '-';
+        const athleteCount = act.athlete_count !== undefined ? act.athlete_count : '-';
+        const achievementCount = act.achievement_count !== undefined ? act.achievement_count : '-';
+
         // --- Render en 3 columnas ---
         document.getElementById('activity-info').innerHTML = `
             <h3>Info</h3>
@@ -138,21 +138,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <li><b>Date:</b> ${date}</li>
                 <li><b>Type:</b> ${activityType}</li>
                 <li><b>Gear:</b> ${gear}</li>
-                <li><b>Weather:</b> ${weatherStr}</li>
+                <li><b>Temperature:</b> ${tempStr}</li>
                 <li><b>Comments:</b> ${commentCount}</li>
                 <li><b>Kudos:</b> ${kudos}</li>
-            </ul>
-        `;
-        document.getElementById('activity-stats').innerHTML = `
-            <h3>Stats</h3>
-            <ul>
-                <li><b>Duration:</b> ${duration}</li>
-                <li><b>Distance:</b> ${distanceKm} km</li>
-                <li><b>Pace:</b> ${pace} min/km</li>
-                <li><b>Elevation Gain:</b> ${elevation} m</li>
-                <li><b>Calories:</b> ${calories}</li>
-                <li><b>HR Avg:</b> ${hrAvg} bpm</li>
-                <li><b>HR Max:</b> ${hrMax} bpm</li>
             </ul>
         `;
         document.getElementById('activity-advanced').innerHTML = `
@@ -161,6 +149,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <li><b>Move Ratio:</b> ${moveRatio}</li>
                 <li><b>Effort:</b> ${effort}</li>
                 <li><b>VO₂max (est):</b> ${vo2max}</li>
+                <li><b>PRs:</b> ${prCount}</li>
+                <li><b>Athlete Count:</b> ${athleteCount}</li>
+                <li><b>Achievements:</b> ${achievementCount}</li>
             </ul>
         `;
 
@@ -373,11 +364,3 @@ function rollingMean(arr, windowSize = 25) {
     }
     return result;
 }
-
-// // Aplica rolling mean a los streams numéricos
-// const windowSize = 25; // Puedes ajustar el tamaño de la ventana
-// ['heartrate', 'altitude', 'cadence'].forEach(key => {
-//     if (streamData[key] && Array.isArray(streamData[key].data)) {
-//         streamData[key].data = rollingMean(streamData[key].data, windowSize);
-//     }
-// });
