@@ -84,8 +84,8 @@ function renderAllCharts(runs) {
     charts.renderDistanceHistogram(runs);
     charts.renderVo2maxChart(runs);
     charts.renderFitnessChart(runs);
-    charts.renderStackedAreaGearChart(runs);
-    charts.renderGearGanttChart(runs);
+    charts.renderStackedAreaGearChart(runs, gearIdToName);
+    charts.renderGearGanttChart(runs, gearIdToName);
     charts.renderAccumulatedDistanceChart(runs);
     charts.renderRollingMeanDistanceChart(runs);
     charts.renderDistanceVsElevationChart(runs);
@@ -365,6 +365,13 @@ async function renderGearSection(runs) {
     gearListContainer.innerHTML = '<p>Loading detailed gear info...</p>';
     try {
         const results = await Promise.all(gearIds.map(id => fetchGearById(id)));
+        // NUEVO CÓDIGO AQUI
+        const gearIdToName = {};
+        results.forEach(result => {
+            const gear = result.gear;
+            // Usa el nombre más bonito disponible
+            gearIdToName[gear.id] = gear.name || [gear.brand_name, gear.model_name].filter(Boolean).join(' ');
+        });
         renderGearCards(results, gearUsage, runs);
     } catch (error) {
         console.error("Failed to fetch gear details:", error);

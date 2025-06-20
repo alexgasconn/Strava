@@ -51,7 +51,7 @@ export function renderConsistencyChart(runs) {
 }
 
 export function renderActivityTypeChart(runs) {
-    const p90Distance = runs.length > 0 ? [...runs].map(a => a.distance).sort((a,b)=>a-b)[Math.floor(0.9 * runs.length)] : 0;
+    const p90Distance = runs.length > 0 ? [...runs].map(a => a.distance).sort((a, b) => a - b)[Math.floor(0.9 * runs.length)] : 0;
     runs.forEach(a => {
         if (a.workout_type !== 1 && a.distance >= p90Distance) {
             a.workout_type_classified = 2; // Long run
@@ -64,8 +64,8 @@ export function renderActivityTypeChart(runs) {
     const workoutTypeCounts = [0, 0, 0];
     runs.forEach(act => {
         const wt = act.workout_type_classified;
-        if(workoutTypeCounts[wt] !== undefined) {
-          workoutTypeCounts[wt]++;
+        if (workoutTypeCounts[wt] !== undefined) {
+            workoutTypeCounts[wt]++;
         }
     });
 
@@ -91,7 +91,7 @@ export function renderMonthlyDistanceChart(runs) {
         acc[month].count += 1;
         return acc;
     }, {});
-    
+
     const sortedMonths = Object.keys(monthlyData).sort();
     const monthlyDistances = sortedMonths.map(m => monthlyData[m].distance);
     const monthlyCounts = sortedMonths.map(m => monthlyData[m].count);
@@ -115,8 +115,8 @@ export function renderMonthlyDistanceChart(runs) {
 }
 
 export function renderPaceVsDistanceChart(runs) {
-    const data = runs.filter(r => r.distance > 0).map(r => ({ 
-        x: r.distance / 1000, 
+    const data = runs.filter(r => r.distance > 0).map(r => ({
+        x: r.distance / 1000,
         y: (r.moving_time / 60) / (r.distance / 1000) // Pace in min/km
     }));
 
@@ -129,11 +129,11 @@ export function renderPaceVsDistanceChart(runs) {
                 backgroundColor: 'rgba(252, 82, 0, 0.7)'
             }]
         },
-        options: { 
-            scales: { 
-                x: { title: { display: true, text: 'Distance (km)' } }, 
-                y: { title: { display: true, text: 'Pace (min/km)' } } 
-            } 
+        options: {
+            scales: {
+                x: { title: { display: true, text: 'Distance (km)' } },
+                y: { title: { display: true, text: 'Pace (min/km)' } }
+            }
         }
     });
 }
@@ -181,7 +181,7 @@ export function renderVo2maxChart(runs) {
         acc[d.yearMonth].push(d.vo2max);
         return acc;
     }, {});
-    
+
     const months = Object.keys(vo2maxByMonth).sort();
     const vo2maxMonthlyAvg = months.map(m => vo2maxByMonth[m].reduce((a, b) => a + b, 0) / vo2maxByMonth[m].length);
     const vo2maxRolling = calculateRollingMean(vo2maxMonthlyAvg, 3); // Rolling window of 3 months
@@ -202,7 +202,7 @@ export function renderFitnessChart(runs) {
         acc[date] = (acc[date] || 0) + (act.perceived_exertion ?? act.suffer_score ?? 0);
         return acc;
     }, {});
-    
+
     const allEffortDays = Object.keys(effortByDay).sort();
     if (allEffortDays.length === 0) return;
 
@@ -212,7 +212,7 @@ export function renderFitnessChart(runs) {
     for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
         days.push(d.toISOString().slice(0, 10));
     }
-    
+
     const dailyEffort = days.map(date => effortByDay[date] || 0);
     const { atl, ctl, tsb } = calculateFitness(dailyEffort);
 
@@ -230,7 +230,7 @@ export function renderFitnessChart(runs) {
     });
 }
 
-export function renderStackedAreaGearChart(runs) {
+export function renderStackedAreaGearChart(runs, gearIdToName = {}) {
     const gearMonthKm = runs.reduce((acc, a) => {
         if (!a.gear_id) return acc;
         const gearName = a.gear?.name || a.gear_id;
@@ -242,15 +242,18 @@ export function renderStackedAreaGearChart(runs) {
 
     const allMonths = Object.keys(gearMonthKm).sort();
     const allGears = Array.from(new Set(runs.map(a => a.gear?.name || a.gear_id).filter(Boolean)));
-    
-    const datasets = allGears.map((gear, idx) => ({
-        label: gear,
-        data: allMonths.map(month => gearMonthKm[month]?.[gear] || 0),
-        backgroundColor: `hsl(${(idx * 60)}, 70%, 60%)`, // Different colors
-        fill: true,
-        borderWidth: 1,
-        tension: 0.2
-    }));
+
+    const datasets = allGears.map((gearId, idx) => {
+        const label = gearIdToName[gearId] || gearId;
+        return {
+            label,
+            data: allMonths.map(month => gearMonthKm[month]?.[gearId] || 0),
+            backgroundColor: `hsl(${(idx * 60)}, 70%, 60%)`, // Different colors
+            fill: true,
+            borderWidth: 1,
+            tension: 0.2
+        };
+    });
 
     createChart('stacked-area-chart', {
         type: 'line',
@@ -329,7 +332,7 @@ export function renderElevationHistogram(runs) {
         const idx = Math.floor(v / binSize);
         if (idx < binCount) bins[idx]++;
     });
-    
+
     createChart('elevation-histogram', {
         type: 'bar',
         data: {
@@ -380,7 +383,7 @@ export function renderRollingMeanDistanceChart(runs) {
 export function renderRunsHeatmap(runs) {
     if (!window.L) {
         console.error("Leaflet.js no está cargado. No se puede renderizar el mapa de calor.");
-        return; 
+        return;
     }
 
     // 1. Filtramos las actividades que tienen datos de mapa.
