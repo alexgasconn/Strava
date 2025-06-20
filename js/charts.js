@@ -23,40 +23,71 @@ function createChart(canvasId, config) {
 // --- CHART RENDERING FUNCTIONS ---
 
 export function renderConsistencyChart(runs) {
-    if (!runs.length) return;
-    const cal = new CalHeatmap();
-    // Aggregate by date: sum distance (in km) per day, using timestamp (seconds)
+    const heatmapContainer = document.getElementById('cal-heatmap');
+    if (!heatmapContainer) {
+        console.error("Heatmap container 'cal-heatmap' not found.");
+        return;
+    }
+
+    // 1. Manejo del caso sin datos: Si no hay carreras, muestra un mensaje y termina.
+    if (!runs || runs.length === 0) {
+        heatmapContainer.innerHTML = '<p style="text-align: center; color: #8c8c8c;">No activity data for this period.</p>';
+        return;
+    }
+    
+    // 2. Agregación de datos: Contamos las actividades por día.
     const aggregatedData = runs.reduce((acc, act) => {
         const date = act.start_date_local.substring(0, 10);
-        // Convert date string to timestamp in seconds
-        const timestamp = Math.floor(new Date(date).getTime() / 1000);
-        acc[timestamp] = (acc[timestamp] || 0) + (act.distance / 1000);
+        acc[date] = (acc[date] || 0) + 1;
         return acc;
     }, {});
-    const heatmapContainer = document.getElementById('cal-heatmap');
-    if (heatmapContainer) {
-        heatmapContainer.innerHTML = '';
-        // Find last date in runs
-        const lastDateStr = runs.reduce((max, act) => act.start_date_local > max ? act.start_date_local : max, runs[0].start_date_local);
-        const lastDate = new Date(lastDateStr.substring(0, 10));
-        const start = new Date(lastDate);
-        start.setDate(start.getDate() - 365);
-        cal.paint({
-            itemSelector: heatmapContainer,
-            domain: { type: "month", label: { text: "MMM yyyy" } }, // Show month and year
-            subDomain: { type: "ghDay", radius: 2, width: 11, height: 11 },
-            range: 12,
-            data: { source: aggregatedData },
-            scale: { 
-                color: { 
-                    type: 'threshold', 
-                    range: ['#ebedf0', '#fcbba1', '#fc9272', '#fb6a4a', '#de2d26'], 
-                    domain: [1, 5, 10, 15] // thresholds in km
-                } 
-            },
-            date: { start }
-        });
-    }
+    
+    // 3. Configuración del calendario (CalHeatmap)
+    const cal = new CalHeatmap();
+    heatmapContainer.innerHTML = ''; // Limpiamos el contenedor antes de dibujar
+
+    // 4. Determinamos el rango de fechas dinámicamente
+    // Buscamos la fecha de la última actividad en el array `runs`
+    const lastDateStr = runs.reduce((max, act) => act.start_date_local > max ? act.start_date_local : max, runs[0].start_date_local);
+    const lastDate = new Date(lastDateStr);
+
+    // La fecha de inicio del calendario será 365 días ANTES de la última actividad
+    const startDate = new Date(lastDate);
+    startDate.setDate(startDate.getDate() - 365);
+    
+    // 5. Renderizado del heatmap
+    cal.paint({
+        itemSelector: heatmapContainer,
+        domain: { 
+            type: "month", 
+            label: { text: "MMM", position: "bottom" },
+            paddding: 5
+        },
+        subDomain: { 
+            type: "ghDay", 
+            radius: 2, 
+            width: 11, 
+            height: 11,
+            gutter: 4
+        },
+        range: 12, // Muestra 12 meses
+        data: { 
+            source: Object.entries(aggregatedData).map(([date, value]) => ({ date, value })), 
+            x: 'date', 
+            y: 'value' 
+        },
+        scale: { 
+            color: { 
+                type: 'threshold', 
+                range: ['#ebedf0', '#fcbba1', '#fc9272', '#fb6a4a', '#de2d26'], 
+                domain: [1, 2, 3, 4] 
+            } 
+        },
+        date: { 
+            start: startDate // Usamos la fecha de inicio calculada
+        },
+        itemSelector: "#cal-heatmap",
+    });
 }
 
 export function renderActivityTypeChart(runs) {
