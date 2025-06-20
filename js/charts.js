@@ -270,19 +270,19 @@ export function renderStackedAreaGearChart(runs, gearIdToName = {}) {
 export function renderGearGanttChart(runs) {
     const gearMonthKm = runs.reduce((acc, a) => {
         if (!a.gear_id) return acc;
-        const gearName = a.gear?.name || a.gear_id;
+        const gearKey = a.gear_id;
         const month = a.start_date_local.substring(0, 7);
         if (!acc[month]) acc[month] = {};
-        acc[month][gearName] = (acc[month][gearName] || 0) + a.distance / 1000;
+        acc[month][gearKey] = (acc[month][gearKey] || 0) + a.distance / 1000;
         return acc;
     }, {});
 
     const allMonths = Object.keys(gearMonthKm).sort();
-    const allGears = Array.from(new Set(runs.map(a => a.gear?.name || a.gear_id).filter(Boolean)));
+    const allGears = Array.from(new Set(runs.map(a => a.gear_id).filter(Boolean)));
 
-    const datasets = allGears.map((gear, idx) => ({
-        label: gear,
-        data: allMonths.map(month => gearMonthKm[month]?.[gear] || 0),
+    const datasets = allGears.map((gearId, idx) => ({
+        label: gearIdToName[gearId] || gearId,
+        data: allMonths.map(month => gearMonthKm[month]?.[gearId] || 0),
         backgroundColor: `hsl(${(idx * 60)}, 70%, 60%)`
     }));
 
