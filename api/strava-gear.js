@@ -77,6 +77,7 @@ export default async function handler(req, res) {
             return res.status(stravaResponse.status).json({ error: data.message });
         }
         const gear = await stravaResponse.json();
+        console.log(`[Backend] Datos del Gear ID ${id} recibidos de Strava:`, gear);
         res.status(200).json({ gear: gear, tokens: updatedTokens });
 
     } catch (err) {
