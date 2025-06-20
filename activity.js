@@ -267,6 +267,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     paceStreamData.push(null);
                 }
             }
+            // Aplica rolling mean al ritmo calculado
+            const windowSize = 100; // Usa el mismo windowSize que para los streams
+            const smoothPaceStreamData = rollingMean(paceStreamData, windowSize);
+
             const paceLabels = distLabels.slice(1);
             const ctx = document.getElementById('chart-pace-distance').getContext('2d');
             if (ctx.canvas.chartInstance) ctx.canvas.chartInstance.destroy();
@@ -276,7 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     labels: paceLabels,
                     datasets: [{
                         label: 'Ritmo (min/km)',
-                        data: paceStreamData,
+                        data: smoothPaceStreamData,
                         borderColor: '#FC5200',
                         backgroundColor: 'rgba(252, 82, 0, 0.07)',
                         fill: false,
