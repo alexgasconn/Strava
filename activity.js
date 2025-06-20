@@ -93,6 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // ¡CORREGIDO! Ahora esta función está definida ANTES de que main la llame.
     function renderActivity(act) {
+        console.log('Rendering activity:', act);
         // --- Info principales ---
         const name = act.name;
         const description = act.description || '';
@@ -125,34 +126,40 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- Advanced stats ---
         const moveRatio = act.elapsed_time ? (act.moving_time / act.elapsed_time).toFixed(2) : '-';
         const effort = act.suffer_score !== undefined ? act.suffer_score : (act.perceived_exertion !== undefined ? act.perceived_exertion : '-');
-        const vo2max = act.vo2max_est ? act.vo2max_est.toFixed(1) : '-';
+        const vo2max = estimateVO2max(act);
 
-        detailsDiv.innerHTML = `
-            <h2>${name}</h2>
-            ${description ? `<p>${description}</p>` : ''}
+        // --- Render en 3 columnas ---
+        document.getElementById('activity-info').innerHTML = `
+            <h3>Info</h3>
             <ul>
-                <li>📅 <strong>Date:</strong> ${date}</li>
-                <li>🏷️ <strong>Type:</strong> ${activityType}</li>
-                <li>👟 <strong>Gear:</strong> ${gear}</li>
-                <li>🌦️ <strong>Weather:</strong> ${weatherStr}</li>
-                <li>💬 <strong>Comments:</strong> ${commentCount}</li>
-                <li>👍 <strong>Kudos:</strong> ${kudos}</li>
+                <li><b>Title:</b> ${name}</li>
+                ${description ? `<li><b>Description:</b> ${description}</li>` : ''}
+                <li><b>Date:</b> ${date}</li>
+                <li><b>Type:</b> ${activityType}</li>
+                <li><b>Gear:</b> ${gear}</li>
+                <li><b>Weather:</b> ${weatherStr}</li>
+                <li><b>Comments:</b> ${commentCount}</li>
+                <li><b>Kudos:</b> ${kudos}</li>
             </ul>
+        `;
+        document.getElementById('activity-stats').innerHTML = `
             <h3>Stats</h3>
             <ul>
-                <li>⏱️ <strong>Duration:</strong> ${duration}</li>
-                <li>📏 <strong>Distance:</strong> ${distanceKm} km</li>
-                <li>🐢 <strong>Pace:</strong> ${pace} min/km</li>
-                <li>⛰️ <strong>Elevation Gain:</strong> ${elevation} m</li>
-                <li>🔥 <strong>Calories:</strong> ${calories}</li>
-                <li>❤️ <strong>HR Avg:</strong> ${hrAvg} bpm</li>
-                <li>❤️‍🔥 <strong>HR Max:</strong> ${hrMax} bpm</li>
+                <li><b>Duration:</b> ${duration}</li>
+                <li><b>Distance:</b> ${distanceKm} km</li>
+                <li><b>Pace:</b> ${pace} min/km</li>
+                <li><b>Elevation Gain:</b> ${elevation} m</li>
+                <li><b>Calories:</b> ${calories}</li>
+                <li><b>HR Avg:</b> ${hrAvg} bpm</li>
+                <li><b>HR Max:</b> ${hrMax} bpm</li>
             </ul>
+        `;
+        document.getElementById('activity-advanced').innerHTML = `
             <h3>Advanced Stats</h3>
             <ul>
-                <li>🚦 <strong>Move Ratio:</strong> ${moveRatio}</li>
-                <li>💪 <strong>Effort:</strong> ${effort}</li>
-                <li>🧬 <strong>VO₂max (est):</strong> ${vo2max}</li>
+                <li><b>Move Ratio:</b> ${moveRatio}</li>
+                <li><b>Effort:</b> ${effort}</li>
+                <li><b>VO₂max (est):</b> ${vo2max}</li>
             </ul>
         `;
 
@@ -262,3 +269,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // Ejecutamos la función principal
     main();
 });
+
+const USER_MAX_HR = 190; // Cambia esto por tu FC máxima real o estimada
+
+function estimateVO2max(act, userMaxHr = USER_MAX_HR) {
+    if (!act.distance || !act.moving_time || !act.average_heartrate) return '-';
+    // Paso A: velocidad en m/min
+    const vel_m_min = (act.distance / act.moving_time) * 60;
+    // Paso B: VO2 al ritmo de la actividad
+    const vo2_at_pace = (vel_m_min * 0.2) + 3.5;
+    // Paso C: % esfuerzo
+    const percent_max_hr = act.average_heartrate / userMaxHr;
+    if (percent_max_hr < 0.5 || percent_max_hr > 1.2) return '-'; // filtro valores raros
+    // Paso D: Extrapolación
+    const vo2max = vo2_at_pace / percent_max_hr;
+    return vo2max.toFixed(1);
+}
