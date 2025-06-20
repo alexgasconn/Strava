@@ -25,9 +25,10 @@ function createChart(canvasId, config) {
 export function renderConsistencyChart(runs) {
     if (!runs.length) return;
     const cal = new CalHeatmap();
+    // Aggregate by date: sum distance (in km) per day
     const aggregatedData = runs.reduce((acc, act) => {
         const date = act.start_date_local.substring(0, 10);
-        acc[date] = (acc[date] || 0) + 1;
+        acc[date] = (acc[date] || 0) + (act.distance / 1000);
         return acc;
     }, {});
     const heatmapContainer = document.getElementById('cal-heatmap');
@@ -40,11 +41,17 @@ export function renderConsistencyChart(runs) {
         start.setDate(start.getDate() - 365);
         cal.paint({
             itemSelector: heatmapContainer,
-            domain: { type: "month", label: { text: "MMM" } },
+            domain: { type: "month", label: { text: "MMM yyyy" } }, // Show month and year
             subDomain: { type: "ghDay", radius: 2, width: 11, height: 11 },
             range: 12,
             data: { source: Object.entries(aggregatedData).map(([date, value]) => ({ date, value })), x: 'date', y: 'value' },
-            scale: { color: { type: 'threshold', range: ['#ebedf0', '#fcbba1', '#fc9272', '#fb6a4a', '#de2d26'], domain: [1, 2, 3, 4] } },
+            scale: { 
+                color: { 
+                    type: 'threshold', 
+                    range: ['#ebedf0', '#fcbba1', '#fc9272', '#fb6a4a', '#de2d26'], 
+                    domain: [1, 5, 10, 15] // thresholds in km
+                } 
+            },
             date: { start }
         });
     }
