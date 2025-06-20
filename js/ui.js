@@ -4,7 +4,7 @@ import * as charts from './charts.js';
 import * as utils from './utils.js';
 import { getISOWeek } from './utils.js';
 
-// --- DOM REFERENCES (las que ya tenías) ---
+// --- DOM REFERENCES  ---
 const loadingOverlay = document.getElementById('loading-overlay');
 const loadingMessage = document.getElementById('loading-message');
 const athleteName = document.getElementById('athlete-name');
@@ -13,7 +13,6 @@ const appSection = document.getElementById('app-section');
 
 // --- UI HELPERS ---
 
-// ¡CORREGIDO! Faltaba el 'export'
 export function showLoading(message) {
     if (loadingOverlay) {
         loadingMessage.textContent = message;
@@ -22,7 +21,6 @@ export function showLoading(message) {
     }
 }
 
-// ¡CORREGIDO! Faltaba el 'export'
 export function hideLoading() {
     if (loadingOverlay) {
         loadingOverlay.style.display = 'none';
@@ -30,14 +28,12 @@ export function hideLoading() {
     }
 }
 
-// ¡CORREGIDO! Faltaba el 'export'
 export function handleError(message, error) {
     console.error(message, error);
     hideLoading();
     alert(`Error: ${message}. Check console for details.`);
 }
 
-// ¡CORREGIDO! Faltaba el 'export'
 export function setupDashboard(activities) {
     loginSection.classList.add('hidden');
     appSection.classList.remove('hidden');
@@ -54,14 +50,21 @@ export function setupDashboard(activities) {
     }
 }
 
-// --- RENDER FUNCTIONS ---
-
 // LA FUNCIÓN PRINCIPAL DE RENDERIZADO
 export function renderDashboard(allActivities, dateFilterFrom, dateFilterTo) {
     const filteredActivities = utils.filterActivitiesByDate(allActivities, dateFilterFrom, dateFilterTo);
     const runs = filteredActivities.filter(a => a.type && a.type.includes('Run'));
 
-    // 1. Render Summary Cards
+    renderSummaryCards(runs);
+    renderAllCharts(runs);
+    renderRaceList(runs);
+    renderAllRunsTable(runs);
+    renderGearSection(runs);
+    renderStreaks(runs);
+    renderPersonalBests(runs);
+}
+
+function renderSummaryCards(runs) {
     const summaryContainer = document.getElementById('summary-cards');
     if (summaryContainer) {
         summaryContainer.innerHTML = `
@@ -71,8 +74,9 @@ export function renderDashboard(allActivities, dateFilterFrom, dateFilterTo) {
             <div class="card"><h3>Total Elevation</h3><p>${runs.reduce((s, a) => s + a.total_elevation_gain, 0).toLocaleString()} m</p></div>
         `;
     }
+}
 
-    // 2. Render all charts by calling functions from the charts module
+function renderAllCharts(runs) {
     charts.renderConsistencyChart(runs);
     charts.renderActivityTypeChart(runs);
     charts.renderMonthlyDistanceChart(runs);
@@ -87,13 +91,6 @@ export function renderDashboard(allActivities, dateFilterFrom, dateFilterTo) {
     charts.renderDistanceVsElevationChart(runs);
     charts.renderElevationHistogram(runs);
     charts.renderRunsHeatmap(runs);
-
-    // 3. Render Tables and other info
-    renderRaceList(runs);
-    renderAllRunsTable(runs);
-    renderStreaks(runs);
-    renderPersonalBests(runs);
-    renderGearSection(runs);
 }
 
 
@@ -157,157 +154,6 @@ function renderAllRunsTable(runs) {
 }
 
 
-
-
-// ==================================================================
-//               LA VERSIÓN DEFINITIVA DE GEARS
-// ==================================================================
-async function renderGearSection(runs) {
-    const container = document.getElementById('gear-info-section'); // Contenedor principal
-    if (!container) return;
-
-    // 1. OBTENER IDs ÚNICOS Y DATOS BÁSICOS DE LAS ACTIVIDADES
-    const gearUsage = new Map();
-    runs.forEach(run => {
-        if (run.gear_id) {
-            if (!gearUsage.has(run.gear_id)) {
-                gearUsage.set(run.gear_id, {
-                    numUses: 0,
-                    firstUse: run.start_date_local,
-                    lastUse: run.start_date_local
-                });
-            }
-            const current = gearUsage.get(run.gear_id);
-            current.numUses++;
-            if (run.start_date_local < current.firstUse) current.firstUse = run.start_date_local;
-            if (run.start_date_local > current.lastUse) current.lastUse = run.start_date_local;
-        }
-    });
-
-    const gearIds = Array.from(gearUsage.keys());
-    const gearListContainer = document.getElementById('gear-info-list');
-
-    if (gearIds.length === 0) {
-        gearListContainer.innerHTML = '<p>No gear used in this period.</p>';
-        return;
-    }
-
-    gearListContainer.innerHTML = '<p>Loading detailed gear info...</p>';
-
-    try {
-        // 2. OBTENER DETALLES COMPLETOS DE LA API
-        const gearDetailsPromises = gearIds.map(id => fetchGearById(id));
-        const results = await Promise.all(gearDetailsPromises);
-
-        // 3. RENDERIZADO PRINCIPAL
-        renderGearCards(results, gearUsage, runs);
-
-    } catch (error) {
-        console.error("Failed to fetch gear details:", error);
-        gearListContainer.innerHTML = '<p>Error loading gear details. Check the console.</p>';
-    }
-}
-
-
-function renderGearCards(apiResults, usageData, allRuns) {
-    const gearListContainer = document.getElementById('gear-info-list');
-    let isEditMode = localStorage.getItem('gearEditMode') === 'true';
-
-    const cardsHtml = apiResults.map(result => {
-        const gear = result.gear; // Objeto DetailedGear de la API
-
-        // --- CÁLCULOS Y DATOS PERSONALIZADOS ---
-        const usage = usageData.get(gear.id) || { numUses: 0, firstUse: 'N/A' };
-        
-        const customData = JSON.parse(localStorage.getItem(`gear-custom-${gear.id}`) || '{}');
-        const price = customData.price ?? 120; // Default price
-        const durationKm = customData.durationKm ?? 700; // Default duration
-
-        const totalKm = gear.distance / 1000;
-        const durabilityPercent = Math.min((totalKm / durationKm) * 100, 100);
-        const euroPerKm = price > 0 && totalKm > 0 ? (price / totalKm).toFixed(2) : '-';
-        const needsReplacement = durabilityPercent >= 100;
-
-        // --- LÓGICA DE VISUALIZACIÓN ---
-        let durabilityColor = '#28a745'; // verde
-        if (durabilityPercent > 90) durabilityColor = '#dc3545'; // rojo
-        else if (durabilityPercent > 75) durabilityColor = '#ffc107'; // naranja
-
-        const editInputs = `
-            <div class="gear-edit-fields">
-                <div>
-                    <label for="price-${gear.id}">Price (€):</label>
-                    <input type="number" value="${price}" id="price-${gear.id}">
-                </div>
-                <div>
-                    <label for="duration-${gear.id}">Lifespan (km):</label>
-                    <input type="number" value="${durationKm}" id="duration-${gear.id}">
-                </div>
-                <button class="save-gear-btn" data-gearid="${gear.id}">💾 Save</button>
-            </div>
-        `;
-
-        return `
-          <div class="gear-card ${gear.retired ? 'retired' : ''} ${gear.primary ? 'primary' : ''}">
-            ${gear.retired ? '<span class="badge retired-badge">RETIRADO</span>' : ''}
-            ${gear.primary ? '<span class="badge primary-badge">PRIMARY</span>' : ''}
-            
-            <h4>${gear.name || `${gear.brand_name} ${gear.model_name}`}</h4>
-            <p class="gear-distance">${totalKm.toFixed(0)} km</p>
-            
-            <div class="durability-bar" title="${durabilityPercent.toFixed(0)}% of ${durationKm} km">
-                <div class="durability-progress" style="width: ${durabilityPercent}%; background-color: ${durabilityColor};"></div>
-            </div>
-            <small>${durabilityPercent.toFixed(0)}% de ${durationKm} km</small>
-
-            <div class="gear-stats">
-                <span><strong>Uses:</strong> ${usage.numUses}</span>
-                <span><strong>€/km:</strong> ${euroPerKm}</span>
-                <span><strong>First Use:</strong> ${new Date(usage.firstUse).toLocaleDateString()}</span>
-            </div>
-
-            ${needsReplacement && !gear.retired ? '<div class="alert-danger">¡Reemplazo Necesario!</div>' : ''}
-            ${isEditMode ? editInputs : ''}
-          </div>
-        `;
-    }).join('');
-
-    const editButtonHtml = `
-      <div class="edit-mode-toggle">
-        <button id="toggle-gear-edit">${isEditMode ? '✅ Done Editing' : '✏️ Edit Gear'}</button>
-      </div>
-    `;
-
-    gearListContainer.innerHTML = editButtonHtml + `<div id="gear-cards-container">${cardsHtml}</div>`;
-
-    // --- EVENT LISTENERS ---
-    document.getElementById('toggle-gear-edit').addEventListener('click', () => {
-        localStorage.setItem('gearEditMode', !isEditMode);
-        renderGearCards(apiResults, usageData, allRuns); // Re-render para mostrar/ocultar inputs
-    });
-
-    if (isEditMode) {
-        document.querySelectorAll('.save-gear-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const gearId = btn.getAttribute('data-gearid');
-                const price = parseFloat(document.getElementById(`price-${gearId}`).value);
-                const durationKm = parseInt(document.getElementById(`duration-${gearId}`).value, 10);
-                
-                if (!isNaN(price) && !isNaN(durationKm)) {
-                    localStorage.setItem(`gear-custom-${gearId}`, JSON.stringify({ price, durationKm }));
-                    btn.textContent = '✅';
-                    setTimeout(() => renderGearCards(apiResults, usageData, allRuns), 500); // Re-render para actualizar
-                } else {
-                    alert('Please enter valid numbers for price and duration.');
-                }
-            });
-        });
-    }
-}
-
-
-// ¡ATENCIÓN! La función de Streaks que te pasé antes tenía errores de cálculo.
-// Esta es una versión simplificada y corregida que funciona.
 function renderStreaks(runs) {
     const streaksInfo = document.getElementById('streaks-info');
     if (!streaksInfo) return;
@@ -498,40 +344,27 @@ function renderPersonalBests(runs) {
     }).join('');
 }
 
-
-// --- SECCIÓN DE GEARS ---
-
 async function renderGearSection(runs) {
     const container = document.getElementById('gear-info-section');
     if (!container) return;
-
     const gearListContainer = document.getElementById('gear-info-list');
-    
     const gearUsage = new Map();
     runs.forEach(run => {
         if (run.gear_id) {
             if (!gearUsage.has(run.gear_id)) {
-                gearUsage.set(run.gear_id, {
-                    numUses: 0,
-                    firstUse: run.start_date_local,
-                });
+                gearUsage.set(run.gear_id, { numUses: 0, firstUse: run.start_date_local });
             }
             gearUsage.get(run.gear_id).numUses++;
         }
     });
-
     const gearIds = Array.from(gearUsage.keys());
-
     if (gearIds.length === 0) {
         gearListContainer.innerHTML = '<p>No gear used in this period.</p>';
         return;
     }
-
     gearListContainer.innerHTML = '<p>Loading detailed gear info...</p>';
-
     try {
-        const gearDetailsPromises = gearIds.map(id => fetchGearById(id));
-        const results = await Promise.all(gearDetailsPromises);
+        const results = await Promise.all(gearIds.map(id => fetchGearById(id)));
         renderGearCards(results, gearUsage, runs);
     } catch (error) {
         console.error("Failed to fetch gear details:", error);
@@ -542,7 +375,6 @@ async function renderGearSection(runs) {
 function renderGearCards(apiResults, usageData, allRuns) {
     const gearListContainer = document.getElementById('gear-info-list');
     let isEditMode = localStorage.getItem('gearEditMode') === 'true';
-
     const cardsHtml = apiResults.map(result => {
         const gear = result.gear;
         const usage = usageData.get(gear.id) || { numUses: 0, firstUse: 'N/A' };
@@ -554,14 +386,12 @@ function renderGearCards(apiResults, usageData, allRuns) {
         const euroPerKm = price > 0 && totalKm > 0 ? (price / totalKm).toFixed(2) : '-';
         const needsReplacement = durabilityPercent >= 100;
         let durabilityColor = durabilityPercent > 90 ? '#dc3545' : durabilityPercent > 75 ? '#ffc107' : '#28a745';
-
         const editInputs = `
             <div class="gear-edit-fields">
                 <div><label for="price-${gear.id}">Price (€):</label><input type="number" value="${price}" id="price-${gear.id}"></div>
                 <div><label for="duration-${gear.id}">Lifespan (km):</label><input type="number" value="${durationKm}" id="duration-${gear.id}"></div>
                 <button class="save-gear-btn" data-gearid="${gear.id}">💾 Save</button>
             </div>`;
-
         return `
           <div class="gear-card ${gear.retired ? 'retired' : ''} ${gear.primary ? 'primary' : ''}">
             ${gear.retired ? '<span class="badge retired-badge">RETIRED</span>' : ''}
@@ -581,15 +411,12 @@ function renderGearCards(apiResults, usageData, allRuns) {
             ${isEditMode ? editInputs : ''}
           </div>`;
     }).join('');
-    
     const editButtonHtml = `<div class="edit-mode-toggle"><button id="toggle-gear-edit">${isEditMode ? '✅ Done Editing' : '✏️ Edit Gear'}</button></div>`;
     gearListContainer.innerHTML = editButtonHtml + `<div id="gear-cards-container">${cardsHtml}</div>`;
-
     document.getElementById('toggle-gear-edit').addEventListener('click', () => {
         localStorage.setItem('gearEditMode', !isEditMode);
         renderGearCards(apiResults, usageData, allRuns);
     });
-
     if (isEditMode) {
         document.querySelectorAll('.save-gear-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -615,14 +442,11 @@ export function setupYearlySelector(activities, onYearSelect) {
     const yearlyBtn = document.getElementById('yearly-btn');
     const yearList = document.getElementById('year-list');
     if (!yearlyBtn || !yearList) return;
-
     const years = Array.from(new Set(activities.map(a => new Date(a.start_date_local).getFullYear()))).sort((a, b) => b - a);
     yearList.innerHTML = years.map(year => `<button class="year-btn" data-year="${year}">${year}</button>`).join('');
-
     yearlyBtn.onclick = () => {
         yearList.style.display = yearList.style.display === 'none' ? 'flex' : 'none';
     };
-
     yearList.querySelectorAll('.year-btn').forEach(btn => {
         btn.onclick = () => {
             const year = btn.getAttribute('data-year');
