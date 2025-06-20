@@ -316,7 +316,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            streamChartsDiv.style.display = 'none';
+            streamChartsDiv.style.display = 'grid';
 
             const [activityData, streamData] = await Promise.all([
                 fetchActivityDetails(activityId, authPayload),
@@ -333,6 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             renderActivity(activityData);
             renderStreamCharts(streamData, activityData);
+            streamChartsDiv.style.display = ''; // o 'grid'
 
         } catch (error) {
             console.error("Failed to load activity page:", error);
