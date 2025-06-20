@@ -183,6 +183,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 data: { labels: kmLabels, datasets: [{ label: 'FC Media (bpm)', data: hrData, borderColor: 'red' }] }
             });
         }
+
+        document.getElementById('activity-stats').innerHTML = `
+            <h3>Stats</h3>
+            <ul>
+                <li><b>Duration:</b> ${duration}</li>
+                <li><b>Distance:</b> ${distanceKm} km</li>
+                <li><b>Pace:</b> ${pace}</li>
+                <li><b>Elevation Gain:</b> ${elevation} m</li>
+                <li><b>Calories:</b> ${calories}</li>
+                <li><b>HR Avg:</b> ${hrAvg} bpm</li>
+                <li><b>HR Max:</b> ${hrMax} bpm</li>
+            </ul>
+        `;
     }
 
     // ¡CORREGIDO! Ahora esta función está definida ANTES de que main la llame.
