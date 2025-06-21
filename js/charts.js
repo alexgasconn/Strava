@@ -461,6 +461,17 @@ export function renderRunsHeatmap(runs) {
         console.error("Leaflet.js no está cargado. No se puede renderizar el mapa de calor.");
         return;
     }
+    if (!window.L.heatLayer) {
+        console.error("leaflet.heat no está cargado. Asegúrate de incluir leaflet.heat.js.");
+        return;
+    }
+
+    const heatmapDiv = document.getElementById('runs-heatmap');
+    if (!heatmapDiv) return;
+
+    // Asegura que el div tenga tamaño visible
+    heatmapDiv.style.width = '100%';
+    heatmapDiv.style.height = '400px';
 
     // 1. Usamos solo los puntos de inicio y fin (si existen) para cada actividad.
     const points = [];
@@ -473,15 +484,12 @@ export function renderRunsHeatmap(runs) {
         }
     });
 
-    const heatmapDiv = document.getElementById('runs-heatmap');
-    if (!heatmapDiv) return;
-
     // 2. Si no hay puntos, lo indicamos y salimos.
     if (points.length === 0) {
         heatmapDiv.innerHTML = '<p>No map data available for this period.</p>';
-        // Si el mapa ya existía, limpiamos la capa anterior.
-        if (runsHeatmapMap && runsHeatmapLayer) {
-            runsHeatmapMap.removeLayer(runsHeatmapLayer);
+        if (runsHeatmapMap) {
+            runsHeatmapMap.remove();
+            runsHeatmapMap = null;
             runsHeatmapLayer = null;
         }
         return;
@@ -489,7 +497,7 @@ export function renderRunsHeatmap(runs) {
 
     // 3. Si el mapa no existe, lo creamos.
     if (!runsHeatmapMap) {
-        runsHeatmapMap = L.map('runs-heatmap').setView([40, -3], 2); // Vista inicial
+        runsHeatmapMap = L.map('runs-heatmap').setView([40, -3], 2);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(runsHeatmapMap);
@@ -505,7 +513,11 @@ export function renderRunsHeatmap(runs) {
 
     // 6. Ajustamos la vista del mapa para que se vean todos los puntos.
     try {
-        runsHeatmapMap.fitBounds(points);
+        if (points.length === 1) {
+            runsHeatmapMap.setView(points[0], 11);
+        } else {
+            runsHeatmapMap.fitBounds(points);
+        }
     } catch (e) {
         console.error("No se pudo ajustar el mapa a los límites.", e);
     }
