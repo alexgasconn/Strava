@@ -135,6 +135,9 @@ export function renderActivityTypeChart(runs) {
 }
 
 export function renderMonthlyDistanceChart(runs) {
+    if (!runs || runs.length === 0) return;
+
+    // Aggregate data by month
     const monthlyData = runs.reduce((acc, act) => {
         const month = act.start_date_local.substring(0, 7);
         if (!acc[month]) acc[month] = { distance: 0, count: 0 };
@@ -143,14 +146,38 @@ export function renderMonthlyDistanceChart(runs) {
         return acc;
     }, {});
 
-    const sortedMonths = Object.keys(monthlyData).sort();
-    const monthlyDistances = sortedMonths.map(m => monthlyData[m].distance);
-    const monthlyCounts = sortedMonths.map(m => monthlyData[m].count);
+    // Find the first and last month
+    const monthsSortedByDate = runs
+        .map(act => act.start_date_local.substring(0, 7))
+        .sort();
+    const firstMonth = monthsSortedByDate[0];
+    const lastMonth = monthsSortedByDate[monthsSortedByDate.length - 1];
+
+    // Generate all months between firstMonth and lastMonth
+    function getMonthRange(start, end) {
+        const result = [];
+        let [sy, sm] = start.split('-').map(Number);
+        let [ey, em] = end.split('-').map(Number);
+        while (sy < ey || (sy === ey && sm <= em)) {
+            result.push(`${sy.toString().padStart(4, '0')}-${sm.toString().padStart(2, '0')}`);
+            sm++;
+            if (sm > 12) {
+                sm = 1;
+                sy++;
+            }
+        }
+        return result;
+    }
+    const allMonths = getMonthRange(firstMonth, lastMonth);
+
+    // Fill missing months with zeros
+    const monthlyDistances = allMonths.map(m => monthlyData[m]?.distance || 0);
+    const monthlyCounts = allMonths.map(m => monthlyData[m]?.count || 0);
 
     createChart('monthly-distance-chart', {
         type: 'bar',
         data: {
-            labels: sortedMonths,
+            labels: allMonths,
             datasets: [
                 { type: 'line', label: 'Distance (km)', data: monthlyDistances, borderColor: '#FC5200', yAxisID: 'y' },
                 { type: 'bar', label: '# Runs', data: monthlyCounts, backgroundColor: 'rgba(54,162,235,0.25)', yAxisID: 'y1' }
@@ -282,6 +309,7 @@ export function renderFitnessChart(runs) {
 }
 
 export function renderStackedAreaGearChart(runs, gearIdToName = {}) {
+    // 1. Aggregate distance per gear per month
     const gearMonthKm = runs.reduce((acc, a) => {
         if (!a.gear_id) return acc;
         const gearName = a.gear?.name || a.gear_id;
@@ -291,15 +319,36 @@ export function renderStackedAreaGearChart(runs, gearIdToName = {}) {
         return acc;
     }, {});
 
-    const allMonths = Object.keys(gearMonthKm).sort();
+    // 2. Get all months between first and last activity
+    const monthsSorted = runs.map(a => a.start_date_local.substring(0, 7)).sort();
+    const firstMonth = monthsSorted[0];
+    const lastMonth = monthsSorted[monthsSorted.length - 1];
+    function getMonthRange(start, end) {
+        const result = [];
+        let [sy, sm] = start.split('-').map(Number);
+        let [ey, em] = end.split('-').map(Number);
+        while (sy < ey || (sy === ey && sm <= em)) {
+            result.push(`${sy.toString().padStart(4, '0')}-${sm.toString().padStart(2, '0')}`);
+            sm++;
+            if (sm > 12) {
+                sm = 1;
+                sy++;
+            }
+        }
+        return result;
+    }
+    const allMonths = getMonthRange(firstMonth, lastMonth);
+
+    // 3. Get all gears
     const allGears = Array.from(new Set(runs.map(a => a.gear?.name || a.gear_id).filter(Boolean)));
 
+    // 4. Build datasets, filling missing months with 0
     const datasets = allGears.map((gearId, idx) => {
         const label = gearIdToName[gearId] || gearId;
         return {
             label,
             data: allMonths.map(month => gearMonthKm[month]?.[gearId] || 0),
-            backgroundColor: `hsl(${(idx * 60)}, 70%, 60%)`, // Different colors
+            backgroundColor: `hsl(${(idx * 60)}, 70%, 60%)`,
             fill: true,
             borderWidth: 1,
             tension: 0.2
@@ -319,7 +368,8 @@ export function renderStackedAreaGearChart(runs, gearIdToName = {}) {
 }
 
 export function renderGearGanttChart(runs, gearIdToName = {}) {
-        const gearMonthKm = runs.reduce((acc, a) => {
+    // 1. Aggregate distance per gear per month
+    const gearMonthKm = runs.reduce((acc, a) => {
         if (!a.gear_id) return acc;
         const gearKey = a.gear_id;
         const month = a.start_date_local.substring(0, 7);
@@ -328,9 +378,30 @@ export function renderGearGanttChart(runs, gearIdToName = {}) {
         return acc;
     }, {});
 
-    const allMonths = Object.keys(gearMonthKm).sort();
+    // 2. Get all months between first and last activity
+    const monthsSorted = runs.map(a => a.start_date_local.substring(0, 7)).sort();
+    const firstMonth = monthsSorted[0];
+    const lastMonth = monthsSorted[monthsSorted.length - 1];
+    function getMonthRange(start, end) {
+        const result = [];
+        let [sy, sm] = start.split('-').map(Number);
+        let [ey, em] = end.split('-').map(Number);
+        while (sy < ey || (sy === ey && sm <= em)) {
+            result.push(`${sy.toString().padStart(4, '0')}-${sm.toString().padStart(2, '0')}`);
+            sm++;
+            if (sm > 12) {
+                sm = 1;
+                sy++;
+            }
+        }
+        return result;
+    }
+    const allMonths = getMonthRange(firstMonth, lastMonth);
+
+    // 3. Get all gears
     const allGears = Array.from(new Set(runs.map(a => a.gear_id).filter(Boolean)));
 
+    // 4. Build datasets, filling missing months with 0
     const datasets = allGears.map((gearId, idx) => ({
         label: gearIdToName[gearId] || gearId,
         data: allMonths.map(month => gearMonthKm[month]?.[gearId] || 0),
