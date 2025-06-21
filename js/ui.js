@@ -664,20 +664,24 @@ export function renderRiegelPredictions(runs) {
     // Saca las mejores marcas de todas las distancias
     const bests = targets.map(t => ({ ...t, best: getBestTime(t.km) }));
 
-    // Para cada distancia objetivo, predice usando todas las otras mejores marcas
+    // Para cada distancia objetivo, predice usando todas las mejores marcas (incluida la propia)
     const rows = targets.map(target => {
-        // Para cada mejor marca distinta de la distancia objetivo
+        // Para cada mejor marca disponible
         const predictions = bests
-            .filter(b => b.best && b.km !== target.km)
+            .filter(b => b.best)
             .map(b => {
+                // Si es la misma distancia, usa el tiempo real
+                if (Math.abs(b.km - target.km) < 0.01) {
+                    return { seconds: b.best.seconds };
+                }
                 // Riegel: T2 = T1 * (D2/D1)^1.06
                 const predSec = b.best.seconds * (target.km / b.km) ** 1.06;
-                return { seconds: predSec, from: b.name, fromKm: b.km };
+                return { seconds: predSec };
             })
             .filter(p => isFinite(p.seconds) && p.seconds > 0);
 
         if (predictions.length === 0) {
-            return `<tr><td>${target.name}</td><td colspan="2">No data</td></tr>`;
+            return `<tr><td>${target.name}</td><td>No data</td></tr>`;
         }
 
         // Calcula rango
@@ -689,23 +693,19 @@ export function renderRiegelPredictions(runs) {
             return `<tr>
                 <td>${target.name}</td>
                 <td>${formatTime(minPred.seconds)}</td>
-                <td style="font-size:0.9em;color:#888;">(de ${predictions.map(p => p.from).join(', ')})</td>
             </tr>`;
         }
 
         return `<tr>
             <td>${target.name}</td>
             <td>${formatTime(minPred.seconds)} - ${formatTime(maxPred.seconds)}</td>
-            <td style="font-size:0.9em;color:#888;">
-                (mín: ${minPred.from}, máx: ${maxPred.from})
-            </td>
         </tr>`;
     }).join('');
 
     container.innerHTML = `
         <table class="df-table">
             <thead>
-                <tr><th>Distancia</th><th>Predicción (Riegel)</th><th></th></tr>
+                <tr><th>Distancia</th><th>Predicción (Riegel)</th></tr>
             </thead>
             <tbody>
                 ${rows}
