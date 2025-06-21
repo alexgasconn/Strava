@@ -457,34 +457,23 @@ export function renderRollingMeanDistanceChart(runs) {
 }
 
 export function renderRunsHeatmap(runs) {
-    if (!window.L) {
-        console.error("Leaflet.js no está cargado. No se puede renderizar el mapa de calor.");
-        return;
-    }
-    if (!window.L.heatLayer) {
-        console.error("leaflet.heat no está cargado. Asegúrate de incluir leaflet.heat.js.");
+    if (!window.L || !window.L.heatLayer) {
+        console.error("Leaflet.js o leaflet.heat no están cargados.");
         return;
     }
 
     const heatmapDiv = document.getElementById('runs-heatmap');
     if (!heatmapDiv) return;
 
-    // Asegura que el div tenga tamaño visible
+    // Asegura tamaño visible
     heatmapDiv.style.width = '100%';
     heatmapDiv.style.height = '400px';
 
-    // 1. Usamos solo los puntos de inicio y fin (si existen) para cada actividad.
-    const points = [];
-    runs.forEach(act => {
-        if (act.start_latlng && Array.isArray(act.start_latlng) && act.start_latlng.length === 2) {
-            points.push([act.start_latlng[0], act.start_latlng[1]]);
-        }
-        if (act.end_latlng && Array.isArray(act.end_latlng) && act.end_latlng.length === 2) {
-            points.push([act.end_latlng[0], act.end_latlng[1]]);
-        }
-    });
+    // Extrae todos los puntos de inicio válidos
+    const points = runs
+        .map(act => act.start_latlng)
+        .filter(latlng => Array.isArray(latlng) && latlng.length === 2 && latlng[0] && latlng[1]);
 
-    // 2. Si no hay puntos, lo indicamos y salimos.
     if (points.length === 0) {
         heatmapDiv.innerHTML = '<p>No map data available for this period.</p>';
         if (runsHeatmapMap) {
@@ -495,30 +484,24 @@ export function renderRunsHeatmap(runs) {
         return;
     }
 
-    // 3. Si el mapa no existe, lo creamos.
-    if (!runsHeatmapMap) {
-        runsHeatmapMap = L.map('runs-heatmap').setView([40, -3], 2);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(runsHeatmapMap);
+    // Si ya hay un mapa, elimínalo completamente
+    if (runsHeatmapMap) {
+        runsHeatmapMap.remove();
+        runsHeatmapMap = null;
+        runsHeatmapLayer = null;
     }
 
-    // 4. Si ya existía una capa de calor, la eliminamos.
-    if (runsHeatmapLayer) {
-        runsHeatmapMap.removeLayer(runsHeatmapLayer);
-    }
+    // Crea el mapa centrado en el primer punto
+    runsHeatmapMap = L.map('runs-heatmap').setView(points[0], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(runsHeatmapMap);
 
-    // 5. Creamos la nueva capa de calor con los puntos de inicio y fin.
+    // Añade la capa de calor
     runsHeatmapLayer = L.heatLayer(points, { radius: 20, blur: 25, maxZoom: 11 }).addTo(runsHeatmapMap);
 
-    // 6. Ajustamos la vista del mapa para que se vean todos los puntos.
-    try {
-        if (points.length === 1) {
-            runsHeatmapMap.setView(points[0], 11);
-        } else {
-            runsHeatmapMap.fitBounds(points);
-        }
-    } catch (e) {
-        console.error("No se pudo ajustar el mapa a los límites.", e);
+    // Ajusta la vista para mostrar todos los puntos
+    if (points.length > 1) {
+        runsHeatmapMap.fitBounds(points);
     }
 }

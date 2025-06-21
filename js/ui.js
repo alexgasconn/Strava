@@ -133,10 +133,13 @@ function renderAllRunsTable(runs) {
         return;
     }
 
-    const tableHeader = `<thead><tr><th>Date</th><th>Name</th><th>Distance</th><th>Time</th><th>Pace</th><th>Details</th></tr></thead>`;
     // Ordenamos las carreras de más reciente a más antigua para la tabla
     const sortedRuns = [...runs].sort((a, b) => new Date(b.start_date_local) - new Date(a.start_date_local));
-    const tableBody = sortedRuns.map(act => {
+    let showAll = container.getAttribute('data-show-all') === 'true';
+    const runsToShow = showAll ? sortedRuns : sortedRuns.slice(0, 10);
+
+    const tableHeader = `<thead><tr><th>Date</th><th>Name</th><th>Distance</th><th>Time</th><th>Pace</th><th>Details</th></tr></thead>`;
+    const tableBody = runsToShow.map(act => {
         const distKm = (act.distance / 1000).toFixed(2);
         const timeStr = new Date(act.moving_time * 1000).toISOString().substr(11, 8);
         const paceMin = act.distance > 0 ? (act.moving_time / 60) / (act.distance / 1000) : 0;
@@ -150,7 +153,26 @@ function renderAllRunsTable(runs) {
             <td><a href="activity.html?id=${act.id}" target="_blank"><button>View</button></a></td>
         </tr>`;
     }).join('');
-    container.innerHTML = tableHeader + `<tbody>${tableBody}</tbody>`;
+
+    let toggleBtn = '';
+    if (sortedRuns.length > 10) {
+        toggleBtn = `
+            <div style="margin: 0.5em 0;">
+                <button id="toggle-all-runs-btn">
+                    ${showAll ? 'Show Only Last 10' : 'Show All Runs'}
+                </button>
+            </div>
+        `;
+    }
+
+    container.innerHTML = toggleBtn + tableHeader + `<tbody>${tableBody}</tbody>`;
+
+    if (sortedRuns.length > 10) {
+        document.getElementById('toggle-all-runs-btn').onclick = () => {
+            container.setAttribute('data-show-all', showAll ? 'false' : 'true');
+            renderAllRunsTable(runs);
+        };
+    }
 }
 
 
