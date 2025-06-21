@@ -633,7 +633,7 @@ export function renderRiegelPredictions(runs) {
         { name: 'Marathon', km: 42.195 }
     ];
 
-    // Encuentra el mejor tiempo para cada distancia
+    // Encuentra la mejor marca para cada distancia
     function getBestTime(km) {
         const margin = 0.1;
         const min = km * (1 - margin);
@@ -647,30 +647,9 @@ export function renderRiegelPredictions(runs) {
             (act.moving_time / (act.distance / 1000)) < (minAct.moving_time / (minAct.distance / 1000)) ? act : minAct
         );
         return {
-            seconds: best.moving_time * (km / (best.distance / 1000)) ** 1.06,
-            baseSeconds: best.moving_time,
-            baseKm: best.distance / 1000
+            seconds: best.moving_time,
+            km: best.distance / 1000
         };
-    }
-
-    // Predice usando la mejor marca más cercana
-    function predictTime(targetKm) {
-        // Busca la mejor marca más cercana (por arriba o por abajo)
-        let best = null, bestDelta = Infinity;
-        for (const t of targets) {
-            const res = getBestTime(t.km);
-            if (res) {
-                const delta = Math.abs(Math.log(targetKm / t.km));
-                if (delta < bestDelta) {
-                    best = { ...res, refKm: t.km };
-                    bestDelta = delta;
-                }
-            }
-        }
-        if (!best) return null;
-        // Riegel
-        const predSec = best.baseSeconds * (targetKm / best.baseKm) ** 1.06;
-        return { seconds: predSec, refKm: best.baseKm };
     }
 
     // Formatea segundos a hh:mm:ss
@@ -682,23 +661,51 @@ export function renderRiegelPredictions(runs) {
         return (h > 0 ? h + ':' : '') + m.toString().padStart(h > 0 ? 2 : 1, '0') + ':' + s.toString().padStart(2, '0');
     }
 
-    // Construye la tabla
-    const rows = targets.map(t => {
-        const pred = predictTime(t.km);
-        if (!pred) {
-            return `<tr><td>${t.name}</td><td colspan="2">No data</td></tr>`;
+    // Saca las mejores marcas de todas las distancias
+    const bests = targets.map(t => ({ ...t, best: getBestTime(t.km) }));
+
+    // Para cada distancia objetivo, predice usando todas las otras mejores marcas
+    const rows = targets.map(target => {
+        // Para cada mejor marca distinta de la distancia objetivo
+        const predictions = bests
+            .filter(b => b.best && b.km !== target.km)
+            .map(b => {
+                // Riegel: T2 = T1 * (D2/D1)^1.06
+                const predSec = b.best.seconds * (target.km / b.km) ** 1.06;
+                return { seconds: predSec, from: b.name, fromKm: b.km };
+            })
+            .filter(p => isFinite(p.seconds) && p.seconds > 0);
+
+        if (predictions.length === 0) {
+            return `<tr><td>${target.name}</td><td colspan="2">No data</td></tr>`;
         }
+
+        // Calcula rango
+        const minPred = predictions.reduce((min, p) => p.seconds < min.seconds ? p : min, predictions[0]);
+        const maxPred = predictions.reduce((max, p) => p.seconds > max.seconds ? p : max, predictions[0]);
+
+        // Si todos los valores son iguales, muestra solo uno
+        if (Math.abs(minPred.seconds - maxPred.seconds) < 1) {
+            return `<tr>
+                <td>${target.name}</td>
+                <td>${formatTime(minPred.seconds)}</td>
+                <td style="font-size:0.9em;color:#888;">(de ${predictions.map(p => p.from).join(', ')})</td>
+            </tr>`;
+        }
+
         return `<tr>
-            <td>${t.name}</td>
-            <td>${formatTime(pred.seconds)}</td>
-            <td style="font-size:0.9em;color:#888;">(basado en mejor marca de ${pred.refKm.toFixed(2)} km)</td>
+            <td>${target.name}</td>
+            <td>${formatTime(minPred.seconds)} - ${formatTime(maxPred.seconds)}</td>
+            <td style="font-size:0.9em;color:#888;">
+                (mín: ${minPred.from}, máx: ${maxPred.from})
+            </td>
         </tr>`;
     }).join('');
 
     container.innerHTML = `
         <table class="df-table">
             <thead>
-                <tr><th>Distancia</th><th>Predicción</th><th></th></tr>
+                <tr><th>Distancia</th><th>Predicción (Riegel)</th><th></th></tr>
             </thead>
             <tbody>
                 ${rows}
