@@ -48,6 +48,7 @@ export function setupDashboard(activities) {
         document.getElementById('date-to').min = dates[0];
         document.getElementById('date-to').max = dates[dates.length - 1];
     }
+    setupExportButtons(activities);
 }
 
 // LA FUNCIÓN PRINCIPAL DE RENDERIZADO
@@ -589,4 +590,31 @@ export function setupYearlySelector(activities, onYearSelect) {
             }
         };
     });
+}
+
+// --- BOTONES DE EXPORTACIÓN ---
+export function setupExportButtons(activities) {
+    // CSV
+    document.getElementById('download-csv-btn').onclick = () => {
+        if (!activities || activities.length === 0) return alert('No data to export.');
+        const headers = Object.keys(activities[0]);
+        const csvRows = [
+            headers.join(','),
+            ...activities.map(act => headers.map(h => `"${(act[h] ?? '').toString().replace(/"/g, '""')}"`).join(','))
+        ];
+        const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'strava_activities.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    // PDF
+    document.getElementById('download-pdf-btn').onclick = () => {
+        window.print();
+    };
 }
