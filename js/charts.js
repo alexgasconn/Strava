@@ -462,10 +462,16 @@ export function renderRunsHeatmap(runs) {
         return;
     }
 
-    // 1. Filtramos las actividades que tienen datos de mapa.
-    const points = runs
-        .filter(act => act.start_latlng && Array.isArray(act.start_latlng) && act.start_latlng.length === 2)
-        .map(act => [act.start_latlng[0], act.start_latlng[1]]); // <-- CREAMOS UN ARRAY [lat, lng]
+    // 1. Usamos solo los puntos de inicio y fin (si existen) para cada actividad.
+    const points = [];
+    runs.forEach(act => {
+        if (act.start_latlng && Array.isArray(act.start_latlng) && act.start_latlng.length === 2) {
+            points.push([act.start_latlng[0], act.start_latlng[1]]);
+        }
+        if (act.end_latlng && Array.isArray(act.end_latlng) && act.end_latlng.length === 2) {
+            points.push([act.end_latlng[0], act.end_latlng[1]]);
+        }
+    });
 
     const heatmapDiv = document.getElementById('runs-heatmap');
     if (!heatmapDiv) return;
@@ -494,8 +500,7 @@ export function renderRunsHeatmap(runs) {
         runsHeatmapMap.removeLayer(runsHeatmapLayer);
     }
 
-    // 5. Creamos la nueva capa de calor. L.heatLayer espera un array de arrays [lat, lng, intensity?].
-    // Nuestro formato [lat, lng] es perfecto.
+    // 5. Creamos la nueva capa de calor con los puntos de inicio y fin.
     runsHeatmapLayer = L.heatLayer(points, { radius: 20, blur: 25, maxZoom: 11 }).addTo(runsHeatmapMap);
 
     // 6. Ajustamos la vista del mapa para que se vean todos los puntos.
