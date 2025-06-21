@@ -6,31 +6,29 @@
 Running:
     -Gears:
         -All gears:
-            -Short description(name, km...)🟡
+            -Short description(name, km...)🟢
             -Gantt🟡
             -stacked area chart🟢
 
         -Single Gear:
-            -First Use🔴
-            -price🔴
-            -duration🔴 
-            -(predeterminat a 700km, customizable)🔴
+            -First Use🟢
+            -price🟢
+            -duration🟢 
+            -(predeterminat a 700km, customizable)🟢
             -% of Durability (Alerts)🟢
             -current km🟢
-            -Num Uses🟡
-            -€ per km🔴
-            -€ per dia🔴
-            -km per dia🔴
+            -Num Uses🟢
+            -€ per km🟢
 
     -Best activities:
-        -PERSONAL BESTS (mile, 5k, 10k, 21k, 42k)🔴
-        -Desplegable Top 3 times per distance (mile, 5k, 10k, 21k, 42k)🔴
+        -PERSONAL BESTS (mile, 5k, 10k, 21k, 42k)🟢
+        -Desplegable Top 3 times per distance (mile, 5k, 10k, 21k, 42k)🟢
         -Predict time with riegel🔴
     
     -Overview:
         -Totals: time, km, elevation, activities, avg Pace, avg VOmax🟡
         -Compare with previosu SAME Period (+12%)🔴
-        -Streaks🟡
+        -Streaks🟢
         -Button 2024, 2025🔴
 
     -Graphics:
@@ -45,7 +43,7 @@ Running:
         -Moving mean km over time🟡
         -TSB, CTL, ATL 🟢
         -km per month🟢
-        -Heatmap total🔴
+        -Heatmap total🟢
         -Histogram of pace per km! all runs!!!🔴
 
 
@@ -57,7 +55,7 @@ Running:
             -Location (City, neighbourhood)🔴
             -acitivty type (race/workout)🟢
             -Gear (and total km of gear)🟡
-            -Weather: average_temp🔴
+            -Weather: average_temp🟢
             -comments/kudos🟢
 
         -stats:
@@ -74,9 +72,9 @@ Running:
             -effort🟢
             -vomax est🟢
             -% in each zone🔴
-            -pr_count🔴
-            -athlete_count🔴
-            -achievement_count🔴
+            -pr_count🟢
+            -athlete_count🟢
+            -achievement_count🟢
 
 
         -graphics:
@@ -85,12 +83,12 @@ Running:
                 -AREA+Line (range) of HR🔴
             -Elevation:
                 -histogram🔴
-                -Profile elevation🔴
+                -Profile elevation🟢
             -Pace:
                 -histogram🔴
                 -AREA+Line (range) of Pace🔴
             -GPS:
-                -Track Overlay🔴
+                -Track Overlay🟢
                 -GPX analyzer (buildings)🔴
 
             -Segments🟡
