@@ -63,6 +63,7 @@ export function renderDashboard(allActivities, dateFilterFrom, dateFilterTo) {
     renderGearSection(runs);
     renderStreaks(runs);
     renderPersonalBests(runs);
+    renderRiegelPredictions(runs);
 }
 
 function renderSummaryCards(runs) {
@@ -617,4 +618,91 @@ export function setupExportButtons(activities) {
     document.getElementById('download-pdf-btn').onclick = () => {
         window.print();
     };
+}
+
+export function renderRiegelPredictions(runs) {
+    const container = document.getElementById('riegel-predictions');
+    if (!container) return;
+
+    // Distancias objetivo
+    const targets = [
+        { name: 'Mile', km: 1.609 },
+        { name: '5K', km: 5 },
+        { name: '10K', km: 10 },
+        { name: 'Half Marathon', km: 21.097 },
+        { name: 'Marathon', km: 42.195 }
+    ];
+
+    // Encuentra el mejor tiempo para cada distancia
+    function getBestTime(km) {
+        const margin = 0.1;
+        const min = km * (1 - margin);
+        const max = km * (1 + margin);
+        const candidates = runs.filter(a => {
+            const distKm = a.distance / 1000;
+            return distKm >= min && distKm <= max && a.moving_time > 0;
+        });
+        if (candidates.length === 0) return null;
+        const best = candidates.reduce((minAct, act) =>
+            (act.moving_time / (act.distance / 1000)) < (minAct.moving_time / (minAct.distance / 1000)) ? act : minAct
+        );
+        return {
+            seconds: best.moving_time * (km / (best.distance / 1000)) ** 1.06,
+            baseSeconds: best.moving_time,
+            baseKm: best.distance / 1000
+        };
+    }
+
+    // Predice usando la mejor marca más cercana
+    function predictTime(targetKm) {
+        // Busca la mejor marca más cercana (por arriba o por abajo)
+        let best = null, bestDelta = Infinity;
+        for (const t of targets) {
+            const res = getBestTime(t.km);
+            if (res) {
+                const delta = Math.abs(Math.log(targetKm / t.km));
+                if (delta < bestDelta) {
+                    best = { ...res, refKm: t.km };
+                    bestDelta = delta;
+                }
+            }
+        }
+        if (!best) return null;
+        // Riegel
+        const predSec = best.baseSeconds * (targetKm / best.baseKm) ** 1.06;
+        return { seconds: predSec, refKm: best.baseKm };
+    }
+
+    // Formatea segundos a hh:mm:ss
+    function formatTime(sec) {
+        sec = Math.round(sec);
+        const h = Math.floor(sec / 3600);
+        const m = Math.floor((sec % 3600) / 60);
+        const s = sec % 60;
+        return (h > 0 ? h + ':' : '') + m.toString().padStart(h > 0 ? 2 : 1, '0') + ':' + s.toString().padStart(2, '0');
+    }
+
+    // Construye la tabla
+    const rows = targets.map(t => {
+        const pred = predictTime(t.km);
+        if (!pred) {
+            return `<tr><td>${t.name}</td><td colspan="2">No data</td></tr>`;
+        }
+        return `<tr>
+            <td>${t.name}</td>
+            <td>${formatTime(pred.seconds)}</td>
+            <td style="font-size:0.9em;color:#888;">(basado en mejor marca de ${pred.refKm.toFixed(2)} km)</td>
+        </tr>`;
+    }).join('');
+
+    container.innerHTML = `
+        <table class="df-table">
+            <thead>
+                <tr><th>Distancia</th><th>Predicción</th><th></th></tr>
+            </thead>
+            <tbody>
+                ${rows}
+            </tbody>
+        </table>
+    `;
 }
