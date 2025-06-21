@@ -661,6 +661,15 @@ export function renderRiegelPredictions(runs) {
         return (h > 0 ? h + ':' : '') + m.toString().padStart(h > 0 ? 2 : 1, '0') + ':' + s.toString().padStart(2, '0');
     }
 
+    // Formatea ritmo en min/km
+    function formatPace(sec, km) {
+        if (!isFinite(sec) || !isFinite(km) || km <= 0) return '-';
+        const pace = sec / 60 / km;
+        const min = Math.floor(pace);
+        const secRest = Math.round((pace - min) * 60);
+        return `${min}:${secRest.toString().padStart(2, '0')} /km`;
+    }
+
     // Saca las mejores marcas de todas las distancias
     const bests = targets.map(t => ({ ...t, best: getBestTime(t.km) }));
 
@@ -681,7 +690,7 @@ export function renderRiegelPredictions(runs) {
             .filter(p => isFinite(p.seconds) && p.seconds > 0);
 
         if (predictions.length === 0) {
-            return `<tr><td>${target.name}</td><td>No data</td></tr>`;
+            return `<tr><td>${target.name}</td><td>No data</td><td>-</td></tr>`;
         }
 
         // Calcula rango
@@ -693,19 +702,21 @@ export function renderRiegelPredictions(runs) {
             return `<tr>
                 <td>${target.name}</td>
                 <td>${formatTime(minPred.seconds)}</td>
+                <td>${formatPace(minPred.seconds, target.km)}</td>
             </tr>`;
         }
 
         return `<tr>
             <td>${target.name}</td>
             <td>${formatTime(minPred.seconds)} - ${formatTime(maxPred.seconds)}</td>
+            <td>${formatPace(minPred.seconds, target.km)} - ${formatPace(maxPred.seconds, target.km)}</td>
         </tr>`;
     }).join('');
 
     container.innerHTML = `
         <table class="df-table">
             <thead>
-                <tr><th>Distancia</th><th>Predicción (Riegel)</th></tr>
+                <tr><th>Distancia</th><th>Predicción (Riegel)</th><th>Ritmo</th></tr>
             </thead>
             <tbody>
                 ${rows}
