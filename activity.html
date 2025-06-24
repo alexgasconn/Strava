@@ -15,25 +15,17 @@
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <style>
-    #activity-map { height: 300px; margin: 1.5rem 0; border-radius: 10px; }
-    #splits-section canvas { max-width: 100%; margin-bottom: 1rem; }
-    #splits-section, #segments-section {
-      background: #fff;
-      padding: 1rem;
-      border-radius: 10px;
-      margin-top: 2rem;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    }
-    ul { list-style: none; padding: 0; }
-    li { margin: 0.5rem 0; }
-    h2 { color: #FC5200; }
-    button { margin-top: 2rem; }
-  </style>
+
 </head>
 <body>
   <div class="container">
     <h1>Detalles de la Actividad</h1>
+
+    <div id="activity-details-row" class="activity-details-row">
+      <div id="activity-info" class="activity-details-col"></div>
+      <div id="activity-stats" class="activity-details-col"></div>
+      <div id="activity-advanced" class="activity-details-col"></div>
+    </div>
 
     <div id="activity-details"></div>
     <div id="activity-map"></div>
@@ -44,11 +36,19 @@
       <canvas id="chart-heartrate"></canvas>
     </div>
 
-    <div id="stream-charts">
-      <h3>📊 Gráficas detalladas por distancia</h3>
-      <canvas id="chart-altitude"></canvas>
-      <canvas id="chart-pace-distance"></canvas>
-      <canvas id="chart-heart-distance"></canvas>
+    <div id="stream-charts" class="charts-grid">
+      <div class="chart-container">
+        <canvas id="chart-altitude"></canvas>
+      </div>
+      <div class="chart-container">
+        <canvas id="chart-pace-distance"></canvas>
+      </div>
+      <div class="chart-container">
+        <canvas id="chart-heart-distance"></canvas>
+      </div>
+      <div class="chart-container">
+        <canvas id="chart-cadence-distance"></canvas>
+      </div>
     </div>
 
 

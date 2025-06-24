@@ -47,13 +47,13 @@
                 <div id="summary-cards" class="summary-grid"></div>
 
                 <!-- Consistency Calendar -->
-                <div class="chart-container full-width">
+                <div class="chart-container">
                     <h3>Consistency (Last Year)</h3>
                     <div id="cal-heatmap"></div>
                 </div>
 
                 <!-- Streaks Section -->
-                <div class="chart-container full-width">
+                <div class="chart-container">
                     <h3>Streaks</h3>
                     <div id="streaks-info"></div>
                 </div>
@@ -64,9 +64,9 @@
                         <h3>Activities by Type</h3>
                         <canvas id="activity-type-barchart"></canvas>
                     </div>
-                    <div id="streaks-section" class="chart-container full-width">
-                        <h3>Streaks</h3>
-                        <div id="streaks-info"></div>
+                    <div id="gear-info-section" class="chart-container full-width">
+                        <h3>My Gear</h3>
+                        <div id="gear-info-list" class="gear-info-list"></div>
                     </div>
                     <div class="chart-container">
                         <h3>Monthly Distance (Last Year)</h3>
@@ -92,15 +92,15 @@
                         <h3>Gear Usage by Month</h3>
                         <canvas id="stacked-area-chart"></canvas>
                     </div>
-                    <div class="chart-container full-width">
+                    <div class="chart-container">
                         <h3>Gear Usage per Month (Mini Gantt)</h3>
                         <canvas id="gear-gantt-chart"></canvas>
                     </div>
-                    <div class="chart-container full-width">
+                    <div class="chart-container">
                         <h3>Accumulated Distance vs Time</h3>
                         <canvas id="accumulated-distance-chart"></canvas>
                     </div>
-                    <div class="chart-container full-width">
+                    <div class="chart-container">
                         <h3>Rolling Mean Distance vs Time</h3>
                         <canvas id="rolling-mean-distance-chart"></canvas>
                     </div>
@@ -114,7 +114,7 @@
                     </div>
 
                     <div class="chart-container full-width">
-                        <h3>Run Start/Mid/End Heatmap</h3>
+                        <h3>Run Start/End Heatmap</h3>
                         <div id="runs-heatmap" style="height: 400px; width: 100%;"></div>
                     </div>
                     <div class="chart-container">
@@ -134,12 +134,16 @@
                             <table id="all-runs-table" class="df-table"></table>
                         </div>
                     </div>
+                    <div class="chart-container">
+                        <h3>Predicción de tiempos (Riegel)</h3>
+                        <div id="riegel-predictions"></div>
+                    </div>
                 </div>
 
-                <!-- Gear Information Section -->
-                <div id="gear-info-section" class="chart-container full-width">
-                    <h3>My Gear</h3>
-                    <div id="gear-info-list" class="gear-info-list"></div>
+                <!-- Export Buttons -->
+                <div id="export-buttons" style="display:flex; gap:1em; margin: 1.5em 0;">
+                    <button id="download-csv-btn">⬇️ Descargar CSV</button>
+                    <button id="download-pdf-btn">⬇️ Descargar PDF</button>
                 </div>
             </main>
         </div>
@@ -153,7 +157,7 @@
 
     <!-- Load our only script -->
     <!-- <script src="script.js"></script> -->
-     <script type="module" src="js/main.js"></script>
+    <script type="module" src="js/main.js"></script>
 </body>
 
 </html>
