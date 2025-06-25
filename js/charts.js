@@ -623,7 +623,7 @@ export function renderRunsHeatmap(runs) {
 }
 
 export function renderGearMatrixGanttChart(runs, gearIdToName = {}) {
-    // 1. Aggregate distance per gear per month
+    // 1. Aggregate distance per gear per month 
     const gearMonthKm = {};
     runs.forEach(a => {
         if (!a.gear_id) return;
