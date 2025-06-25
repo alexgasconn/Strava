@@ -88,6 +88,7 @@ function renderAllCharts(runs) {
     charts.renderPaceVsDistanceChart(runs);
     charts.renderDistanceHistogram(runs);
     charts.renderVo2maxChart(runs);
+    charts.renderGearMatrixGanttChart(runs, gearIdToName);
     charts.renderFitnessChart(runs);
     charts.renderStackedAreaGearChart(runs); // <--- SIN gearIdToName
     charts.renderGearGanttChart(runs);       // <--- SIN gearIdToName

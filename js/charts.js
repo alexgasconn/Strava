@@ -621,3 +621,72 @@ export function renderRunsHeatmap(runs) {
         runsHeatmapMap.fitBounds(points);
     }
 }
+
+export function renderGearMatrixGanttChart(runs, gearIdToName = {}) {
+    // 1. Aggregate distance per gear per month
+    const gearMonthKm = {};
+    runs.forEach(a => {
+        if (!a.gear_id) return;
+        const gearKey = a.gear_id;
+        const month = a.start_date_local.substring(0, 7);
+        if (!gearMonthKm[gearKey]) gearMonthKm[gearKey] = {};
+        gearMonthKm[gearKey][month] = (gearMonthKm[gearKey][month] || 0) + a.distance / 1000;
+    });
+
+    // 2. Get all months and all gears
+    const allMonths = Array.from(new Set(runs.map(a => a.start_date_local.substring(0, 7)))).sort();
+    const allGears = Array.from(new Set(runs.map(a => a.gear_id).filter(Boolean)));
+
+    // 3. Prepare matrix data for Chart.js Matrix
+    const data = [];
+    allGears.forEach((gear, yIdx) => {
+        let acc = 0;
+        allMonths.forEach((month, xIdx) => {
+            const val = gearMonthKm[gear]?.[month] || 0;
+            acc += val;
+            data.push({
+                x: month,
+                y: gearIdToName[gear] || gear,
+                v: val,
+                acc: acc
+            });
+        });
+    });
+
+    // 4. Create the chart
+    createChart('gear-matrix-gantt', {
+        type: 'matrix',
+        data: {
+            labels: { x: allMonths, y: allGears.map(g => gearIdToName[g] || g) },
+            datasets: [{
+                label: 'Gear Usage (km)',
+                data: data,
+                backgroundColor: ctx => {
+                    const v = ctx.raw.v;
+                    if (v === 0) return '#ebedf0';
+                    if (v < 10) return '#fcbba1';
+                    if (v < 50) return '#fc9272';
+                    if (v < 100) return '#fb6a4a';
+                    return '#de2d26';
+                },
+                width: ({chart}) => (chart.chartArea || {}).width / allMonths.length - 2,
+                height: ({chart}) => (chart.chartArea || {}).height / allGears.length - 2,
+            }]
+        },
+        options: {
+            plugins: {
+                title: { display: true, text: 'Gear Usage Gantt (Matrix)' },
+                tooltip: {
+                    callbacks: {
+                        title: ctx => `Gear: ${ctx[0].raw.y}, Month: ${ctx[0].raw.x}`,
+                        label: ctx => `Distance: ${ctx.raw.v.toFixed(1)} km\nAccumulated: ${ctx.raw.acc.toFixed(1)} km`
+                    }
+                }
+            },
+            scales: {
+                x: { type: 'category', labels: allMonths, title: { display: true, text: 'Month' } },
+                y: { type: 'category', labels: allGears.map(g => gearIdToName[g] || g), title: { display: true, text: 'Gear' } }
+            }
+        }
+    });
+}
