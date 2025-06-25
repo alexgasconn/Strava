@@ -262,7 +262,7 @@ export function renderVo2maxChart(runs) {
 
     const months = Object.keys(vo2maxByMonth).sort();
     const vo2maxMonthlyAvg = months.map(m => vo2maxByMonth[m].reduce((a, b) => a + b, 0) / vo2maxByMonth[m].length);
-    const vo2maxRolling = calculateRollingMean(vo2maxMonthlyAvg, 3); // Rolling window of 3 months
+    const vo2maxRolling = calculateRollingMean(vo2maxMonthlyAvg, 1); // Rolling window of 3 months
 
     createChart('vo2max-over-time', {
         type: 'line',
