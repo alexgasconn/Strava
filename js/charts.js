@@ -637,6 +637,12 @@ export function renderGearMatrixGanttChart(runs, gearIdToName = {}) {
     const allMonths = Array.from(new Set(runs.map(a => a.start_date_local.substring(0, 7)))).sort();
     const allGears = Array.from(new Set(runs.map(a => a.gear_id).filter(Boolean)));
 
+    // DEBUG: log data
+    console.log('runs:', runs);
+    console.log('gearIdToName:', gearIdToName);
+    console.log('allMonths:', allMonths);
+    console.log('allGears:', allGears);
+
     if (!allMonths.length || !allGears.length) {
         const canvas = document.getElementById('gear-matrix-gantt');
         if (canvas) canvas.parentElement.innerHTML = '<p style="text-align:center;color:#888;">No gear data for this period.</p>';
@@ -659,11 +665,8 @@ export function renderGearMatrixGanttChart(runs, gearIdToName = {}) {
         });
     });
 
-    console.log('runs:', runs);
-    console.log('gearIdToName:', gearIdToName);
-    console.log('allMonths:', allMonths);
-    console.log('allGears:', allGears);
-    console.log('data:', data);
+    // DEBUG: log matrix data
+    console.log('Gear Matrix Data:', data);
 
     // 4. Create the chart
     const canvasId = 'gear-matrix-gantt';
