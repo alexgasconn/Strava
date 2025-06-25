@@ -244,86 +244,114 @@ export function renderDistanceHistogram(runs) {
 }
 
 export function renderVo2maxChart(runs) {
+    // Constantes configurables
     const USER_MAX_HR = 195;
-    const ROLLING_WINDOW = 3; // Cambia este valor para ajustar la ventana del rolling mean
+    const HR_INTERCEPT = 218.29;
+    const HR_COEF_DISTANCE = 0.73;
+    const HR_COEF_PACE = -14.73;
+    const HR_MIN = 100;
+    const HR_MAX = 200;
+    const ROLLING_WINDOW = 3; // meses
+    const DECAY_PER_MONTH = 0.05; // VO2max se reduce 0.05 por mes de antigüedad
 
-    // Estima HR para actividades sin average_heartrate
-    runs.forEach(act => {
-        if ((!act.average_heartrate || act.average_heartrate === 0) && act.distance > 0 && act.moving_time > 0) {
-            const distance_km = act.distance / 1000;
-            const pace_min_per_km = (act.moving_time / 60) / distance_km;
-            act.average_heartrate = Math.round(
-                218.29 + 0.73 * distance_km - 14.73 * pace_min_per_km
-            );
-        }
-    });
+    // Cache de actividades válidas con HR y VO2 calculados
+    const validActs = [];
 
-    // Calcula vo2max para todas las actividades válidas
-    const vo2maxData = runs
-        .filter(act => act.average_heartrate && act.moving_time > 0 && act.distance > 0)
-        .map(act => {
-            const vel_m_min = (act.distance / act.moving_time) * 60;
-            const vo2_at_pace = (vel_m_min * 0.2) + 3.5;
-            const vo2max = vo2_at_pace / (act.average_heartrate / USER_MAX_HR);
-            return { yearMonth: act.start_date_local.substring(0, 7), vo2max };
-        });
+    // Fecha de hoy para calcular antigüedad
+    const today = new Date();
 
-    // Genera todos los meses entre el primero y el último, para evitar huecos
-    const allMonths = (() => {
-        if (runs.length === 0) return [];
-        const monthsSorted = runs.map(d => d.start_date_local.substring(0, 7)).sort();
-        const first = monthsSorted[0];
-        const last = monthsSorted[monthsSorted.length - 1];
-        const result = [];
-        let [sy, sm] = first.split('-').map(Number);
-        let [ey, em] = last.split('-').map(Number);
-        while (sy < ey || (sy === ey && sm <= em)) {
-            result.push(`${sy.toString().padStart(4, '0')}-${sm.toString().padStart(2, '0')}`);
-            sm++;
-            if (sm > 12) {
-                sm = 1;
-                sy++;
+    // Un solo bucle: estimación de HR, filtro y cálculo de VO2
+    for (const act of runs) {
+        if (act.distance > 0 && act.moving_time > 0) {
+            // Aseguramos average_heartrate
+            if (!act.average_heartrate) {
+                const distance_km = act.distance / 1000;
+                const pace_min_per_km = (act.moving_time / 60) / distance_km;
+                let hr = Math.round(
+                    HR_INTERCEPT
+                    + HR_COEF_DISTANCE * distance_km
+                    + HR_COEF_PACE * pace_min_per_km
+                );
+                // Imponer rango
+                act.average_heartrate = Math.min(HR_MAX, Math.max(HR_MIN, hr));
             }
+
+            // Cálculo básico de VO₂ en el momento
+            const vel_m_min = (act.distance / act.moving_time) * 60;
+            const vo2_at_pace = vel_m_min * 0.2 + 3.5;
+            let vo2max = vo2_at_pace / (act.average_heartrate / USER_MAX_HR);
+
+            // Aplicar decay por antigüedad en meses
+            const actDate = new Date(act.start_date_local);
+            const monthsOld = 
+                (today.getFullYear() - actDate.getFullYear()) * 12
+                + (today.getMonth() - actDate.getMonth());
+            vo2max = vo2max - (monthsOld * DECAY_PER_MONTH);
+
+            validActs.push({
+                yearMonth: act.start_date_local.slice(0, 7),
+                vo2max
+            });
+        }
+    }
+
+    // Generar lista de todos los meses
+    const allMonths = (() => {
+        if (!validActs.length) return [];
+        const months = validActs.map(d => d.yearMonth);
+        const sorted = Array.from(new Set(months)).sort();
+        const [startY, startM] = sorted[0].split('-').map(Number);
+        const [endY, endM] = sorted[sorted.length - 1].split('-').map(Number);
+        const result = [];
+        let y = startY, m = startM;
+        while (y < endY || (y === endY && m <= endM)) {
+            result.push(`${y}-${String(m).padStart(2, '0')}`);
+            m++;
+            if (m > 12) { m = 1; y++; }
         }
         return result;
     })();
 
-    // Agrupa los valores por mes
-    const vo2maxByMonth = vo2maxData.reduce((acc, d) => {
-        if (!acc[d.yearMonth]) acc[d.yearMonth] = [];
-        acc[d.yearMonth].push(d.vo2max);
+    // Agrupar y promediar por mes
+    const byMonth = validActs.reduce((acc, {yearMonth, vo2max}) => {
+        (acc[yearMonth] = acc[yearMonth] || []).push(vo2max);
         return acc;
     }, {});
+    const monthlyAvg = allMonths.map(m =>
+        byMonth[m]
+            ? byMonth[m].reduce((a, b) => a + b, 0) / byMonth[m].length
+            : null
+    );
 
-    // Calcula el promedio mensual, usando null para meses sin datos
-    const vo2maxMonthlyAvg = allMonths.map(m => {
-        const vals = vo2maxByMonth[m];
-        return vals && vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    // Rolling mean
+    const rolling = monthlyAvg.map((_, i) => {
+        const window = monthlyAvg
+            .slice(Math.max(0, i - (ROLLING_WINDOW - 1)), i + 1)
+            .filter(v => v != null);
+        return window.length ? window.reduce((a, b) => a + b, 0) / window.length : null;
     });
 
-    // Rolling mean configurable
-    const vo2maxRolling = [];
-    for (let i = 0; i < vo2maxMonthlyAvg.length; i++) {
-        const window = vo2maxMonthlyAvg.slice(Math.max(0, i - (ROLLING_WINDOW - 1)), i + 1).filter(v => v !== null);
-        // Si hay al menos un valor en la ventana, calcula el promedio de los valores no nulos
-        vo2maxRolling.push(window.length > 0 ? window.reduce((a, b) => a + b, 0) / window.length : null);
-    }
-
+    // Render
     createChart('vo2max-over-time', {
         type: 'line',
         data: {
             labels: allMonths,
             datasets: [{
-                label: `Estimated VO₂max (${ROLLING_WINDOW}-month rolling mean)`,
-                data: vo2maxRolling,
+                label: `${ROLLING_WINDOW}-month rolling VO₂max`,
+                data: rolling,
                 borderColor: 'rgba(54, 162, 235, 1)',
                 tension: 0.2,
-                spanGaps: true // Permite saltar huecos
+                spanGaps: true
             }]
         },
-        options: { scales: { y: { title: { display: true, text: 'VO₂max' } } } }
+        options: {
+            scales: {
+                y: { title: { display: true, text: 'VO₂max' } }
+            }
+        }
     });
 }
+
 
 export function renderFitnessChart(runs) {
 
