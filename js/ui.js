@@ -724,3 +724,29 @@ export function renderRiegelPredictions(runs) {
         </table>
     `;
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Quita 'active' de todos los botones
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            // Oculta todos los contenidos
+            document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+            // Muestra el seleccionado
+            document.getElementById(btn.dataset.tab).style.display = 'block';
+
+            // Si es Heatmap, inicializa el heatmap global si no está ya
+            if (btn.dataset.tab === 'heatmap-tab') {
+                renderGlobalHeatmap();
+            }
+        });
+    });
+});
+
+function renderGlobalHeatmap() {
+    const container = document.getElementById('global-heatmap');
+    if (!container) return;
+    container.innerHTML = '<p style="text-align:center;margin-top:2em;">Aquí irá el heatmap global de todas tus actividades (próximamente).</p>';
+    // Aquí puedes poner el código de Leaflet o el heatmap que quieras en el futuro
+}

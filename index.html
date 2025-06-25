@@ -42,6 +42,14 @@
                 </div>
             </header>
 
+            <!-- Tabs Navigation -->
+            <div id="main-tabs" class="tabs">
+                <button class="tab-btn active" data-tab="run-tab">🏃 Running</button>
+                <button class="tab-btn" data-tab="bike-tab">🚴 Bike</button>
+                <button class="tab-btn" data-tab="swim-tab">🏊 Swimming</button>
+                <button class="tab-btn" data-tab="heatmap-tab">🔥 Heatmap</button>
+            </div>
+
             <main>
                 <!-- Summary Cards -->
                 <div id="summary-cards" class="summary-grid"></div>
@@ -145,6 +153,28 @@
                     <button id="download-csv-btn">⬇️ Descargar CSV</button>
                     <button id="download-pdf-btn">⬇️ Descargar PDF</button>
                 </div>
+
+
+
+                <div id="main-tabs" class="tabs">...</div>
+                <div id="run-tab" class="tab-content" style="display:block;">
+                    <!-- aquí va todo tu dashboard actual -->
+                </div>
+                <div id="bike-tab" class="tab-content" style="display:none;">
+                    <h2>Bike</h2>
+                    <p>Próximamente...</p>
+                </div>
+                <div id="swim-tab" class="tab-content" style="display:none;">
+                    <h2>Swimming</h2>
+                    <p>Próximamente...</p>
+                </div>
+                <div id="heatmap-tab" class="tab-content" style="display:none;">
+                    <h2>Heatmap</h2>
+                    <div id="global-heatmap" style="width:100%;height:600px;background:#eee;"></div>
+                </div>
+
+
+
             </main>
         </div>
 

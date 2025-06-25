@@ -337,22 +337,25 @@ main {
     display: flex;
     flex-direction: column;
     transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
-    border-top: 4px solid var(--text-light); /* Borde gris por defecto */
+    border-top: 4px solid var(--text-light);
+    /* Borde gris por defecto */
 }
 
 .gear-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 
 .gear-card.primary {
-    border-top-color: var(--strava-orange); /* Naranja si es primario */
+    border-top-color: var(--strava-orange);
+    /* Naranja si es primario */
 }
 
 .gear-card.retired {
     opacity: 0.7;
     background-color: #f8f9fa;
 }
+
 .gear-card.retired:hover {
     transform: none;
     box-shadow: var(--shadow);
@@ -368,10 +371,12 @@ main {
     text-transform: uppercase;
     color: white;
 }
+
 .primary-badge {
     left: 12px;
     background-color: var(--strava-orange);
 }
+
 .retired-badge {
     right: 12px;
     background-color: var(--text-medium);
@@ -383,7 +388,8 @@ main {
     color: var(--text-dark);
 }
 
-.gear-distance { /* Aplicado al <p> */
+.gear-distance {
+    /* Aplicado al <p> */
     font-size: 2.5rem;
     font-weight: 700;
     color: var(--strava-orange);
@@ -421,12 +427,19 @@ main {
     font-size: 0.9rem;
     color: var(--text-medium);
 }
+
 .gear-stats span {
     flex: 1;
     text-align: center;
 }
-.gear-stats span:first-child { text-align: left; }
-.gear-stats span:last-child { text-align: right; }
+
+.gear-stats span:first-child {
+    text-align: left;
+}
+
+.gear-stats span:last-child {
+    text-align: right;
+}
 
 
 .alert-danger {
@@ -448,23 +461,27 @@ main {
     width: 100%;
     font-size: 0.9rem;
 }
+
 .gear-edit-fields div {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 0.5rem;
 }
+
 .gear-edit-fields input {
     width: 80px;
     padding: 5px;
     border: 1px solid var(--border-color);
     border-radius: 4px;
 }
+
 .gear-edit-fields button.save-gear-btn {
     width: 100%;
     margin-top: 0.5rem;
     background-color: #28a745;
 }
+
 .gear-edit-fields button.save-gear-btn:hover {
     background-color: #218838;
 }
@@ -474,11 +491,13 @@ main {
     display: flex;
     gap: 2rem;
     margin-bottom: 2rem;
-    flex-wrap: wrap; /* Para que sea responsive */
+    flex-wrap: wrap;
+    /* Para que sea responsive */
 }
 
 .activity-details-col {
-    flex: 1 1 300px; /* Crecerá y se encogerá, con una base de 300px */
+    flex: 1 1 300px;
+    /* Crecerá y se encogerá, con una base de 300px */
     background: #fff;
     border-radius: 14px;
     box-shadow: var(--shadow);
@@ -500,8 +519,38 @@ main {
     margin-bottom: 1rem;
 }
 
+.tabs {
+    display: flex;
+    gap: 1em;
+    margin-bottom: 1.5em;
+}
+
+.tab-btn {
+    background: #fff;
+    border: 2px solid #fc4c02;
+    color: #fc4c02;
+    border-radius: 6px 6px 0 0;
+    padding: 0.5em 1.5em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+
+.tab-btn.active {
+    background: #fc4c02;
+    color: #fff;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content[style*="display:block"] {
+    display: block;
+}
+
 @media print {
-  #export-buttons {
-    display: none !important;
-  }
+    #export-buttons {
+        display: none !important;
+    }
 }
