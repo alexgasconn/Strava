@@ -318,19 +318,11 @@ export function renderFitnessChart(runs) {
         acc[date] = (acc[date] || 0) + (act.perceived_exertion ?? act.suffer_score ?? 0);
         return acc;
     }, {});
-    // Calculate relation between moving_time (in minutes) and suffer_score for runs with suffer_score > 0
-    const runsWithSufferScore = runs.filter(act => act.suffer_score && act.suffer_score > 0 && act.moving_time > 0);
-    console.log('runsWithSufferScore:', runsWithSufferScore);
-    let sufferScorePerMinute = 0;
-    if (runsWithSufferScore.length > 0) {
-        sufferScorePerMinute = runsWithSufferScore.reduce((acc, act) => acc + (act.suffer_score / (act.moving_time / 60)), 0) / runsWithSufferScore.length;
-    }
-    console.log('sufferScorePerMinute:', sufferScorePerMinute);
+ 
     // Fill missing suffer_score using the relation
     runs.forEach(act => {
         if ((!act.suffer_score || act.suffer_score === 0) && act.moving_time > 0) {
-            act.suffer_score = Math.round((act.moving_time / 60) * sufferScorePerMinute);
-            console.log(`Filled suffer_score for activity on ${act.start_date_local}:`, act.suffer_score);
+            act.suffer_score = Math.round((act.moving_time / 60) * 30);
         }
     });
 
