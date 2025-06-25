@@ -246,7 +246,7 @@ export function renderDistanceHistogram(runs) {
 export function renderVo2maxChart(runs) {
     const USER_MAX_HR = 195;
     const ROLLING_WINDOW = 3; // Cambia este valor para ajustar la ventana del rolling mean
-    
+
     // Estima HR para actividades sin average_heartrate
     runs.forEach(act => {
         if ((!act.average_heartrate || act.average_heartrate === 0) && act.distance > 0 && act.moving_time > 0) {
@@ -258,7 +258,7 @@ export function renderVo2maxChart(runs) {
         }
     });
 
-
+    // Calcula vo2max para todas las actividades válidas
     const vo2maxData = runs
         .filter(act => act.average_heartrate && act.moving_time > 0 && act.distance > 0)
         .map(act => {
@@ -270,8 +270,8 @@ export function renderVo2maxChart(runs) {
 
     // Genera todos los meses entre el primero y el último, para evitar huecos
     const allMonths = (() => {
-        if (vo2maxData.length === 0) return [];
-        const monthsSorted = vo2maxData.map(d => d.yearMonth).sort();
+        if (runs.length === 0) return [];
+        const monthsSorted = runs.map(d => d.start_date_local.substring(0, 7)).sort();
         const first = monthsSorted[0];
         const last = monthsSorted[monthsSorted.length - 1];
         const result = [];
@@ -305,7 +305,8 @@ export function renderVo2maxChart(runs) {
     const vo2maxRolling = [];
     for (let i = 0; i < vo2maxMonthlyAvg.length; i++) {
         const window = vo2maxMonthlyAvg.slice(Math.max(0, i - (ROLLING_WINDOW - 1)), i + 1).filter(v => v !== null);
-        vo2maxRolling.push(window.length === ROLLING_WINDOW ? window.reduce((a, b) => a + b, 0) / ROLLING_WINDOW : null);
+        // Si hay al menos un valor en la ventana, calcula el promedio de los valores no nulos
+        vo2maxRolling.push(window.length > 0 ? window.reduce((a, b) => a + b, 0) / window.length : null);
     }
 
     createChart('vo2max-over-time', {
