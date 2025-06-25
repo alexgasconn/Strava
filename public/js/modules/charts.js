@@ -252,7 +252,7 @@ export function renderVo2maxChart(runs) {
     const HR_MIN = 100;
     const HR_MAX = 200;
     const ROLLING_WINDOW = 3; // meses
-    const DECAY_PER_MONTH = 0.05; // VO2max se reduce 0.05 por mes de antigüedad
+    const DECAY_PER_MONTH = 0.075; // VO2max se reduce 0.05 por mes de antigüedad
 
     // Cache de actividades válidas con HR y VO2 calculados
     const validActs = [];
