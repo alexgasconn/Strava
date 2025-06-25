@@ -110,3 +110,38 @@ Cycling: TBD
         
         
         
+
+NOMS:
+-Statify
+-PacePerfect
+-PaceLab
+-EnduranceLab
+-TriathlonIO
+-TriathlonLab
+-KudoMetrics
+-DataRunner
+-Stravify
+-KudoEngine
+-
+
+Pace, Cadence, Stride, Split, Tempo, Beat, Pulse, Rhythm, Drive, Watt
+Flow, Glide, Surge, Swing, Momentum, Spin, Turnover, Gait
+Enduro, Grind, Climb, Summit, Ascent, Peak, Crest, Charge, Core
+Velo, Aero, Dash, Sprint, Zoom, Bolt, Velocity, Rush, Swift
+Kudo, PR (Personal Record), PB (Personal Best), Podium, Medal, Badge
+Zen, Flow, Focus, Zone, Thrive, Push, Fuel, Ignite
+Raíces Técnicas:
+
+Stat, Metric, Data, Byte, Bit, Quant, Vector, Axis, Graph
+-lytics, -metry, -scope, -graph, -gram, -tron, -viz
+Decode, Parse, Filter, Scan, Map, Cluster, Pattern, Matrix, Grid
+Insight, Foresight, Overview, Lens, Prism, Mirror, Compass
+Hub, Nexus, Node, Core, Base, Frame, Mesh
+-ify (Statify), -ly (Deeply), -io (Metric.io), -ai (RunAI), -ex (Datapex)
+Lab, Forge, Build, Foundry, Workshop, Engine, Dynamo
+Quantum, Nano, Vertex, Apex, Zenith, Flux, Vector, Cipher
+Core, Kernel, Spark, Pulse, Surge, Bolt, Nexus, Reactor
+Evolve, Adapt, Grow, Thrive, Ascend, Elevate, Amplify, Boost
+Tune, Calibrate, Optimize, Refine, Polish, Perfect, Trim
+Edge, Lead, Prime, Apex, Pinnacle, Frontier, Vanguard
+

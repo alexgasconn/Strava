@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Strava Activity Details</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/css/style.css">
+
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+</head>
+<body>
+  <div class="container">
+    <h1>Detalles de la Actividad</h1>
+
+    <div id="activity-details-row" class="activity-details-row">
+      <div id="activity-info" class="activity-details-col"></div>
+      <div id="activity-stats" class="activity-details-col"></div>
+      <div id="activity-advanced" class="activity-details-col"></div>
+    </div>
+
+    <div id="activity-details"></div>
+    <div id="activity-map"></div>
+
+    <div id="splits-section" class="hidden">
+      <h3>📈 Splits por kilómetro</h3>
+      <canvas id="chart-pace"></canvas>
+      <canvas id="chart-heartrate"></canvas>
+    </div>
+
+    <div id="stream-charts" class="charts-grid">
+      <div class="chart-container">
+        <canvas id="chart-altitude"></canvas>
+      </div>
+      <div class="chart-container">
+        <canvas id="chart-pace-distance"></canvas>
+      </div>
+      <div class="chart-container">
+        <canvas id="chart-heart-distance"></canvas>
+      </div>
+      <div class="chart-container">
+        <canvas id="chart-cadence-distance"></canvas>
+      </div>
+    </div>
+
+
+    <div id="segments-section"></div>
+
+    <button onclick="window.close()">Cerrar</button>
+  </div>
+
+  <script src="/js/pages/activity.js"></script>
+</body>
+</html>

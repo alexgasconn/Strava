@@ -1,6 +1,6 @@
 // js/activity.js
 
-document.addEventListener('DOMContentLoaded', () => {
+export function init() {
 
     // --- 1. REFERENCIAS AL DOM Y ESTADO INICIAL ---
     const params = new URLSearchParams(window.location.search);
@@ -352,33 +352,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Ejecutamos la función principal
     main();
-});
 
-const USER_MAX_HR = 190; // Cambia esto por tu FC máxima real o estimada
 
-function estimateVO2max(act, userMaxHr = USER_MAX_HR) {
-    if (!act.distance || !act.moving_time || !act.average_heartrate) return '-';
-    // Paso A: velocidad en m/min
-    const vel_m_min = (act.distance / act.moving_time) * 60;
-    // Paso B: VO2 al ritmo de la actividad
-    const vo2_at_pace = (vel_m_min * 0.2) + 3.5;
-    // Paso C: % esfuerzo
-    const percent_max_hr = act.average_heartrate / userMaxHr;
-    if (percent_max_hr < 0.5 || percent_max_hr > 1.2) return '-'; // filtro valores raros
-    // Paso D: Extrapolación
-    const vo2max = vo2_at_pace / percent_max_hr;
-    return vo2max.toFixed(1);
-}
+    const USER_MAX_HR = 190; // Cambia esto por tu FC máxima real o estimada
 
-function rollingMean(arr, windowSize = 25) {
-    if (!Array.isArray(arr) || arr.length === 0) return [];
-    const result = [];
-    for (let i = 0; i < arr.length; i++) {
-        const start = Math.max(0, i - Math.floor(windowSize / 2));
-        const end = Math.min(arr.length, i + Math.ceil(windowSize / 2));
-        const window = arr.slice(start, end);
-        const mean = window.reduce((a, b) => a + b, 0) / window.length;
-        result.push(mean);
+    function estimateVO2max(act, userMaxHr = USER_MAX_HR) {
+        if (!act.distance || !act.moving_time || !act.average_heartrate) return '-';
+        // Paso A: velocidad en m/min
+        const vel_m_min = (act.distance / act.moving_time) * 60;
+        // Paso B: VO2 al ritmo de la actividad
+        const vo2_at_pace = (vel_m_min * 0.2) + 3.5;
+        // Paso C: % esfuerzo
+        const percent_max_hr = act.average_heartrate / userMaxHr;
+        if (percent_max_hr < 0.5 || percent_max_hr > 1.2) return '-'; // filtro valores raros
+        // Paso D: Extrapolación
+        const vo2max = vo2_at_pace / percent_max_hr;
+        return vo2max.toFixed(1);
     }
-    return result;
+
+    function rollingMean(arr, windowSize = 25) {
+        if (!Array.isArray(arr) || arr.length === 0) return [];
+        const result = [];
+        for (let i = 0; i < arr.length; i++) {
+            const start = Math.max(0, i - Math.floor(windowSize / 2));
+            const end = Math.min(arr.length, i + Math.ceil(windowSize / 2));
+            const window = arr.slice(start, end);
+            const mean = window.reduce((a, b) => a + b, 0) / window.length;
+            result.push(mean);
+        }
+        return result;
+    }
+
+    main();
 }
+
+
+
