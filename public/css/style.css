@@ -553,6 +553,8 @@ main {
     display: block;
 }
 
+#gear-matrix-gantt { border: 2px solid red; }
+
 @media print {
     #export-buttons {
         display: none !important;

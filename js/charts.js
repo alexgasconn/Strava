@@ -659,6 +659,12 @@ export function renderGearMatrixGanttChart(runs, gearIdToName = {}) {
         });
     });
 
+    console.log('runs:', runs);
+    console.log('gearIdToName:', gearIdToName);
+    console.log('allMonths:', allMonths);
+    console.log('allGears:', allGears);
+    console.log('data:', data);
+
     // 4. Create the chart
     const canvasId = 'gear-matrix-gantt';
     const canvas = document.getElementById(canvasId);
