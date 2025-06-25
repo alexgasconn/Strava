@@ -526,6 +526,7 @@ main {
 }
 
 .tab-btn {
+    text-decoration: none;
     background: #fff;
     border: 2px solid #fc4c02;
     color: #fc4c02;
@@ -534,9 +535,12 @@ main {
     font-weight: bold;
     cursor: pointer;
     transition: background 0.2s, color 0.2s;
+    margin-right: 0.5em;
+    display: inline-block;
 }
 
-.tab-btn.active {
+.tab-btn.active,
+.tabs .tab-btn:focus {
     background: #fc4c02;
     color: #fff;
 }
