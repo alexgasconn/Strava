@@ -637,6 +637,12 @@ export function renderGearMatrixGanttChart(runs, gearIdToName = {}) {
     const allMonths = Array.from(new Set(runs.map(a => a.start_date_local.substring(0, 7)))).sort();
     const allGears = Array.from(new Set(runs.map(a => a.gear_id).filter(Boolean)));
 
+    if (!allMonths.length || !allGears.length) {
+        const canvas = document.getElementById('gear-matrix-gantt');
+        if (canvas) canvas.parentElement.innerHTML = '<p style="text-align:center;color:#888;">No gear data for this period.</p>';
+        return;
+    }
+
     // 3. Prepare matrix data for Chart.js Matrix
     const data = [];
     allGears.forEach((gear, yIdx) => {
@@ -654,7 +660,15 @@ export function renderGearMatrixGanttChart(runs, gearIdToName = {}) {
     });
 
     // 4. Create the chart
-    createChart('gear-matrix-gantt', {
+    const canvasId = 'gear-matrix-gantt';
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+
+    if (charts[canvasId]) {
+        charts[canvasId].destroy();
+    }
+
+    charts[canvasId] = new Chart(canvas, {
         type: 'matrix',
         data: {
             labels: { x: allMonths, y: allGears.map(g => gearIdToName[g] || g) },
@@ -669,8 +683,8 @@ export function renderGearMatrixGanttChart(runs, gearIdToName = {}) {
                     if (v < 100) return '#fb6a4a';
                     return '#de2d26';
                 },
-                width: ({chart}) => (chart.chartArea || {}).width / allMonths.length - 2,
-                height: ({chart}) => (chart.chartArea || {}).height / allGears.length - 2,
+                width: ({chart}) => Math.max(10, (chart.chartArea || {}).width / allMonths.length - 2),
+                height: ({chart}) => Math.max(10, (chart.chartArea || {}).height / allGears.length - 2),
             }]
         },
         options: {
