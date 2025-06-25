@@ -318,11 +318,13 @@ export function renderFitnessChart(runs) {
         acc[date] = (acc[date] || 0) + (act.perceived_exertion ?? act.suffer_score ?? 0);
         return acc;
     }, {});
- 
+    
+
     // Fill missing suffer_score using the relation
     runs.forEach(act => {
         if ((!act.suffer_score || act.suffer_score === 0) && act.moving_time > 0) {
-            act.suffer_score = Math.round((act.moving_time / 60) * 30);
+            const sufferScorePerMinute = 30 * (1 + (Math.random() - 0.5) * 0.1);
+            act.suffer_score = Math.round((act.moving_time / 60) * sufferScorePerMinute);
         }
     });
 
