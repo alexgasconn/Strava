@@ -339,9 +339,9 @@ export function renderFitnessChart(runs) {
             // ATL (Fatigue) - Opacidad de línea al 70%
             { label: 'ATL (Fatigue)', data: atl, borderColor: 'rgba(252, 82, 0, 0.7)', fill: false, tension: 0.2, pointRadius: 0 },
             // CTL (Fitness) - Opacidad de línea al 90%, relleno al 15%
-            { label: 'CTL (Fitness)', data: ctl, borderColor: 'rgba(0, 116, 217, 0.9)', fill: true, backgroundColor: 'rgba(0,116,217,0.15)', tension: 0.2, pointRadius: 0 },
+            { label: 'CTL (Fitness)', data: ctl, borderColor: 'rgba(0, 116, 217, 0.5)', fill: true, backgroundColor: 'rgba(0,116,217,0.15)', tension: 0.2, pointRadius: 0 },
             // TSB (Form) - Opacidad de línea al 100% (o muy alta)
-            { label: 'TSB (Form)', data: tsb, borderColor: 'rgba(46, 204, 64, 1)', fill: false, tension: 0.2, pointRadius: 0 }
+            { label: 'TSB (Form)', data: tsb, borderColor: 'rgba(46, 204, 64, 0.1)', fill: false, tension: 0.2, pointRadius: 0 }
         ]
         },
         options: { scales: { y: { title: { display: true, text: 'Load' } } } }
