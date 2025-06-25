@@ -313,23 +313,24 @@ export function renderVo2maxChart(runs) {
 
 export function renderFitnessChart(runs) {
 
-    const effortByDay = runs.reduce((acc, act) => {
-        const date = act.start_date_local.substring(0, 10);
-        acc[date] = (acc[date] || 0) + (act.perceived_exertion ?? act.suffer_score ?? 0);
-        return acc;
-    }, {});
-    
-
-    // Fill missing suffer_score using the relation
+    // Primero, rellenamos suffer_score si falta o es 0
     runs.forEach(act => {
         if ((!act.suffer_score || act.suffer_score === 0) && act.moving_time > 0) {
-            const sufferScorePerMinute = 30 * (1 + (Math.random() - 0.5) * 0.1);
+            // Estimación simple si falta suffer_score
+            const sufferScorePerMinute = 30 * (1 + (Math.random() - 0.5) * 0.2);
             act.suffer_score = Math.round((act.moving_time / 60) * sufferScorePerMinute);
         }
     });
 
-    const allEffortDays = Object.keys(effortByDay).sort();
+    // Ahora agregamos el esfuerzo por día usando solo suffer_score
+    const effortByDay = runs.reduce((acc, act) => {
+        const date = act.start_date_local.substring(0, 10);
+        const effort = act.suffer_score ?? 0;
+        acc[date] = (acc[date] || 0) + effort;
+        return acc;
+    }, {});
 
+    const allEffortDays = Object.keys(effortByDay).sort();
     if (allEffortDays.length === 0) return;
 
     const startDate = new Date(allEffortDays[0]);
@@ -341,20 +342,16 @@ export function renderFitnessChart(runs) {
 
     const dailyEffort = days.map(date => effortByDay[date] || 0);
     const { atl, ctl, tsb } = calculateFitness(dailyEffort);
-    
 
     createChart('ctl-atl-tsb', {
         type: 'line',
         data: {
             labels: days,
             datasets: [
-            // ATL (Fatigue) - Opacidad de línea al 70%
-            { label: 'ATL (Fatigue)', data: atl, borderColor: 'rgba(252, 82, 0, 0.3)', fill: false, tension: 0.2, pointRadius: 0 },
-            // CTL (Fitness) - Opacidad de línea al 90%, relleno al 15%
-            { label: 'CTL (Fitness)', data: ctl, borderColor: 'rgba(0, 116, 217, 0.6)', fill: true, backgroundColor: 'rgba(0,116,217,0.15)', tension: 0.2, pointRadius: 0 },
-            // TSB (Form) - Opacidad de línea al 100% (o muy alta)
-            { label: 'TSB (Form)', data: tsb, borderColor: 'rgba(46, 204, 64, 1)', fill: false, tension: 0.2, pointRadius: 0 }
-        ]
+                { label: 'ATL (Fatigue)', data: atl, borderColor: 'rgba(252, 82, 0, 0.3)', fill: false, tension: 0.2, pointRadius: 0 },
+                { label: 'CTL (Fitness)', data: ctl, borderColor: 'rgba(0, 116, 217, 0.6)', fill: true, backgroundColor: 'rgba(0,116,217,0.15)', tension: 0.2, pointRadius: 0 },
+                { label: 'TSB (Form)', data: tsb, borderColor: 'rgba(46, 204, 64, 1)', fill: false, tension: 0.2, pointRadius: 0 }
+            ]
         },
         options: { scales: { y: { title: { display: true, text: 'Load' } } } }
     });
