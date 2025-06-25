@@ -245,6 +245,7 @@ export function renderDistanceHistogram(runs) {
 
 export function renderVo2maxChart(runs) {
     const USER_MAX_HR = 195;
+    const ROLLING_WINDOW = 2; // Cambia este valor para ajustar la ventana del rolling mean
     const vo2maxData = runs
         .filter(act => act.average_heartrate && act.moving_time > 0 && act.distance > 0)
         .map(act => {
@@ -254,21 +255,57 @@ export function renderVo2maxChart(runs) {
             return { yearMonth: act.start_date_local.substring(0, 7), vo2max };
         });
 
+    // Genera todos los meses entre el primero y el último, para evitar huecos
+    const allMonths = (() => {
+        if (vo2maxData.length === 0) return [];
+        const monthsSorted = vo2maxData.map(d => d.yearMonth).sort();
+        const first = monthsSorted[0];
+        const last = monthsSorted[monthsSorted.length - 1];
+        const result = [];
+        let [sy, sm] = first.split('-').map(Number);
+        let [ey, em] = last.split('-').map(Number);
+        while (sy < ey || (sy === ey && sm <= em)) {
+            result.push(`${sy.toString().padStart(4, '0')}-${sm.toString().padStart(2, '0')}`);
+            sm++;
+            if (sm > 12) {
+                sm = 1;
+                sy++;
+            }
+        }
+        return result;
+    })();
+
+    // Agrupa los valores por mes
     const vo2maxByMonth = vo2maxData.reduce((acc, d) => {
         if (!acc[d.yearMonth]) acc[d.yearMonth] = [];
         acc[d.yearMonth].push(d.vo2max);
         return acc;
     }, {});
 
-    const months = Object.keys(vo2maxByMonth).sort();
-    const vo2maxMonthlyAvg = months.map(m => vo2maxByMonth[m].reduce((a, b) => a + b, 0) / vo2maxByMonth[m].length);
-    const vo2maxRolling = calculateRollingMean(vo2maxMonthlyAvg, 1); // Rolling window of 3 months
+    // Calcula el promedio mensual, usando null para meses sin datos
+    const vo2maxMonthlyAvg = allMonths.map(m => {
+        const vals = vo2maxByMonth[m];
+        return vals && vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    });
+
+    // Rolling mean configurable
+    const vo2maxRolling = [];
+    for (let i = 0; i < vo2maxMonthlyAvg.length; i++) {
+        const window = vo2maxMonthlyAvg.slice(Math.max(0, i - (ROLLING_WINDOW - 1)), i + 1).filter(v => v !== null);
+        vo2maxRolling.push(window.length === ROLLING_WINDOW ? window.reduce((a, b) => a + b, 0) / ROLLING_WINDOW : null);
+    }
 
     createChart('vo2max-over-time', {
         type: 'line',
         data: {
-            labels: months,
-            datasets: [{ label: 'Estimated VO₂max (3-month rolling mean)', data: vo2maxRolling, borderColor: 'rgba(54, 162, 235, 1)', tension: 0.2 }]
+            labels: allMonths,
+            datasets: [{
+                label: `Estimated VO₂max (${ROLLING_WINDOW}-month rolling mean)`,
+                data: vo2maxRolling,
+                borderColor: 'rgba(54, 162, 235, 1)',
+                tension: 0.2,
+                spanGaps: true // Permite saltar huecos
+            }]
         },
         options: { scales: { y: { title: { display: true, text: 'VO₂max' } } } }
     });
