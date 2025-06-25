@@ -388,7 +388,9 @@ export function renderStackedAreaGearChart(runs, gearIdToName = {}) {
             backgroundColor: `hsl(${(idx * 60)}, 70%, 60%)`,
             fill: true,
             borderWidth: 1,
-            tension: 0.2
+            tension: 0.2,
+            pointRadius: 2, // <-- más pequeño el punto
+            pointHoverRadius: 4 // opcional, para hover
         };
     });
 
@@ -396,6 +398,11 @@ export function renderStackedAreaGearChart(runs, gearIdToName = {}) {
         type: 'line',
         data: { labels: allMonths, datasets: datasets },
         options: {
+            elements: {
+                point: {
+                    radius: 2 // <-- también aquí por si acaso
+                }
+            },
             scales: {
                 x: { stacked: true, title: { display: true, text: 'Year-Month' } },
                 y: { stacked: true, title: { display: true, text: 'Distance (km)' } }
