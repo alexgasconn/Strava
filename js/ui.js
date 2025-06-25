@@ -3,6 +3,8 @@ import { fetchGearById } from './api.js';
 import * as charts from './charts.js';
 import * as utils from './utils.js';
 import { getISOWeek } from './utils.js';
+import { estimateAverageHR, estimateVO2max } from './utils.js'; // Ajusta la ruta según tu estructura
+
 
 // --- DOM REFERENCES  ---
 const loadingOverlay = document.getElementById('loading-overlay');
@@ -55,6 +57,7 @@ export function setupDashboard(activities) {
 export function renderDashboard(allActivities, dateFilterFrom, dateFilterTo) {
     const filteredActivities = utils.filterActivitiesByDate(allActivities, dateFilterFrom, dateFilterTo);
     const runs = filteredActivities.filter(a => a.type && a.type.includes('Run'));
+    preprocessRuns(runs, 195); // O el HR máximo real del usuario
 
     renderSummaryCards(runs);
     renderAllCharts(runs);
@@ -749,4 +752,11 @@ function renderGlobalHeatmap() {
     if (!container) return;
     container.innerHTML = '<p style="text-align:center;margin-top:2em;">Aquí irá el heatmap global de todas tus actividades (próximamente).</p>';
     // Aquí puedes poner el código de Leaflet o el heatmap que quieras en el futuro
+}
+
+function preprocessRuns(runs, userMaxHr = 195) {
+    runs.forEach(act => {
+        act.estimated_hr = estimateAverageHR(act, userMaxHr);
+        act.estimated_vo2max = estimateVO2max(act, userMaxHr);
+    });
 }

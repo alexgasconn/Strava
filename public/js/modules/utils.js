@@ -55,6 +55,37 @@ export function getISOWeek(date) {
     return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 }
 
+// Estimate average HR if missing (based on distance and pace)
+export function estimateAverageHR(act, userMaxHr = 195) {
+    if (act.average_heartrate) return act.average_heartrate;
+    // Ajusta estos coeficientes si tienes mejores datos
+    const HR_INTERCEPT = 218.29;
+    const HR_COEF_DISTANCE = 0.73;
+    const HR_COEF_PACE = -14.73;
+    const HR_MIN = 100;
+    const HR_MAX = 200;
+    const distance_km = act.distance / 1000;
+    const pace_min_per_km = (act.moving_time / 60) / distance_km;
+    let hr = Math.round(
+        HR_INTERCEPT
+        + HR_COEF_DISTANCE * distance_km
+        + HR_COEF_PACE * pace_min_per_km
+    );
+    return Math.min(HR_MAX, Math.max(HR_MIN, hr));
+}
+
+// Estimate VO2max for an activity
+export function estimateVO2max(act, userMaxHr = 195) {
+    if (!act.distance || !act.moving_time) return null;
+    const avgHr = act.average_heartrate || estimateAverageHR(act, userMaxHr);
+    if (!avgHr) return null;
+    const vel_m_min = (act.distance / act.moving_time) * 60;
+    const vo2_at_pace = (vel_m_min * 0.2) + 3.5;
+    const percent_max_hr = avgHr / userMaxHr;
+    if (percent_max_hr < 0.5 || percent_max_hr > 1.2) return null;
+    return vo2_at_pace / percent_max_hr;
+}
+
 
 // ELIMINADO: La función calculateStreaks la hemos movido por completo a ui.js
 // porque mezclaba cálculo y renderizado. Mantener este placeholder causaba confusión.

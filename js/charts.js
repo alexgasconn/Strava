@@ -247,13 +247,11 @@ export function renderVo2maxChart(runs) {
     const USER_MAX_HR = 195;
     const ROLLING_WINDOW = 2; // Cambia este valor para ajustar la ventana del rolling mean
     const vo2maxData = runs
-        .filter(act => act.average_heartrate && act.moving_time > 0 && act.distance > 0)
-        .map(act => {
-            const vel_m_min = (act.distance / act.moving_time) * 60;
-            const vo2_at_pace = (vel_m_min * 0.2) + 3.5;
-            const vo2max = vo2_at_pace / (act.average_heartrate / USER_MAX_HR);
-            return { yearMonth: act.start_date_local.substring(0, 7), vo2max };
-        });
+        .filter(act => act.estimated_vo2max)
+        .map(act => ({
+            yearMonth: act.start_date_local.substring(0, 7),
+            vo2max: act.estimated_vo2max
+        }));
 
     // Genera todos los meses entre el primero y el último, para evitar huecos
     const allMonths = (() => {
