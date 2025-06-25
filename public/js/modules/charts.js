@@ -246,6 +246,16 @@ export function renderDistanceHistogram(runs) {
 export function renderVo2maxChart(runs) {
     const USER_MAX_HR = 195;
     const ROLLING_WINDOW = 2; // Cambia este valor para ajustar la ventana del rolling mean
+    console.log(
+        runs
+            .filter(act => act.average_heartrate && act.moving_time > 0 && act.distance > 0)
+            .map(act => ({
+                distance_km: act.distance / 1000,
+                pace_min_per_km: (act.moving_time / 60) / (act.distance / 1000),
+                average_heartrate: act.average_heartrate,
+                vo2max: ((act.distance / act.moving_time) * 60 * 0.2 + 3.5) / (act.average_heartrate / USER_MAX_HR)
+            }))
+    );
     const vo2maxData = runs
         .filter(act => act.average_heartrate && act.moving_time > 0 && act.distance > 0)
         .map(act => {
