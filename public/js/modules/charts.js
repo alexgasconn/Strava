@@ -312,13 +312,25 @@ export function renderVo2maxChart(runs) {
 }
 
 export function renderFitnessChart(runs) {
+
     const effortByDay = runs.reduce((acc, act) => {
         const date = act.start_date_local.substring(0, 10);
         acc[date] = (acc[date] || 0) + (act.perceived_exertion ?? act.suffer_score ?? 0);
         return acc;
     }, {});
+    console.log('Run day:', runs);
+    console.log(runs.length)
+    
+    console.log('Effort by day1:', effortByDay);
+    console.log(effortByDay.length)
+
+    //print of mean suffer_score
+    const meanSufferScore = runs.reduce((acc, act) => acc + (act.suffer_score || 0), 0) / runs.length;
+    console.log('Mean Suffer Score:', meanSufferScore);
+
 
     const allEffortDays = Object.keys(effortByDay).sort();
+    console.log('Effort by day2:', effortByDay);
     if (allEffortDays.length === 0) return;
 
     const startDate = new Date(allEffortDays[0]);
@@ -330,6 +342,7 @@ export function renderFitnessChart(runs) {
 
     const dailyEffort = days.map(date => effortByDay[date] || 0);
     const { atl, ctl, tsb } = calculateFitness(dailyEffort);
+    
 
     createChart('ctl-atl-tsb', {
         type: 'line',
