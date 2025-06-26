@@ -410,6 +410,15 @@ export function init() {
                 }
             }
 
+            
+            // Aplica rolling mean al ritmo calculado
+            const windowSize = 100; // Usa el mismo windowSize que para los streams
+            const smoothPaceStreamData = rollingMean(pace, windowSize);
+
+
+
+
+
             // Agrupa en bloques de 250m
             let blocks = [];
             let currentBlock = { min: Infinity, max: -Infinity, start: 0, end: blockSize };
@@ -425,9 +434,9 @@ export function init() {
                     currentBlock.min = Infinity;
                     currentBlock.max = -Infinity;
                 }
-                if (pace[i - 1] != null && isFinite(pace[i - 1])) {
-                    currentBlock.min = Math.min(currentBlock.min, pace[i - 1]);
-                    currentBlock.max = Math.max(currentBlock.max, pace[i - 1]);
+                if (smoothPaceStreamData[i - 1] != null && isFinite(smoothPaceStreamData[i - 1])) {
+                    currentBlock.min = Math.min(currentBlock.min, smoothPaceStreamData[i - 1]);
+                    currentBlock.max = Math.max(currentBlock.max, smoothPaceStreamData[i - 1]);
                 }
             }
             if (currentBlock.min !== Infinity && currentBlock.max !== -Infinity) {
