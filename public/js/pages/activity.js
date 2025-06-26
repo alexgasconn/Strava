@@ -386,14 +386,21 @@ export function init() {
         }
 
         // Pace Range by 250m blocks (usando smoothPaceStreamData)
-        if (streams.distance && streams.distance.data && smoothPaceStreamData && smoothPaceStreamData.length > 0) {
+        if (
+            streams.distance &&
+            streams.distance.data &&
+            typeof smoothPaceStreamData !== 'undefined' &&
+            Array.isArray(smoothPaceStreamData) &&
+            smoothPaceStreamData.length > 0
+        ) {
             const pace = smoothPaceStreamData;
             const dist = streams.distance.data;
             const blockSize = 250; // meters
 
+            // pace[0] corresponde a dist[1], pace[1] a dist[2], etc.
             let blocks = [];
             let currentBlock = { min: Infinity, max: -Infinity, start: 0, end: blockSize };
-            for (let i = 1; i < dist.length; i++) { // Empieza en 1 porque smoothPaceStreamData empieza en 1
+            for (let i = 1; i < dist.length && i - 1 < pace.length; i++) {
                 if (dist[i] > currentBlock.end) {
                     if (currentBlock.min !== Infinity && currentBlock.max !== -Infinity) {
                         blocks.push({ ...currentBlock });
@@ -405,7 +412,7 @@ export function init() {
                     currentBlock.min = Infinity;
                     currentBlock.max = -Infinity;
                 }
-                if (pace[i - 1] != null) {
+                if (pace[i - 1] != null && isFinite(pace[i - 1])) {
                     currentBlock.min = Math.min(currentBlock.min, pace[i - 1]);
                     currentBlock.max = Math.max(currentBlock.max, pace[i - 1]);
                 }
