@@ -385,22 +385,35 @@ export function init() {
             });
         }
 
-        // Pace Range by 250m blocks (usando smoothPaceStreamData)
+        // Pace Range by 250m blocks (usando pace normal)
         if (
             streams.distance &&
             streams.distance.data &&
-            typeof smoothPaceStreamData !== 'undefined' &&
-            Array.isArray(smoothPaceStreamData) &&
-            smoothPaceStreamData.length > 0
+            streams.time &&
+            streams.time.data &&
+            streams.distance.data.length === streams.time.data.length
         ) {
-            const pace = smoothPaceStreamData;
             const dist = streams.distance.data;
+            const time = streams.time.data;
             const blockSize = 250; // meters
 
-            // pace[0] corresponde a dist[1], pace[1] a dist[2], etc.
+            // Calcula pace instantáneo en min/km entre cada punto
+            const pace = [];
+            for (let i = 1; i < dist.length; i++) {
+                const deltaDist = dist[i] - dist[i - 1];
+                const deltaTime = time[i] - time[i - 1];
+                if (deltaDist > 0 && deltaTime > 0) {
+                    const speed = deltaDist / deltaTime; // m/s
+                    pace.push(1000 / speed / 60); // min/km
+                } else {
+                    pace.push(null);
+                }
+            }
+
+            // Agrupa en bloques de 250m
             let blocks = [];
             let currentBlock = { min: Infinity, max: -Infinity, start: 0, end: blockSize };
-            for (let i = 1; i < dist.length && i - 1 < pace.length; i++) {
+            for (let i = 1; i < dist.length; i++) {
                 if (dist[i] > currentBlock.end) {
                     if (currentBlock.min !== Infinity && currentBlock.max !== -Infinity) {
                         blocks.push({ ...currentBlock });
