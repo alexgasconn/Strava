@@ -79,7 +79,19 @@ export function renderConsistencyChart(runs) {
             radius: 2, 
             width: 11, 
             height: 11,
-            gutter: 4
+            gutter: 4,
+            // Añadimos etiquetas de días de la semana en el eje Y
+            label: (date, value, index) => {
+                // Solo mostrar la etiqueta en la primera columna de cada semana
+                if (date.getDay() === 1) { // Lunes (0=Domingo, 1=Lunes,...)
+                    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                    return days[date.getDay()];
+                }
+                return '';
+            },
+            labelPosition: 'left',
+            labelAlign: 'middle',
+            labelOffset: 0
         },
         range: 12, // Muestra 12 meses
         data: { 
@@ -99,6 +111,34 @@ export function renderConsistencyChart(runs) {
         },
         itemSelector: "#cal-heatmap",
     });
+
+    // Añadir etiquetas de días de la semana a la izquierda del heatmap
+    // (Esto es un workaround visual, ya que CalHeatmap no lo hace automáticamente)
+    const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    let yLabels = document.getElementById('cal-heatmap-weekdays');
+    if (!yLabels) {
+        yLabels = document.createElement('div');
+        yLabels.id = 'cal-heatmap-weekdays';
+        yLabels.style.display = 'flex';
+        yLabels.style.flexDirection = 'column';
+        yLabels.style.position = 'absolute';
+        yLabels.style.left = '0';
+        yLabels.style.top = '40px';
+        yLabels.style.zIndex = '10';
+        yLabels.style.pointerEvents = 'none';
+        yLabels.style.fontSize = '11px';
+        yLabels.style.color = '#888';
+        yLabels.style.lineHeight = '13px';
+        weekDays.forEach(day => {
+            const d = document.createElement('span');
+            d.textContent = day;
+            d.style.height = '13px';
+            d.style.marginBottom = '2px';
+            yLabels.appendChild(d);
+        });
+        heatmapContainer.parentElement.style.position = 'relative';
+        heatmapContainer.parentElement.appendChild(yLabels);
+    }
 }
 
 export function renderActivityTypeChart(runs) {
