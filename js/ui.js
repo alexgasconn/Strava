@@ -71,14 +71,24 @@ export function renderDashboard(allActivities, dateFilterFrom, dateFilterTo) {
 
 function renderSummaryCards(runs) {
     const summaryContainer = document.getElementById('summary-cards');
-    if (summaryContainer) {
-        summaryContainer.innerHTML = `
-            <div class="card"><h3>Activities</h3><p>${runs.length}</p></div>
-            <div class="card"><h3>Total Distance</h3><p>${(runs.reduce((s, a) => s + a.distance, 0) / 1000).toFixed(0)} km</p></div>
-            <div class="card"><h3>Total Time</h3><p>${(runs.reduce((s, a) => s + a.moving_time, 0) / 3600).toFixed(1)} h</p></div>
-            <div class="card"><h3>Total Elevation</h3><p>${runs.reduce((s, a) => s + a.total_elevation_gain, 0).toLocaleString()} m</p></div>
-        `;
-    }
+    if (!summaryContainer) return;
+
+    // VO2max medio de las últimas 5 actividades con dato válido
+    const last5 = [...runs]
+        .filter(a => a.estimated_vo2max)
+        .sort((a, b) => new Date(b.start_date_local) - new Date(a.start_date_local))
+        .slice(0, 5);
+    const avgVO2 = last5.length
+        ? (last5.reduce((sum, a) => sum + a.estimated_vo2max, 0) / last5.length).toFixed(1)
+        : '-';
+
+    summaryContainer.innerHTML = `
+        <div class="card"><h3>Activities</h3><p>${runs.length}</p></div>
+        <div class="card"><h3>Total Distance</h3><p>${(runs.reduce((s, a) => s + a.distance, 0) / 1000).toFixed(0)} km</p></div>
+        <div class="card"><h3>Total Time</h3><p>${(runs.reduce((s, a) => s + a.moving_time, 0) / 3600).toFixed(1)} h</p></div>
+        <div class="card"><h3>Total Elevation</h3><p>${runs.reduce((s, a) => s + a.total_elevation_gain, 0).toLocaleString()} m</p></div>
+        <div class="card"><h3>VO₂max (últimas 5)</h3><p>${avgVO2}</p></div>
+    `;
 }
 
 function renderAllCharts(runs) {
