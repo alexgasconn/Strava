@@ -350,9 +350,6 @@ export function init() {
         }
     }
 
-    // Ejecutamos la función principal
-    main();
-
 
     const USER_MAX_HR = 190; // Cambia esto por tu FC máxima real o estimada
 
