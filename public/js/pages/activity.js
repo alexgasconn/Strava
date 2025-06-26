@@ -310,6 +310,80 @@ export function init() {
             const cadenceData = act.type === 'Run' ? cadence.data.map(c => c * 2) : cadence.data;
             createStreamChart('chart-cadence-distance', 'Cadencia (spm)', cadenceData, '#0074D9');
         }
+
+        // Heart Rate Range by 250m blocks
+        if (streams.heartrate && streams.heartrate.data && streams.distance && streams.distance.data) {
+            const hr = streams.heartrate.data;
+            const dist = streams.distance.data;
+            const blockSize = 250; // meters
+
+            let blocks = [];
+            let currentBlock = { min: Infinity, max: -Infinity, start: 0, end: blockSize };
+            for (let i = 0; i < dist.length; i++) {
+                if (dist[i] > currentBlock.end) {
+                    // Save current block
+                    if (currentBlock.min !== Infinity && currentBlock.max !== -Infinity) {
+                        blocks.push({ ...currentBlock });
+                    }
+                    // Start new block
+                    while (dist[i] > currentBlock.end) {
+                        currentBlock.start = currentBlock.end;
+                        currentBlock.end += blockSize;
+                    }
+                    currentBlock.min = Infinity;
+                    currentBlock.max = -Infinity;
+                }
+                if (hr[i] != null) {
+                    currentBlock.min = Math.min(currentBlock.min, hr[i]);
+                    currentBlock.max = Math.max(currentBlock.max, hr[i]);
+                }
+            }
+            // Push last block
+            if (currentBlock.min !== Infinity && currentBlock.max !== -Infinity) {
+                blocks.push({ ...currentBlock });
+            }
+
+            const labels = blocks.map(b => ((b.start + b.end) / 2000).toFixed(2) + ' km');
+            const minData = blocks.map(b => b.min);
+            const maxData = blocks.map(b => b.max);
+
+            const ctx = document.getElementById('chart-hr-range').getContext('2d');
+            if (ctx.canvas.chartInstance) ctx.canvas.chartInstance.destroy();
+            ctx.canvas.chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'HR Min',
+                            data: minData,
+                            fill: '+1',
+                            backgroundColor: 'rgba(252,82,0,0.15)',
+                            borderColor: 'rgba(252,82,0,0.5)',
+                            pointRadius: 0,
+                            borderWidth: 1,
+                            tension: 0.2
+                        },
+                        {
+                            label: 'HR Max',
+                            data: maxData,
+                            fill: false,
+                            borderColor: 'rgba(252,82,0,0.9)',
+                            pointRadius: 0,
+                            borderWidth: 1,
+                            tension: 0.2
+                        }
+                    ]
+                },
+                options: {
+                    plugins: { legend: { display: true } },
+                    scales: {
+                        x: { title: { display: true, text: 'Distance (km)' } },
+                        y: { title: { display: true, text: 'Heart Rate (bpm)' } }
+                    }
+                }
+            });
+        }
     }
 
     // --- 5. PUNTO DE ENTRADA DE LA APLICACIÓN ---
