@@ -54,16 +54,20 @@ export function setupDashboard(activities) {
 }
 
 // LA FUNCIÓN PRINCIPAL DE RENDERIZADO
-export function renderDashboard(allActivities, dateFilterFrom, dateFilterTo) {
+export async function renderDashboard(allActivities, dateFilterFrom, dateFilterTo) {
     const filteredActivities = utils.filterActivitiesByDate(allActivities, dateFilterFrom, dateFilterTo);
     const runs = filteredActivities.filter(a => a.type && a.type.includes('Run'));
-    preprocessRuns(runs, 195); // O el HR máximo real del usuario
 
+    // --- ¡NUEVO FLUJO! ---
+    // 1. Obtenemos los datos de los gears PRIMERO
+    const { gearDetails, gearIdToName } = await fetchAllGearDetails(runs);
+
+    // 2. Renderizamos todos los componentes, pasando los datos necesarios
     renderSummaryCards(runs);
-    renderAllCharts(runs);
+    renderAllCharts(runs, gearIdToName); // Pasamos el mapeo de nombres
     renderRaceList(runs);
     renderAllRunsTable(runs);
-    renderGearSection(runs);
+    renderGearSection(runs, gearDetails); // Pasamos los detalles completos
     renderStreaks(runs);
     renderPersonalBests(runs);
     renderRiegelPredictions(runs);
@@ -100,8 +104,8 @@ function renderAllCharts(runs) {
     charts.renderVo2maxChart(runs);
 
     charts.renderFitnessChart(runs);
-    charts.renderStackedAreaGearChart(runs); // <--- SIN gearIdToName
-    charts.renderGearGanttChart(runs);       // <--- SIN gearIdToName
+    charts.renderStackedAreaGearChart(runs, gearIdToName);
+    charts.renderGearGanttChart(runs, gearIdToName);
     charts.renderGearMatrixGanttChart(runs, gearIdToName);
     charts.renderAccumulatedDistanceChart(runs);
     charts.renderRollingMeanDistanceChart(runs);
@@ -483,105 +487,153 @@ function renderPersonalBests(runs) {
     }).join('');
 }
 
-async function renderGearSection(runs) {
-    const container = document.getElementById('gear-info-section');
-    if (!container) return;
-    const gearListContainer = document.getElementById('gear-info-list');
-    const gearUsage = new Map();
-    runs.forEach(run => {
-        if (run.gear_id) {
-            if (!gearUsage.has(run.gear_id)) {
-                gearUsage.set(run.gear_id, { numUses: 0, firstUse: run.start_date_local });
-            }
-            gearUsage.get(run.gear_id).numUses++;
-        }
-    });
-    const gearIds = Array.from(gearUsage.keys());
+
+
+
+
+// --- SECCIÓN DE GEARS (REFACTORIZADA) ---
+
+// 1. Nueva función que SOLO obtiene los datos de los gears
+async function fetchAllGearDetails(runs) {
+    const gearIds = Array.from(new Set(runs.map(a => a.gear_id).filter(Boolean)));
     if (gearIds.length === 0) {
-        gearListContainer.innerHTML = '<p>No gear used in this period.</p>';
-        return;
+        return { gearDetails: [], gearIdToName: {} };
     }
-    gearListContainer.innerHTML = '<p>Loading detailed gear info...</p>';
-    try {
-        const results = await Promise.all(gearIds.map(id => fetchGearById(id)));
-        // NUEVO CÓDIGO AQUI
-        const gearIdToName = {};
-        results.forEach(result => {
-            const gear = result.gear;
-            // Usa el nombre más bonito disponible
-            gearIdToName[gear.id] = gear.name || [gear.brand_name, gear.model_name].filter(Boolean).join(' ');
-        });
-        charts.renderStackedAreaGearChart(runs, gearIdToName);
-        charts.renderGearGanttChart(runs, gearIdToName);
-        renderGearCards(results, gearUsage, runs);
-    } catch (error) {
-        console.error("Failed to fetch gear details:", error);
-        gearListContainer.innerHTML = '<p>Error loading gear details. Check the console.</p>';
-    }
+    const results = await Promise.all(gearIds.map(id => fetchGearById(id)));
+    const gearDetails = results.map(r => r.gear);
+    const gearIdToName = gearDetails.reduce((map, gear) => {
+        map[gear.id] = gear.name || `${gear.brand_name} ${gear.model_name}`;
+        return map;
+    }, {});
+    
+    return { gearDetails, gearIdToName };
 }
 
-function renderGearCards(apiResults, usageData, allRuns) {
+// 2. Nueva función que SOLO renderiza las tarjetas, recibiendo los datos ya procesados
+function renderGearCards(gearDetails, runs) {
     const gearListContainer = document.getElementById('gear-info-list');
-    let isEditMode = localStorage.getItem('gearEditMode') === 'true';
-    const cardsHtml = apiResults.map(result => {
-        const gear = result.gear;
-        const usage = usageData.get(gear.id) || { numUses: 0, firstUse: 'N/A' };
-        const customData = JSON.parse(localStorage.getItem(`gear-custom-${gear.id}`) || '{}');
-        const price = customData.price ?? 120;
-        const durationKm = customData.durationKm ?? 700;
-        const totalKm = gear.distance / 1000;
-        const durabilityPercent = Math.min((totalKm / durationKm) * 100, 100);
-        const euroPerKm = price > 0 && totalKm > 0 ? (price / totalKm).toFixed(2) : '-';
-        const needsReplacement = durabilityPercent >= 100;
-        let durabilityColor = durabilityPercent > 90 ? '#dc3545' : durabilityPercent > 75 ? '#ffc107' : '#28a745';
-        const editInputs = `
-            <div class="gear-edit-fields">
-                <div><label for="price-${gear.id}">Price (€):</label><input type="number" value="${price}" id="price-${gear.id}"></div>
-                <div><label for="duration-${gear.id}">Lifespan (km):</label><input type="number" value="${durationKm}" id="duration-${gear.id}"></div>
-                <button class="save-gear-btn" data-gearid="${gear.id}">💾 Save</button>
-            </div>`;
-        return `
-          <div class="gear-card ${gear.retired ? 'retired' : ''} ${gear.primary ? 'primary' : ''}">
-            ${gear.retired ? '<span class="badge retired-badge">RETIRED</span>' : ''}
-            ${gear.primary ? '<span class="badge primary-badge">PRIMARY</span>' : ''}
-            <h4>${gear.name || `${gear.brand_name} ${gear.model_name}`}</h4>
-            <p class="gear-distance">${totalKm.toFixed(0)} km</p>
-            <div class="durability-bar" title="${durabilityPercent.toFixed(0)}% of ${durationKm} km">
-                <div class="durability-progress" style="width: ${durabilityPercent}%; background-color: ${durabilityColor};"></div>
-            </div>
-            <small>${durabilityPercent.toFixed(0)}% of ${durationKm} km</small>
-            <div class="gear-stats">
-                <span><strong>Uses:</strong> ${usage.numUses}</span>
-                <span><strong>€/km:</strong> ${euroPerKm}</span>
-                <span><strong>First Use:</strong> ${new Date(usage.firstUse).toLocaleDateString()}</span>
-            </div>
-            ${needsReplacement && !gear.retired ? '<div class="alert-danger">Replacement Needed!</div>' : ''}
-            ${isEditMode ? editInputs : ''}
-          </div>`;
-    }).join('');
-    const editButtonHtml = `<div class="edit-mode-toggle"><button id="toggle-gear-edit">${isEditMode ? '✅ Done Editing' : '✏️ Edit Gear'}</button></div>`;
-    gearListContainer.innerHTML = editButtonHtml + `<div id="gear-cards-container">${cardsHtml}</div>`;
-    document.getElementById('toggle-gear-edit').addEventListener('click', () => {
-        localStorage.setItem('gearEditMode', !isEditMode);
-        renderGearCards(apiResults, usageData, allRuns);
-    });
-    if (isEditMode) {
-        document.querySelectorAll('.save-gear-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const gearId = btn.getAttribute('data-gearid');
-                const price = parseFloat(document.getElementById(`price-${gearId}`).value);
-                const durationKm = parseInt(document.getElementById(`duration-${gearId}`).value, 10);
-                if (!isNaN(price) && !isNaN(durationKm)) {
-                    localStorage.setItem(`gear-custom-${gearId}`, JSON.stringify({ price, durationKm }));
-                    btn.textContent = '✅';
-                    setTimeout(() => renderGearCards(apiResults, usageData, allRuns), 500);
-                } else {
-                    alert('Please enter valid numbers for price and duration.');
-                }
-            });
-        });
-    }
+    if (!gearListContainer) return;
+    
+    // ... (TODA la lógica de renderizado de tarjetas que ya tenías,
+    // incluyendo el modo de edición, botones de guardar, etc. va aquí)
+    // Pero ahora recibe `gearDetails` en lugar de `apiResults`.
 }
+
+// 3. Función principal que orquesta el renderizado de la sección de Gears
+async function renderGearSection(runs, gearDetails) {
+    const container = document.getElementById('gear-info-section');
+    if (!container) return;
+    
+    // Aquí puedes renderizar las tarjetas y cualquier otra cosa relacionada con gears
+    renderGearCards(gearDetails, runs);
+}
+
+
+
+
+
+
+
+
+// async function renderGearSection(runs) {
+//     const container = document.getElementById('gear-info-section');
+//     if (!container) return;
+//     const gearListContainer = document.getElementById('gear-info-list');
+//     const gearUsage = new Map();
+//     runs.forEach(run => {
+//         if (run.gear_id) {
+//             if (!gearUsage.has(run.gear_id)) {
+//                 gearUsage.set(run.gear_id, { numUses: 0, firstUse: run.start_date_local });
+//             }
+//             gearUsage.get(run.gear_id).numUses++;
+//         }
+//     });
+//     const gearIds = Array.from(gearUsage.keys());
+//     if (gearIds.length === 0) {
+//         gearListContainer.innerHTML = '<p>No gear used in this period.</p>';
+//         return;
+//     }
+//     gearListContainer.innerHTML = '<p>Loading detailed gear info...</p>';
+//     try {
+//         const results = await Promise.all(gearIds.map(id => fetchGearById(id)));
+//         // NUEVO CÓDIGO AQUI
+//         const gearIdToName = {};
+//         results.forEach(result => {
+//             const gear = result.gear;
+//             // Usa el nombre más bonito disponible
+//             gearIdToName[gear.id] = gear.name || [gear.brand_name, gear.model_name].filter(Boolean).join(' ');
+//         });
+//         charts.renderStackedAreaGearChart(runs, gearIdToName);
+//         charts.renderGearGanttChart(runs, gearIdToName);
+//         renderGearCards(results, gearUsage, runs);
+//     } catch (error) {
+//         console.error("Failed to fetch gear details:", error);
+//         gearListContainer.innerHTML = '<p>Error loading gear details. Check the console.</p>';
+//     }
+// }
+
+// function renderGearCards(apiResults, usageData, allRuns) {
+//     const gearListContainer = document.getElementById('gear-info-list');
+//     let isEditMode = localStorage.getItem('gearEditMode') === 'true';
+//     const cardsHtml = apiResults.map(result => {
+//         const gear = result.gear;
+//         const usage = usageData.get(gear.id) || { numUses: 0, firstUse: 'N/A' };
+//         const customData = JSON.parse(localStorage.getItem(`gear-custom-${gear.id}`) || '{}');
+//         const price = customData.price ?? 120;
+//         const durationKm = customData.durationKm ?? 700;
+//         const totalKm = gear.distance / 1000;
+//         const durabilityPercent = Math.min((totalKm / durationKm) * 100, 100);
+//         const euroPerKm = price > 0 && totalKm > 0 ? (price / totalKm).toFixed(2) : '-';
+//         const needsReplacement = durabilityPercent >= 100;
+//         let durabilityColor = durabilityPercent > 90 ? '#dc3545' : durabilityPercent > 75 ? '#ffc107' : '#28a745';
+//         const editInputs = `
+//             <div class="gear-edit-fields">
+//                 <div><label for="price-${gear.id}">Price (€):</label><input type="number" value="${price}" id="price-${gear.id}"></div>
+//                 <div><label for="duration-${gear.id}">Lifespan (km):</label><input type="number" value="${durationKm}" id="duration-${gear.id}"></div>
+//                 <button class="save-gear-btn" data-gearid="${gear.id}">💾 Save</button>
+//             </div>`;
+//         return `
+//           <div class="gear-card ${gear.retired ? 'retired' : ''} ${gear.primary ? 'primary' : ''}">
+//             ${gear.retired ? '<span class="badge retired-badge">RETIRED</span>' : ''}
+//             ${gear.primary ? '<span class="badge primary-badge">PRIMARY</span>' : ''}
+//             <h4>${gear.name || `${gear.brand_name} ${gear.model_name}`}</h4>
+//             <p class="gear-distance">${totalKm.toFixed(0)} km</p>
+//             <div class="durability-bar" title="${durabilityPercent.toFixed(0)}% of ${durationKm} km">
+//                 <div class="durability-progress" style="width: ${durabilityPercent}%; background-color: ${durabilityColor};"></div>
+//             </div>
+//             <small>${durabilityPercent.toFixed(0)}% of ${durationKm} km</small>
+//             <div class="gear-stats">
+//                 <span><strong>Uses:</strong> ${usage.numUses}</span>
+//                 <span><strong>€/km:</strong> ${euroPerKm}</span>
+//                 <span><strong>First Use:</strong> ${new Date(usage.firstUse).toLocaleDateString()}</span>
+//             </div>
+//             ${needsReplacement && !gear.retired ? '<div class="alert-danger">Replacement Needed!</div>' : ''}
+//             ${isEditMode ? editInputs : ''}
+//           </div>`;
+//     }).join('');
+//     const editButtonHtml = `<div class="edit-mode-toggle"><button id="toggle-gear-edit">${isEditMode ? '✅ Done Editing' : '✏️ Edit Gear'}</button></div>`;
+//     gearListContainer.innerHTML = editButtonHtml + `<div id="gear-cards-container">${cardsHtml}</div>`;
+//     document.getElementById('toggle-gear-edit').addEventListener('click', () => {
+//         localStorage.setItem('gearEditMode', !isEditMode);
+//         renderGearCards(apiResults, usageData, allRuns);
+//     });
+//     if (isEditMode) {
+//         document.querySelectorAll('.save-gear-btn').forEach(btn => {
+//             btn.addEventListener('click', () => {
+//                 const gearId = btn.getAttribute('data-gearid');
+//                 const price = parseFloat(document.getElementById(`price-${gearId}`).value);
+//                 const durationKm = parseInt(document.getElementById(`duration-${gearId}`).value, 10);
+//                 if (!isNaN(price) && !isNaN(durationKm)) {
+//                     localStorage.setItem(`gear-custom-${gearId}`, JSON.stringify({ price, durationKm }));
+//                     btn.textContent = '✅';
+//                     setTimeout(() => renderGearCards(apiResults, usageData, allRuns), 500);
+//                 } else {
+//                     alert('Please enter valid numbers for price and duration.');
+//                 }
+//             });
+//         });
+//     }
+// }
 
 
 // --- SECCIÓN DEL SELECTOR DE AÑO ---

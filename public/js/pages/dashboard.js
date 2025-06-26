@@ -29,23 +29,29 @@ export function init() {
 
     function refreshActivities() { /* Tu lógica está bien */ }
 
+    // --- EVENT LISTENERS ---
     if (loginButton) loginButton.addEventListener('click', redirectToStrava);
     if (logoutButton) logoutButton.addEventListener('click', logout);
     if (refreshButton) refreshButton.addEventListener('click', refreshActivities);
+
     if (applyFilterButton) {
-        applyFilterButton.addEventListener('click', () => {
+        // Añadimos 'async' aquí
+        applyFilterButton.addEventListener('click', async () => { 
             dateFilterFrom = document.getElementById('date-from').value || null;
             dateFilterTo = document.getElementById('date-to').value || null;
-            renderDashboard(allActivities, dateFilterFrom, dateFilterTo);
+            // Ahora 'await' es válido
+            await renderDashboard(allActivities, dateFilterFrom, dateFilterTo); 
         });
     }
     if (resetFilterButton) {
-        resetFilterButton.addEventListener('click', () => {
+        // Añadimos 'async' aquí también
+        resetFilterButton.addEventListener('click', async () => { 
             dateFilterFrom = null;
             dateFilterTo = null;
             document.getElementById('date-from').value = '';
             document.getElementById('date-to').value = '';
-            renderDashboard(allActivities, dateFilterFrom, dateFilterTo);
+            // Y aquí 'await' también es válido
+            await renderDashboard(allActivities, dateFilterFrom, dateFilterTo);
         });
     }
 
