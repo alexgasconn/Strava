@@ -384,6 +384,77 @@ export function init() {
                 }
             });
         }
+
+        // Pace Range by 250m blocks (usando smoothPaceStreamData)
+        if (streams.distance && streams.distance.data && smoothPaceStreamData && smoothPaceStreamData.length > 0) {
+            const pace = smoothPaceStreamData;
+            const dist = streams.distance.data;
+            const blockSize = 250; // meters
+
+            let blocks = [];
+            let currentBlock = { min: Infinity, max: -Infinity, start: 0, end: blockSize };
+            for (let i = 1; i < dist.length; i++) { // Empieza en 1 porque smoothPaceStreamData empieza en 1
+                if (dist[i] > currentBlock.end) {
+                    if (currentBlock.min !== Infinity && currentBlock.max !== -Infinity) {
+                        blocks.push({ ...currentBlock });
+                    }
+                    while (dist[i] > currentBlock.end) {
+                        currentBlock.start = currentBlock.end;
+                        currentBlock.end += blockSize;
+                    }
+                    currentBlock.min = Infinity;
+                    currentBlock.max = -Infinity;
+                }
+                if (pace[i - 1] != null) {
+                    currentBlock.min = Math.min(currentBlock.min, pace[i - 1]);
+                    currentBlock.max = Math.max(currentBlock.max, pace[i - 1]);
+                }
+            }
+            if (currentBlock.min !== Infinity && currentBlock.max !== -Infinity) {
+                blocks.push({ ...currentBlock });
+            }
+
+            const labels = blocks.map(b => ((b.start + b.end) / 2000).toFixed(2) + ' km');
+            const minData = blocks.map(b => b.min);
+            const maxData = blocks.map(b => b.max);
+
+            const ctx = document.getElementById('chart-pace-range').getContext('2d');
+            if (ctx.canvas.chartInstance) ctx.canvas.chartInstance.destroy();
+            ctx.canvas.chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Pace Min',
+                            data: minData,
+                            fill: '+1',
+                            backgroundColor: 'rgba(0,116,217,0.15)',
+                            borderColor: 'rgba(0,116,217,0.5)',
+                            pointRadius: 0,
+                            borderWidth: 1,
+                            tension: 0.2
+                        },
+                        {
+                            label: 'Pace Max',
+                            data: maxData,
+                            fill: false,
+                            borderColor: 'rgba(0,116,217,0.9)',
+                            pointRadius: 0,
+                            borderWidth: 1,
+                            tension: 0.2
+                        }
+                    ]
+                },
+                options: {
+                    plugins: { legend: { display: true } },
+                    scales: {
+                        x: { title: { display: true, text: 'Distance (km)' } },
+                        y: { reverse: true, title: { display: true, text: 'Pace (min/km)' } }
+                    }
+                }
+            });
+        }
     }
 
     // --- 5. PUNTO DE ENTRADA DE LA APLICACIÓN ---
