@@ -12,6 +12,15 @@ export function init() {
     const splitsSection = document.getElementById('splits-section');
     const streamChartsDiv = document.getElementById('stream-charts');
 
+    const segmentsSection = document.getElementById('segments-section');
+    const segmentsTableDiv = document.getElementById('segments-table');
+    const bestEffortsSection = document.getElementById('best-efforts-section');
+    const bestEffortsTableDiv = document.getElementById('best-efforts-table');
+    const lapsSection = document.getElementById('laps-section');
+    const lapsTableDiv = document.getElementById('laps-table');
+    const splitsStandardSection = document.getElementById('splits-standard-section');
+    const splitsStandardTableDiv = document.getElementById('splits-standard-table');
+
     // --- 2. FUNCIONES DE UTILIDAD ---
     function formatTime(seconds) {
         if (isNaN(seconds) || seconds < 0) return '0:00';
@@ -154,6 +163,19 @@ export function init() {
                 <li><b>Achievements:</b> ${achievementCount}</li>
             </ul>
         `;
+
+        renderBestEffortsTable(act.best_efforts);
+        renderLapsTable(act.laps);
+        renderSegmentsTable(act.segment_efforts);
+
+
+        if (document.getElementById('splits-metric-table')) {
+            renderSplitsTable(act.splits_metric, document.getElementById('splits-metric-table'), splitsSection, 'km');
+        }
+        // Y ahora la nueva para millas.
+        renderSplitsTable(act.splits_standard, splitsStandardTableDiv, splitsStandardSection, 'mile');
+
+
 
         // --- Renderizado del mapa ---
         if (act.map?.summary_polyline && window.L) {
@@ -410,7 +432,7 @@ export function init() {
                 }
             }
 
-            
+
             // Aplica rolling mean al ritmo calculado
             const windowSize = 150; // Usa el mismo windowSize que para los streams
             const smoothPaceStreamData = rollingMean(pace, windowSize);
@@ -485,6 +507,203 @@ export function init() {
             });
         }
     }
+
+
+
+
+    function renderBestEffortsTable(efforts) {
+        if (!efforts || efforts.length === 0) {
+            bestEffortsSection.classList.add('hidden');
+            return;
+        }
+        bestEffortsSection.classList.remove('hidden');
+
+        const tableRows = efforts.map(e => {
+            const speed = e.distance / e.moving_time;
+            const pace = formatPace(speed);
+            const time = formatTime(e.moving_time);
+            const prRank = e.pr_rank ? `<span class="pr-badge">PR #${e.pr_rank}</span>` : '-';
+
+            return `
+            <tr>
+                <td>${e.name}</td>
+                <td>${time}</td>
+                <td>${pace} /km</td>
+                <td>${prRank}</td>
+            </tr>
+        `;
+        }).join('');
+
+        bestEffortsTableDiv.innerHTML = `
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Distance</th>
+                    <th>Time</th>
+                    <th>Pace</th>
+                    <th>Rank</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${tableRows}
+            </tbody>
+        </table>
+    `;
+    }
+
+    function renderLapsTable(laps) {
+        if (!laps || laps.length === 0) {
+            lapsSection.classList.add('hidden');
+            return;
+        }
+        lapsSection.classList.remove('hidden');
+
+        const tableRows = laps.map(lap => {
+            const distanceKm = (lap.distance / 1000).toFixed(2);
+            const pace = formatPace(lap.average_speed);
+            const time = formatTime(lap.moving_time);
+            const elevation = lap.total_elevation_gain.toFixed(1);
+            const hr = lap.average_heartrate ? Math.round(lap.average_heartrate) : '-';
+
+            return `
+            <tr>
+                <td>${lap.lap_index}</td>
+                <td>${distanceKm} km</td>
+                <td>${time}</td>
+                <td>${pace} /km</td>
+                <td>${hr} bpm</td>
+                <td>${elevation} m</td>
+            </tr>
+        `;
+        }).join('');
+
+        lapsTableDiv.innerHTML = `
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Lap</th>
+                    <th>Distance</th>
+                    <th>Time</th>
+                    <th>Pace</th>
+                    <th>Avg HR</th>
+                    <th>Elev Gain</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${tableRows}
+            </tbody>
+        </table>
+    `;
+    }
+
+    function renderSegmentsTable(efforts) {
+        if (!efforts || efforts.length === 0) {
+            segmentsSection.classList.add('hidden');
+            return;
+        }
+        segmentsSection.classList.remove('hidden');
+
+        const tableRows = efforts.map(s => {
+            const distanceKm = (s.distance / 1000).toFixed(2);
+            const pace = formatPace(s.distance / s.moving_time);
+            const time = formatTime(s.moving_time);
+
+            // Formatear PR y Logros
+            let rankHtml = '-';
+            if (s.pr_rank === 1) {
+                rankHtml = `<span class="pr-badge">PR 🏆</span>`;
+            } else if (s.pr_rank) {
+                rankHtml = `<span>#${s.pr_rank}</span>`;
+            }
+
+            let achievementHtml = '';
+            if (s.achievements && s.achievements.length > 0) {
+                achievementHtml = `<span class="achievement-icon" title="${s.achievements.length} achievements">🏅</span>`;
+            }
+
+            return `
+            <tr>
+                <td>${s.name} ${achievementHtml}</td>
+                <td>${distanceKm} km</td>
+                <td>${time}</td>
+                <td>${pace} /km</td>
+                <td>${rankHtml}</td>
+            </tr>
+        `;
+        }).join('');
+
+        segmentsTableDiv.innerHTML = `
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Segment Name</th>
+                    <th>Distance</th>
+                    <th>Time</th>
+                    <th>Pace</th>
+                    <th>Rank</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${tableRows}
+            </tbody>
+        </table>
+    `;
+    }
+
+    // Función genérica para renderizar tablas de splits (métrica y estándar)
+    function renderSplitsTable(splits, container, section, unitLabel) {
+        if (!splits || splits.length === 0) {
+            section.classList.add('hidden');
+            return;
+        }
+        section.classList.remove('hidden');
+
+        // Filtramos el último parcial si es muy corto (suele ser el resto)
+        const filteredSplits = splits.filter(s => s.distance > 100);
+
+        const tableRows = filteredSplits.map(s => {
+            const distance = (s.distance / (unitLabel === 'km' ? 1000 : 1609.34)).toFixed(2);
+            const pace = formatPace(s.average_speed);
+            const time = formatTime(s.moving_time);
+            const hr = s.average_heartrate ? Math.round(s.average_heartrate) : '-';
+            const elevation = s.elevation_difference.toFixed(1);
+
+            return `
+            <tr>
+                <td>${s.split}</td>
+                <td>${time}</td>
+                <td>${pace} /${unitLabel}</td>
+                <td>${hr} bpm</td>
+                <td>${elevation > 0 ? '+' : ''}${elevation} m</td>
+            </tr>
+        `;
+        }).join('');
+
+        container.innerHTML = `
+         <table class="data-table">
+            <thead>
+                <tr>
+                    <th>${unitLabel.charAt(0).toUpperCase() + unitLabel.slice(1)}</th>
+                    <th>Time</th>
+                    <th>Pace</th>
+                    <th>Avg HR</th>
+                    <th>Elev Diff</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${tableRows}
+            </tbody>
+        </table>
+    `;
+    }
+
+
+
+
+
+
+
+
 
     // --- 5. PUNTO DE ENTRADA DE LA APLICACIÓN ---
     async function main() {

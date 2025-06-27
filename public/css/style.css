@@ -560,3 +560,58 @@ main {
         display: none !important;
     }
 }
+
+
+
+/* Estilos para las nuevas secciones y tablas */
+.data-section {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.data-section h2 {
+    margin-bottom: 15px;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9em;
+}
+
+.data-table th, .data-table td {
+    padding: 10px 8px;
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.data-table thead th {
+    background-color: #f7f7f7;
+    font-weight: bold;
+    text-align: left;
+}
+
+.data-table tbody tr:hover {
+    background-color: #fdf5f0; /* Un color naranja muy claro al pasar el ratón */
+}
+
+/* Estilos para iconos y badges */
+.pr-badge {
+    display: inline-block;
+    background-color: #FC5200;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
+.achievement-icon {
+    color: #ffd700; /* Color dorado */
+    font-size: 1.1em;
+}
+
+.hidden {
+    display: none;
+}
