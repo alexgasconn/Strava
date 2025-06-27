@@ -412,7 +412,7 @@ export function init() {
 
             
             // Aplica rolling mean al ritmo calculado
-            const windowSize = 100; // Usa el mismo windowSize que para los streams
+            const windowSize = 150; // Usa el mismo windowSize que para los streams
             const smoothPaceStreamData = rollingMean(pace, windowSize);
 
 
