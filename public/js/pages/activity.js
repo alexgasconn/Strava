@@ -251,7 +251,7 @@ export function init() {
 
         // 1. Altitud vs Distancia
         if (altitude && altitude.data) {
-            createStreamChart('chart-altitude', 'Altitud (m)', altitude.data, '#888');
+            createStreamChart('chart-altitude', 'Altitud (m)', altitude.data, '#888', true);
         }
 
         // 2. Ritmo vs Distancia (Cálculo corregido)
@@ -268,7 +268,7 @@ export function init() {
                 }
             }
             // Aplica rolling mean al ritmo calculado
-            const windowSize = 100; // Usa el mismo windowSize que para los streams
+            const windowSize = 150; // Usa el mismo windowSize que para los streams
             const smoothPaceStreamData = rollingMean(paceStreamData, windowSize);
 
             const paceLabels = distLabels.slice(1);
@@ -293,7 +293,7 @@ export function init() {
                     plugins: { legend: { display: false } },
                     scales: {
                         x: { title: { display: true, text: 'Distancia (km)' } },
-                        y: { reverse: true, title: { display: true, text: 'Ritmo (min/km)' } }
+                        y: { reverse: false, title: { display: true, text: 'Ritmo (min/km)' } }
                     }
                 }
             });
@@ -479,7 +479,7 @@ export function init() {
                     plugins: { legend: { display: true } },
                     scales: {
                         x: { title: { display: true, text: 'Distance (km)' } },
-                        y: { reverse: true, title: { display: true, text: 'Pace (min/km)' } }
+                        y: { reverse: false, title: { display: true, text: 'Pace (min/km)' } }
                     }
                 }
             });
