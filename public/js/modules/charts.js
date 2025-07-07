@@ -555,6 +555,101 @@ export function renderGearGanttChart(runs, gearIdToName = {}) {
     });
 }
 
+export function renderGearMatrixGantt(runs, gearIdToName = {}) {
+    const container = document.getElementById('gear-matrix-gantt');
+    if (!container) {
+        console.error("Container 'gear-matrix-gantt' not found.");
+        return;
+    }
+
+    if (!runs || runs.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #8c8c8c;">No activity data for this period.</p>';
+        return;
+    }
+
+    // Agregar datos por gear y mes
+    const gearMonthData = runs.reduce((acc, act) => {
+        if (!act.gear_id) return acc;
+        const month = act.start_date_local.substring(0, 7);
+        if (!acc[act.gear_id]) acc[act.gear_id] = {};
+        acc[act.gear_id][month] = (acc[act.gear_id][month] || 0) + (act.distance || 0) / 1000;
+        return acc;
+    }, {});
+
+    // Obtener todos los meses
+    const allMonths = [...new Set(runs.map(act => act.start_date_local.substring(0, 7)))].sort();
+    const allGears = Object.keys(gearMonthData);
+
+    if (allGears.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #8c8c8c;">No gear data available.</p>';
+        return;
+    }
+
+    // Crear la matriz
+    container.innerHTML = '';
+    
+    const table = document.createElement('table');
+    table.style.cssText = `
+        width: 100%;
+        border-collapse: collapse;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-size: 13px;
+    `;
+
+    // Header con los meses
+    const headerRow = document.createElement('tr');
+    headerRow.innerHTML = '<th style="padding: 8px; border: 1px solid #ddd; background: #f5f5f5; text-align: left;">Gear</th>';
+    allMonths.forEach(month => {
+        const [year, monthNum] = month.split('-');
+        const monthName = new Date(year, monthNum - 1).toLocaleDateString('en', { month: 'short' });
+        headerRow.innerHTML += `<th style="padding: 8px; border: 1px solid #ddd; background: #f5f5f5; text-align: center; min-width: 50px;">${monthName}<br/>'${year.slice(-2)}</th>`;
+    });
+    table.appendChild(headerRow);
+
+    // Calcular valores máximos para normalizar colores
+    const allValues = Object.values(gearMonthData).flatMap(months => Object.values(months));
+    const maxValue = Math.max(...allValues);
+
+    // Filas para cada gear
+    allGears.forEach(gearId => {
+        const row = document.createElement('tr');
+        
+        // Columna del gear
+        const gearCell = document.createElement('td');
+        gearCell.style.cssText = 'padding: 8px; border: 1px solid #ddd; font-weight: 500;';
+        gearCell.textContent = gearIdToName[gearId] || gearId;
+        row.appendChild(gearCell);
+
+        // Columnas para cada mes
+        allMonths.forEach(month => {
+            const cell = document.createElement('td');
+            const value = gearMonthData[gearId][month] || 0;
+            
+            // Calcular intensidad del color
+            const intensity = maxValue > 0 ? value / maxValue : 0;
+            const alpha = Math.max(0.1, intensity);
+            
+            cell.style.cssText = `
+                padding: 8px;
+                border: 1px solid #ddd;
+                text-align: center;
+                background: rgba(34, 197, 94, ${alpha});
+                color: ${intensity > 0.5 ? 'white' : 'black'};
+                font-weight: ${value > 0 ? 'bold' : 'normal'};
+            `;
+            
+            cell.textContent = value > 0 ? value.toFixed(1) : '';
+            cell.title = `${gearIdToName[gearId] || gearId} - ${month}: ${value.toFixed(1)} km`;
+            
+            row.appendChild(cell);
+        });
+
+        table.appendChild(row);
+    });
+
+    container.appendChild(table);
+}
+
 export function renderDistanceVsElevationChart(runs) {
     const data = runs.map(r => ({
         x: r.distance / 1000,
