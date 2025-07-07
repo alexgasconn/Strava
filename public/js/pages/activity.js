@@ -301,7 +301,7 @@ export function init() {
                 plugins: { legend: { display: false } },
                 scales: {
                 x: { title: { display: true, text: 'Distancia (km)' } },
-                y: { reverse: true, title: { display: true, text: 'Altitud (m)' } }
+                y: { reverse: false, title: { display: true, text: 'Altitud (m)' } }
                 }
             }
             });
