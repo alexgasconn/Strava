@@ -29,52 +29,28 @@ export function renderConsistencyChart(runs) {
         return;
     }
 
-    // 1. Manejo del caso sin datos: Si no hay carreras, muestra un mensaje y termina.
     if (!runs || runs.length === 0) {
         heatmapContainer.innerHTML = '<p style="text-align: center; color: #8c8c8c;">No activity data for this period.</p>';
         return;
     }
     
-    // 2. Agregación de datos: Sumamos la distancia total (en km) por día.
+    // Agregación de datos: Sumamos la distancia total (en km) por día
     const aggregatedData = runs.reduce((acc, act) => {
         const date = act.start_date_local.substring(0, 10);
         acc[date] = (acc[date] || 0) + (act.distance ? act.distance / 1000 : 0);
         return acc;
     }, {});
     
-    // 3. Configuración del calendario (CalHeatmap)
     const cal = new CalHeatmap();
-    heatmapContainer.innerHTML = ''; // Limpiamos el contenedor antes de dibujar
+    heatmapContainer.innerHTML = '';
 
-    // 4. Determinamos el rango de fechas dinámicamente
+    // Determinamos el rango de fechas
     const lastDateStr = runs.reduce((max, act) => act.start_date_local > max ? act.start_date_local : max, runs[0].start_date_local);
     const lastDate = new Date(lastDateStr);
-
-    // La fecha de inicio del calendario será 365 días ANTES de la última actividad
     const startDate = new Date(lastDate);
     startDate.setDate(startDate.getDate() - 365);
 
-    // 5. Calculamos los umbrales de color en función de los datos (percentiles)
-    const kmValues = Object.values(aggregatedData).filter(v => v > 0).sort((a, b) => a - b);
-    // Si hay pocos datos, usamos valores fijos razonables
-    const thresholds = kmValues.length >= 5
-        ? [
-            kmValues[Math.floor(0.2 * kmValues.length)],
-            kmValues[Math.floor(0.4 * kmValues.length)],
-            kmValues[Math.floor(0.6 * kmValues.length)],
-            kmValues[Math.floor(0.8 * kmValues.length)]
-        ]
-        : [2, 5, 10, 15];
-
-    // 6. Preparamos datos para CalHeatmap con información enriquecida
-    const heatmapData = Object.entries(aggregatedData).map(([date, dayData]) => ({
-        date,
-        value: dayData.distance,
-        count: dayData.count,
-        types: Array.from(dayData.types).join(', ')
-    }));
-
-    // 7. Renderizado del heatmap mejorado
+    // Renderizado del heatmap
     cal.paint({
         itemSelector: "#cal-heatmap",
         domain: { 
@@ -87,71 +63,40 @@ export function renderConsistencyChart(runs) {
                     return `${month} '${year}`;
                 }, 
                 position: "bottom" 
-            },
-            padding: [0, 10, 0, 10]
+            }
         },
         subDomain: { 
             type: "ghDay", 
             radius: 2, 
             width: 11, 
             height: 11,
-            gutter: 4,
-            label: (timestamp) => {
-                const date = new Date(timestamp);
-                return date.getDate();
-            }
+            gutter: 4
         },
-        range: 12, // Muestra 12 meses
+        range: 12,
         data: { 
-            source: heatmapData, 
+            source: Object.entries(aggregatedData).map(([date, value]) => ({ date, value })), 
             x: 'date', 
             y: 'value' 
         },
         scale: { 
             color: { 
-                type: 'threshold', 
-                range: ['#ebedf0', '#c6e48b', '#7bc96f', '#239a3b', '#196127'], 
-                domain: thresholds
+                type: 'linear', 
+                range: ['#ebedf0', '#c6e48b', '#7bc96f', '#239a3b', '#196127']
             } 
         },
         date: { 
             start: startDate
-        },
-        // Tooltip enriquecido con información detallada
-        tooltip: {
-            text: function(date, value, dayjsDate) {
-                const dateStr = dayjsDate.format('YYYY-MM-DD');
-                const dayData = aggregatedData[dateStr];
-                
-                if (!dayData) {
-                    return `${dayjsDate.format('dddd, MMM D, YYYY')}<br/>No activities`;
-                }
-                
-                const dayName = dayjsDate.format('dddd');
-                const weekOfYear = Math.ceil(dayjsDate.dayOfYear() / 7);
-                
-                let tooltipText = `<strong>${dayName}, ${dayjsDate.format('MMM D, YYYY')}</strong><br/>`;
-                tooltipText += `<strong>${dayData.distance.toFixed(1)} km</strong> in ${dayData.count} activit${dayData.count === 1 ? 'y' : 'ies'}<br/>`;
-                
-                if (dayData.types.size > 0) {
-                    tooltipText += `Types: ${Array.from(dayData.types).join(', ')}<br/>`;
-                }
-                
-                tooltipText += `Week ${weekOfYear} of ${dayjsDate.format('YYYY')}`;
-                
-                return tooltipText;
-            }
         }
     });
 
-    // 8. Añadimos etiquetas de días de la semana
+    // Añadimos etiquetas de días de la semana
     setTimeout(() => {
         const calElement = document.querySelector('#cal-heatmap .cal-heatmap-container');
         if (calElement) {
             const weekdayLabels = document.createElement('div');
             weekdayLabels.style.cssText = `
                 position: absolute;
-                left: -40px;
+                left: -25px;
                 top: 20px;
                 font-size: 11px;
                 color: #666;
@@ -169,37 +114,6 @@ export function renderConsistencyChart(runs) {
             calElement.style.position = 'relative';
             calElement.appendChild(weekdayLabels);
         }
-    }, 100);
-
-    // 9. Añadimos leyenda mejorada
-    setTimeout(() => {
-        const legend = document.createElement('div');
-        legend.style.cssText = `
-            margin-top: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            font-size: 12px;
-            color: #666;
-        `;
-        
-        legend.innerHTML = `
-            <span>Less</span>
-            <div style="display: flex; gap: 2px;">
-                <div style="width: 11px; height: 11px; background: #ebedf0; border-radius: 2px;"></div>
-                <div style="width: 11px; height: 11px; background: #c6e48b; border-radius: 2px;"></div>
-                <div style="width: 11px; height: 11px; background: #7bc96f; border-radius: 2px;"></div>
-                <div style="width: 11px; height: 11px; background: #239a3b; border-radius: 2px;"></div>
-                <div style="width: 11px; height: 11px; background: #196127; border-radius: 2px;"></div>
-            </div>
-            <span>More</span>
-            <span style="margin-left: 20px; font-size: 11px;">
-                Thresholds: ${thresholds.map(t => t.toFixed(1)).join(', ')} km
-            </span>
-        `;
-        
-        heatmapContainer.appendChild(legend);
     }, 100);
 }
 
