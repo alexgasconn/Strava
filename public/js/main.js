@@ -14,7 +14,7 @@ function initPage() {
         });
     }
     // Aquí puedes añadir más 'else if' para las páginas de deportes si tienen JS
-    else if (path.includes('/sports/running.html')) {
+    else if (path.includes('/sports/run.html')) {
         console.log('Loading running sports script...');
         import('./pages/sports/running.js').then(module => {
             if (module.init) module.init();
