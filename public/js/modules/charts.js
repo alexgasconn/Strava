@@ -35,21 +35,10 @@ export function renderConsistencyChart(runs) {
         return;
     }
     
-    // 2. Agregación de datos enriquecida: Sumamos distancia, contamos actividades y tipos por día
+    // 2. Agregación de datos: Sumamos la distancia total (en km) por día.
     const aggregatedData = runs.reduce((acc, act) => {
         const date = act.start_date_local.substring(0, 10);
-        if (!acc[date]) {
-            acc[date] = {
-                distance: 0,
-                count: 0,
-                types: new Set(),
-                activities: []
-            };
-        }
-        acc[date].distance += act.distance ? act.distance / 1000 : 0;
-        acc[date].count += 1;
-        if (act.type) acc[date].types.add(act.type);
-        acc[date].activities.push(act);
+        acc[date] = (acc[date] || 0) + (act.distance ? act.distance / 1000 : 0);
         return acc;
     }, {});
     
@@ -66,11 +55,7 @@ export function renderConsistencyChart(runs) {
     startDate.setDate(startDate.getDate() - 365);
 
     // 5. Calculamos los umbrales de color en función de los datos (percentiles)
-    const kmValues = Object.values(aggregatedData)
-        .map(day => day.distance)
-        .filter(v => v > 0)
-        .sort((a, b) => a - b);
-    
+    const kmValues = Object.values(aggregatedData).filter(v => v > 0).sort((a, b) => a - b);
     // Si hay pocos datos, usamos valores fijos razonables
     const thresholds = kmValues.length >= 5
         ? [
