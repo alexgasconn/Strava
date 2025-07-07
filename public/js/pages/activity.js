@@ -129,6 +129,12 @@ export function init() {
         const hrAvg = act.average_heartrate ? Math.round(act.average_heartrate) : '-';
         const hrMax = act.max_heartrate ? Math.round(act.max_heartrate) : '-';
 
+        // Elevation per km
+        let elevPerKm = '-';
+        if (act.total_elevation_gain !== undefined && act.distance > 0) {
+            elevPerKm = (act.total_elevation_gain / (act.distance / 1000)).toFixed(1) + ' m/km';
+        }
+
         // --- Advanced stats ---
         const moveRatio = act.elapsed_time ? (act.moving_time / act.elapsed_time).toFixed(2) : '-';
         const effort = act.suffer_score !== undefined ? act.suffer_score : (act.perceived_exertion !== undefined ? act.perceived_exertion : '-');
@@ -161,6 +167,7 @@ export function init() {
                 <li><b>PRs:</b> ${prCount}</li>
                 <li><b>Athlete Count:</b> ${athleteCount}</li>
                 <li><b>Achievements:</b> ${achievementCount}</li>
+                <li><b>Elev. per km:</b> ${elevPerKm}</li>
             </ul>
         `;
 
@@ -273,7 +280,31 @@ export function init() {
 
         // 1. Altitud vs Distancia
         if (altitude && altitude.data) {
-            createStreamChart('chart-altitude', 'Altitud (m)', altitude.data, '#888', true);
+            const ctx = document.getElementById('chart-altitude').getContext('2d');
+            if (ctx.canvas.chartInstance) ctx.canvas.chartInstance.destroy();
+            ctx.canvas.chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: distLabels,
+                datasets: [{
+                label: 'Altitud (m)',
+                data: altitude.data,
+                borderColor: '#888',
+                backgroundColor: 'rgba(136,136,136,0.08)',
+                fill: true,
+                pointRadius: 0,
+                borderWidth: 2,
+                tension: 0.3
+                }]
+            },
+            options: {
+                plugins: { legend: { display: false } },
+                scales: {
+                x: { title: { display: true, text: 'Distancia (km)' } },
+                y: { reverse: true, title: { display: true, text: 'Altitud (m)' } }
+                }
+            }
+            });
         }
 
         // 2. Ritmo vs Distancia (Cálculo corregido)
