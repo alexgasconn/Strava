@@ -321,7 +321,7 @@ export function init() {
                 }
             }
             // Aplica rolling mean al ritmo calculado
-            const windowSize = 150; // Usa el mismo windowSize que para los streams
+            const windowSize = 200; // Usa el mismo windowSize que para los streams
             const smoothPaceStreamData = rollingMean(paceStreamData, windowSize);
 
             const paceLabels = distLabels.slice(1);
@@ -465,7 +465,7 @@ export function init() {
 
 
             // Aplica rolling mean al ritmo calculado
-            const windowSize = 150; // Usa el mismo windowSize que para los streams
+            const windowSize = 200; // Usa el mismo windowSize que para los streams
             const smoothPaceStreamData = rollingMean(pace, windowSize);
 
 
@@ -757,7 +757,7 @@ export function init() {
             ]);
 
             // --- AQUI aplica rolling mean ---
-            const windowSize = 100; // Puedes ajustar el tamaño de la ventana
+            const windowSize = 150; // Puedes ajustar el tamaño de la ventana
             ['heartrate', 'altitude', 'cadence'].forEach(key => {
                 if (streamData[key] && Array.isArray(streamData[key].data)) {
                     streamData[key].data = rollingMean(streamData[key].data, windowSize);
@@ -791,7 +791,7 @@ export function init() {
         return vo2max.toFixed(1);
     }
 
-    function rollingMean(arr, windowSize = 25) {
+    function rollingMean(arr, windowSize = 115) {
         if (!Array.isArray(arr) || arr.length === 0) return [];
         const result = [];
         for (let i = 0; i < arr.length; i++) {
