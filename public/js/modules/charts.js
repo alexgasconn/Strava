@@ -471,8 +471,8 @@ export function renderGearGanttChart(runs, gearIdToName = {}) {
         if (!a.gear_id) return acc;
         const gearKey = a.gear_id;
         const month = a.start_date_local.substring(0, 7);
-        if (!acc[month]) acc[month] = {};
-        acc[month][gearKey] = (acc[month][gearKey] || 0) + a.distance / 1000;
+        if (!acc[gearKey]) acc[gearKey] = {};
+        acc[gearKey][month] = (acc[gearKey][month] || 0) + a.distance / 1000;
         return acc;
     }, {});
 
@@ -480,6 +480,7 @@ export function renderGearGanttChart(runs, gearIdToName = {}) {
     const monthsSorted = runs.map(a => a.start_date_local.substring(0, 7)).sort();
     const firstMonth = monthsSorted[0];
     const lastMonth = monthsSorted[monthsSorted.length - 1];
+    
     function getMonthRange(start, end) {
         const result = [];
         let [sy, sm] = start.split('-').map(Number);
@@ -499,21 +500,40 @@ export function renderGearGanttChart(runs, gearIdToName = {}) {
     // 3. Get all gears
     const allGears = Array.from(new Set(runs.map(a => a.gear_id).filter(Boolean)));
 
-    // 4. Build datasets, filling missing months with 0
-    const datasets = allGears.map((gearId, idx) => ({
-        label: gearIdToName[gearId] || gearId,
-        data: allMonths.map(month => gearMonthKm[month]?.[gearId] || 0),
-        backgroundColor: `hsl(${(idx * 60)}, 70%, 60%)`
+    // 4. Build datasets - one dataset per month (columns), with gears as labels (rows)
+    const datasets = allMonths.map((month, idx) => ({
+        label: month,
+        data: allGears.map(gearId => gearMonthKm[gearId]?.[month] || 0),
+        backgroundColor: `hsl(${(idx * 360 / allMonths.length)}, 70%, 60%)`
     }));
 
     createChart('gear-gantt-chart', {
         type: 'bar',
-        data: { labels: allMonths, datasets },
+        data: { 
+            labels: allGears.map(gearId => gearIdToName[gearId] || gearId), // Gears as row labels
+            datasets 
+        },
         options: {
-            indexAxis: 'y',
+            indexAxis: 'y', // Horizontal bars (gears on Y-axis)
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: true,
+                    text: 'Gear Usage Over Time (Gantt Chart)'
+                }
+            },
             scales: {
-                x: { stacked: true, title: { display: true, text: 'Distance (km)' } },
-                y: { stacked: true, title: { display: true, text: 'Year-Month' } }
+                x: { 
+                    stacked: true, 
+                    title: { display: true, text: 'Distance (km)' } 
+                },
+                y: { 
+                    stacked: true, 
+                    title: { display: true, text: 'Gear' } 
+                }
             }
         }
     });
