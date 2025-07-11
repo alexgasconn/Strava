@@ -52,20 +52,88 @@ export function setupDashboard(activities) {
     setupExportButtons(activities);
 }
 
-// LA FUNCIÓN PRINCIPAL DE RENDERIZADO
-export function renderDashboard(allActivities, dateFilterFrom, dateFilterTo) {
-    const filteredActivities = utils.filterActivitiesByDate(allActivities, dateFilterFrom, dateFilterTo);
-    const runs = filteredActivities.filter(a => a.type && a.type.includes('Run'));
+// // LA FUNCIÓN PRINCIPAL DE RENDERIZADO
+// export function renderDashboard(allActivities, dateFilterFrom, dateFilterTo) {
+//     const filteredActivities = utils.filterActivitiesByDate(allActivities, dateFilterFrom, dateFilterTo);
+//     const runs = filteredActivities.filter(a => a.type && a.type.includes('Run'));
 
-    renderSummaryCards(runs);
-    renderAllCharts(runs);
+//     renderSummaryCards(runs);
+//     renderAllCharts(runs);
+//     renderRaceList(runs);
+//     renderAllRunsTable(runs);
+//     renderGearSection(runs);
+//     renderStreaks(runs);
+//     renderPersonalBests(runs);
+//     renderRiegelPredictions(runs);
+// }
+
+
+// ELIMINA la antigua función renderDashboard y añade estas dos:
+
+// 1. FUNCIÓN PARA EL PANEL GENERAL
+export async function renderGeneralDashboard(allActivities, from, to) {
+    const filtered = utils.filterActivitiesByDate(allActivities, from, to);
+    
+    // Tarjetas de resumen con datos de TODAS las actividades
+    const summaryContainer = document.getElementById('summary-cards');
+    if (summaryContainer) {
+        summaryContainer.innerHTML = `
+            <div class="card"><h3>Total Activities</h3><p>${filtered.length}</p></div>
+            <div class="card"><h3>Total Distance</h3><p>${(filtered.reduce((s, a) => s + a.distance, 0) / 1000).toFixed(0)} km</p></div>
+            <div class="card"><h3>Total Time</h3><p>${(filtered.reduce((s, a) => s + a.moving_time, 0) / 3600).toFixed(1)} h</p></div>
+            <div class="card"><h3>Total Elevation</h3><p>${filtered.reduce((s, a) => s + a.total_elevation_gain, 0).toLocaleString()} m</p></div>
+        `;
+    }
+
+    // Gráficos generales
+    charts.renderConsistencyChart(filtered);
+    charts.renderRunsHeatmap(filtered); // Este muestra un mapa de calor de todas las actividades
+}
+
+// 2. FUNCIÓN PARA EL PANEL DE RUNNING
+export async function renderRunningDashboard(allRuns, from, to) {
+    const runs = utils.filterActivitiesByDate(allRuns, from, to);
+    
+    const { gearDetails, gearIdToName } = await fetchAllGearDetails(runs);
+
+    renderRunSummaryCards(runs); // Tarjetas de resumen solo para running
+    
+    // Llama a todas las funciones de gráficos específicos para running
+    charts.renderConsistencyChart(runs);
+    charts.renderActivityTypeChart(runs);
+    charts.renderMonthlyDistanceChart(runs);
+    charts.renderPaceVsDistanceChart(runs);
+    // ...y todas las demás llamadas a gráficos de charts.js
+
+    // Llama a todas las funciones de renderizado de tablas y datos de running
     renderRaceList(runs);
     renderAllRunsTable(runs);
-    renderGearSection(runs);
+    renderGearSection(runs, gearDetails);
     renderStreaks(runs);
     renderPersonalBests(runs);
     renderRiegelPredictions(runs);
 }
+
+// --- Asegúrate de que las funciones auxiliares (como renderRaceList, renderStreaks, etc.)
+// --- sigan existiendo en ui.js, ahora serán llamadas por renderRunningDashboard.
+// --- También necesitarás esta nueva función de ayuda para las tarjetas de resumen de running:
+
+function renderRunSummaryCards(runs) {
+    // ... (código para mostrar tarjetas de resumen de running como total de carreras, ritmo promedio, etc.)
+     document.getElementById('summary-cards').innerHTML = `
+        <div class="card"><h3>Runs</h3><p>${runs.length}</p></div>
+        <div class="card"><h3>Total Distance</h3><p>${(runs.reduce((s, a) => s + a.distance, 0) / 1000).toFixed(0)} km</p></div>
+        <div class="card"><h3>Total Time</h3><p>${(runs.reduce((s, a) => s + a.moving_time, 0) / 3600).toFixed(1)} h</p></div>
+    `;
+}
+
+// (El resto de ui.js con funciones como fetchAllGearDetails, renderGearCards, etc., se mantiene)
+
+
+
+
+
+
 
 function renderSummaryCards(runs) {
     const summaryContainer = document.getElementById('summary-cards');
