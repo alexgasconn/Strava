@@ -1,7 +1,7 @@
 // /public/js/pages/dashboard.js
 import { redirectToStrava, logout, handleAuth } from '../modules/auth.js';
 import { fetchAllActivities } from '../modules/api.js';
-import { setupDashboard, renderDashboard, renderGeneralDashboard, showLoading, hideLoading, handleError } from '../modules/ui.js';
+import { setupDashboard, renderGeneralDashboard, showLoading, hideLoading, handleError } from '../modules/ui.js';
 
 export function init() {
     let allActivities = [];
