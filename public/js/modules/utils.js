@@ -89,3 +89,38 @@ export function estimateVO2max(act, userMaxHr = 195) {
 
 // ELIMINADO: La función calculateStreaks la hemos movido por completo a ui.js
 // porque mezclaba cálculo y renderizado. Mantener este placeholder causaba confusión.
+
+
+// ... (al final del archivo, junto a las otras funciones exportadas)
+
+/**
+ * Decodifica una polilínea encriptada de Google/Strava a un array de coordenadas [lat, lng].
+ * @param {string} str La polilínea encriptada.
+ * @returns {Array<[number, number]>} Un array de coordenadas.
+ */
+export function decodePolyline(str) {
+    let index = 0, lat = 0, lng = 0, coordinates = [];
+    while (index < str.length) {
+        let b, shift = 0, result = 0;
+        do {
+            b = str.charCodeAt(index++) - 63;
+            result |= (b & 0x1f) << shift;
+            shift += 5;
+        } while (b >= 0x20);
+        const dlat = (result & 1) ? ~(result >> 1) : (result >> 1);
+        lat += dlat;
+
+        shift = 0;
+        result = 0;
+        do {
+            b = str.charCodeAt(index++) - 63;
+            result |= (b & 0x1f) << shift;
+            shift += 5;
+        } while (b >= 0x20);
+        const dlng = (result & 1) ? ~(result >> 1) : (result >> 1);
+        lng += dlng;
+
+        coordinates.push([lat / 1e5, lng / 1e5]);
+    }
+    return coordinates;
+}

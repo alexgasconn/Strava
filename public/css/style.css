@@ -615,3 +615,11 @@ main {
 .hidden {
     display: none;
 }
+/* --- Estilos para la página de Heatmap Global --- */
+#global-heatmap-map {
+    height: 80vh; /* Ocupa el 80% de la altura de la ventana */
+    width: 100%;
+    margin-top: 1.5rem;
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow);
+}

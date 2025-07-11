@@ -2,13 +2,34 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Heatmap</title>
-    <link rel="stylesheet" href="../css/style.css">
+    <title>Global Activity Heatmap</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Carga de librerías y CSS -->
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
 </head>
 <body>
     <div class="container">
-        <h1>🔥 Heatmap</h1>
-        <p>TBD SAMPLE</p>
+        <div id="app-section">
+            <header>
+                <h1>🔥 Global Activity Map</h1>
+                <a href="/index.html"><button>Back to Main Dashboard</button></a>
+            </header>
+            <main>
+                <p>Esta es una visualización de todas tus rutas de actividad combinadas.</p>
+                <!-- Contenedor donde se renderizará el mapa -->
+                <div id="global-heatmap-map"></div>
+            </main>
+        </div>
+        <!-- Pantalla de Carga -->
+        <div id="loading-overlay" class="hidden">
+            <div class="spinner"></div>
+            <p id="loading-message"></p>
+        </div>
     </div>
+    
+    <!-- El cargador universal llamará a heatmap.js -->
+    <script type="module" src="/js/main.js"></script>
 </body>
 </html>
