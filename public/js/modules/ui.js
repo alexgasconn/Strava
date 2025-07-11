@@ -130,7 +130,44 @@ function renderRunSummaryCards(runs) {
 // (El resto de ui.js con funciones como fetchAllGearDetails, renderGearCards, etc., se mantiene)
 
 
+// En ui.js
 
+// ... (otras funciones como setupDashboard, renderGeneralDashboard, etc.)
+
+export async function renderRunningDashboard(allRuns, from, to) {
+    const runs = utils.filterActivitiesByDate(allRuns, from, to);
+    
+    // 1. Obtiene detalles del gear
+    const { gearDetails, gearIdToName } = await fetchAllGearDetails(runs);
+
+    // 2. Renderiza todo lo demás
+    renderRunSummaryCards(runs); // Tarjetas de resumen
+    
+    // Todas las tablas y datos
+    renderRaceList(runs);
+    renderAllRunsTable(runs);
+    renderStreaks(runs);
+    renderPersonalBests(runs);
+    renderRiegelPredictions(runs);
+    renderGearSection(runs, gearDetails); // ¡Importante! Pasa los detalles del gear
+
+    // Todos los gráficos
+    charts.renderConsistencyChart(runs);
+    charts.renderActivityTypeChart(runs);
+    charts.renderMonthlyDistanceChart(runs);
+    charts.renderPaceVsDistanceChart(runs);
+    charts.renderDistanceHistogram(runs);
+    charts.renderVo2maxChart(runs);
+    charts.renderFitnessChart(runs);
+    charts.renderDistanceVsElevationChart(runs);
+    charts.renderElevationHistogram(runs);
+    charts.renderAccumulatedDistanceChart(runs);
+    charts.renderRollingMeanDistanceChart(runs);
+    charts.renderStackedAreaGearChart(runs, gearIdToName); // Pasa el mapeo de nombres
+    charts.renderGearMatrixGantt(runs, gearIdToName);   // Pasa el mapeo de nombres
+}
+
+// ... (asegúrate de que el resto de funciones como renderRaceList, fetchAllGearDetails, etc., estén presentes en el archivo)
 
 
 

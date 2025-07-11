@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <title>Running Dashboard</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Carga las mismas librerías y CSS que index.html -->
+    <!-- Carga todas las librerías y CSS -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/cal-heatmap@4.2.2/dist/cal-heatmap.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -16,15 +15,15 @@
     <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
 </head>
-
 <body>
     <div class="container">
-        <!-- La sección de la app se mostrará después del login -->
+        <!-- ESTOS ELEMENTOS SON NECESARIOS PARA setupDashboard -->
+        <div id="login-section" class="hidden"></div>
         <div id="app-section">
             <header>
                 <h1 id="athlete-name">Running Dashboard</h1>
-                <!-- Filtros de fecha -->
-                <div id="date-filter" style="margin-bottom:1em;">
+                <!-- Filtros de fecha (NECESARIOS) -->
+                 <div id="date-filter" style="margin-bottom:1em;">
                     <label>From: <input type="date" id="date-from"></label>
                     <label>To: <input type="date" id="date-to"></label>
                     <button id="apply-date-filter">Apply</button>
@@ -33,82 +32,59 @@
                 <a href="/index.html"><button>Back to Main Dashboard</button></a>
             </header>
 
-            <div id="main-tabs" class="tabs">
-                <a class="tab-btn" href="/index.html">🏠 General</a>
-                <button class="tab-btn active" data-tab="run-tab">🏃 Running</button>
-                <a class="tab-btn" href="/sports/bike.html">🚴 Bike</a>
-                <a class="tab-btn" href="/sports/swim.html">🏊 Swimming</a>
-            </div>
-
             <main>
-                <!-- Summary Cards -->
+                <!-- Tarjetas de Resumen -->
                 <div id="summary-cards" class="summary-grid"></div>
 
-                <!-- Grid para los gráficos de running -->
+                <!-- Grid para TODOS los gráficos y tablas de running -->
                 <div class="charts-grid">
-                    <!-- Aquí van TODOS los contenedores de gráficos y tablas de running -->
                     <div class="chart-container full-width">
-                        <h3>Consistency (Last Year)</h3>
-                        <div id="cal-heatmap"></div>
+                        <h3>Consistency</h3><div id="cal-heatmap"></div>
                     </div>
                     <div class="chart-container">
-                        <h3>Streaks</h3>
-                        <div id="streaks-info"></div>
+                        <h3>Streaks</h3><div id="streaks-info"></div>
                     </div>
                     <div class="chart-container">
-                        <h3>Activities by Type (Workout, Race, Long Run)</h3>
-                        <canvas id="activity-type-barchart"></canvas>
+                        <h3>Activity Type</h3><canvas id="activity-type-barchart"></canvas>
                     </div>
                     <div class="chart-container">
-                        <h3>Pace vs. Distance</h3>
-                        <canvas id="pace-vs-distance-chart"></canvas>
+                        <h3>Pace vs. Distance</h3><canvas id="pace-vs-distance-chart"></canvas>
                     </div>
                     <div class="chart-container">
-                        <h3>Estimated VO₂max Over Time</h3>
-                        <canvas id="vo2max-over-time"></canvas>
+                        <h3>Estimated VO₂max</h3><canvas id="vo2max-over-time"></canvas>
                     </div>
                     <div class="chart-container full-width">
-                        <h3>ATL, CTL & TSB (Training Load)</h3>
-                        <canvas id="ctl-atl-tsb"></canvas>
+                        <h3>Training Load</h3><canvas id="ctl-atl-tsb"></canvas>
                     </div>
                     <div class="chart-container">
-                        <h3>Personal Bests</h3>
-                        <div id="personal-bests"></div>
+                        <h3>Personal Bests</h3><div id="personal-bests"></div>
+                    </div>
+                     <div class="chart-container">
+                        <h3>Race Predictions</h3><div id="riegel-predictions"></div>
+                    </div>
+                    <div class="chart-container full-width">
+                        <h3>Races</h3><div style="overflow-x:auto;"><table id="race-list" class="df-table"></table></div>
+                    </div>
+                    <div class="chart-container full-width">
+                        <h3>All Runs</h3><div style="overflow-x:auto;"><table id="all-runs-table" class="df-table"></table></div>
+                    </div>
+                    <div id="gear-info-section" class="chart-container full-width">
+                        <h3>My Running Gear</h3><div id="gear-info-list"></div>
                     </div>
                     <div class="chart-container">
-                        <h3>Race Time Predictions (Riegel)</h3>
-                        <div id="riegel-predictions"></div>
+                        <h3>Gear Usage by Month</h3><canvas id="stacked-area-chart"></canvas>
                     </div>
-                    <div class="chart-container full-width">
-                        <h3>All Races</h3>
-                        <div style="overflow-x:auto;">
-                            <table id="race-list" class="df-table"></table>
-                        </div>
-                    </div>
-                    <div class="chart-container full-width">
-                        <h3>All Runs</h3>
-                        <div style="overflow-x:auto;">
-                            <table id="all-runs-table" class="df-table"></table>
-                        </div>
-                    </div>
-                    <div class="chart-container full-width">
-                        <h3>Running Gear</h3>
-                        <div id="gear-info-section">
-                            <div id="gear-info-list" class="gear-info-list"></div>
-                        </div>
+                     <div class="chart-container">
+                        <h3>Gear Gantt</h3><canvas id="gear-matrix-gantt"></canvas>
                     </div>
                 </div>
             </main>
         </div>
-        <!-- Pantalla de Carga -->
-        <div id="loading-overlay" class="hidden">
-            <div class="spinner"></div>
-            <p id="loading-message"></p>
-        </div>
+        <!-- Pantalla de Carga (NECESARIA) -->
+        <div id="loading-overlay" class="hidden"><div class="spinner"></div><p id="loading-message"></p></div>
     </div>
-
+    
     <!-- Cargador universal que llamará a running.js -->
     <script type="module" src="/js/main.js"></script>
 </body>
-
 </html>
