@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Running Dashboard</title>
@@ -15,6 +16,7 @@
     <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
 </head>
+
 <body>
     <div class="container">
         <!-- La sección de la app se mostrará después del login -->
@@ -22,7 +24,7 @@
             <header>
                 <h1 id="athlete-name">Running Dashboard</h1>
                 <!-- Filtros de fecha -->
-                 <div id="date-filter" style="margin-bottom:1em;">
+                <div id="date-filter" style="margin-bottom:1em;">
                     <label>From: <input type="date" id="date-from"></label>
                     <label>To: <input type="date" id="date-to"></label>
                     <button id="apply-date-filter">Apply</button>
@@ -31,12 +33,11 @@
                 <a href="/index.html"><button>Back to Main Dashboard</button></a>
             </header>
 
-             <!-- Pestañas de Navegación -->
             <div id="main-tabs" class="tabs">
                 <a class="tab-btn" href="/index.html">🏠 General</a>
                 <button class="tab-btn active" data-tab="run-tab">🏃 Running</button>
-                <a class="tab-btn" href="/public/sports/bike.html">🚴 Bike</a>
-                <a class="tab-btn" href="/public/sports/swim.html">🏊 Swimming</a>
+                <a class="tab-btn" href="/sports/bike.html">🚴 Bike</a>
+                <a class="tab-btn" href="/sports/swim.html">🏊 Swimming</a>
             </div>
 
             <main>
@@ -74,32 +75,40 @@
                         <h3>Personal Bests</h3>
                         <div id="personal-bests"></div>
                     </div>
-                     <div class="chart-container">
+                    <div class="chart-container">
                         <h3>Race Time Predictions (Riegel)</h3>
                         <div id="riegel-predictions"></div>
                     </div>
                     <div class="chart-container full-width">
                         <h3>All Races</h3>
-                        <div style="overflow-x:auto;"><table id="race-list" class="df-table"></table></div>
+                        <div style="overflow-x:auto;">
+                            <table id="race-list" class="df-table"></table>
+                        </div>
                     </div>
                     <div class="chart-container full-width">
                         <h3>All Runs</h3>
-                        <div style="overflow-x:auto;"><table id="all-runs-table" class="df-table"></table></div>
+                        <div style="overflow-x:auto;">
+                            <table id="all-runs-table" class="df-table"></table>
+                        </div>
                     </div>
                     <div class="chart-container full-width">
                         <h3>Running Gear</h3>
                         <div id="gear-info-section">
-                             <div id="gear-info-list" class="gear-info-list"></div>
+                            <div id="gear-info-list" class="gear-info-list"></div>
                         </div>
                     </div>
                 </div>
             </main>
         </div>
         <!-- Pantalla de Carga -->
-        <div id="loading-overlay" class="hidden"><div class="spinner"></div><p id="loading-message"></p></div>
+        <div id="loading-overlay" class="hidden">
+            <div class="spinner"></div>
+            <p id="loading-message"></p>
+        </div>
     </div>
-    
+
     <!-- Cargador universal que llamará a running.js -->
     <script type="module" src="/js/main.js"></script>
 </body>
+
 </html>
