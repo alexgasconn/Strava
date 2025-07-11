@@ -2,13 +2,104 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Running</title>
-    <link rel="stylesheet" href="../css/style.css">
+    <title>Running Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Carga las mismas librerías y CSS que index.html -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cal-heatmap@4.2.2/dist/cal-heatmap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@4.1.0/dist/chartjs-chart-matrix.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cal-heatmap@4.2.2/dist/cal-heatmap.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
 </head>
 <body>
     <div class="container">
-        <h1>🏃 Running</h1>
-        <p>TBD SAMPLE</p>
+        <!-- La sección de la app se mostrará después del login -->
+        <div id="app-section">
+            <header>
+                <h1 id="athlete-name">Running Dashboard</h1>
+                <!-- Filtros de fecha -->
+                 <div id="date-filter" style="margin-bottom:1em;">
+                    <label>From: <input type="date" id="date-from"></label>
+                    <label>To: <input type="date" id="date-to"></label>
+                    <button id="apply-date-filter">Apply</button>
+                    <button id="reset-date-filter">Reset</button>
+                </div>
+                <a href="/index.html"><button>Back to Main Dashboard</button></a>
+            </header>
+
+             <!-- Pestañas de Navegación -->
+            <div id="main-tabs" class="tabs">
+                <a class="tab-btn" href="/index.html">🏠 General</a>
+                <button class="tab-btn active" data-tab="run-tab">🏃 Running</button>
+                <a class="tab-btn" href="/public/sports/bike.html">🚴 Bike</a>
+                <a class="tab-btn" href="/public/sports/swim.html">🏊 Swimming</a>
+            </div>
+
+            <main>
+                <!-- Summary Cards -->
+                <div id="summary-cards" class="summary-grid"></div>
+
+                <!-- Grid para los gráficos de running -->
+                <div class="charts-grid">
+                    <!-- Aquí van TODOS los contenedores de gráficos y tablas de running -->
+                    <div class="chart-container full-width">
+                        <h3>Consistency (Last Year)</h3>
+                        <div id="cal-heatmap"></div>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Streaks</h3>
+                        <div id="streaks-info"></div>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Activities by Type (Workout, Race, Long Run)</h3>
+                        <canvas id="activity-type-barchart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Pace vs. Distance</h3>
+                        <canvas id="pace-vs-distance-chart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Estimated VO₂max Over Time</h3>
+                        <canvas id="vo2max-over-time"></canvas>
+                    </div>
+                    <div class="chart-container full-width">
+                        <h3>ATL, CTL & TSB (Training Load)</h3>
+                        <canvas id="ctl-atl-tsb"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Personal Bests</h3>
+                        <div id="personal-bests"></div>
+                    </div>
+                     <div class="chart-container">
+                        <h3>Race Time Predictions (Riegel)</h3>
+                        <div id="riegel-predictions"></div>
+                    </div>
+                    <div class="chart-container full-width">
+                        <h3>All Races</h3>
+                        <div style="overflow-x:auto;"><table id="race-list" class="df-table"></table></div>
+                    </div>
+                    <div class="chart-container full-width">
+                        <h3>All Runs</h3>
+                        <div style="overflow-x:auto;"><table id="all-runs-table" class="df-table"></table></div>
+                    </div>
+                    <div class="chart-container full-width">
+                        <h3>Running Gear</h3>
+                        <div id="gear-info-section">
+                             <div id="gear-info-list" class="gear-info-list"></div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+        <!-- Pantalla de Carga -->
+        <div id="loading-overlay" class="hidden"><div class="spinner"></div><p id="loading-message"></p></div>
     </div>
+    
+    <!-- Cargador universal que llamará a running.js -->
+    <script type="module" src="/js/main.js"></script>
 </body>
 </html>
