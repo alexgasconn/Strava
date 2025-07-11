@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Running Dashboard</title>
@@ -15,6 +16,7 @@
     <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
 </head>
+
 <body>
     <div class="container">
         <!-- ESTOS ELEMENTOS SON NECESARIOS PARA setupDashboard -->
@@ -23,7 +25,7 @@
             <header>
                 <h1 id="athlete-name">Running Dashboard</h1>
                 <!-- Filtros de fecha (NECESARIOS) -->
-                 <div id="date-filter" style="margin-bottom:1em;">
+                <div id="date-filter" style="margin-bottom:1em;">
                     <label>From: <input type="date" id="date-from"></label>
                     <label>To: <input type="date" id="date-to"></label>
                     <button id="apply-date-filter">Apply</button>
@@ -39,10 +41,12 @@
                 <!-- Grid para TODOS los gráficos y tablas de running -->
                 <div class="charts-grid">
                     <div class="chart-container full-width">
-                        <h3>Consistency</h3><div id="cal-heatmap"></div>
+                        <h3>Consistency</h3>
+                        <div id="cal-heatmap"></div>
                     </div>
                     <div class="chart-container">
-                        <h3>Streaks</h3><div id="streaks-info"></div>
+                        <h3>Streaks</h3>
+                        <div id="streaks-info"></div>
                     </div>
                     <div class="chart-container">
                         <h3>Activity Type</h3><canvas id="activity-type-barchart"></canvas>
@@ -57,34 +61,51 @@
                         <h3>Training Load</h3><canvas id="ctl-atl-tsb"></canvas>
                     </div>
                     <div class="chart-container">
-                        <h3>Personal Bests</h3><div id="personal-bests"></div>
+                        <h3>Personal Bests</h3>
+                        <div id="personal-bests"></div>
                     </div>
-                     <div class="chart-container">
-                        <h3>Race Predictions</h3><div id="riegel-predictions"></div>
+                    <div class="chart-container">
+                        <h3>Race Predictions</h3>
+                        <div id="riegel-predictions"></div>
                     </div>
                     <div class="chart-container full-width">
-                        <h3>Races</h3><div style="overflow-x:auto;"><table id="race-list" class="df-table"></table></div>
+                        <h3>Races</h3>
+                        <div style="overflow-x:auto;">
+                            <table id="race-list" class="df-table"></table>
+                        </div>
                     </div>
                     <div class="chart-container full-width">
-                        <h3>All Runs</h3><div style="overflow-x:auto;"><table id="all-runs-table" class="df-table"></table></div>
+                        <h3>All Runs</h3>
+                        <div style="overflow-x:auto;">
+                            <table id="all-runs-table" class="df-table"></table>
+                        </div>
                     </div>
                     <div id="gear-info-section" class="chart-container full-width">
-                        <h3>My Running Gear</h3><div id="gear-info-list"></div>
+                        <h3>My Running Gear</h3>
+                        <div id="gear-info-list"></div>
                     </div>
                     <div class="chart-container">
                         <h3>Gear Usage by Month</h3><canvas id="stacked-area-chart"></canvas>
                     </div>
-                     <div class="chart-container">
+                    <div class="chart-container">
                         <h3>Gear Gantt</h3><canvas id="gear-matrix-gantt"></canvas>
                     </div>
+                </div>
+                <div id="export-buttons" style="display:flex; gap:1em; margin: 1.5em 0;">
+                    <button id="download-csv-btn">⬇️ Download CSV</button>
+                    <button id="download-pdf-btn">⬇️ Download PDF</button>
                 </div>
             </main>
         </div>
         <!-- Pantalla de Carga (NECESARIA) -->
-        <div id="loading-overlay" class="hidden"><div class="spinner"></div><p id="loading-message"></p></div>
+        <div id="loading-overlay" class="hidden">
+            <div class="spinner"></div>
+            <p id="loading-message"></p>
+        </div>
     </div>
-    
+
     <!-- Cargador universal que llamará a running.js -->
     <script type="module" src="/js/main.js"></script>
 </body>
+
 </html>
