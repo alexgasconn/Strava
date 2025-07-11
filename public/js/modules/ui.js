@@ -90,29 +90,7 @@ export async function renderGeneralDashboard(allActivities, from, to) {
     charts.renderRunsHeatmap(filtered); // Este muestra un mapa de calor de todas las actividades
 }
 
-// 2. FUNCIÓN PARA EL PANEL DE RUNNING
-export async function renderRunningDashboard(allRuns, from, to) {
-    const runs = utils.filterActivitiesByDate(allRuns, from, to);
-    
-    const { gearDetails, gearIdToName } = await fetchAllGearDetails(runs);
 
-    renderRunSummaryCards(runs); // Tarjetas de resumen solo para running
-    
-    // Llama a todas las funciones de gráficos específicos para running
-    charts.renderConsistencyChart(runs);
-    charts.renderActivityTypeChart(runs);
-    charts.renderMonthlyDistanceChart(runs);
-    charts.renderPaceVsDistanceChart(runs);
-    // ...y todas las demás llamadas a gráficos de charts.js
-
-    // Llama a todas las funciones de renderizado de tablas y datos de running
-    renderRaceList(runs);
-    renderAllRunsTable(runs);
-    renderGearSection(runs, gearDetails);
-    renderStreaks(runs);
-    renderPersonalBests(runs);
-    renderRiegelPredictions(runs);
-}
 
 // --- Asegúrate de que las funciones auxiliares (como renderRaceList, renderStreaks, etc.)
 // --- sigan existiendo en ui.js, ahora serán llamadas por renderRunningDashboard.
