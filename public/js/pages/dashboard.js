@@ -19,7 +19,8 @@ export function init() {
         try {
             allActivities = await fetchAllActivities();
             setupDashboard(allActivities); // Configura el dashboard y los listeners
-            renderDashboard(allActivities, dateFilterFrom, dateFilterTo); // Renderiza por primera vez
+            await renderGeneralDashboard(allActivities, dateFilterFrom, dateFilterTo); 
+            // renderDashboard(allActivities, dateFilterFrom, dateFilterTo); // Renderiza por primera vez
         } catch (error) {
             handleError("Could not initialize the app", error);
         } finally {
