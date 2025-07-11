@@ -827,7 +827,26 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 });
-
+/**
+ * Devuelve un objeto con detalles de equipamiento y un mapa id->nombre.
+ * @param {Array} runs
+ * @returns {Promise<{gearDetails: Array, gearIdToName: Object}>}
+ */
+async function fetchAllGearDetails(runs) {
+    const gearIds = Array.from(new Set(runs.map(a => a.gear_id).filter(Boolean)));
+    if (gearIds.length === 0) {
+        return { gearDetails: [], gearIdToName: {} };
+    }
+    const results = await Promise.all(gearIds.map(id => fetchGearById(id)));
+    const gearDetails = results.map(r => r.gear);
+    const gearIdToName = gearDetails.reduce((map, gear) => {
+        if (gear) {
+            map[gear.id] = gear.name || `${gear.brand_name || ''} ${gear.model_name || ''}`.trim();
+        }
+        return map;
+    }, {});
+    return { gearDetails, gearIdToName };
+}
 function renderGlobalHeatmap() {
     const container = document.getElementById('global-heatmap');
     if (!container) return;
