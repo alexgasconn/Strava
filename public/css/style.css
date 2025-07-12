@@ -615,11 +615,42 @@ main {
 .hidden {
     display: none;
 }
-/* --- Estilos para la página de Heatmap Global --- */
+/* En /public/css/style.css */
+
 #global-heatmap-map {
-    height: 80vh; /* Ocupa el 80% de la altura de la ventana */
+    height: 80vh; /* 80% de la altura de la ventana */
     width: 100%;
     margin-top: 1.5rem;
     border-radius: var(--border-radius-md);
     box-shadow: var(--shadow);
+    background-color: #e8e8e8; /* Un color de fondo mientras carga */
+}
+/* --- Estilos para el Indicador de Progreso --- */
+#progress-indicator {
+    width: 80%;
+    max-width: 400px;
+    margin-top: 20px;
+    text-align: center;
+}
+
+.progress-bar-container {
+    width: 100%;
+    background-color: #e0e0e0;
+    border-radius: 5px;
+    overflow: hidden;
+    height: 15px;
+    border: 1px solid #c0c0c0;
+}
+
+#progress-bar {
+    width: 0%; /* Inicia en 0% */
+    height: 100%;
+    background-color: var(--strava-orange);
+    transition: width 0.3s ease-out; /* Animación suave */
+}
+
+#progress-text {
+    margin-top: 10px;
+    font-size: 0.9em;
+    color: var(--text-medium);
 }

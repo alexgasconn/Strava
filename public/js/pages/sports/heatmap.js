@@ -2,70 +2,86 @@
 import { handleAuth } from '../../modules/auth.js';
 import { fetchAllActivities } from '../../modules/api.js';
 import { showLoading, hideLoading, handleError } from '../../modules/ui.js';
-import { decodePolyline } from '../../modules/utils.js'; // Importaremos la función de decodificación
+import { decodePolyline } from '../../modules/utils.js';
 
 export function init() {
     console.log("Initializing Global Heatmap Page...");
 
     async function initializeApp() {
-        showLoading('Loading all activity routes...');
+        // La pantalla de carga se muestra aquí
+        showLoading('Fetching activities from Strava...');
         try {
             const allActivities = await fetchAllActivities();
-            renderGlobalHeatmap(allActivities);
+            // Una vez obtenidos los datos, pasamos al renderizado progresivo
+            await renderGlobalHeatmap(allActivities);
         } catch (error) {
             handleError("Could not build the global heatmap", error);
         } finally {
-            hideLoading();
+            // El hideLoading se llamará al final de renderGlobalHeatmap
         }
     }
 
-    function renderGlobalHeatmap(activities) {
+    async function renderGlobalHeatmap(activities) {
         if (!window.L) {
             handleError("Leaflet library not loaded.", null);
             return;
         }
 
         const mapContainer = document.getElementById('global-heatmap-map');
-        if (!mapContainer) return;
+        // Obtenemos referencias a los elementos de progreso
+        const loadingMessage = document.getElementById('loading-message');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
 
-        // Inicializa el mapa centrado en una ubicación genérica (se ajustará después)
+        if (!mapContainer || !progressBar || !progressText) return;
+
+        // Inicializa el mapa
         const map = L.map(mapContainer).setView([20, 0], 2);
-
-        // Añade la capa de mapa (puedes elegir un estilo oscuro si prefieres)
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
         const allCoords = [];
-        let routesAdded = 0;
+        const totalActivities = activities.length;
+        const chunkSize = 50; // Procesaremos actividades en lotes de 50
 
-        activities.forEach(act => {
-            // Nos aseguramos de que la actividad tenga una ruta para dibujar
-            if (act.map && act.map.summary_polyline) {
-                const coords = decodePolyline(act.map.summary_polyline);
-                if (coords.length > 0) {
-                    // Dibuja la ruta en el mapa
-                    L.polyline(coords, {
-                        color: '#FC5200', // Naranja Strava
-                        weight: 2,
-                        opacity: 0.6
-                    }).addTo(map);
+        loadingMessage.textContent = 'Processing routes...';
 
-                    // Agrega las coordenadas a un array global para ajustar el zoom
-                    allCoords.push(...coords);
-                    routesAdded++;
+        for (let i = 0; i < totalActivities; i += chunkSize) {
+            const chunk = activities.slice(i, i + chunkSize);
+            
+            chunk.forEach(act => {
+                if (act.map && act.map.summary_polyline) {
+                    const coords = decodePolyline(act.map.summary_polyline);
+                    if (coords.length > 0) {
+                        L.polyline(coords, { color: '#FC5200', weight: 2, opacity: 0.6 }).addTo(map);
+                        allCoords.push(...coords);
+                    }
                 }
-            }
-        });
-        
-        console.log(`Added ${routesAdded} routes to the map.`);
+            });
 
-        // Si se encontraron rutas, ajusta el mapa para que se vean todas
+            // Actualizar el progreso
+            const processedCount = Math.min(i + chunkSize, totalActivities);
+            const percentage = Math.round((processedCount / totalActivities) * 100);
+
+            progressBar.style.width = `${percentage}%`;
+            progressText.textContent = `Processed ${processedCount} of ${totalActivities} activities (${percentage}%)`;
+            
+            // ¡Esta es la parte clave!
+            // Hacemos una pausa para permitir que el navegador actualice la UI.
+            await new Promise(resolve => setTimeout(resolve, 0)); 
+        }
+        
+        console.log(`Finished processing. Added ${allCoords.length > 0 ? 'routes' : 'no routes'} to the map.`);
+
         if (allCoords.length > 0) {
             map.fitBounds(allCoords, { padding: [50, 50] });
         } else {
             mapContainer.innerHTML = '<p>No activities with routes found to display on the map.</p>';
         }
+        
+        // Ocultamos la pantalla de carga solo cuando todo ha terminado.
+        hideLoading();
     }
 
     handleAuth(initializeApp).catch(error => {

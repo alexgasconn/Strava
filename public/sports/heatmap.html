@@ -2,21 +2,19 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Global Activity Heatmap</title>
+    <title>Global Activity Map</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Carga de librerías y CSS -->
+    
+    <!-- 1. Carga del CSS: Tu estilo y el de Leaflet -->
     <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <!-- 2. Carga del JS de Leaflet (DEBE ir en el <head>) -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
     <div class="container">
-        <div id="main-tabs" class="tabs">
-            <a class="tab-btn" href="/index.html">🏠 General</a>
-            <button class="tab-btn active" data-tab="run-tab">🏃 Running</button>
-            <a class="tab-btn" href="/sports/bike.html">🚴 Bike</a>
-            <a class="tab-btn" href="/sports/swim.html">🏊 Swimming</a>
-        </div>
+        <div id="login-section" class="hidden"></div>
         <div id="app-section">
             <header>
                 <h1>🔥 Global Activity Map</h1>
@@ -24,18 +22,27 @@
             </header>
             <main>
                 <p>Esta es una visualización de todas tus rutas de actividad combinadas.</p>
-                <!-- Contenedor donde se renderizará el mapa -->
                 <div id="global-heatmap-map"></div>
             </main>
         </div>
-        <!-- Pantalla de Carga -->
+        
+        <!-- Pantalla de Carga ACTUALIZADA -->
         <div id="loading-overlay" class="hidden">
             <div class="spinner"></div>
-            <p id="loading-message"></p>
+            <p id="loading-message">Loading routes...</p>
+            
+            <!-- NUEVOS ELEMENTOS PARA EL PROGRESO -->
+            <div id="progress-indicator">
+                <div class="progress-bar-container">
+                    <div id="progress-bar"></div>
+                </div>
+                <div id="progress-text"></div>
+            </div>
+            <!-- FIN DE NUEVOS ELEMENTOS -->
+            
         </div>
     </div>
     
-    <!-- El cargador universal llamará a heatmap.js -->
     <script type="module" src="/js/main.js"></script>
 </body>
 </html>
