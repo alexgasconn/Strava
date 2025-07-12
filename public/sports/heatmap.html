@@ -5,7 +5,7 @@
     <title>Global Activity Map</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <!-- 1. Carga del CSS: Tu estilo y el de Leaflet -->
+    <!-- 1. Carga del CSS: Tu estilo y el de Leaflet (¡ESTO ES CRÍTICO!) -->
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
@@ -14,6 +14,7 @@
 </head>
 <body>
     <div class="container">
+        <!-- Estos divs son necesarios para la lógica de carga -->
         <div id="login-section" class="hidden"></div>
         <div id="app-section">
             <header>
@@ -21,28 +22,28 @@
                 <a href="/index.html"><button>Back to Main Dashboard</button></a>
             </header>
             <main>
-                <p>Esta es una visualización de todas tus rutas de actividad combinadas.</p>
+                <p>Visualización de todas las rutas de tus actividades. El proceso puede tardar un momento.</p>
+                
+                <!-- 3. El contenedor donde se renderizará el mapa -->
                 <div id="global-heatmap-map"></div>
+                
             </main>
         </div>
         
-        <!-- Pantalla de Carga ACTUALIZADA -->
+        <!-- Pantalla de Carga (con la barra de progreso) -->
         <div id="loading-overlay" class="hidden">
             <div class="spinner"></div>
-            <p id="loading-message">Loading routes...</p>
-            
-            <!-- NUEVOS ELEMENTOS PARA EL PROGRESO -->
+            <p id="loading-message">Loading...</p>
             <div id="progress-indicator">
                 <div class="progress-bar-container">
                     <div id="progress-bar"></div>
                 </div>
                 <div id="progress-text"></div>
             </div>
-            <!-- FIN DE NUEVOS ELEMENTOS -->
-            
         </div>
     </div>
     
+    <!-- 4. El cargador de tu aplicación que llamará a heatmap.js -->
     <script type="module" src="/js/main.js"></script>
 </body>
 </html>
