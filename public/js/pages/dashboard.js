@@ -41,7 +41,7 @@ export function init() {
             dateFilterFrom = document.getElementById('date-from').value || null;
             dateFilterTo = document.getElementById('date-to').value || null;
             // Ahora 'await' es válido
-            await renderDashboard(allActivities, dateFilterFrom, dateFilterTo); 
+            await renderGeneralDashboard(allActivities, dateFilterFrom, dateFilterTo); 
         });
     }
     if (resetFilterButton) {
@@ -52,7 +52,7 @@ export function init() {
             document.getElementById('date-from').value = '';
             document.getElementById('date-to').value = '';
             // Y aquí 'await' también es válido
-            await renderDashboard(allActivities, dateFilterFrom, dateFilterTo);
+            await renderGeneralDashboard(allActivities, dateFilterFrom, dateFilterTo); 
         });
     }
 
