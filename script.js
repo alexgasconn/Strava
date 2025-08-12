@@ -201,7 +201,7 @@ function renderDashboard(activities) {
             x: r.distance / 1000,
             y: r.moving_time / (r.distance / 1000)
         }));
-        const trailRuns = runs.filter(r => r.distance > 0 && r.type === 'TrailRun' && r.workout_type !== 1).map(r => ({
+        const trailRuns = runs.filter(r => r.distance > 0 && r.type === 'Trail Run' && r.workout_type !== 1).map(r => ({
             x: r.distance / 1000,
             y: r.moving_time / (r.distance / 1000)
         }));
