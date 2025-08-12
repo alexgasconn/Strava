@@ -195,17 +195,53 @@ function renderDashboard(activities) {
 
     // --- Scatter Plot: Pace vs Distance (Running) ---
     const paceVsDistanceCanvas = document.getElementById('pace-vs-distance-chart');
-    if (paceVsDistanceCanvas && !charts['pace-vs-distance-chart']) {
+    if (paceVsDistanceCanvas) {
+        // Separate normal runs, trail runs, and races
+        const normalRuns = runs.filter(r => r.distance > 0 && r.type === 'Run' && r.workout_type !== 1).map(r => ({
+            x: r.distance / 1000,
+            y: r.moving_time / (r.distance / 1000)
+        }));
+        const trailRuns = runs.filter(r => r.distance > 0 && r.type === 'TrailRun' && r.workout_type !== 1).map(r => ({
+            x: r.distance / 1000,
+            y: r.moving_time / (r.distance / 1000)
+        }));
+        const races = runs.filter(r => r.distance > 0 && r.workout_type === 1).map(r => ({
+            x: r.distance / 1000,
+            y: r.moving_time / (r.distance / 1000)
+        }));
+
+        if (charts['pace-vs-distance-chart']) charts['pace-vs-distance-chart'].destroy();
         charts['pace-vs-distance-chart'] = new Chart(paceVsDistanceCanvas, {
             type: 'scatter',
             data: {
-                datasets: [{
-                    label: 'Runs',
-                    data: runs.filter(r => r.distance > 0).map(r => ({ x: r.distance / 1000, y: r.moving_time / (r.distance / 1000) })),
-                    backgroundColor: 'rgba(252, 82, 0, 0.7)'
-                }]
+                datasets: [
+                    {
+                        label: 'Runs',
+                        data: normalRuns,
+                        backgroundColor: 'rgba(252, 82, 0, 0.7)',
+                        pointStyle: 'circle'
+                    },
+                    {
+                        label: 'Trail Runs',
+                        data: trailRuns,
+                        backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                        pointStyle: 'rect'
+                    },
+                    {
+                        label: 'Races',
+                        data: races,
+                        backgroundColor: 'rgba(50, 205, 50, 0.9)',
+                        pointStyle: 'star',
+                        radius: 7
+                    }
+                ]
             },
-            options: { scales: { x: { title: { display: true, text: 'Distance (km)' } }, y: { title: { display: true, text: 'Pace (sec/km)' } } } }
+            options: {
+                scales: {
+                    x: { title: { display: true, text: 'Distance (km)' } },
+                    y: { title: { display: true, text: 'Pace (sec/km)' } }
+                }
+            }
         });
     }
 
