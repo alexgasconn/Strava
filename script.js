@@ -50,7 +50,6 @@ function logout() {
 
 function renderDashboard(activities) {
     const filtered = filterActivitiesByDate(activities);
-    // --- Filter only running activities (includes Trail Run, etc) ---
     const runs = filtered.filter(a => a.type && a.type.includes('Run'));
     // Assign descending distance rank to each run
     const sortedByDistance = [...runs].sort((a, b) => b.distance - a.distance);
@@ -305,12 +304,20 @@ function renderDashboard(activities) {
             const dist_km = act.distance / 1000;
             const time_hr = act.moving_time / 3600;
             const speed_kmh = dist_km / time_hr;
-            // VO2 at pace (simplified): 3.5 + 12 * speed_km_h / 60
-            // Or use Daniels: VO2 = (vel_m_min * 0.2) + 3.5
+
+            // Simplified formula: VO2 = 3.5 + 12 * speed_kmh / 60
+            const vo2_simplified = 3.5 + 12 * speed_kmh / 60;
+
+            // Daniels formula: VO2 = (vel_m_min * 0.2) + 3.5
             const vel_m_min = (act.distance / act.moving_time) * 60;
-            const vo2_at_pace = (vel_m_min * 0.2) + 3.5;
+            const vo2_daniels = (vel_m_min * 0.2) + 3.5;
+
             const avg_hr = act.average_heartrate;
-            const vo2max = vo2_at_pace / (avg_hr / USER_MAX_HR);
+            const vo2max_simplified = vo2_simplified / (avg_hr / USER_MAX_HR);
+            const vo2max_daniels = vo2_daniels / (avg_hr / USER_MAX_HR);
+
+            const vo2max = (vo2max_simplified + vo2max_daniels) / 2;
+
             return {
                 date: act.start_date_local.substring(0, 10),
                 yearMonth: act.start_date_local.substring(0, 7),
