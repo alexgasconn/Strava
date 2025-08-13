@@ -620,6 +620,9 @@ export function setupExportButtons(activities) {
     };
 }
 
+// A variable to hold the chart instance, so we can destroy it before redrawing.
+let paceChartInstance = null;
+
 export function renderRiegelPredictions(runs) {
     const container = document.getElementById('riegel-predictions');
     if (!container) return;
@@ -635,7 +638,12 @@ export function renderRiegelPredictions(runs) {
 
     // --- HELPER FUNCTIONS ---
 
-    // Formats seconds to hh:mm:ss or mm:ss
+    function formatTime(sec) { /* ... (same as before) ... */ }
+    function formatPace(sec, km) { /* ... (same as before) ... */ }
+    function solve3x3(A, B) { /* ... (same as before) ... */ }
+    
+    // --- Omitted for brevity, paste the functions from the previous answer here ---
+    // formatTime, formatPace, solve3x3
     function formatTime(sec) {
         if (!isFinite(sec) || sec <= 0) return 'N/A';
         sec = Math.round(sec);
@@ -644,8 +652,6 @@ export function renderRiegelPredictions(runs) {
         const s = sec % 60;
         return (h > 0 ? h + ':' : '') + m.toString().padStart(h > 0 ? 2 : 1, '0') + ':' + s.toString().padStart(2, '0');
     }
-
-    // Formats pace to m:ss /km
     function formatPace(sec, km) {
         if (!isFinite(sec) || !isFinite(km) || km <= 0) return '-';
         const pace = sec / km;
@@ -653,150 +659,203 @@ export function renderRiegelPredictions(runs) {
         const secRest = Math.round(pace % 60);
         return `${min}:${secRest.toString().padStart(2, '0')} /km`;
     }
-
-    // Solves a 3x3 system of linear equations (Ax = B).
-    // In a real project, you would use a library like math.js (math.lusolve).
     function solve3x3(A, B) {
         const det = A[0][0] * (A[1][1] * A[2][2] - A[2][1] * A[1][2]) -
                     A[0][1] * (A[1][0] * A[2][2] - A[1][2] * A[2][0]) +
                     A[0][2] * (A[1][0] * A[2][1] - A[1][1] * A[2][0]);
-        if (det === 0) return null; // No unique solution
-
+        if (det === 0) return null;
         const invDet = 1 / det;
         const adj = [
-            [
-                A[1][1] * A[2][2] - A[2][1] * A[1][2],
-                A[0][2] * A[2][1] - A[0][1] * A[2][2],
-                A[0][1] * A[1][2] - A[0][2] * A[1][1]
-            ],
-            [
-                A[1][2] * A[2][0] - A[1][0] * A[2][2],
-                A[0][0] * A[2][2] - A[0][2] * A[2][0],
-                A[0][2] * A[1][0] - A[0][0] * A[1][2]
-            ],
-            [
-                A[1][0] * A[2][1] - A[2][0] * A[1][1],
-                A[2][0] * A[0][1] - A[0][0] * A[2][1],
-                A[0][0] * A[1][1] - A[1][0] * A[0][1]
-            ]
+            [A[1][1]*A[2][2]-A[2][1]*A[1][2], A[0][2]*A[2][1]-A[0][1]*A[2][2], A[0][1]*A[1][2]-A[0][2]*A[1][1]],
+            [A[1][2]*A[2][0]-A[1][0]*A[2][2], A[0][0]*A[2][2]-A[0][2]*A[2][0], A[0][2]*A[1][0]-A[0][0]*A[1][2]],
+            [A[1][0]*A[2][1]-A[2][0]*A[1][1], A[2][0]*A[0][1]-A[0][0]*A[2][1], A[0][0]*A[1][1]-A[1][0]*A[0][1]]
         ];
-        
-        const x = [
-            invDet * (adj[0][0] * B[0] + adj[0][1] * B[1] + adj[0][2] * B[2]),
-            invDet * (adj[1][0] * B[0] + adj[1][1] * B[1] + adj[1][2] * B[2]),
-            invDet * (adj[2][0] * B[0] + adj[2][1] * B[1] + adj[2][2] * B[2])
+        return [
+            invDet * (adj[0][0]*B[0] + adj[0][1]*B[1] + adj[0][2]*B[2]),
+            invDet * (adj[1][0]*B[0] + adj[1][1]*B[1] + adj[1][2]*B[2]),
+            invDet * (adj[2][0]*B[0] + adj[2][1]*B[1] + adj[2][2]*B[2])
         ];
-        return x;
     }
 
 
     // --- CORE LOGIC ---
 
-    /**
-     * Finds the top 3 performances for each target distance.
-     * A performance is ranked by pace (time/distance).
-     */
+    function getBestPerformances(allRuns) { /* ... (same as before) ... */ }
+    function trainPersonalizedModel(bestPerformances) { /* ... (same as before) ... */ }
+    function calculateAllPredictions(bestPerformances, model) { /* ... (same as before) ... */ }
+
+    // --- Omitted for brevity, paste the functions from the previous answer here ---
+    // getBestPerformances, trainPersonalizedModel, calculateAllPredictions
     function getBestPerformances(allRuns) {
         const bestPerformances = {};
         for (const { km } of targetDistances) {
-            const margin = 0.05; // 5% margin for distance matching
-            const min = km * (1 - margin);
-            const max = km * (1 + margin);
-
+            const margin = 0.05;
+            const min = km * (1 - margin), max = km * (1 + margin);
             const candidates = allRuns
                 .map(r => ({ ...r, km: r.distance / 1000, seconds: r.moving_time }))
                 .filter(r => r.km >= min && r.km <= max && r.seconds > 0);
-
             if (candidates.length === 0) continue;
-
-            candidates.sort((a, b) => (a.seconds / a.km) - (b.seconds / b.km)); // Sort by pace
-            bestPerformances[km] = candidates.slice(0, 3); // Take top 3
+            candidates.sort((a, b) => (a.seconds / a.km) - (b.seconds / b.km));
+            bestPerformances[km] = candidates.slice(0, 3);
         }
         return bestPerformances;
     }
-
-    /**
-     * Trains a personalized model: T = a + b*log(D) + c*(log(D))^2
-     * This creates an endurance curve based on the runner's best times.
-     */
     function trainPersonalizedModel(bestPerformances) {
         const flatBests = Object.values(bestPerformances).flat();
-        if (flatBests.length < 3) return null; // Need at least 3 points for a 2nd degree polynomial
-
+        if (flatBests.length < 3) return null;
         const X = flatBests.map(r => Math.log(r.km));
         const Y = flatBests.map(r => r.seconds);
-
-        let sumX = 0, sumX2 = 0, sumX3 = 0, sumX4 = 0;
-        let sumY = 0, sumXY = 0, sumX2Y = 0;
+        let sumX=0, sumX2=0, sumX3=0, sumX4=0, sumY=0, sumXY=0, sumX2Y=0;
         const n = X.length;
-
         for (let i = 0; i < n; i++) {
-            const x = X[i], x2 = x * x, y = Y[i];
-            sumX += x; sumX2 += x2; sumX3 += x2 * x; sumX4 += x2 * x2;
-            sumY += y; sumXY += x * y; sumX2Y += x2 * y;
+            const x = X[i], x2 = x*x, y = Y[i];
+            sumX += x; sumX2 += x2; sumX3 += x2*x; sumX4 += x2*x2;
+            sumY += y; sumXY += x*y; sumX2Y += x2*y;
         }
-
         const A = [[n, sumX, sumX2], [sumX, sumX2, sumX3], [sumX2, sumX3, sumX4]];
         const B = [sumY, sumXY, sumX2Y];
-        
         const coeffs = solve3x3(A, B);
         if (!coeffs) return null;
-
-        const [a, b, c] = coeffs;
-        return { a, b, c }; // Return model coefficients
+        return { a: coeffs[0], b: coeffs[1], c: coeffs[2] };
     }
-
-    /**
-     * Calculates final predictions by combining multiple models and data points.
-     */
     function calculateAllPredictions(bestPerformances, model) {
         return targetDistances.map(target => {
             let allPredictions = [];
-
-            // 1. Riegel Predictions: T2 = T1 * (D2/D1)^1.06
             Object.values(bestPerformances).flat().forEach(perf => {
-                if (Math.abs(perf.km - target.km) < 0.1) return; // Avoid predicting from same distance
+                if (Math.abs(perf.km - target.km) < 0.1) return;
                 const predSec = perf.seconds * (target.km / perf.km) ** 1.06;
-                allPredictions.push({ time: predSec, weight: 1 }); // Lower weight
+                allPredictions.push({ time: predSec, weight: 1 });
             });
-
-            // 2. Personalized Model Predictions
             if (model) {
                 const logKm = Math.log(target.km);
                 const mlTime = model.a + model.b * logKm + model.c * logKm ** 2;
                 if (isFinite(mlTime) && mlTime > 0) {
-                   allPredictions.push({ time: mlTime, weight: 2.5 }); // Higher weight
+                   allPredictions.push({ time: mlTime, weight: 2.5 });
                 }
             }
-
-            // 3. Real Best Times (if they exist for this target)
             if (bestPerformances[target.km]) {
                 bestPerformances[target.km].forEach(perf => {
-                    allPredictions.push({ time: perf.seconds, weight: 4 }); // Highest weight
+                    allPredictions.push({ time: perf.seconds, weight: 4 });
                 });
             }
-
             if (allPredictions.length === 0) {
                 return { ...target, combined: null, low: null, high: null };
             }
-            
-            // 4. Trim outliers and calculate a weighted average
             allPredictions.sort((a, b) => a.time - b.time);
             const start = Math.floor(allPredictions.length * 0.25);
             const end = Math.ceil(allPredictions.length * 0.75);
             const trimmed = allPredictions.slice(start, end + 1);
-
-            if (trimmed.length === 0) { // Fallback if trimming removed everything
+            if (trimmed.length === 0) {
                  return { ...target, combined: null, low: null, high: null };
             }
-
             const totalWeight = trimmed.reduce((sum, p) => sum + p.weight, 0);
             const combinedTime = trimmed.reduce((sum, p) => sum + p.time * p.weight, 0) / totalWeight;
-
             const lowTime = trimmed[0].time;
             const highTime = trimmed[trimmed.length - 1].time;
-
             return { ...target, combined: combinedTime, low: lowTime, high: highTime };
+        });
+    }
+
+    // --- NEW: CHART RENDERING FUNCTION ---
+    
+    /**
+     * Renders a pace chart using Chart.js to visualize predictions.
+     */
+    function renderPaceChart(predictions) {
+        // Ensure Chart.js is loaded
+        if (typeof Chart === 'undefined') {
+            console.error("Chart.js is not loaded. Please include it to display the chart.");
+            return;
+        }
+
+        const chartContainer = document.getElementById('riegel-chart-container');
+        if (!chartContainer) return;
+        const ctx = chartContainer.getContext('2d');
+
+        // If a chart already exists, destroy it before creating a new one
+        if (paceChartInstance) {
+            paceChartInstance.destroy();
+        }
+
+        // Filter out invalid predictions and prepare data for the chart
+        const validPredictions = predictions.filter(p => p.combined && p.low && p.high);
+
+        // Convert times to pace (minutes per km)
+        const toPace = (time, km) => (time / km) / 60;
+
+        const mainPaces = validPredictions.map(p => ({ x: p.km, y: toPace(p.combined, p.km) }));
+        const lowerPaces = validPredictions.map(p => ({ x: p.km, y: toPace(p.low, p.km) }));
+        const upperPaces = validPredictions.map(p => ({ x: p.km, y: toPace(p.high, p.km) }));
+
+        paceChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: [
+                    {
+                        label: 'Fastest Pace Prediction',
+                        data: lowerPaces,
+                        borderColor: 'transparent',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        pointRadius: 0,
+                        fill: '+1' // Fill to the next dataset (upperPaces)
+                    },
+                    {
+                        label: 'Slowest Pace Prediction',
+                        data: upperPaces,
+                        borderColor: 'transparent',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        pointRadius: 0,
+                        fill: '-1' // Fill to the previous dataset (lowerPaces)
+                    },
+                    {
+                        label: 'Predicted Pace',
+                        data: mainPaces,
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgb(75, 192, 192)',
+                        tension: 0.1,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Predicted Pace vs. Distance'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const paceDecimal = context.parsed.y;
+                                const minutes = Math.floor(paceDecimal);
+                                const seconds = Math.round((paceDecimal - minutes) * 60);
+                                return `${context.dataset.label}: ${minutes}:${seconds.toString().padStart(2, '0')} /km`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'linear',
+                        title: {
+                            display: true,
+                            text: 'Distance (km)'
+                        },
+                        min: 0,
+                        max: 45
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Pace (min/km)'
+                        },
+                        // Reverse the axis so faster paces (lower numbers) are at the top
+                        reverse: true 
+                    }
+                }
+            }
         });
     }
 
@@ -811,24 +870,13 @@ export function renderRiegelPredictions(runs) {
         if (!p.combined) {
             return `<tr><td>${p.name}</td><td>No data</td><td>-</td></tr>`;
         }
-
-        // If the range is very narrow, show a single prediction
-        if (Math.abs(p.low - p.high) < 5) { // Less than 5 seconds difference
-             return `<tr>
-                <td>${p.name}</td>
-                <td>${formatTime(p.combined)}</td>
-                <td>${formatPace(p.combined, p.km)}</td>
-            </tr>`;
+        if (Math.abs(p.low - p.high) < 5) {
+             return `<tr><td>${p.name}</td><td>${formatTime(p.combined)}</td><td>${formatPace(p.combined, p.km)}</td></tr>`;
         }
-        
-        // Otherwise, show the calculated range
-        return `<tr>
-            <td>${p.name}</td>
-            <td>${formatTime(p.low)} - ${formatTime(p.high)}</td>
-            <td>${formatPace(p.low, p.km)} - ${formatPace(p.high, p.km)}</td>
-        </tr>`;
+        return `<tr><td>${p.name}</td><td>${formatTime(p.low)} - ${formatTime(p.high)}</td><td>${formatPace(p.low, p.km)} - ${formatPace(p.high, p.km)}</td></tr>`;
     }).join('');
 
+    // Update the container's HTML to include the table AND the chart canvas
     container.innerHTML = `
         <table class="df-table">
             <thead>
@@ -838,8 +886,16 @@ export function renderRiegelPredictions(runs) {
                 ${rows}
             </tbody>
         </table>
+        
+        <div class="chart-wrapper" style="position: relative; height: 300px; width: 100%; margin-top: 20px;">
+            <canvas id="riegel-chart-container"></canvas>
+        </div>
+
         <div class="disclaimer" style="font-size: 0.8em; color: #666; margin-top: 10px;">
             Predictions use a hybrid model combining Riegel's formula and a personalized endurance curve. The range is based on the most consistent estimates from your running data.
         </div>
     `;
+
+    // Finally, render the chart into the newly created canvas
+    renderPaceChart(finalPredictions);
 }
