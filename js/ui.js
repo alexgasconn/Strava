@@ -38,8 +38,7 @@ export function setupDashboard(activities) {
     loginSection.classList.add('hidden');
     appSection.classList.remove('hidden');
 
-    const athleteInfo = activities.find(a => a.athlete)?.athlete || { firstname: 'Athlete' };
-    athleteName.textContent = `Dashboard for ${athleteInfo.firstname}`;
+    athleteName.textContent = `Running Dashboard`;
 
     const dates = activities.map(a => a.start_date_local.substring(0, 10)).sort();
     if (dates.length > 0) {
