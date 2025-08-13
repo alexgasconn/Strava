@@ -724,7 +724,7 @@ export function renderRiegelPredictions(runs) {
             }
             allPredictions.sort((a, b) => a.time - b.time);
             const start = Math.floor(allPredictions.length * 0.25);
-            const end = Math.ceil(allPredictions.length * 0.65);
+            const end = Math.ceil(allPredictions.length * 0.6);
             const trimmed = allPredictions.slice(start, end + 1);
             if (trimmed.length === 0) {
                  return { ...target, combined: null, low: null, high: null };
