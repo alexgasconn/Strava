@@ -724,7 +724,7 @@ export function renderRiegelPredictions(runs) {
             Object.values(bestPerformances).flat().forEach(perf => {
                 if (Math.abs(perf.km - target.km) < 0.1) return;
                 const predSec = perf.seconds * (target.km / perf.km) ** 1.06;
-                allPredictions.push({ time: predSec, weight: 1 });
+                allPredictions.push({ time: predSec, weight: 5 });
             });
             if (model) {
                 const logKm = Math.log(target.km);
