@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 1. REFERENCIAS AL DOM Y ESTADO INICIAL ---
     const params = new URLSearchParams(window.location.search);
-    const activityId = params.get('id');
+    const activityId = parseInt(params.get('id'), 10);
     const activityInfoDiv = document.getElementById('activity-info');
     const activityStatsDiv = document.getElementById('activity-stats');
     const activityAdvancedDiv = document.getElementById('activity-advanced');
@@ -329,10 +329,27 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             streamChartsDiv.style.display = 'grid';
 
+            const allActivitiesText = localStorage.getItem('strava_all_activities');
+            const allActivities = allActivitiesText ? JSON.parse(allActivitiesText) : [];
+
             const [activityData, streamData] = await Promise.all([
                 fetchActivityDetails(activityId, authPayload),
                 fetchActivityStreams(activityId, authPayload)
             ]);
+
+            if (allActivities.length > 0 && activityData.type && activityData.type.includes('Run')) {
+                // Filtramos solo las carreras de la lista completa
+                const runs = allActivities.filter(a => a.type && a.type.includes('Run'));
+                // Ordenamos por distancia para obtener el ranking
+                const sortedByDistance = [...runs].sort((a, b) => b.distance - a.distance);
+                // Buscamos la posición (índice) de la actividad actual en la lista ordenada
+                const rankIndex = sortedByDistance.findIndex(a => a.id === activityData.id);
+
+                if (rankIndex !== -1) {
+                    // El rango es el índice + 1. Lo añadimos al objeto de la actividad.
+                    activityData.distance_rank = rankIndex + 1;
+                }
+            }
 
             // --- AQUI aplica rolling mean ---
             const windowSize = 100; // Puedes ajustar el tamaño de la ventana

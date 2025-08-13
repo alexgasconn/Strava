@@ -707,6 +707,8 @@ async function initializeApp(encodedTokenPayload) {
         athleteName.textContent = `Dashboard for ${athleteInfo.firstname}`;
 
         allActivities = activities;
+        localStorage.setItem('strava_all_activities', JSON.stringify(activities));
+
         renderDashboard(activities);
     } catch (error) {
         handleError("Error initializing the app", error);
@@ -797,6 +799,8 @@ document.getElementById('refresh-button').addEventListener('click', async () => 
         const activities = result.activities;
         localStorage.setItem(CACHE_KEY, JSON.stringify(activities));
         allActivities = activities;
+        localStorage.setItem('strava_all_activities', JSON.stringify(activities));
+
         renderDashboard(activities);
     } catch (error) {
         handleError('Error refreshing activities', error);
