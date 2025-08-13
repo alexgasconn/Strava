@@ -620,14 +620,12 @@ export function setupExportButtons(activities) {
     };
 }
 
-// A variable to hold the chart instance, so we can destroy it before redrawing.
 let paceChartInstance = null;
 
 export function renderRiegelPredictions(runs) {
     const container = document.getElementById('riegel-predictions');
     if (!container) return;
 
-    // --- CONFIGURATION & TARGETS ---
     const targetDistances = [
         { name: 'Mile', km: 1.609 },
         { name: '5K', km: 5 },
@@ -636,14 +634,6 @@ export function renderRiegelPredictions(runs) {
         { name: 'Marathon', km: 42.195 }
     ];
 
-    // --- HELPER FUNCTIONS ---
-
-    function formatTime(sec) { /* ... (same as before) ... */ }
-    function formatPace(sec, km) { /* ... (same as before) ... */ }
-    function solve3x3(A, B) { /* ... (same as before) ... */ }
-    
-    // --- Omitted for brevity, paste the functions from the previous answer here ---
-    // formatTime, formatPace, solve3x3
     function formatTime(sec) {
         if (!isFinite(sec) || sec <= 0) return 'N/A';
         sec = Math.round(sec);
@@ -677,15 +667,6 @@ export function renderRiegelPredictions(runs) {
         ];
     }
 
-
-    // --- CORE LOGIC ---
-
-    function getBestPerformances(allRuns) { /* ... (same as before) ... */ }
-    function trainPersonalizedModel(bestPerformances) { /* ... (same as before) ... */ }
-    function calculateAllPredictions(bestPerformances, model) { /* ... (same as before) ... */ }
-
-    // --- Omitted for brevity, paste the functions from the previous answer here ---
-    // getBestPerformances, trainPersonalizedModel, calculateAllPredictions
     function getBestPerformances(allRuns) {
         const bestPerformances = {};
         for (const { km } of targetDistances) {
@@ -743,7 +724,7 @@ export function renderRiegelPredictions(runs) {
             }
             allPredictions.sort((a, b) => a.time - b.time);
             const start = Math.floor(allPredictions.length * 0.25);
-            const end = Math.ceil(allPredictions.length * 0.55);
+            const end = Math.ceil(allPredictions.length * 0.65);
             const trimmed = allPredictions.slice(start, end + 1);
             if (trimmed.length === 0) {
                  return { ...target, combined: null, low: null, high: null };
@@ -756,33 +737,19 @@ export function renderRiegelPredictions(runs) {
         });
     }
 
-    // --- NEW: CHART RENDERING FUNCTION ---
-    
-    /**
-     * Renders a pace chart using Chart.js to visualize predictions.
-     */
     function renderPaceChart(predictions) {
-        // Ensure Chart.js is loaded
         if (typeof Chart === 'undefined') {
             console.error("Chart.js is not loaded. Please include it to display the chart.");
             return;
         }
-
         const chartContainer = document.getElementById('riegel-chart-container');
         if (!chartContainer) return;
         const ctx = chartContainer.getContext('2d');
-
-        // If a chart already exists, destroy it before creating a new one
         if (paceChartInstance) {
             paceChartInstance.destroy();
         }
-
-        // Filter out invalid predictions and prepare data for the chart
         const validPredictions = predictions.filter(p => p.combined && p.low && p.high);
-
-        // Convert times to pace (minutes per km)
         const toPace = (time, km) => (time / km) / 60;
-
         const mainPaces = validPredictions.map(p => ({ x: p.km, y: toPace(p.combined, p.km) }));
         const lowerPaces = validPredictions.map(p => ({ x: p.km, y: toPace(p.low, p.km) }));
         const upperPaces = validPredictions.map(p => ({ x: p.km, y: toPace(p.high, p.km) }));
@@ -797,7 +764,7 @@ export function renderRiegelPredictions(runs) {
                         borderColor: 'transparent',
                         backgroundColor: 'rgba(75, 192, 192, 0.2)',
                         pointRadius: 0,
-                        fill: '+1' // Fill to the next dataset (upperPaces)
+                        fill: '+1'
                     },
                     {
                         label: 'Slowest Pace Prediction',
@@ -805,7 +772,7 @@ export function renderRiegelPredictions(runs) {
                         borderColor: 'transparent',
                         backgroundColor: 'rgba(75, 192, 192, 0.2)',
                         pointRadius: 0,
-                        fill: '-1' // Fill to the previous dataset (lowerPaces)
+                        fill: '-1'
                     },
                     {
                         label: 'Predicted Pace',
@@ -851,16 +818,12 @@ export function renderRiegelPredictions(runs) {
                             display: true,
                             text: 'Pace (min/km)'
                         },
-                        // Reverse the axis so faster paces (lower numbers) are at the top
                         reverse: false 
                     }
                 }
             }
         });
     }
-
-
-    // --- EXECUTION & RENDERING ---
 
     const bests = getBestPerformances(runs);
     const model = trainPersonalizedModel(bests);
@@ -876,26 +839,29 @@ export function renderRiegelPredictions(runs) {
         return `<tr><td>${p.name}</td><td>${formatTime(p.low)} - ${formatTime(p.high)}</td><td>${formatPace(p.low, p.km)} - ${formatPace(p.high, p.km)}</td></tr>`;
     }).join('');
 
-    // Update the container's HTML to include the table AND the chart canvas
+    // Layout: table and chart side by side
     container.innerHTML = `
-        <table class="df-table">
-            <thead>
-                <tr><th>Distance</th><th>Predicted Time</th><th>Pace</th></tr>
-            </thead>
-            <tbody>
-                ${rows}
-            </tbody>
-        </table>
-        
-        <div class="chart-wrapper" style="position: relative; height: 300px; width: 100%; margin-top: 20px;">
-            <canvas id="riegel-chart-container"></canvas>
+        <div style="display: flex; gap: 2rem; align-items: flex-start; flex-wrap: wrap;">
+            <div style="flex: 1 1 320px; min-width: 280px;">
+                <table class="df-table">
+                    <thead>
+                        <tr><th>Distance</th><th>Predicted Time</th><th>Pace</th></tr>
+                    </thead>
+                    <tbody>
+                        ${rows}
+                    </tbody>
+                </table>
+            </div>
+            <div style="flex: 1 1 320px; min-width: 280px;">
+                <div class="chart-wrapper" style="position: relative; height: 300px; width: 100%;">
+                    <canvas id="riegel-chart-container"></canvas>
+                </div>
+            </div>
         </div>
-
         <div class="disclaimer" style="font-size: 0.8em; color: #666; margin-top: 10px;">
             Predictions use a hybrid model combining Riegel's formula and a personalized endurance curve. The range is based on the most consistent estimates from your running data.
         </div>
     `;
 
-    // Finally, render the chart into the newly created canvas
     renderPaceChart(finalPredictions);
 }
