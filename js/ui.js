@@ -743,7 +743,7 @@ export function renderRiegelPredictions(runs) {
             }
             allPredictions.sort((a, b) => a.time - b.time);
             const start = Math.floor(allPredictions.length * 0.25);
-            const end = Math.ceil(allPredictions.length * 0.75);
+            const end = Math.ceil(allPredictions.length * 0.55);
             const trimmed = allPredictions.slice(start, end + 1);
             if (trimmed.length === 0) {
                  return { ...target, combined: null, low: null, high: null };
@@ -852,7 +852,7 @@ export function renderRiegelPredictions(runs) {
                             text: 'Pace (min/km)'
                         },
                         // Reverse the axis so faster paces (lower numbers) are at the top
-                        reverse: true 
+                        reverse: false 
                     }
                 }
             }
