@@ -124,6 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const moveRatio = act.elapsed_time ? (act.moving_time / act.elapsed_time).toFixed(2) : '-';
         const effort = act.suffer_score !== undefined ? act.suffer_score : (act.perceived_exertion !== undefined ? act.perceived_exertion : '-');
         const vo2max = estimateVO2max(act);
+        const distance_rank = act.distance_rank !== undefined ? act.distance_rank : '-';
 
         const prCount = act.pr_count !== undefined ? act.pr_count : '-';
         const athleteCount = act.athlete_count !== undefined ? act.athlete_count : '-';
@@ -146,6 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('activity-advanced').innerHTML = `
             <h3>Advanced Stats</h3>
             <ul>
+                <li><b>Distance Rank:</b> #${distance_rank}</li>
                 <li><b>Move Ratio:</b> ${moveRatio}</li>
                 <li><b>Effort:</b> ${effort}</li>
                 <li><b>VO₂max (est):</b> ${vo2max}</li>

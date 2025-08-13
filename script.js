@@ -52,6 +52,16 @@ function renderDashboard(activities) {
     const filtered = filterActivitiesByDate(activities);
     // --- Filter only running activities (includes Trail Run, etc) ---
     const runs = filtered.filter(a => a.type && a.type.includes('Run'));
+    // Assign descending distance rank to each run
+    const sortedByDistance = [...runs].sort((a, b) => b.distance - a.distance);
+    sortedByDistance.forEach((run, idx) => {
+        run.distance_rank = idx + 1;
+    });
+    // Map rank back to original runs array
+    runs.forEach(run => {
+        const ranked = sortedByDistance.find(r => r.id === run.id);
+        run.distance_rank = ranked ? ranked.distance_rank : null;
+    });
     console.log(`Total running activities: ${runs.length}`);
     console.log(`Running activities:`, runs);
 
