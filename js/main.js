@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let allActivities = [];
     let dateFilterFrom = null;
     let dateFilterTo = null;
-    // let plannerTabRendered = false; // <-- ¡AÑADE ESTA LÍNEA! La variable debe ser declarada aquí.
+    let plannerTabRendered = false; // <-- ¡AÑADE ESTA LÍNEA! La variable debe ser declarada aquí.
 
     // --- DOM REFERENCES ---
     const loginButton = document.getElementById('login-button');
