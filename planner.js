@@ -1,5 +1,4 @@
 // js/planner.js
-// import { renderRiegelPredictions } from './ui.js'; 
 
 // --- DOM REFERENCES ---
 const loadingOverlay = document.getElementById('loading-overlay');
@@ -40,12 +39,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const allActivities = JSON.parse(allActivitiesText);
     const runs = allActivities.filter(a => a.type && a.type.includes('Run'));
 
-    // Render the Riegel predictions
-    // The renderRiegelPredictions function is already in ui.js, so we just call it.
+  
     renderRiegelPredictions(runs);
-
-    // The VDOT calculator iframe loads by itself, no JS needed for it.
-    
     hideLoading();
 });
 
