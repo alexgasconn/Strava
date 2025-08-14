@@ -1,7 +1,7 @@
 // js/main.js
 import { redirectToStrava, logout, handleAuth } from './auth.js';
 import { fetchAllActivities } from './api.js';
-import { setupDashboard, renderDashboard, showLoading, hideLoading, handleError, renderPlannerTab } from './ui.js';
+import { setupDashboard, renderDashboard, showLoading, hideLoading, handleError } from './ui.js';
 
 // Espera a que el DOM esté completamente cargado
 document.addEventListener('DOMContentLoaded', () => {
@@ -17,37 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const refreshButton = document.getElementById('refresh-button');
     const applyFilterButton = document.getElementById('apply-date-filter');
     const resetFilterButton = document.getElementById('reset-date-filter');
-
-        // =========================================================
-    //         AÑADE ESTE BLOQUE DE CÓDIGO AQUÍ
-    // =========================================================
-    const tabLinks = document.querySelectorAll('.tab-link');
-    const tabContents = document.querySelectorAll('.tab-content');
-
-    tabLinks.forEach(link => {
-        link.addEventListener('click', () => {
-            const tabId = link.getAttribute('data-tab');
-
-            // 1. Quitar la clase 'active' de todos los links y contenidos
-            tabLinks.forEach(item => item.classList.remove('active'));
-            tabContents.forEach(item => item.classList.remove('active'));
-
-            // 2. Añadir la clase 'active' al link y contenido seleccionados
-            link.classList.add('active');
-            document.getElementById(tabId).classList.add('active');
-
-            // 3. Renderizar el contenido de la pestaña si es la primera vez
-            if (tabId === 'planner-tab' && !plannerTabRendered) {
-                renderPlannerTab(allActivities); 
-                plannerTabRendered = true; 
-            }
-        });
-    });
-    // =========================================================
-    //         FIN DEL BLOQUE A AÑADIR
-    // =========================================================
-
-
+  
     // --- INITIALIZATION ---
     // Movemos la función initializeApp DENTRO del listener también
     async function initializeApp(tokenData) {
@@ -63,8 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Y la pasamos a auth.js a través de una función de "callback" o importándola directamente
-    // Para simplificar, vamos a modificar auth.js para que no dependa de initializeApp directamente.
 
     async function refreshActivities() {
         showLoading('Refreshing activities...');
@@ -107,8 +75,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- APP ENTRY POINT ---
-    // Lo llamamos aquí al final del listener.
-    // Necesitamos pasar la función de inicialización a handleAuth.
     handleAuth(initializeApp).catch(error => {
         console.error("App failed to start:", error);
         hideLoading();

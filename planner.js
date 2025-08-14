@@ -1,7 +1,4 @@
 // js/planner.js
-
-// We can reuse the Riegel prediction logic. Let's assume it's in a shared 'utils' or 'ui' file.
-// For simplicity, I'll copy the function here, but ideally it would be imported.
 import { renderRiegelPredictions } from './ui.js'; 
 
 // --- DOM REFERENCES ---
