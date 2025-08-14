@@ -24,7 +24,7 @@ Running:
         -PERSONAL BESTS (mile, 5k, 10k, 21k, 42k)🟢
         -Desplegable Top 3 times per distance (mile, 5k, 10k, 21k, 42k)🟢
         -Predict time with riegel🟢
-        -Predict time with ML
+        -Predict time with ML🟢
     
     -Overview:
         -Totals: time, km, elevation, activities, avg Pace, avg VOmax🟡
@@ -46,6 +46,12 @@ Running:
         -km per month🟢
         -Heatmap total🟢
         -Histogram of pace per km! all runs!!!🔴
+
+
+    -PLANNER
+        -suggest paces for tempo, easy, bla bla
+        -suggest a ctraining calendar
+        -predictions of times (moure lo del a pagina rpincipal)
 
 
     -Activity:🟡

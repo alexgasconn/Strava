@@ -505,3 +505,32 @@ main {
     display: none !important;
   }
 }
+
+/* --- Estilos para la calculadora VDOT incrustada --- */
+
+.iframe-responsive-container {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    /* La altura original es 1600px, la mantenemos aquí */
+    /* Puedes ajustar esta altura si lo ves necesario */
+    height: 1600px; 
+    border: 1px solid #ddd; /* Un borde sutil para enmarcarlo */
+    border-radius: 8px;
+}
+
+.iframe-responsive-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+#calculator-container p {
+    margin-top: -1em;
+    margin-bottom: 1.5em;
+    font-size: 0.9em;
+    color: #666;
+}
