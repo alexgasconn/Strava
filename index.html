@@ -1,161 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+
+</html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strava Dashboard</title>
+    <!-- Load libraries and our CSS -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cal-heatmap@4.2.2/dist/cal-heatmap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@4.1.0/dist/chartjs-chart-matrix.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cal-heatmap@4.2.2/dist/cal-heatmap.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+</head>
+
 <body>
     <div class="container">
-        <!-- LOGIN SECTION (sin cambios) -->
+        <!-- LOGIN SECTION -->
         <div id="login-section">
-            <h1>Your Performance, Analyzed!</h1>
+            <h1>Your Performance, Analyzed.</h1>
             <p>Connect your Strava account to visualize your progress and discover new insights.</p>
             <button id="login-button">Connect with Strava</button>
         </div>
 
-        <!-- MAIN APP SECTION (CORREGIDO) -->
+        <!-- MAIN APP SECTION -->
         <div id="app-section" class="hidden">
             <header>
                 <h1 id="athlete-name"></h1>
-                <div>
-                    <button id="logout-button">Log Out</button>
-                    <button id="refresh-button">Refresh Activities</button>
+                <button id="logout-button">Log Out</button>
+                <button id="refresh-button">Refresh Activities</button>
+                <div id="date-filter" style="margin-bottom:1em;">
+                    <label>From: <input type="date" id="date-from"></label>
+                    <label>To: <input type="date" id="date-to"></label>
+                    <button id="apply-date-filter">Apply</button>
+                    <button id="reset-date-filter">Reset</button>
                 </div>
             </header>
 
-            <!-- BARRA DE NAVEGACIÓN DE PESTAÑAS -->
+
             <nav class="tab-nav">
                 <button class="tab-link active" data-tab="dashboard-tab">📈 Dashboard</button>
                 <button class="tab-link" data-tab="planner-tab">📅 Planner & Tools</button>
             </nav>
-
-            <!-- CONTENEDOR PRINCIPAL PARA EL CONTENIDO DE LAS PESTAÑAS -->
             <main>
-                <!-- ============================================= -->
-                <!-- PESTAÑA 1: DASHBOARD                          -->
-                <!-- ============================================= -->
-                <div id="dashboard-tab" class="tab-content active">
-                    <div id="date-filter" style="margin-bottom:1em;">
-                        <label>From: <input type="date" id="date-from"></label>
-                        <label>To: <input type="date" id="date-to"></label>
-                        <button id="apply-date-filter">Apply</button>
-                        <button id="reset-date-filter">Reset</button>
-                    </div>
 
-                    <div id="summary-cards" class="summary-grid"></div>
 
-                    <div class="charts-grid">
+                <main>
+                    <!-- PESTAÑA 1: DASHBOARD (Contenido original) -->
+                    <div id="dashboard-tab" class="tab-content active">
+                        <div id="date-filter" style="margin-bottom:1em;">
+                            <label>From: <input type="date" id="date-from"></label>
+                            <label>To: <input type="date" id="date-to"></label>
+                            <button id="apply-date-filter">Apply</button>
+                            <button id="reset-date-filter">Reset</button>
+                        </div>
+
+                        <!-- Summary Cards -->
+                        <div id="summary-cards" class="summary-grid"></div>
+
+                        <!-- Consistency Calendar -->
                         <div class="chart-container">
                             <h3>Consistency (Last Year)</h3>
                             <div id="cal-heatmap"></div>
                         </div>
-                        <div class="chart-container">
-                            <h3>Streaks</h3>
-                            <div id="streaks-info"></div>
-                        </div>
-                        <div class="chart-container">
-                            <h3>Activities by Type</h3>
-                            <canvas id="activity-type-barchart"></canvas>
-                        </div>
-                        <div id="gear-info-section" class="chart-container full-width">
-                            <h3>My Gear</h3>
-                            <div id="gear-info-list" class="gear-info-list"></div>
-                        </div>
-                        <div class="chart-container">
-                            <h3>Monthly Distance (Last Year)</h3>
-                            <canvas id="monthly-distance-chart"></canvas>
-                        </div>
-                        <div class="chart-container">
-                            <h3>Pace vs. Distance (Runs)</h3>
-                            <canvas id="pace-vs-distance-chart"></canvas>
-                        </div>
-                        <div class="chart-container">
-                            <h3>Distance Distribution</h3>
-                            <canvas id="distance-histogram"></canvas>
-                        </div>
-                        <div class="chart-container">
-                            <h3>Estimated VO₂max Over Time</h3>
-                            <canvas id="vo2max-over-time"></canvas>
-                        </div>
-                        <div class="chart-container">
-                            <h3>ATL, CTL & TSB (Effort)</h3>
-                            <canvas id="ctl-atl-tsb"></canvas>
-                        </div>
-                        <div class="chart-container">
-                            <h3>Gear Usage by Month</h3>
-                            <canvas id="stacked-area-chart"></canvas>
-                        </div>
-                        <div class="chart-container">
-                            <h3>Gear Usage per Month (Mini Gantt)</h3>
-                            <canvas id="gear-gantt-chart"></canvas>
-                        </div>
-                        <div class="chart-container">
-                            <h3>Accumulated Distance vs Time</h3>
-                            <canvas id="accumulated-distance-chart"></canvas>
-                        </div>
-                        <div class="chart-container">
-                            <h3>Rolling Mean Distance vs Time</h3>
-                            <canvas id="rolling-mean-distance-chart"></canvas>
-                        </div>
-                        <div class="chart-container">
-                            <h3>Distance vs Elevation Gain</h3>
-                            <canvas id="distance-vs-elevation-chart"></canvas>
-                        </div>
-                        <div class="chart-container">
-                            <h3>Elevation Gain Histogram</h3>
-                            <canvas id="elevation-histogram"></canvas>
-                        </div>
-                        <div class="chart-container full-width">
-                            <h3>Run Start/End Heatmap</h3>
-                            <div id="runs-heatmap" style="height: 400px; width: 100%;"></div>
-                        </div>
-                        <div class="chart-container">
-                            <h3>Personal Bests</h3>
-                            <div id="personal-bests"></div>
-                        </div>
-                        <div class="chart-container">
-                            <h3>Races</h3>
-                            <div style="overflow-x:auto;">
-                                <table id="race-list" class="df-table"></table>
+
+
+                        <!-- Grid for detailed charts -->
+                        <div class="charts-grid">
+                            <div class="chart-container">
+                                <h3>Streaks</h3>
+                                <div id="streaks-info"></div>
+                            </div>
+                            <div class="chart-container">
+                                <h3>Activities by Type</h3>
+                                <canvas id="activity-type-barchart"></canvas>
+                            </div>
+                            <div id="gear-info-section" class="chart-container full-width">
+                                <h3>My Gear</h3>
+                                <div id="gear-info-list" class="gear-info-list"></div>
+                            </div>
+                            <div class="chart-container">
+                                <h3>Monthly Distance (Last Year)</h3>
+                                <canvas id="monthly-distance-chart"></canvas>
+                            </div>
+                            <div class="chart-container">
+                                <h3>Pace vs. Distance (Runs)</h3>
+                                <canvas id="pace-vs-distance-chart"></canvas>
+                            </div>
+                            <div class="chart-container">
+                                <h3>Distance Distribution</h3>
+                                <canvas id="distance-histogram"></canvas>
+                            </div>
+                            <div class="chart-container">
+                                <h3>Estimated VO₂max Over Time</h3>
+                                <canvas id="vo2max-over-time"></canvas>
+                            </div>
+                            <div class="chart-container">
+                                <h3>ATL, CTL & TSB (Effort)</h3>
+                                <canvas id="ctl-atl-tsb"></canvas>
+                            </div>
+                            <div class="chart-container">
+                                <h3>Gear Usage by Month</h3>
+                                <canvas id="stacked-area-chart"></canvas>
+                            </div>
+                            <div class="chart-container">
+                                <h3>Gear Usage per Month (Mini Gantt)</h3>
+                                <canvas id="gear-gantt-chart"></canvas>
+                            </div>
+                            <div class="chart-container">
+                                <h3>Accumulated Distance vs Time</h3>
+                                <canvas id="accumulated-distance-chart"></canvas>
+                            </div>
+                            <div class="chart-container">
+                                <h3>Rolling Mean Distance vs Time</h3>
+                                <canvas id="rolling-mean-distance-chart"></canvas>
+                            </div>
+                            <div class="chart-container">
+                                <h3>Distance vs Elevation Gain</h3>
+                                <canvas id="distance-vs-elevation-chart"></canvas>
+                            </div>
+                            <div class="chart-container">
+                                <h3>Elevation Gain Histogram</h3>
+                                <canvas id="elevation-histogram"></canvas>
+                            </div>
+
+                            <div class="chart-container">
+                                <h3>Run Start/End Heatmap</h3>
+                                <div id="runs-heatmap" style="height: 400px; width: 100%;"></div>
+                            </div>
+                            <div class="chart-container">
+                                <h3>Personal Bests</h3>
+                                <div id="personal-bests"></div>
+                            </div>
+                            <div class="chart-container">
+                                <h3>Races</h3>
+                                <div style="overflow-x:auto;">
+                                    <table id="race-list" class="df-table"></table>
+                                </div>
+                            </div>
+
+                            <div class="chart-container full-width">
+                                <h3>All Runs</h3>
+                                <div style="overflow-x:auto;">
+                                    <table id="all-runs-table" class="df-table"></table>
+                                </div>
                             </div>
                         </div>
-                        <div class="chart-container full-width">
-                            <h3>All Runs</h3>
-                            <div style="overflow-x:auto;">
-                                <table id="all-runs-table" class="df-table"></table>
+
+                        <!-- Export Buttons -->
+                        <div id="export-buttons" style="display:flex; gap:1em; margin: 1.5em 0;">
+                            <button id="download-csv-btn">⬇️ Descargar CSV</button>
+                            <button id="download-pdf-btn">⬇️ Descargar PDF</button>
+                        </div>
+
+
+                        <!-- ============================================= -->
+                        <!-- PESTAÑA 2: PLANNER & TOOLS                    -->
+                        <!-- ============================================= -->
+                        <div id="planner-tab" class="tab-content">
+                            <!-- SECCIÓN DE PREDICCIÓN -->
+                            <div class="chart-container full-width">
+                                <h3>Predicción de Tiempos (Riegel)</h3>
+                                <div id="riegel-predictions"></div>
+                            </div>
+
+                            <!-- CALCULADORA VDOT -->
+                            <div class="chart-container full-width" id="calculator-container">
+                                <h3>VDOT Race Time Calculator</h3>
+                                <p>Powered by <a href="https://vdoto2.com/" target="_blank">VDOT O2</a>.</p>
+                                <div class="iframe-responsive-container">
+                                    <iframe src='https://vdoto2.com/calculator/embed' frameborder='0'></iframe>
+                                </div>
                             </div>
                         </div>
-                    </div>
-
-                    <div id="export-buttons" style="display:flex; gap:1em; margin: 1.5em 0;">
-                        <button id="download-csv-btn">⬇️ Descargar CSV</button>
-                        <button id="download-pdf-btn">⬇️ Descargar PDF</button>
-                    </div>
-                </div>
-
-                <!-- ============================================= -->
-                <!-- PESTAÑA 2: PLANNER & TOOLS                    -->
-                <!-- ============================================= -->
-                <div id="planner-tab" class="tab-content">
-                    <!-- SECCIÓN DE PREDICCIÓN -->
-                    <div class="chart-container full-width">
-                        <h3>Predicción de Tiempos (Riegel)</h3>
-                        <div id="riegel-predictions"></div>
-                    </div>
-
-                    <!-- CALCULADORA VDOT -->
-                    <div class="chart-container full-width" id="calculator-container">
-                        <h3>VDOT Race Time Calculator</h3>
-                        <p>Powered by <a href="https://vdoto2.com/" target="_blank">VDOT O2</a>.</p>
-                        <div class="iframe-responsive-container">
-                            <iframe src='https://vdoto2.com/calculator/embed' frameborder='0'></iframe>
-                        </div>
-                    </div>
-                </div>
-            </main>
+                </main>
         </div>
 
-        <!-- LOADING SCREEN (sin cambios) -->
+        <!-- LOADING SCREEN -->
         <div id="loading-overlay" class="hidden">
             <div class="spinner"></div>
             <p id="loading-message"></p>
         </div>
     </div>
 
-    <!-- Carga de scripts (sin cambios) -->
+    <!-- Load our only script -->
+    <!-- <script src="script.js"></script> -->
     <script type="module" src="js/main.js"></script>
 </body>
+
+</html>
