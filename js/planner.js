@@ -1,62 +1,39 @@
 // js/planner.js
 
-// --- DOM REFERENCES ---
-const loadingOverlay = document.getElementById('loading-overlay');
-const loadingMessage = document.getElementById('loading-message');
+// Este archivo ya no necesita showLoading/hideLoading porque main.js lo controla.
+// Tampoco necesita el listener DOMContentLoaded.
 
-function showLoading(message) {
-    if (loadingOverlay) {
-        loadingMessage.textContent = message;
-        loadingOverlay.classList.remove('hidden');
-    }
-}
+// La única responsabilidad de este archivo es definir y exportar
+// la lógica para renderizar el contenido de la pestaña del planner.
 
-function hideLoading() {
-    if (loadingOverlay) {
-        loadingOverlay.classList.add('hidden');
-    }
-}
-
-
-// --- Main Logic for the Planner Page ---
-document.addEventListener('DOMContentLoaded', () => {
-    showLoading('Loading your activities...');
-
-    // Get all activities from localStorage (provided by the main dashboard page)
-    const allActivitiesText = localStorage.getItem('strava_all_activities');
-    
-    if (!allActivitiesText) {
-        const container = document.getElementById('riegel-predictions');
-        container.innerHTML = `
-            <p style="color: red;">
-                Could not find activity data. Please go back to the 
-                <a href="index.html">main dashboard</a> to load your activities first.
-            </p>`;
-        hideLoading();
-        return;
-    }
-
-    const allActivities = JSON.parse(allActivitiesText);
+export function renderPlannerTab(allActivities) {
+    console.log("Rendering Planner Tab content from planner.js...");
     const runs = allActivities.filter(a => a.type && a.type.includes('Run'));
-
-  
     renderRiegelPredictions(runs);
-    hideLoading();
-});
+}
 
 
+// =================================================================
+//          TODA LA LÓGICA DE RIEGEL VIVE AQUÍ
+// =================================================================
 let paceChartInstance = null;
 
 function renderRiegelPredictions(runs) {
     const container = document.getElementById('riegel-predictions');
     if (!container) return;
 
+    if (!runs || runs.length === 0) {
+        container.innerHTML = '<p>No running data available to make predictions.</p>';
+        return;
+    }
+
+    // ... (Aquí va toda tu función de Riegel, SIN CAMBIOS)
     const targetDistances = [
         { name: 'Mile', km: 1.609 },
         { name: '5K', km: 5 },
         { name: '10K', km: 10 },
         { name: 'Half Marathon', km: 21.097 },
-        { name: 'Marathon', km: 42.195 }
+        { name:- 'Marathon', km: 42.195 }
     ];
 
     function formatTime(sec) {
