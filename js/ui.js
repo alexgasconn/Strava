@@ -62,6 +62,15 @@ export function renderDashboard(allActivities, dateFilterFrom, dateFilterTo) {
     renderGearSection(runs);
     renderStreaks(runs);
     renderPersonalBests(runs);
+    // renderRiegelPredictions(runs);
+}
+
+// =================================================================
+//          NUEVA FUNCIÓN PARA LA PESTAÑA DEL PLANNER
+// =================================================================
+export function renderPlannerTab(allActivities) {
+    const runs = allActivities.filter(a => a.type && a.type.includes('Run'));
+    console.log("Rendering Planner Tab content...");
     renderRiegelPredictions(runs);
 }
 

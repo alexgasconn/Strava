@@ -1,7 +1,7 @@
 // js/main.js
 import { redirectToStrava, logout, handleAuth } from './auth.js';
 import { fetchAllActivities } from './api.js';
-import { setupDashboard, renderDashboard, showLoading, hideLoading, handleError } from './ui.js';
+import { setupDashboard, renderDashboard, showLoading, hideLoading, handleError, renderPlannerTab } from './ui.js';
 
 // Espera a que el DOM esté completamente cargado
 document.addEventListener('DOMContentLoaded', () => {
