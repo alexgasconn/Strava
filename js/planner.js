@@ -288,7 +288,7 @@ function renderPaceChart(predictions) {
             },
             scales: {
                 x: { type: 'linear', title: { display: true, text: 'Distance (km)' }, min: 0, max: 45 },
-                y: { title: { display: true, text: 'Pace (min/km)' }, reverse: true }
+                y: { title: { display: true, text: 'Pace (min/km)' }, reverse: false }
             }
         }
     });
