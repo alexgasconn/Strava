@@ -17,7 +17,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const refreshButton = document.getElementById('refresh-button');
     const applyFilterButton = document.getElementById('apply-date-filter');
     const resetFilterButton = document.getElementById('reset-date-filter');
-  
+
+
+    // --- LÓGICA DE PESTAÑAS ---
+    const tabLinks = document.querySelectorAll('.tab-link');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabLinks.forEach(link => {
+        link.addEventListener('click', () => {
+            const tabId = link.getAttribute('data-tab');
+
+            tabLinks.forEach(item => item.classList.remove('active'));
+            tabContents.forEach(item => item.classList.remove('active'));
+
+            link.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+
+            // Renderiza el contenido del planner LA PRIMERA VEZ que se hace clic
+            if (tabId === 'planner-tab' && !plannerTabRendered) {
+                if (allActivities.length > 0) {
+                    renderPlannerTab(allActivities);
+                    plannerTabRendered = true;
+                } else {
+                    console.warn("Activities not loaded yet, can't render planner tab.");
+                }
+            }
+        });
+    });
+
+
+
     // --- INITIALIZATION ---
     // Movemos la función initializeApp DENTRO del listener también
     async function initializeApp(tokenData) {

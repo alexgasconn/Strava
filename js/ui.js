@@ -62,7 +62,6 @@ export function renderDashboard(allActivities, dateFilterFrom, dateFilterTo) {
     renderGearSection(runs);
     renderStreaks(runs);
     renderPersonalBests(runs);
-    // renderRiegelPredictions(runs);
 }
 
 // =================================================================
