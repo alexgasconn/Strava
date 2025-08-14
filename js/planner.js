@@ -211,7 +211,7 @@ function getBestPerformances(allRuns) {
     ];
     const bestPerformances = {};
     for (const { km } of targetDistances) {
-        const margin = 0.05;
+        const margin = 0.1;
         const min = km * (1 - margin), max = km * (1 + margin);
         const candidates = allRuns
             .map(r => ({ ...r, km: r.distance / 1000, seconds: r.moving_time }))
