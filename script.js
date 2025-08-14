@@ -165,10 +165,12 @@ function renderDashboard(activities) {
                         type: 'line',
                         label: 'Distance (km)',
                         data: monthlyDistances,
-                        borderColor: '#FC5200',
-                        backgroundColor: 'rgba(252,82,0,0.15)',
+                        borderColor: 'rgba(252,82,0,0.5)', // softer line
+                        backgroundColor: 'rgba(252,82,0,0.08)', // more transparent fill
                         fill: false,
-                        tension: 0.1,
+                        tension: 0.4, // smoother curve
+                        borderWidth: 2, // thinner line
+                        pointRadius: 0, // no points
                         yAxisID: 'y',
                         order: 1
                     },
@@ -176,9 +178,9 @@ function renderDashboard(activities) {
                         type: 'bar',
                         label: '# Runs',
                         data: monthlyCounts,
-                        backgroundColor: 'rgba(54,162,235,0.25)',
-                        borderColor: 'rgba(54,162,235,0.5)',
-                        borderWidth: 1,
+                        backgroundColor: 'rgba(54,162,235,0.7)', // stronger bars
+                        borderColor: 'rgba(54,162,235,1)', // stronger border
+                        borderWidth: 2, // thicker border
                         yAxisID: 'y1',
                         order: 2
                     }
@@ -703,7 +705,7 @@ async function initializeApp(encodedTokenPayload) {
         const activities = result.activities;
         loginSection.classList.add('hidden');
         appSection.classList.remove('hidden');
-        
+
         athleteName.textContent = `Running Dashboard`;
 
         allActivities = activities;
