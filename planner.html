@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planner & Tools - Strava Dashboard</title>
+    <!-- Reuse the same stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <!-- A simplified header for this page -->
+            <h1>Planner & Tools</h1>
+            <!-- Navigation back to the dashboard -->
+            <nav>
+                <a href="index.html" class="nav-link">📈 Back to Dashboard</a>
+            </nav>
+        </header>
+
+        <main>
+            <!-- Riegel Predictions Section -->
+            <div class="chart-container full-width">
+                <h3>Race Time Predictions (Riegel)</h3>
+                <div id="riegel-predictions">
+                    <p>Loading run data...</p>
+                </div>
+            </div>
+
+            <!-- VDOT Calculator Section -->
+            <div class="chart-container full-width" id="calculator-container">
+                <h3>VDOT Race Time Calculator</h3>
+                <p>Powered by <a href="https://vdoto2.com/" target="_blank">VDOT O2</a>.</p>
+                <div class="iframe-responsive-container">
+                    <iframe src='https://vdoto2.com/calculator/embed' frameborder='0'></iframe>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Loading screen for this page -->
+    <div id="loading-overlay" class="hidden">
+        <div class="spinner"></div>
+        <p id="loading-message">Loading...</p>
+    </div>
+
+    <!-- We need Chart.js for the Riegel prediction chart -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Load a DEDICATED script for this page -->
+    <script type="module" src="js/planner.js"></script>
+</body>
+</html>

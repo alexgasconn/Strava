@@ -19,25 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const resetFilterButton = document.getElementById('reset-date-filter');
 
 
-    // --- LÓGICA DE PESTAÑAS (NUEVO) ---
-    const tabLinks = document.querySelectorAll('.tab-link');
-    const tabContents = document.querySelectorAll('.tab-content');
-
-    tabLinks.forEach(link => {
-        link.addEventListener('click', () => {
-            const tabId = link.getAttribute('data-tab');
-
-            // 1. Quitar la clase 'active' de todos los links y contenidos
-            tabLinks.forEach(item => item.classList.remove('active'));
-            tabContents.forEach(item => item.classList.remove('active'));
-
-            // 2. Añadir la clase 'active' al link y contenido seleccionados
-            link.classList.add('active');
-            document.getElementById(tabId).classList.add('active');
-        });
-    });
-    // --- FIN DE LÓGICA DE PESTAÑAS ---
-
     // --- INITIALIZATION ---
     // Movemos la función initializeApp DENTRO del listener también
     async function initializeApp(tokenData) {
