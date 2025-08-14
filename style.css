@@ -601,3 +601,67 @@ main {
     font-size: 0.9em;
     color: #666;
 }
+
+/* --- Estilos para los Controles de Predicción --- */
+.prediction-controls {
+    background-color: #f9f9f9;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 1em;
+    margin-bottom: 1.5em;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    align-items: flex-end;
+}
+
+.prediction-controls fieldset {
+    border: none;
+    padding: 0;
+    margin: 0;
+    min-width: 200px;
+}
+
+.prediction-controls legend {
+    font-weight: bold;
+    margin-bottom: 0.5em;
+    font-size: 1em;
+    color: #333;
+}
+
+.prediction-controls .control-group {
+    display: flex;
+    gap: 1rem;
+}
+
+.prediction-controls .control-group.sliders {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.prediction-controls label {
+    display: flex;
+    align-items: center;
+    gap: 0.3em;
+    font-size: 0.9em;
+}
+
+.prediction-controls input[type="range"] {
+    width: 100%;
+}
+
+#update-predictions-btn {
+    padding: 0.5em 1em;
+    background-color: #FC5200;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    margin-left: auto; /* Empuja el botón a la derecha */
+}
+
+#update-predictions-btn:hover {
+    background-color: #d94700;
+}
