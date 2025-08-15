@@ -718,7 +718,7 @@ function classifyRun(act, streams) {
         .filter(result => result.score > 0)
         .sort((a, b) => b.score - a.score);
 
-    return results.slice(0, 3);
+    return results.slice(0, 7);
 }
 
 
