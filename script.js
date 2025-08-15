@@ -165,24 +165,22 @@ function renderDashboard(activities) {
                         type: 'bar',
                         label: 'Distance (km)',
                         data: monthlyDistances,
-                        borderColor: 'rgba(252,82,0,0.7)', // softer line
-                        backgroundColor: 'rgba(252,82,0,0.6)', // more transparent fill
-                        fill: false,
-                        tension: 0.4, // smoother curve
-                        borderWidth: 2, // thinner line
-                        pointRadius: 0, // no points
+                        backgroundColor: 'rgba(0, 78, 148, 0.75)', // <-- Azul más intenso
+                        borderColor: 'rgba(0, 58, 110, 1)',      // <-- Borde aún más oscuro
+                        borderWidth: 1, // thinner line
                         yAxisID: 'y',
-                        order: 1
+                        order: 2
                     },
                     {
-                        type: 'line',
+                        type: 'line', // <-- Las carreras ahora son una LÍNEA
                         label: '# Runs',
                         data: monthlyCounts,
-                        backgroundColor: 'rgba(54,162,235,0.7)', // stronger bars
-                        borderColor: 'rgba(54,162,235,1)', // stronger border
-                        borderWidth: 2, // thicker border
-                        yAxisID: 'y1',
-                        order: 2
+                        borderColor: '#FC5200', // <-- Naranja, como pediste
+                        backgroundColor: 'rgba(252, 82, 0, 0.1)',
+                        tension: 0.2,
+                        fill: false, // La línea no tendrá relleno
+                        yAxisID: 'y1', // Usa el eje derecho
+                        order: 1 // Se dibuja encima de las barras
                     }
                 ]
             },
