@@ -484,6 +484,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             renderActivity(activityData);
             renderStreamCharts(streamData, activityData);
+
+            renderBestEfforts(activityData.best_efforts);
+            renderLaps(activityData.laps);
+            renderSegments(activityData.segment_efforts);
+
             streamChartsDiv.style.display = ''; // o 'grid'
 
         } catch (error) {
