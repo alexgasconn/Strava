@@ -29,18 +29,31 @@
 
     <div id="activity-details"></div>
 
-    <div id="run-classifier-section" class="data-section">
-        <h3>🤖 Run Type Analysis</h3>
-        <div id="run-classifier-results">
-            <p>Analyzing run data...</p>
+    <div class="side-by-side-container">
+        <!-- Columna Izquierda: Clasificador -->
+        <div id="run-classifier-section" class="data-section">
+            <h3>🤖 Run Type Analysis</h3>
+            <div id="run-classifier-results">
+                <p>Analyzing run data...</p>
+            </div>
+        </div>
+        <!-- Columna Derecha: Mapa -->
+        <div id="activity-map-container" class="data-section">
+             <h3>🗺️ Route Map</h3>
+            <div id="activity-map"></div>
         </div>
     </div>
-    <div id="activity-map"></div>
 
-    <div id="splits-section" class="hidden">
-      <h3>📈 Splits por kilómetro</h3>
-      <canvas id="chart-pace"></canvas>
-      <canvas id="chart-heartrate"></canvas>
+    <div id="splits-section" class="data-section hidden">
+      <h3>📈 Splits per Kilometer</h3>
+      <div class="side-by-side-container">
+          <div class="chart-container">
+            <canvas id="chart-pace"></canvas>
+          </div>
+          <div class="chart-container">
+            <canvas id="chart-heartrate"></canvas>
+          </div>
+      </div>
     </div>
 
     <div id="stream-charts" class="charts-grid">
