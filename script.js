@@ -162,11 +162,11 @@ function renderDashboard(activities) {
                 labels: sortedMonths,
                 datasets: [
                     {
-                        type: 'line',
+                        type: 'bar',
                         label: 'Distance (km)',
                         data: monthlyDistances,
-                        borderColor: 'rgba(252,82,0,0.5)', // softer line
-                        backgroundColor: 'rgba(252,82,0,0.08)', // more transparent fill
+                        borderColor: 'rgba(252,82,0,0.7)', // softer line
+                        backgroundColor: 'rgba(252,82,0,0.6)', // more transparent fill
                         fill: false,
                         tension: 0.4, // smoother curve
                         borderWidth: 2, // thinner line
@@ -175,7 +175,7 @@ function renderDashboard(activities) {
                         order: 1
                     },
                     {
-                        type: 'bar',
+                        type: 'line',
                         label: '# Runs',
                         data: monthlyCounts,
                         backgroundColor: 'rgba(54,162,235,0.7)', // stronger bars
