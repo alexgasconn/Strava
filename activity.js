@@ -620,6 +620,8 @@ function classifyRun(act, streams) {
     const effort = act.suffer_score || act.perceived_exertion || 0;
     const moveRatio = act.elapsed_time ? act.moving_time / act.elapsed_time : 1;
     const elevationPerKm = distKm > 0 ? act.total_elevation_gain / distKm : 0;
+    const paceAvg = formatPace(act.average_speed);
+    const heartRateAvg = act.average_heartrate ? Math.round(act.average_heartrate) : '-';
 
     const paceStream = [];
     if (streams && streams.time && streams.distance) {
@@ -662,25 +664,35 @@ function classifyRun(act, streams) {
     // Recovery Run (muy estricto)
     if (distKm < 8 && effort < 25 && avgHrRatio < 0.70) runTypes['Recovery Run'] += 60;
     if (paceCV < 4) runTypes['Recovery Run'] += 15;
+    if (paceAvg > 6) runTypes['Recovery Run'] += 10;
+    if (heartRateAvg < 135) runTypes['Recovery Run'] += 5;
 
     // Easy Run
-    if (effort >= 25 && effort < 60 && avgHrRatio < 0.78) runTypes['Easy Run'] += 50;
-    if (distKm > 4 && distKm < 15) runTypes['Easy Run'] += 10;
+    if (effort >= 15 && effort < 60 && avgHrRatio < 0.78) runTypes['Easy Run'] += 50;
+    if (distKm > 4 && distKm < 13) runTypes['Easy Run'] += 10;
     if (paceCV < 5 && elevationPerKm < 30) runTypes['Easy Run'] += 20;
+    if (paceAvg > 5.75) runTypes['Easy Run'] += 10;
+    if (heartRateAvg < 150) runTypes['Easy Run'] += 5;
 
     // Long Run
-    if (distKm > 16) runTypes['Long Run'] += 60;
+    if (distKm > 14.9) runTypes['Long Run'] += 60;
     if (effort > 60 && effort < 160) runTypes['Long Run'] += 20;
     if (paceCV < 7) runTypes['Long Run'] += 10;
+    if (paceAvg > 5.25) runTypes['Long Run'] += 5;
+    if (heartRateAvg < 155) runTypes['Long Run'] += 5;
+
 
     // Race (alta prioridad si se cumplen las condiciones)
     const isRaceDist = [5, 10, 21.1, 42.2].some(d => Math.abs(distKm - d) < 0.5);
     if (isRaceDist && effort > 150 && avgHrRatio > 0.88 && paceCV < 4) runTypes['Race'] += 100;
     if (act.workout_type === 1) runTypes['Race'] += 150; // ¡La etiqueta de Strava es el mejor indicador!
+    if (heartRateAvg > 170) runTypes['Race'] += 5;
 
     // Tempo Run
     if (distKm > 5 && distKm < 16 && avgHrRatio > 0.84 && avgHrRatio < 0.91) runTypes['Tempo Run'] += 60;
     if (paceCV < 4.5) runTypes['Tempo Run'] += 25;
+    if (heartRateAvg > 165) runTypes['Tempo Run'] += 5;
+    if (paceAvg < 5) runTypes['Tempo Run'] += 10;
 
     // Progressive Run
     if (distKm > 8 && negativeSplitRatio < 0.99) runTypes['Progressive Run'] += 70; // 1% negative split
@@ -689,19 +701,26 @@ function classifyRun(act, streams) {
     // Intervals / Series
     if (paceCV > 12 && hrCV > 8) runTypes['Intervals'] += 70;
     if (effort > 100) runTypes['Intervals'] += 20;
+    if (avgPace < 5.25) runTypes['Intervals'] += 10;
+    if (heartRateAvg > 166) runTypes['Intervals'] += 5;
 
     // Fartlek (menos estructurado que los intervalos)
     if (paceCV > 7 && paceCV < 15 && hrCV > 5) runTypes['Fartlek'] += 60;
     if (distKm > 5 && distKm < 16) runTypes['Fartlek'] += 10;
+    if (avgPace < 5.25) runTypes['Fartlek'] += 10;
+    if (heartRateAvg > 166) runTypes['Fartlek'] += 5;
 
     // Hill Repeats
-    if (elevationPerKm > 60 && paceCV > 9) runTypes['Hill Repeats'] += 70;
-    // (Análisis más avanzado: buscar picos repetidos en el stream de altitud)
+    if (elevationPerKm > 30 && paceCV > 9) runTypes['Hill Repeats'] += 70;
+    if (heartRateAvg > 166) runTypes['Hill Repeats'] += 5;
+    if (avgPace > 5.25) runTypes['Hill Repeats'] += 5;
 
     // Trail Run
     if (elevationPerKm > 40) runTypes['Trail Run'] += 50;
-    if (moveRatio < 0.95) runTypes['Trail Run'] += 40; // Mucho tiempo parado = técnico
+    if (moveRatio < 0.75) runTypes['Trail Run'] += 40; // Mucho tiempo parado = técnico
     if (act.type === 'TrailRun') runTypes['Trail Run'] += 150; // Etiqueta de Strava
+    if (heartRateAvg > 170) runTypes['Trail Run'] += 5;
+    if (paceAvg > 5.25) runTypes['Trail Run'] += 10;
 
     // --- 3. Calcular porcentajes y devolver los 3 mejores ---
     const totalScore = Object.values(runTypes).reduce((sum, score) => sum + score, 0);
