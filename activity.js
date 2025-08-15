@@ -237,6 +237,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const duration = formatTime(act.moving_time);
         const pace = formatPace(act.average_speed);
         const elevation = act.total_elevation_gain !== undefined ? act.total_elevation_gain : '-';
+        const elevationPerKm = act.distance > 0 ? (act.total_elevation_gain / (act.distance / 1000)).toFixed(2) : '-';
+
         const calories = act.calories !== undefined ? act.calories : '-';
         const hrAvg = act.average_heartrate ? Math.round(act.average_heartrate) : '-';
         const hrMax = act.max_heartrate ? Math.round(act.max_heartrate) : '-';
@@ -246,7 +248,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const effort = act.suffer_score !== undefined ? act.suffer_score : (act.perceived_exertion !== undefined ? act.perceived_exertion : '-');
         const vo2max = estimateVO2max(act);
         const distance_rank = act.distance_rank !== undefined ? act.distance_rank : '-';
-        const elevationPerKm = act.distance > 0 ? (act.total_elevation_gain / (act.distance / 1000)).toFixed(2) : '-';
+        const paceVariability = act.pace_variability || '-';
+        const hrVariability = act.hr_variability || '-';
 
         const prCount = act.pr_count !== undefined ? act.pr_count : '-';
         const athleteCount = act.athlete_count !== undefined ? act.athlete_count : '-';
@@ -273,7 +276,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <li><b>Move Ratio:</b> ${moveRatio}</li>
                 <li><b>Effort:</b> ${effort}</li>
                 <li><b>VO₂max (est):</b> ${vo2max}</li>
-                <li><b>Elevation Gain:</b> ${elevation} m (${elevationPerKm} m/km)</li>
+                <li><b>Pace Variability (CV):</b> ${paceVariability}</li>
+            <li><b>Heart Rate Variability (CV):</b> ${hrVariability}</li>
                 <li><b>PRs:</b> ${prCount}</li>
                 <li><b>Athlete Count:</b> ${athleteCount}</li>
                 <li><b>Achievements:</b> ${achievementCount}</li>
@@ -474,6 +478,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+
+            // =============================================
+            //       NUEVO BLOQUE: CÁLCULO DE VARIABILIDAD
+            // =============================================
+            let paceVariability = '-';
+            let hrVariability = '-';
+
+            if (streamData && streamData.time && streamData.distance) {
+                // Calcula el ritmo (segundos por metro) para cada punto del stream
+                const paceStream = [];
+                for (let i = 1; i < streamData.distance.data.length; i++) {
+                    const deltaDist = streamData.distance.data[i] - streamData.distance.data[i - 1];
+                    const deltaTime = streamData.time.data[i] - streamData.time.data[i - 1];
+                    if (deltaDist > 0 && deltaTime > 0) {
+                        paceStream.push(deltaTime / deltaDist); // s/m
+                    }
+                }
+                paceVariability = calculateVariability(paceStream);
+            }
+
+            if (streamData && streamData.heartrate) {
+                hrVariability = calculateVariability(streamData.heartrate.data);
+            }
+
+            // Añadimos las nuevas métricas al objeto de la actividad para pasarlas al renderizador
+            activityData.pace_variability = paceVariability;
+            activityData.hr_variability = hrVariability;
+            // =============================================
+            //         FIN DEL NUEVO BLOQUE
+            // =============================================
+
+
             // --- AQUI aplica rolling mean ---
             const windowSize = 100; // Puedes ajustar el tamaño de la ventana
             ['heartrate', 'altitude', 'cadence'].forEach(key => {
@@ -528,4 +564,36 @@ function rollingMean(arr, windowSize = 25) {
         result.push(mean);
     }
     return result;
+}
+
+
+// =============================================
+//  NUEVA FUNCIÓN: COEFICIENTE DE VARIACIÓN (CV)
+// =============================================
+/**
+ * Calcula el Coeficiente de Variación (CV) para un array de números.
+ * El CV es la desviación estándar dividida por la media, expresada como porcentaje.
+ * @param {number[]} data - Array de números (ej. ritmo, FC).
+ * @returns {string} El CV como un string de porcentaje (ej. "4.5%") o '-' si no se puede calcular.
+ */
+function calculateVariability(data) {
+    if (!data || data.length < 2) return '-';
+
+    // Filtra valores nulos o inválidos
+    const validData = data.filter(d => d !== null && isFinite(d) && d > 0);
+    if (validData.length < 2) return '-';
+
+    // 1. Calcular la media (promedio)
+    const mean = validData.reduce((a, b) => a + b, 0) / validData.length;
+    if (mean === 0) return '-';
+
+    // 2. Calcular la desviación estándar
+    const standardDeviation = Math.sqrt(
+        validData.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b, 0) / (validData.length - 1)
+    );
+
+    // 3. Calcular el Coeficiente de Variación (CV)
+    const cv = (standardDeviation / mean) * 100;
+
+    return `${cv.toFixed(1)}%`;
 }
