@@ -53,13 +53,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- FUNCIÓN PARA LOS BOTONES DE AÑO ---
     function setupYearlySelector() {
+        const yearsToShow = 4; // Número de años a mostrar
         const container = document.getElementById('year-filter-buttons');
         if (!container || allActivities.length === 0) return;
 
         const years = [...new Set(allActivities.map(a => a.start_date_local.substring(0, 4)))]
             .sort((a, b) => b - a);
 
-        container.innerHTML = years.slice(0, 10).map(year =>
+        container.innerHTML = years.slice(0, yearsToShow).map(year =>
             `<button class="year-btn" data-year="${year}">${year}</button>`
         ).join('');
 
