@@ -92,6 +92,127 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 4. LÓGICA DE RENDERIZADO ---
 
+    // =============================================
+    //      NUEVA FUNCIÓN: RENDER BEST EFFORTS
+    // =============================================
+    function renderBestEfforts(bestEfforts) {
+        const section = document.getElementById('best-efforts-section');
+        const table = document.getElementById('best-efforts-table');
+        if (!section || !table || !bestEfforts || bestEfforts.length === 0) return;
+
+        section.classList.remove('hidden');
+
+        const tableHeader = `
+        <thead>
+            <tr>
+                <th>Distance</th>
+                <th>Time</th>
+                <th>Pace</th>
+                <th>Achievements</th>
+            </tr>
+        </thead>`;
+
+        const tableBody = bestEfforts.map(effort => {
+            const pace = formatPace(effort.distance / effort.moving_time);
+            const achievements = effort.pr_rank ? `🏆 PR #${effort.pr_rank}` : (effort.achievements.length > 0 ? '🏅' : '');
+            return `
+            <tr>
+                <td>${effort.name}</td>
+                <td>${formatTime(effort.moving_time)}</td>
+                <td>${pace} /km</td>
+                <td>${achievements}</td>
+            </tr>`;
+        }).join('');
+
+        table.innerHTML = tableHeader + `<tbody>${tableBody}</tbody>`;
+    }
+
+
+    // =============================================
+    //         NUEVA FUNCIÓN: RENDER LAPS
+    // =============================================
+    function renderLaps(laps) {
+        const section = document.getElementById('laps-section');
+        const table = document.getElementById('laps-table');
+        if (!section || !table || !laps || laps.length === 0) return;
+
+        section.classList.remove('hidden');
+
+        const tableHeader = `
+        <thead>
+            <tr>
+                <th>Lap</th>
+                <th>Distance</th>
+                <th>Time</th>
+                <th>Pace</th>
+                <th>Elev. Gain</th>
+                <th>Avg HR</th>
+            </tr>
+        </thead>`;
+
+        const tableBody = laps.map(lap => {
+            const pace = formatPace(lap.average_speed);
+            return `
+            <tr>
+                <td>${lap.lap_index}</td>
+                <td>${(lap.distance / 1000).toFixed(2)} km</td>
+                <td>${formatTime(lap.moving_time)}</td>
+                <td>${pace} /km</td>
+                <td>${Math.round(lap.total_elevation_gain)} m</td>
+                <td>${lap.average_heartrate ? Math.round(lap.average_heartrate) : '-'} bpm</td>
+            </tr>`;
+        }).join('');
+
+        table.innerHTML = tableHeader + `<tbody>${tableBody}</tbody>`;
+    }
+
+
+    // =============================================
+    //      NUEVA FUNCIÓN: RENDER SEGMENTS
+    // =============================================
+    function renderSegments(segments) {
+        const section = document.getElementById('segments-section');
+        const table = document.getElementById('segments-table');
+        if (!section || !table || !segments || segments.length === 0) return;
+
+        section.classList.remove('hidden');
+
+        const tableHeader = `
+        <thead>
+            <tr>
+                <th>Segment Name</th>
+                <th>Time</th>
+                <th>Pace</th>
+                <th>Avg HR</th>
+                <th>Rank</th>
+            </tr>
+        </thead>`;
+
+        const tableBody = segments.map(effort => {
+            const pace = formatPace(effort.distance / effort.moving_time);
+            let rank = '';
+            if (effort.pr_rank === 1) {
+                rank = '🏆 PR!';
+            } else if (effort.pr_rank) {
+                rank = `PR #${effort.pr_rank}`;
+            } else if (effort.kom_rank === 1) {
+                rank = '👑 KOM/QOM!';
+            } else if (effort.kom_rank) {
+                rank = `Top ${effort.kom_rank}`;
+            }
+            return `
+            <tr>
+                <td><a href="https://www.strava.com/segments/${effort.segment.id}" target="_blank">${effort.name}</a></td>
+                <td>${formatTime(effort.moving_time)}</td>
+                <td>${pace} /km</td>
+                <td>${effort.average_heartrate ? Math.round(effort.average_heartrate) : '-'} bpm</td>
+                <td>${rank}</td>
+            </tr>`;
+        }).join('');
+
+        table.innerHTML = tableHeader + `<tbody>${tableBody}</tbody>`;
+    }
+
     // ¡CORREGIDO! Ahora esta función está definida ANTES de que main la llame.
     function renderActivity(act) {
         console.log('Rendering activity:', act);

@@ -665,3 +665,30 @@ main {
 #update-predictions-btn:hover {
     background-color: #d94700;
 }
+
+/* --- Estilos para las Nuevas Secciones de Datos en activity.html --- */
+.data-section {
+    margin-top: 2.5em;
+    padding-top: 1.5em;
+    border-top: 1px solid #eee;
+}
+
+.data-section h3 {
+    margin-bottom: 0.25em;
+    font-size: 1.5em;
+    color: #333;
+}
+
+.data-section p {
+    margin-top: 0;
+    margin-bottom: 1em;
+    font-size: 0.9em;
+    color: #666;
+}
+
+.table-container {
+    max-height: 400px; /* Limita la altura de las tablas largas */
+    overflow-y: auto;  /* Añade scroll vertical si es necesario */
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
