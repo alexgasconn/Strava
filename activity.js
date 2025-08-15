@@ -603,12 +603,12 @@ function calculateVariability(data) {
 }
 
 
-function formatTime(seconds) {
-        if (isNaN(seconds) || seconds < 0) return '0:00';
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        const s = Math.round(seconds % 60);
-        return `${h > 0 ? h + ':' : ''}${m.toString().padStart(h > 0 ? 2 : 1, '0')}:${s.toString().padStart(2, '0')}`;
+function formatPace(speedInMps) {
+        if (!speedInMps || speedInMps === 0) return '-';
+        const paceInSecPerKm = 1000 / speedInMps;
+        const min = Math.floor(paceInSecPerKm / 60);
+        const sec = Math.round(paceInSecPerKm % 60);
+        return `${min}:${sec.toString().padStart(2, '0')}`;
     }
 // =================================================================
 //          NUEVO MÓDULO: CLASIFICADOR DE TIPO DE CARRERA
@@ -621,6 +621,7 @@ function formatTime(seconds) {
  * @returns {object[]} Un array de los 3 tipos de carrera más probables con su puntuación.
  */
 function classifyRun(act, streams) {
+    
     // --- 1. Extraer y preparar todas las métricas necesarias ---
     const distKm = act.distance / 1000;
     const effort = act.suffer_score || act.perceived_exertion || 0;
