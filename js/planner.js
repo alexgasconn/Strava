@@ -125,11 +125,26 @@ function calculateAllPredictions(bestPerformances, model, settings) {
         const actualBest = bestPerformances[target.km] ? bestPerformances[target.km][0].seconds : null;
 
         if (actualBest) {
-            const diff = Math.abs(actualBest - combinedTime) / actualBest;
-            confidence = Math.max(0, 100 - (diff * 800));
+            // Caso 1: Tenemos un PB para comparar.
+            const predictedTime = combinedTime;
+
+            if (predictedTime <= actualBest) {
+                // La predicción es MÁS RÁPIDA o igual que el PB.
+                // La confianza se basa en qué tan cerca está. Si es un 10% más rápida, la confianza baja.
+                const diff = (actualBest - predictedTime) / actualBest;
+                confidence = Math.max(10, 100 - (diff * 500)); // Un mínimo de 10% de confianza para predicciones muy optimistas.
+            } else {
+                // La predicción es MÁS LENTA que el PB.
+                // Ya has demostrado que puedes correr más rápido, así que la confianza es muy alta.
+                const diff = (predictedTime - actualBest) / actualBest;
+                // Si es un poco más lento (hasta 5%), la confianza es 99%. Si es mucho más lento, es 100%.
+                confidence = Math.min(100, 98 + (diff * 20));
+            }
         } else {
+            // Caso 2: No tenemos un PB para esta distancia.
+            // La confianza se basa en la cantidad de datos de otras carreras.
             const sourceCount = Object.values(bestPerformances).flat().length;
-            confidence = Math.min(80, 10 + sourceCount * 4);
+            confidence = Math.min(85, 20 + sourceCount * 5); // Un poco más generoso que antes.
         }
 
         return { 
