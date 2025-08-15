@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const years = [...new Set(allActivities.map(a => a.start_date_local.substring(0, 4)))]
             .sort((a, b) => b - a);
 
-        container.innerHTML = years.slice(0, 3).map(year =>
+        container.innerHTML = years.slice(0, 10).map(year =>
             `<button class="year-btn" data-year="${year}">${year}</button>`
         ).join('');
 
