@@ -731,3 +731,58 @@ main {
     font-weight: bold;
     font-size: 1.1em;
 }
+
+/* =================================================================
+   NUEVOS ESTILOS PARA LAYOUT FLEXIBLE (Side-by-Side)
+   ================================================================= */
+
+.side-by-side-container {
+    display: flex;
+    flex-wrap: wrap; /* Permite que los elementos se coloquen debajo en pantallas pequeñas */
+    gap: 2rem;       /* Espacio entre las columnas */
+    align-items: stretch; /* Hace que ambas columnas tengan la misma altura */
+    margin-top: 1.5em;
+    margin-bottom: 2rem;
+}
+
+/* 
+  Cada hijo directo del contenedor se convertirá en una columna flexible.
+  flex: 1; -> Ocupará el espacio disponible.
+  min-width: 300px; -> Ancho mínimo antes de que salte a la siguiente línea.
+*/
+.side-by-side-container > * {
+    flex: 1;
+    min-width: 300px; 
+}
+
+
+/* Ajustes específicos para los contenedores dentro de la estructura flexible */
+
+/* El contenedor del clasificador ya tiene la clase .data-section, que le da borde, etc. */
+/* No necesita estilos adicionales. */
+
+
+/* Ajustes para el contenedor del mapa */
+#activity-map-container {
+    display: flex; /* Lo convertimos en flex para que el mapa ocupe todo el alto */
+    flex-direction: column;
+}
+
+#activity-map {
+    width: 100%;
+    flex-grow: 1; /* Hace que el mapa ocupe todo el espacio vertical disponible en su contenedor */
+    min-height: 400px; /* Asegura una altura mínima para el mapa */
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+
+/* Ajustes para los gráficos de splits, que también usan el side-by-side */
+#splits-section .side-by-side-container {
+    gap: 1rem; /* Un poco menos de espacio entre los gráficos */
+}
+
+#splits-section .chart-container {
+    /* Los chart-container ya tienen estilos que funcionan bien como columnas flexibles */
+    min-width: 250px; /* Ancho mínimo más pequeño para los gráficos */
+}
