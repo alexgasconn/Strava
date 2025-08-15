@@ -692,3 +692,42 @@ main {
     border: 1px solid #ddd;
     border-radius: 5px;
 }
+
+/* --- Estilos para la Sección de Clasificación de Carrera --- */
+#run-classifier-results {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75em;
+}
+
+.classifier-result {
+    display: grid;
+    grid-template-columns: 150px 1fr 60px; /* Tipo | Barra | Porcentaje */
+    align-items: center;
+    gap: 1em;
+}
+
+.classifier-type {
+    font-weight: bold;
+    font-size: 1.1em;
+    text-align: right;
+}
+
+.classifier-bar-container {
+    width: 100%;
+    background-color: #e5e7eb;
+    border-radius: 999px;
+    height: 1.25em;
+    overflow: hidden;
+}
+
+.classifier-bar {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.5s ease-in-out;
+}
+
+.classifier-score {
+    font-weight: bold;
+    font-size: 1.1em;
+}

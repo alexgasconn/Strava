@@ -525,6 +525,9 @@ document.addEventListener('DOMContentLoaded', () => {
             renderLaps(activityData.laps);
             renderSegments(activityData.segment_efforts);
 
+            const classificationResults = classifyRun(activityData, streamData);
+            renderClassifierResults(classificationResults);
+
             streamChartsDiv.style.display = ''; // o 'grid'
 
         } catch (error) {
@@ -597,4 +600,153 @@ function calculateVariability(data) {
     const cv = (standardDeviation / mean) * 100;
 
     return `${cv.toFixed(1)}%`;
+}
+
+
+
+// =================================================================
+//          NUEVO MÓDULO: CLASIFICADOR DE TIPO DE CARRERA
+// =================================================================
+
+/**
+ * Clasifica una carrera en un tipo de entrenamiento basado en un sistema de puntuación.
+ * @param {object} act - El objeto de la actividad de Strava.
+ * @param {object} streams - Los datos de los streams de la actividad.
+ * @returns {object[]} Un array de los 3 tipos de carrera más probables con su puntuación.
+ */
+function classifyRun(act, streams) {
+    // --- 1. Extraer y preparar todas las métricas necesarias ---
+    const distKm = act.distance / 1000;
+    const effort = act.suffer_score || act.perceived_exertion || 0;
+    const moveRatio = act.elapsed_time ? act.moving_time / act.elapsed_time : 1;
+    const elevationPerKm = distKm > 0 ? act.total_elevation_gain / distKm : 0;
+
+    const paceStream = [];
+    if (streams && streams.time && streams.distance) {
+        for (let i = 1; i < streams.distance.data.length; i++) {
+            const dDist = streams.distance.data[i] - streams.distance.data[i - 1];
+            const dTime = streams.time.data[i] - streams.time.data[i - 1];
+            if (dDist > 0 && dTime > 0) paceStream.push(dTime / dDist); // s/m
+        }
+    }
+    const paceCV = parseFloat(calculateVariability(paceStream).replace('%', ''));
+    const hrCV = parseFloat(calculateVariability(streams?.heartrate?.data).replace('%', ''));
+
+    // Asumimos una FC Máxima teórica para calcular zonas si no está disponible la real
+    const maxHr = act.max_heartrate || USER_MAX_HR + 5;
+    const avgHrRatio = act.average_heartrate / maxHr;
+
+    // Análisis de Negative Split para carreras progresivas
+    const firstHalfTime = act.moving_time / 2;
+    let timeAtHalfway = 0;
+    if (streams && streams.distance) {
+        const halfwayPoint = act.distance / 2;
+        const halfwayIndex = streams.distance.data.findIndex(d => d >= halfwayPoint);
+        if (halfwayIndex > 0) {
+            timeAtHalfway = streams.time.data[halfwayIndex];
+        }
+    }
+    const secondHalfTime = act.moving_time - timeAtHalfway;
+    const negativeSplitRatio = timeAtHalfway > 0 ? secondHalfTime / timeAtHalfway : 1;
+
+
+    // --- 2. Definir las reglas para cada tipo de entrenamiento ---
+    const runTypes = {
+        'Race': 0, 'Long Run': 0, 'Trail Run': 0, 'Hill Repeats': 0,
+        'Intervals': 0, 'Fartlek': 0, 'Tempo Run': 0, 'Progressive Run': 0,
+        'Easy Run': 0, 'Recovery Run': 0
+    };
+
+    // --- Sistema de Puntuación ---
+
+    // Recovery Run (muy estricto)
+    if (distKm < 8 && effort < 25 && avgHrRatio < 0.70) runTypes['Recovery Run'] += 60;
+    if (paceCV < 4) runTypes['Recovery Run'] += 15;
+
+    // Easy Run
+    if (effort >= 25 && effort < 60 && avgHrRatio < 0.78) runTypes['Easy Run'] += 50;
+    if (distKm > 4 && distKm < 15) runTypes['Easy Run'] += 10;
+    if (paceCV < 5 && elevationPerKm < 30) runTypes['Easy Run'] += 20;
+
+    // Long Run
+    if (distKm > 16) runTypes['Long Run'] += 60;
+    if (effort > 60 && effort < 160) runTypes['Long Run'] += 20;
+    if (paceCV < 7) runTypes['Long Run'] += 10;
+
+    // Race (alta prioridad si se cumplen las condiciones)
+    const isRaceDist = [5, 10, 21.1, 42.2].some(d => Math.abs(distKm - d) < 0.5);
+    if (isRaceDist && effort > 150 && avgHrRatio > 0.88 && paceCV < 4) runTypes['Race'] += 100;
+    if (act.workout_type === 1) runTypes['Race'] += 150; // ¡La etiqueta de Strava es el mejor indicador!
+
+    // Tempo Run
+    if (distKm > 5 && distKm < 16 && avgHrRatio > 0.84 && avgHrRatio < 0.91) runTypes['Tempo Run'] += 60;
+    if (paceCV < 4.5) runTypes['Tempo Run'] += 25;
+
+    // Progressive Run
+    if (distKm > 8 && negativeSplitRatio < 0.99) runTypes['Progressive Run'] += 70; // 1% negative split
+    if (paceCV > 5 && paceCV < 12) runTypes['Progressive Run'] += 15;
+
+    // Intervals / Series
+    if (paceCV > 12 && hrCV > 8) runTypes['Intervals'] += 70;
+    if (effort > 100) runTypes['Intervals'] += 20;
+
+    // Fartlek (menos estructurado que los intervalos)
+    if (paceCV > 7 && paceCV < 15 && hrCV > 5) runTypes['Fartlek'] += 60;
+    if (distKm > 5 && distKm < 16) runTypes['Fartlek'] += 10;
+
+    // Hill Repeats
+    if (elevationPerKm > 60 && paceCV > 9) runTypes['Hill Repeats'] += 70;
+    // (Análisis más avanzado: buscar picos repetidos en el stream de altitud)
+
+    // Trail Run
+    if (elevationPerKm > 40) runTypes['Trail Run'] += 50;
+    if (moveRatio < 0.95) runTypes['Trail Run'] += 40; // Mucho tiempo parado = técnico
+    if (act.type === 'TrailRun') runTypes['Trail Run'] += 150; // Etiqueta de Strava
+
+    // --- 3. Calcular porcentajes y devolver los 3 mejores ---
+    const totalScore = Object.values(runTypes).reduce((sum, score) => sum + score, 0);
+
+    if (totalScore === 0) {
+        return [{ type: 'General Run', score: 100 }];
+    }
+
+    const results = Object.entries(runTypes)
+        .map(([type, score]) => ({
+            type,
+            score: Math.round((score / totalScore) * 100)
+        }))
+        .filter(result => result.score > 0)
+        .sort((a, b) => b.score - a.score);
+
+    return results.slice(0, 3);
+}
+
+
+/**
+ * Renderiza los resultados del clasificador en la UI.
+ * @param {object[]} results - El array de resultados de la función classifyRun.
+ */
+function renderClassifierResults(results) {
+    const container = document.getElementById('run-classifier-results');
+    if (!container) return;
+
+    if (!results || results.length === 0) {
+        container.innerHTML = '<p>Could not classify this run.</p>';
+        return;
+    }
+
+    const resultsHtml = results.map((result, index) => {
+        // Asignar un color para el primer, segundo y tercer puesto
+        const color = index === 0 ? '#FC5200' : index === 1 ? '#6b7280' : '#a0aec0';
+        return `
+            <div class="classifier-result">
+                <div class="classifier-type" style="color: ${color};">${result.type}</div>
+                <div class="classifier-bar-container">
+                    <div class="classifier-bar" style="width: ${result.score}%; background-color: ${color};"></div>
+                </div>
+                <div class="classifier-score" style="color: ${color};">${result.score}%</div>
+            </div>`;
+    }).join('');
+
+    container.innerHTML = resultsHtml;
 }
