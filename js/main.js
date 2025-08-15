@@ -47,6 +47,39 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // =========================================================
+    //          ORGANIZACIÓN MEJORADA: FUNCIONES PRIMERO
+    // =========================================================
+
+    // --- FUNCIÓN PARA LOS BOTONES DE AÑO ---
+    function setupYearlySelector() {
+        const container = document.getElementById('year-filter-buttons');
+        if (!container || allActivities.length === 0) return;
+
+        const years = [...new Set(allActivities.map(a => a.start_date_local.substring(0, 4)))]
+            .sort((a, b) => b - a);
+
+        container.innerHTML = years.slice(0, 3).map(year =>
+            `<button class="year-btn" data-year="${year}">${year}</button>`
+        ).join('');
+
+        container.querySelectorAll('.year-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                container.querySelectorAll('.year-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                const year = btn.dataset.year;
+                dateFilterFrom = `${year}-01-01`;
+                dateFilterTo = `${year}-12-31`;
+
+                document.getElementById('date-from').value = dateFilterFrom;
+                document.getElementById('date-to').value = dateFilterTo;
+
+                renderDashboard(allActivities, dateFilterFrom, dateFilterTo);
+            });
+        });
+    }
+
 
 
     // --- INITIALIZATION ---
@@ -57,6 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
             allActivities = await fetchAllActivities();
             setupDashboard(allActivities);
             renderDashboard(allActivities, dateFilterFrom, dateFilterTo);
+            setupYearlySelector();
         } catch (error) {
             handleError("Could not initialize the app", error);
         } finally {
@@ -70,6 +104,8 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             allActivities = await fetchAllActivities(); // La API se encarga de los tokens
             renderDashboard(allActivities, dateFilterFrom, dateFilterTo);
+            setupYearlySelector();
+
         } catch (error) {
             handleError('Error refreshing activities', error);
         } finally {
@@ -90,6 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (applyFilterButton) {
         applyFilterButton.addEventListener('click', () => {
+            document.querySelectorAll('.year-btn').forEach(b => b.classList.remove('active'));
             dateFilterFrom = document.getElementById('date-from').value || null;
             dateFilterTo = document.getElementById('date-to').value || null;
             renderDashboard(allActivities, dateFilterFrom, dateFilterTo);
@@ -101,6 +138,8 @@ document.addEventListener('DOMContentLoaded', () => {
             dateFilterTo = null;
             document.getElementById('date-from').value = '';
             document.getElementById('date-to').value = '';
+            document.querySelectorAll('.year-btn').forEach(b => b.classList.remove('active'));
+
             renderDashboard(allActivities, dateFilterFrom, dateFilterTo);
         });
     }

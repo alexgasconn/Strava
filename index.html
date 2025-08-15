@@ -58,6 +58,9 @@
                         <button id="reset-date-filter">Reset</button>
                     </div>
 
+                    <div id="year-filter-buttons" class="year-buttons">
+                    </div>
+
                     <!-- Summary Cards -->
                     <div id="summary-cards" class="summary-grid"></div>
 
@@ -177,15 +180,18 @@
                             <legend>Model Weights</legend>
                             <div class="control-group sliders" style="display: flex; gap: 2em; align-items: center;">
                                 <div style="display: flex; flex-direction: column; align-items: center;">
-                                    <label for="riegel-weight">Riegel Formula: <span id="riegel-weight-val">50%</span></label>
+                                    <label for="riegel-weight">Riegel Formula: <span
+                                            id="riegel-weight-val">50%</span></label>
                                     <input type="range" id="riegel-weight" min="0" max="100" value="50">
                                 </div>
                                 <div style="display: flex; flex-direction: column; align-items: center;">
-                                    <label for="ml-weight">Personal Curve (ML): <span id="ml-weight-val">25%</span></label>
+                                    <label for="ml-weight">Personal Curve (ML): <span
+                                            id="ml-weight-val">25%</span></label>
                                     <input type="range" id="ml-weight" min="0" max="100" value="25">
                                 </div>
                                 <div style="display: flex; flex-direction: column; align-items: center;">
-                                    <label for="pb-weight">Personal Bests (PBs): <span id="pb-weight-val">40%</span></label>
+                                    <label for="pb-weight">Personal Bests (PBs): <span
+                                            id="pb-weight-val">40%</span></label>
                                     <input type="range" id="pb-weight" min="0" max="100" value="40">
                                 </div>
                             </div>

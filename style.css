@@ -786,3 +786,43 @@ main {
     /* Los chart-container ya tienen estilos que funcionan bien como columnas flexibles */
     min-width: 250px; /* Ancho mínimo más pequeño para los gráficos */
 }
+
+/* --- Estilos para los Controles de Fecha y Año --- */
+
+.date-controls-container {
+    display: flex;
+    flex-wrap: wrap; /* Para que se ajuste en pantallas pequeñas */
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: var(--border-radius-md);
+    margin-bottom: 1.5em;
+    border: 1px solid var(--border-color);
+}
+
+#date-filter, .year-buttons {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Estilo para los nuevos botones de año */
+.year-buttons button {
+    background-color: #e9ecef;
+    color: var(--text-medium);
+    font-weight: 600;
+    padding: 0.5em 1em;
+}
+
+.year-buttons button:hover {
+    background-color: #ced4da;
+    color: var(--text-dark);
+}
+
+/* Estilo para el botón de año activo */
+.year-buttons button.active {
+    background-color: var(--strava-orange);
+    color: white;
+}
