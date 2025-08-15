@@ -577,6 +577,7 @@ function rollingMean(arr, windowSize = 25) {
  * @returns {string} El CV como un string de porcentaje (ej. "4.5%") o '-' si no se puede calcular.
  */
 function calculateVariability(data) {
+    data = rollingMean(data, 150);
     if (!data || data.length < 2) return '-';
 
     // Filtra valores nulos o inválidos
