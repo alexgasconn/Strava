@@ -708,19 +708,19 @@ function classifyRun(act, streams) {
     // Intervals / Series
     if (paceCV > 12 && hrCV > 8) runTypes['Intervals'] += 70;
     if (effort > 100) runTypes['Intervals'] += 20;
-    if (avgPace < 5.25) runTypes['Intervals'] += 10;
+    if (paceAvg < 5.25) runTypes['Intervals'] += 10;
     if (heartRateAvg > 166) runTypes['Intervals'] += 5;
 
     // Fartlek (menos estructurado que los intervalos)
     if (paceCV > 7 && paceCV < 15 && hrCV > 5) runTypes['Fartlek'] += 60;
     if (distKm > 5 && distKm < 16) runTypes['Fartlek'] += 10;
-    if (avgPace < 5.25) runTypes['Fartlek'] += 10;
+    if (paceAvg < 5.25) runTypes['Fartlek'] += 10;
     if (heartRateAvg > 166) runTypes['Fartlek'] += 5;
 
     // Hill Repeats
     if (elevationPerKm > 30 && paceCV > 9) runTypes['Hill Repeats'] += 70;
     if (heartRateAvg > 166) runTypes['Hill Repeats'] += 5;
-    if (avgPace > 5.25) runTypes['Hill Repeats'] += 5;
+    if (paceAvg > 5.25) runTypes['Hill Repeats'] += 5;
 
     // Trail Run
     if (elevationPerKm > 40) runTypes['Trail Run'] += 50;
