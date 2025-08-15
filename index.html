@@ -51,14 +51,19 @@
                 <!-- PESTAÑA 1: DASHBOARD                          -->
                 <!-- ============================================= -->
                 <div id="dashboard-tab" class="tab-content active">
-                    <div id="date-filter" style="margin-bottom:1em;">
-                        <label>From: <input type="date" id="date-from"></label>
-                        <label>To: <input type="date" id="date-to"></label>
-                        <button id="apply-date-filter">Apply</button>
-                        <button id="reset-date-filter">Reset</button>
-                    </div>
+                    <div id="date-controls" class="date-controls-container">
+                        <!-- Grupo de filtros manuales -->
+                        <div class="filter-group">
+                            <label>From: <input type="date" id="date-from"></label>
+                            <label>To: <input type="date" id="date-to"></label>
+                            <button id="apply-date-filter">Apply</button>
+                            <button id="reset-date-filter">Reset</button>
+                        </div>
 
-                    <div id="year-filter-buttons" class="year-buttons">
+                        <!-- Grupo de atajos por año -->
+                        <div id="year-filter-buttons" class="filter-group year-buttons">
+                            <!-- Los botones de año se generarán aquí con JS -->
+                        </div>
                     </div>
 
                     <!-- Summary Cards -->
