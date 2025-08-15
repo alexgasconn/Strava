@@ -246,6 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const effort = act.suffer_score !== undefined ? act.suffer_score : (act.perceived_exertion !== undefined ? act.perceived_exertion : '-');
         const vo2max = estimateVO2max(act);
         const distance_rank = act.distance_rank !== undefined ? act.distance_rank : '-';
+        const elevationPerKm = act.distance > 0 ? (act.total_elevation_gain / (act.distance / 1000)).toFixed(2) : '-';
 
         const prCount = act.pr_count !== undefined ? act.pr_count : '-';
         const athleteCount = act.athlete_count !== undefined ? act.athlete_count : '-';
@@ -272,6 +273,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <li><b>Move Ratio:</b> ${moveRatio}</li>
                 <li><b>Effort:</b> ${effort}</li>
                 <li><b>VO₂max (est):</b> ${vo2max}</li>
+                <li><b>Elevation Gain:</b> ${elevation} m (${elevationPerKm} m/km)</li>
                 <li><b>PRs:</b> ${prCount}</li>
                 <li><b>Athlete Count:</b> ${athleteCount}</li>
                 <li><b>Achievements:</b> ${achievementCount}</li>
