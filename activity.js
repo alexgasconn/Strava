@@ -731,8 +731,8 @@ function classifyRun(act, streams) {
 
 
     // HEART RATE
-    if (heartRateAvg < 135) runTypes['Recovery Run'] += 50;
-    if (heartRateAvg < 150 && heartRateAvg > 130) runTypes['Easy Run'] += 30;
+    if (heartRateAvg < 135) runTypes['Recovery Run'] += 70;
+    if (heartRateAvg < 140 && heartRateAvg > 130) runTypes['Easy Run'] += 40;
     if (heartRateAvg < 160 && heartRateAvg > 150) runTypes['Long Run'] += 10;
     if (heartRateAvg < 170 && heartRateAvg > 150) runTypes['Tempo Run'] += 10;
     if (heartRateAvg < 180 && heartRateAvg > 170) runTypes['Intervals'] += 10;
