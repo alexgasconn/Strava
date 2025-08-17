@@ -729,7 +729,6 @@ function classifyRun(act, streams) {
     if (heartRateAvg > 170) runTypes['Trail Run'] += 5;
     if (paceAvg > 5.25) runTypes['Trail Run'] += 10;
 
-
     // HEART RATE
     if (heartRateAvg < 135) runTypes['Recovery Run'] += 70;
     if (heartRateAvg < 140 && heartRateAvg > 130) runTypes['Easy Run'] += 40;
@@ -761,6 +760,7 @@ function classifyRun(act, streams) {
     if (paceCV > 20) runTypes['Intervals'] += 30;
     if (paceCV > 20) runTypes['Fartlek'] += 30;
     if (paceCV < 10) runTypes['Race'] += 10;
+    
 
     // --- 3. Calcular porcentajes y devolver los 3 mejores ---
     const totalScore = Object.values(runTypes).reduce((sum, score) => sum + score, 0);
