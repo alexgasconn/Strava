@@ -729,6 +729,39 @@ function classifyRun(act, streams) {
     if (heartRateAvg > 170) runTypes['Trail Run'] += 5;
     if (paceAvg > 5.25) runTypes['Trail Run'] += 10;
 
+
+    // HEART RATE
+    if (heartRateAvg < 135) runTypes['Recovery Run'] += 50;
+    if (heartRateAvg < 150 && heartRateAvg > 130) runTypes['Easy Run'] += 30;
+    if (heartRateAvg < 160 && heartRateAvg > 150) runTypes['Long Run'] += 10;
+    if (heartRateAvg < 170 && heartRateAvg > 150) runTypes['Tempo Run'] += 10;
+    if (heartRateAvg < 180 && heartRateAvg > 170) runTypes['Intervals'] += 10;
+    if (heartRateAvg > 180) runTypes['Race'] += 60;
+    if (heartRateAvg < 175 && heartRateAvg > 160) runTypes['Fartlek'] += 10;
+    if (heartRateAvg < 180 && heartRateAvg > 160) runTypes['Hill Repeats'] += 10;
+    if (heartRateAvg > 170) runTypes['Trail Run'] += 20;
+    if (heartRateAvg < 180 && heartRateAvg > 160) runTypes['Progressive Run'] += 20;
+
+    // DISTANCE
+    if (distKm < 5) runTypes['Recovery Run'] += 50;
+    if (distKm < 10 && distKm > 5) runTypes['Easy Run'] += 30;
+    if (distKm > 15) runTypes['Long Run'] += 30;
+    if (distKm < 14 && distKm > 6) runTypes['Tempo Run'] += 10;
+    if (distKm > 5) runTypes['Intervals'] += 10;
+    if (distKm > 6) runTypes['Fartlek'] += 10;
+    if (distKm < 14) runTypes['Hill Repeats'] += 10;
+    if (distKm > 7) runTypes['Trail Run'] += 10;
+    if (distKm > 9) runTypes['Progressive Run'] += 30;
+
+    // PACE CV
+    if (paceCV > 15) runTypes['Long Run'] += 30;
+    if (paceCV < 14) runTypes['Tempo Run'] += 10;
+    if (paceCV > 15) runTypes['Trail Run'] += 25;
+    if (paceCV > 15) runTypes['Progressive Run'] += 30;
+    if (paceCV > 20) runTypes['Intervals'] += 30;
+    if (paceCV > 20) runTypes['Fartlek'] += 30;
+    if (paceCV < 10) runTypes['Race'] += 10;
+
     // --- 3. Calcular porcentajes y devolver los 3 mejores ---
     const totalScore = Object.values(runTypes).reduce((sum, score) => sum + score, 0);
 
