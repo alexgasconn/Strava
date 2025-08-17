@@ -152,37 +152,37 @@ function renderDashboard(activities) {
     const monthlyCounts = sortedMonths.map(month => monthlyCountMap[month]);
     const monthlyDistanceCanvas = document.getElementById('monthly-distance-chart');
     if (monthlyDistanceCanvas) {
+        // Destruye el gráfico anterior si existe
         if (charts['monthly-distance-chart']) {
             charts['monthly-distance-chart'].destroy();
-            charts['monthly-distance-chart'] = null;
         }
+
+        // Aquí está el código corregido y completo
         charts['monthly-distance-chart'] = new Chart(monthlyDistanceCanvas, {
-            type: 'bar',
+            // NO se especifica un 'type' aquí. Dejamos que los datasets lo definan.
             data: {
                 labels: sortedMonths,
                 datasets: [
                     {
-                        type: 'line',
+                        type: 'bar', // La distancia son BARRAS
                         label: 'Distance (km)',
                         data: monthlyDistances,
-                        borderColor: 'rgba(252,82,0,0.5)', // softer line
-                        backgroundColor: 'rgba(252,82,0,0.08)', // more transparent fill
-                        fill: false,
-                        tension: 0.4, // smoother curve
-                        borderWidth: 2, // thinner line
-                        pointRadius: 0, // no points
-                        yAxisID: 'y',
-                        order: 1
+                        backgroundColor: 'rgba(0, 78, 148, 0.8)', // Azul intenso
+                        borderColor: 'rgba(0, 58, 110, 1)',
+                        borderWidth: 1,
+                        yAxisID: 'y', // Eje izquierdo
+                        order: 2      // Se dibuja detrás
                     },
                     {
-                        type: 'bar',
+                        type: 'line', // El número de carreras es una LÍNEA
                         label: '# Runs',
                         data: monthlyCounts,
-                        backgroundColor: 'rgba(54,162,235,0.7)', // stronger bars
-                        borderColor: 'rgba(54,162,235,1)', // stronger border
-                        borderWidth: 2, // thicker border
-                        yAxisID: 'y1',
-                        order: 2
+                        borderColor: '#FC5200', // Naranja
+                        backgroundColor: 'rgba(252, 82, 0, 0.1)',
+                        tension: 0.3,
+                        fill: false,
+                        yAxisID: 'y1', // Eje derecho
+                        order: 1      // Se dibuja delante
                     }
                 ]
             },
@@ -191,13 +191,15 @@ function renderDashboard(activities) {
                     y: {
                         type: 'linear',
                         position: 'left',
-                        title: { display: true, text: 'Distance (km)' }
+                        title: { display: true, text: 'Distance (km)', font: { weight: 'bold' } },
+                        ticks: { color: 'rgba(0, 78, 148, 1)' } // Ticks del mismo color que las barras
                     },
                     y1: {
                         type: 'linear',
                         position: 'right',
-                        title: { display: true, text: '# Runs' },
-                        grid: { drawOnChartArea: false }
+                        title: { display: true, text: '# Runs', font: { weight: 'bold' } },
+                        grid: { drawOnChartArea: false }, // Rejilla solo para el eje principal
+                        ticks: { color: '#FC5200' } // Ticks del mismo color que la línea
                     }
                 }
             }
