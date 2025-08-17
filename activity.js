@@ -725,9 +725,9 @@ function classifyRun(act, streams) {
     // Trail Run
     if (elevationPerKm > 40) runTypes['Trail Run'] += 50;
     if (moveRatio < 0.75) runTypes['Trail Run'] += 40; // Mucho tiempo parado = técnico
-    if (act.type === 'TrailRun') runTypes['Trail Run'] += 150; // Etiqueta de Strava
     if (heartRateAvg > 170) runTypes['Trail Run'] += 5;
     if (paceAvg > 5.25) runTypes['Trail Run'] += 10;
+    if (act.sport_type === 'TrailRun') runTypes['Trail Run'] += 200;
 
     // HEART RATE
     if (heartRateAvg < 135) runTypes['Recovery Run'] += 70;
