@@ -248,8 +248,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const effort = act.suffer_score !== undefined ? act.suffer_score : (act.perceived_exertion !== undefined ? act.perceived_exertion : '-');
         const vo2max = estimateVO2max(act);
         const distance_rank = act.distance_rank !== undefined ? act.distance_rank : '-';
-        const paceVariability = act.pace_variability || '-';
-        const hrVariability = act.hr_variability || '-';
+        const paceVariabilityStream = act.pace_variability_stream || '-';
+        const hrVariabilityStream = act.hr_variability_stream || '-';
+        const paceVariabilityLaps = act.pace_variability_laps || '-';
+        const hrVariabilityLaps = act.hr_variability_laps || '-';
 
         const prCount = act.pr_count !== undefined ? act.pr_count : '-';
         const athleteCount = act.athlete_count !== undefined ? act.athlete_count : '-';
@@ -273,11 +275,14 @@ document.addEventListener('DOMContentLoaded', () => {
             <h3>Advanced Stats</h3>
             <ul>
                 <li><b>Distance Rank:</b> #${distance_rank}</li>
+                <li><b>Elevation per Km:</b> ${elevationPerKm}</li>
                 <li><b>Move Ratio:</b> ${moveRatio}</li>
                 <li><b>Effort:</b> ${effort}</li>
                 <li><b>VO₂max (est):</b> ${vo2max}</li>
-                <li><b>Pace Variability (CV):</b> ${paceVariability}</li>
-            <li><b>Heart Rate Variability (CV):</b> ${hrVariability}</li>
+                <li><b>Pace CV (Laps):</b> ${paceVariabilityLaps}</li>
+                <li><b>Pace CV (Stream):</b> ${paceVariabilityStream}</li>
+                <li><b>HR CV (Laps):</b> ${hrVariabilityLaps}</li>
+                <li><b>HR CV (Stream):</b> ${hrVariabilityStream}</li>
                 <li><b>PRs:</b> ${prCount}</li>
                 <li><b>Athlete Count:</b> ${athleteCount}</li>
                 <li><b>Achievements:</b> ${achievementCount}</li>
@@ -321,6 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <li><b>Distance:</b> ${distanceKm} km</li>
                 <li><b>Pace:</b> ${pace}</li>
                 <li><b>Elevation Gain:</b> ${elevation} m</li>
+                <li><b>Elevation per Km:</b> ${elevationPerKm} m</li>
                 <li><b>Calories:</b> ${calories}</li>
                 <li><b>HR Avg:</b> ${hrAvg} bpm</li>
                 <li><b>HR Max:</b> ${hrMax} bpm</li>
@@ -479,14 +485,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
 
-            // =============================================
-            //       NUEVO BLOQUE: CÁLCULO DE VARIABILIDAD
-            // =============================================
-            let paceVariability = '-';
-            let hrVariability = '-';
+            // =================================================================
+            //       BLOQUE ACTUALIZADO: CÁLCULO DE AMBAS VARIABILIDADES
+            // =================================================================
+
+            // --- Cálculo de Variabilidad por STREAMS (micro) ---
+            let paceVariabilityStream = '-';
+            let hrVariabilityStream = '-';
 
             if (streamData && streamData.time && streamData.distance) {
-                // Calcula el ritmo (segundos por metro) para cada punto del stream
                 const paceStream = [];
                 for (let i = 1; i < streamData.distance.data.length; i++) {
                     const deltaDist = streamData.distance.data[i] - streamData.distance.data[i - 1];
@@ -495,18 +502,38 @@ document.addEventListener('DOMContentLoaded', () => {
                         paceStream.push(deltaTime / deltaDist); // s/m
                     }
                 }
-                paceVariability = calculateVariability(paceStream);
+                // Aplicamos suavizado a los datos de streams antes de calcular
+                paceVariabilityStream = calculateVariability(paceStream, true);
             }
 
             if (streamData && streamData.heartrate) {
-                hrVariability = calculateVariability(streamData.heartrate.data);
+                // Aplicamos suavizado a los datos de streams antes de calcular
+                hrVariabilityStream = calculateVariability(streamData.heartrate.data, true);
             }
 
-            // Añadimos las nuevas métricas al objeto de la actividad para pasarlas al renderizador
-            activityData.pace_variability = paceVariability;
-            activityData.hr_variability = hrVariability;
+            // --- Cálculo de Variabilidad por LAPS (macro) ---
+            let paceVariabilityLaps = '-';
+            let hrVariabilityLaps = '-';
+            const lapsData = activityData.laps && activityData.laps.length > 1
+                ? activityData.laps
+                : activityData.splits_metric;
+
+            if (lapsData && lapsData.length > 1) {
+                const paceDataForCV = lapsData.map(lap => lap.average_speed);
+                const hrDataForCV = lapsData.map(lap => lap.average_heartrate);
+
+                // NO aplicamos suavizado a los datos de laps
+                paceVariabilityLaps = calculateVariability(paceDataForCV, false);
+                hrVariabilityLaps = calculateVariability(hrDataForCV, false);
+            }
+
+            // Añadimos TODAS las nuevas métricas al objeto de la actividad
+            activityData.pace_variability_stream = paceVariabilityStream;
+            activityData.hr_variability_stream = hrVariabilityStream;
+            activityData.pace_variability_laps = paceVariabilityLaps;
+            activityData.hr_variability_laps = hrVariabilityLaps;
             // =============================================
-            //         FIN DEL NUEVO BLOQUE
+            //         FIN DEL BLOQUE ACTUALIZADO
             // =============================================
 
 
@@ -581,24 +608,23 @@ function rollingMean(arr, windowSize = 25) {
  * @param {number[]} data - Array de números (ej. ritmo, FC).
  * @returns {string} El CV como un string de porcentaje (ej. "4.5%") o '-' si no se puede calcular.
  */
-function calculateVariability(data) {
-    data = rollingMean(data, 150);
+function calculateVariability(data, applySmoothing = false) {
+    if (applySmoothing) {
+        data = rollingMean(data, 150); // Aplica suavizado solo si se solicita
+    }
+
     if (!data || data.length < 2) return '-';
 
-    // Filtra valores nulos o inválidos
     const validData = data.filter(d => d !== null && isFinite(d) && d > 0);
     if (validData.length < 2) return '-';
 
-    // 1. Calcular la media (promedio)
     const mean = validData.reduce((a, b) => a + b, 0) / validData.length;
     if (mean === 0) return '-';
 
-    // 2. Calcular la desviación estándar
     const standardDeviation = Math.sqrt(
         validData.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b, 0) / (validData.length - 1)
     );
 
-    // 3. Calcular el Coeficiente de Variación (CV)
     const cv = (standardDeviation / mean) * 100;
 
     return `${cv.toFixed(1)}%`;
@@ -606,12 +632,12 @@ function calculateVariability(data) {
 
 
 function formatPace(speedInMps) {
-        if (!speedInMps || speedInMps === 0) return '-';
-        const paceInSecPerKm = 1000 / speedInMps;
-        const min = Math.floor(paceInSecPerKm / 60);
-        const sec = Math.round(paceInSecPerKm % 60);
-        return `${min}:${sec.toString().padStart(2, '0')}`;
-    }
+    if (!speedInMps || speedInMps === 0) return '-';
+    const paceInSecPerKm = 1000 / speedInMps;
+    const min = Math.floor(paceInSecPerKm / 60);
+    const sec = Math.round(paceInSecPerKm % 60);
+    return `${min}:${sec.toString().padStart(2, '0')}`;
+}
 // =================================================================
 //          NUEVO MÓDULO: CLASIFICADOR DE TIPO DE CARRERA
 // =================================================================
@@ -631,8 +657,8 @@ function classifyRun(act, streams) {
     const paceStream = [];
     if (streams?.time?.data && streams?.distance?.data) {
         for (let i = 1; i < streams.distance.data.length; i++) {
-            const dDist = streams.distance.data[i] - streams.distance.data[i-1];
-            const dTime = streams.time.data[i] - streams.time.data[i-1];
+            const dDist = streams.distance.data[i] - streams.distance.data[i - 1];
+            const dTime = streams.time.data[i] - streams.time.data[i - 1];
             if (dDist > 0 && dTime > 0) paceStream.push(dTime / dDist);
         }
     }
@@ -641,7 +667,7 @@ function classifyRun(act, streams) {
 
     const timeInZones = hrZones ? calculateTimeInZones(streams.heartrate, streams.time, hrZones) : [];
     const totalTimeInZones = timeInZones.reduce((a, b) => a + b, 0);
-    
+
     let pctTimeInLowZones = 0; // % en Z1-Z2
     let pctTimeInTempoZones = 0; // % en Z3-Z4
     let pctTimeInHighZones = 0; // % en Z4-Z5
@@ -659,7 +685,7 @@ function classifyRun(act, streams) {
     }
     const secondHalfTime = act.moving_time - timeAtHalfway;
     const negativeSplitRatio = timeAtHalfway > 0 ? secondHalfTime / timeAtHalfway : 1;
-    
+
     // --- 2. Definir los tipos de carrera ---
     const runTypes = {
         'Race': 0, 'Long Run': 0, 'Trail Run': 0, 'Hill Repeats': 0,
@@ -668,7 +694,7 @@ function classifyRun(act, streams) {
     };
 
     // --- 3. Sistema de Puntuación Híbrido ---
-    
+
     // Etiquetas de Strava (máxima prioridad)
     if (act.workout_type === 1) runTypes['Race'] += 150;
     if (act.type === 'TrailRun') runTypes['Trail Run'] += 150;
@@ -677,7 +703,7 @@ function classifyRun(act, streams) {
     if (distKm < 8 && effort < 25) runTypes['Recovery Run'] += 60;
     if (paceCV < 4) runTypes['Recovery Run'] += 15;
     if (paceAvgMinKm > 6) runTypes['Recovery Run'] += 10;
-    
+
     if (effort >= 15 && effort < 60) runTypes['Easy Run'] += 50;
     if (distKm > 4 && distKm < 13) runTypes['Easy Run'] += 10;
     if (paceCV < 5 && elevationPerKm < 30) runTypes['Easy Run'] += 20;
@@ -687,7 +713,7 @@ function classifyRun(act, streams) {
     if (effort > 60 && effort < 160) runTypes['Long Run'] += 20;
     if (paceCV < 7) runTypes['Long Run'] += 10;
     if (paceAvgMinKm > 5.25) runTypes['Long Run'] += 5;
-    
+
     const isRaceDist = [5, 10, 21.1, 42.2].some(d => Math.abs(distKm - d) < 0.5);
     if (isRaceDist && effort > 150 && paceCV < 4) runTypes['Race'] += 100;
 
@@ -739,14 +765,14 @@ function classifyRun(act, streams) {
         if (pctTimeInLowZones > 90) runTypes['Recovery Run'] += 80;
         if (pctTimeInLowZones > 75) runTypes['Easy Run'] += 50;
         if (pctTimeInLowZones > 60) runTypes['Long Run'] += 30;
-        
+
         if (pctTimeInTempoZones > 60) runTypes['Tempo Run'] += 70;
         if (pctTimeInTempoZones > 40) runTypes['Progressive Run'] += 20;
 
         if (pctTimeInHighZones > 50) runTypes['Intervals'] += 50;
         if (pctTimeInHighZones > 60) runTypes['Race'] += 50;
         if (pctTimeInHighZones > 40) runTypes['Hill Repeats'] += 30;
-        
+
         // Fartlek es una mezcla, así que puntuamos si no es ni muy fácil ni muy a tope
         if (pctTimeInLowZones < 70 && pctTimeInHighZones < 50) runTypes['Fartlek'] += 25;
     }
@@ -817,7 +843,7 @@ function calculateTimeInZones(heartrateStream, timeStream, zones) {
     if (!heartrateStream || !timeStream || !zones || zones.length === 0) {
         return [];
     }
-    
+
     // Inicializamos un array para guardar los segundos en cada zona.
     const timeInZones = Array(zones.length).fill(0);
 
@@ -839,12 +865,12 @@ function calculateTimeInZones(heartrateStream, timeStream, zones) {
                 break;
             }
         }
-        
+
         if (zoneIndex !== -1) {
             timeInZones[zoneIndex] += deltaTime;
         }
     }
-    
+
     return timeInZones;
 }
 
@@ -858,7 +884,7 @@ function renderHrZoneDistributionChart(streams) {
     if (!canvas || !streams.heartrate || !streams.time) {
         return; // No se puede renderizar si no hay canvas o datos de FC/tiempo
     }
-    
+
     // 1. Obtener las zonas de FC del atleta desde localStorage
     const zonesDataText = localStorage.getItem('strava_training_zones');
     if (!zonesDataText) {
@@ -867,7 +893,7 @@ function renderHrZoneDistributionChart(streams) {
     }
     const allZones = JSON.parse(zonesDataText);
     const hrZones = allZones?.heart_rate?.zones?.filter(z => z.max > 0);
-    
+
     if (!hrZones || hrZones.length === 0) {
         console.warn("Valid HR zones not found.");
         return;
@@ -909,7 +935,7 @@ function renderHrZoneDistributionChart(streams) {
                 },
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             let label = context.dataset.label || '';
                             if (label) {
                                 label += ': ';
