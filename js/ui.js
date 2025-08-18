@@ -620,3 +620,58 @@ export function setupExportButtons(activities) {
 }
 
 
+export function renderAthleteProfile(athlete) {
+    const container = document.getElementById('athlete-profile-card');
+    if (!container) return;
+    const contentDiv = container.querySelector('.profile-content');
+    if (!contentDiv) return;
+
+    contentDiv.innerHTML = `
+        <img src="${athlete.profile_medium}" alt="Athlete profile picture">
+        <div class="profile-details">
+            <span class="name">${athlete.firstname} ${athlete.lastname}</span>
+            <span class="location">${athlete.city || ''}, ${athlete.country || ''}</span>
+            <span class="stats">Followers: ${athlete.follower_count} | Friends: ${athlete.friend_count}</span>
+        </div>
+    `;
+}
+
+export function renderTrainingZones(zones) {
+    const container = document.getElementById('training-zones-card');
+    if (!container) return;
+    const contentDiv = container.querySelector('.zones-content');
+    if (!contentDiv) return;
+    
+    let html = '';
+
+    if (zones.heart_rate && zones.heart_rate.zones && zones.heart_rate.zones.length > 0) {
+        const hrZones = zones.heart_rate.zones;
+        // La API a veces devuelve la primera zona con min y max 0, la ignoramos.
+        const validZones = hrZones.filter(z => z.max > 0);
+        const totalRange = validZones[validZones.length - 1].max - validZones[0].min;
+
+        html += `
+            <div class="zone-group">
+                <h4>Heart Rate Zones (bpm)</h4>
+                <div class="zone-bar">
+                    <div class="zone-segment hr-z1" style="flex-basis: ${((validZones[0].max - validZones[0].min) / totalRange) * 100}%;" title="Z1: ${validZones[0].min}-${validZones[0].max}">${validZones[0].max}</div>
+                    <div class="zone-segment hr-z2" style="flex-basis: ${((validZones[1].max - validZones[1].min) / totalRange) * 100}%;" title="Z2: ${validZones[1].min}-${validZones[1].max}">${validZones[1].max}</div>
+                    <div class="zone-segment hr-z3" style="flex-basis: ${((validZones[2].max - validZones[2].min) / totalRange) * 100}%;" title="Z3: ${validZones[2].min}-${validZones[2].max}">${validZones[2].max}</div>
+                    <div class="zone-segment hr-z4" style="flex-basis: ${((validZones[3].max - validZones[3].min) / totalRange) * 100}%;" title="Z4: ${validZones[3].min}-${validZones[3].max}">${validZones[3].max}</div>
+                    <div class="zone-segment hr-z5" style="flex-basis: 20%;" title="Z5: > ${validZones[4].min}">${validZones[4].min}+</div>
+                </div>
+            </div>`;
+    }
+
+    if (zones.power && zones.power.zones && zones.power.zones.length > 0) {
+        const ftp = zones.power.zones[zones.power.zones.length-1].min;
+        html += `
+            <div class="zone-group">
+                <h4>Functional Threshold Power (FTP)</h4>
+                <p style="font-size: 1.5rem; font-weight: bold; color: var(--text-dark); margin: 0;">${ftp} W</p>
+            </div>
+        `;
+    }
+    
+    contentDiv.innerHTML = html || '<p>No training zones configured in your Strava profile.</p>';
+}
