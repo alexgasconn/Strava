@@ -11,6 +11,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const mapDiv = document.getElementById('activity-map');
     const splitsSection = document.getElementById('splits-section');
     const streamChartsDiv = document.getElementById('stream-charts');
+    const detailsDiv = document.getElementById('activity-details');
+
 
     // --- 2. FUNCIONES DE UTILIDAD ---
     function formatTime(seconds) {
@@ -21,13 +23,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${h > 0 ? h + ':' : ''}${m.toString().padStart(h > 0 ? 2 : 1, '0')}:${s.toString().padStart(2, '0')}`;
     }
 
-    function formatPace(speedInMps) {
-        if (!speedInMps || speedInMps === 0) return '-';
-        const paceInSecPerKm = 1000 / speedInMps;
-        const min = Math.floor(paceInSecPerKm / 60);
-        const sec = Math.round(paceInSecPerKm % 60);
-        return `${min}:${sec.toString().padStart(2, '0')}`;
-    }
+    // function formatPace(speedInMps) {
+    //     if (!speedInMps || speedInMps === 0) return '-';
+    //     const paceInSecPerKm = 1000 / speedInMps;
+    //     const min = Math.floor(paceInSecPerKm / 60);
+    //     const sec = Math.round(paceInSecPerKm % 60);
+    //     return `${min}:${sec.toString().padStart(2, '0')}`;
+    // }
 
     function decodePolyline(str) {
         let index = 0, lat = 0, lng = 0, coordinates = [];
@@ -932,9 +934,13 @@ function classifyRun(act = {}, streams = {}) {
  * Renderiza los resultados del clasificador en la UI.
  * @param {object[]} results - El array de resultados de la función classifyRun.
  */
-function renderClassifierResults(results) {
+function renderClassifierResults(classificationData) {
     const container = document.getElementById('run-classifier-results');
     if (!container) return;
+
+    // --- CAMBIO CLAVE: Ahora extraemos el array 'top' del objeto ---
+    const results = classificationData ? classificationData.top : null;
+    console.log("Classification Diagnostics:", classificationData.diagnostics); // Para depurar, muy útil
 
     if (!results || results.length === 0) {
         container.innerHTML = '<p>Could not classify this run.</p>';
@@ -948,9 +954,9 @@ function renderClassifierResults(results) {
             <div class="classifier-result">
                 <div class="classifier-type" style="color: ${color};">${result.type}</div>
                 <div class="classifier-bar-container">
-                    <div class="classifier-bar" style="width: ${result.score}%; background-color: ${color};"></div>
+                    <div class="classifier-bar" style="width: ${result.pct}%; background-color: ${color};"></div>
                 </div>
-                <div class="classifier-score" style="color: ${color};">${result.score}%</div>
+                <div class="classifier-score" style="color: ${color};">${result.pct}%</div>
             </div>`;
     }).join('');
 
