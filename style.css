@@ -827,3 +827,93 @@ main {
     background-color: var(--strava-orange);
     color: white;
 }
+
+
+/* --- Estilos para la sección de Perfil y Zonas --- */
+
+.profile-and-zones-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+}
+
+/* Estilos específicos para la tarjeta de perfil */
+.profile-content {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.profile-content img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 3px solid var(--strava-orange);
+}
+
+.profile-details {
+    font-size: 0.9em;
+    line-height: 1.6;
+}
+
+.profile-details span {
+    display: block;
+}
+
+.profile-details .name {
+    font-size: 1.3em;
+    font-weight: bold;
+    color: var(--text-dark);
+}
+
+.profile-details .location {
+    color: var(--text-medium);
+}
+
+.profile-details .stats {
+    color: var(--text-light);
+    font-style: italic;
+}
+
+
+/* Estilos específicos para la tarjeta de zonas */
+.zones-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.zone-group {
+    border-left: 3px solid var(--border-color);
+    padding-left: 1rem;
+}
+
+.zone-group h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1em;
+    color: var(--text-dark);
+}
+
+.zone-bar {
+    display: flex;
+    height: 20px;
+    border-radius: 4px;
+    overflow: hidden;
+    font-size: 0.75em;
+    font-weight: bold;
+    color: white;
+}
+
+.zone-segment {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Colores para las zonas de Frecuencia Cardíaca (Z1 a Z5) */
+.hr-z1 { background-color: #d1d5db; color: #374151; }
+.hr-z2 { background-color: #60a5fa; }
+.hr-z3 { background-color: #34d399; }
+.hr-z4 { background-color: #f59e0b; }
+.hr-z5 { background-color: #ef4444; }

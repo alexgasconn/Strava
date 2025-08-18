@@ -1,8 +1,8 @@
 // js/main.js
 import { redirectToStrava, logout, handleAuth } from './auth.js';
-import { fetchAllActivities } from './api.js';
-import { setupDashboard, renderDashboard, showLoading, hideLoading, handleError } from './ui.js';
+import { setupDashboard, renderDashboard, showLoading, hideLoading, handleError, renderAthleteProfile, renderTrainingZones } from './ui.js';
 import { renderPlannerTab } from './planner.js';
+import { fetchAllActivities, fetchAthleteData, fetchTrainingZones } from './api.js'; // <-- Añade los nuevos imports
 
 // Espera a que el DOM esté completamente cargado
 document.addEventListener('DOMContentLoaded', () => {
@@ -88,7 +88,15 @@ document.addEventListener('DOMContentLoaded', () => {
     async function initializeApp(tokenData) {
         showLoading('Loading activities...');
         try {
-            allActivities = await fetchAllActivities();
+            const [activities, athlete, zones] = await Promise.all([
+                fetchAllActivities(),
+                fetchAthleteData(),
+                fetchTrainingZones()
+            ]);
+            allActivities = activities;
+            renderAthleteProfile(athlete);
+            renderTrainingZones(zones);
+            
             setupDashboard(allActivities);
             renderDashboard(allActivities, dateFilterFrom, dateFilterTo);
             setupYearlySelector();
