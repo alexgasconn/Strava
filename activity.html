@@ -27,13 +27,6 @@
       <div id="activity-advanced" class="activity-details-col"></div>
     </div>
 
-    <div class="chart-container" style="padding: 0; box-shadow: none; border: none; margin-top: 1.5rem;">
-              <h4 style="margin-bottom: 1rem; color: var(--strava-orange);">Time in Heart Rate Zones</h4>
-              <canvas id="hr-zones-pie-chart"></canvas>
-          </div>
-
-    <div id="activity-details"></div>
-
     <div class="side-by-side-container">
         <!-- Columna Izquierda: Clasificador -->
         <div id="run-classifier-section" class="data-section">
@@ -42,11 +35,20 @@
                 <p>Analyzing run data...</p>
             </div>
         </div>
-        <!-- Columna Derecha: Mapa -->
-        <div id="activity-map-container" class="data-section">
-             <h3>🗺️ Route Map</h3>
-            <div id="activity-map"></div>
+
+        <!-- Columna Derecha: Gráfico de Zonas de FC -->
+        <div id="hr-zones-section" class="data-section">
+            <h3>❤️‍🩹 Time in Heart Rate Zones</h3>
+            <div class="chart-container-inner">
+                <canvas id="hr-zones-pie-chart"></canvas>
+            </div>
         </div>
+    </div>
+
+    <!-- FILA 2: Mapa (Full Width) -->
+    <div id="activity-map-container" class="data-section">
+        <h3>🗺️ Route Map</h3>
+        <div id="activity-map"></div>
     </div>
 
     <div id="splits-section" class="data-section hidden">
