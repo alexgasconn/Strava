@@ -93,6 +93,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 fetchAthleteData(),
                 fetchTrainingZones()
             ]);
+
+            localStorage.setItem('strava_training_zones', JSON.stringify(zones));
+            
             allActivities = activities;
             renderAthleteProfile(athlete);
             renderTrainingZones(zones);
