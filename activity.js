@@ -213,7 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
         table.innerHTML = tableHeader + `<tbody>${tableBody}</tbody>`;
     }
 
-    // ¡CORREGIDO! Ahora esta función está definida ANTES de que main la llame.
+
     function renderActivity(act) {
         console.log('Rendering activity:', act);
         // --- Info principales ---
@@ -328,7 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     }
 
-    // ¡CORREGIDO! Ahora esta función está definida ANTES de que main la llame.
+
     function renderStreamCharts(streams, act) {
         if (!streams || !streams.distance || !streams.distance.data || streams.distance.data.length === 0) {
             streamChartsDiv.innerHTML = '<p>No detailed stream data available for this activity.</p>';
@@ -527,6 +527,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const classificationResults = classifyRun(activityData, streamData);
             renderClassifierResults(classificationResults);
+
+            renderHrZoneDistributionChart(streamData);
 
             streamChartsDiv.style.display = ''; // o 'grid'
 
