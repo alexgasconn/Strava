@@ -616,145 +616,113 @@ function formatPace(speedInMps) {
 //          NUEVO MÓDULO: CLASIFICADOR DE TIPO DE CARRERA
 // =================================================================
 
-/**
- * Clasifica una carrera en un tipo de entrenamiento basado en un sistema de puntuación.
- * @param {object} act - El objeto de la actividad de Strava.
- * @param {object} streams - Los datos de los streams de la actividad.
- * @returns {object[]} Un array de los 3 tipos de carrera más probables con su puntuación.
- */
 function classifyRun(act, streams) {
-    
-    // --- 1. Extraer y preparar todas las métricas necesarias ---
+    // --- 1. Obtener Zonas de FC y Preparar Métricas ---
+    const zonesDataText = localStorage.getItem('strava_training_zones');
+    const allZones = zonesDataText ? JSON.parse(zonesDataText) : null;
+    const hrZones = allZones?.heart_rate?.custom_zones ? allZones.heart_rate.zones.filter(z => z.max > 0) : null;
+
     const distKm = act.distance / 1000;
     const effort = act.suffer_score || act.perceived_exertion || 0;
     const moveRatio = act.elapsed_time ? act.moving_time / act.elapsed_time : 1;
     const elevationPerKm = distKm > 0 ? act.total_elevation_gain / distKm : 0;
-    const paceAvg = formatPace(act.average_speed);
-    const heartRateAvg = act.average_heartrate ? Math.round(act.average_heartrate) : '-';
+    const paceAvgMinKm = act.average_speed > 0 ? (1000 / act.average_speed) / 60 : 0;
 
     const paceStream = [];
-    if (streams && streams.time && streams.distance) {
+    if (streams?.time?.data && streams?.distance?.data) {
         for (let i = 1; i < streams.distance.data.length; i++) {
-            const dDist = streams.distance.data[i] - streams.distance.data[i - 1];
-            const dTime = streams.time.data[i] - streams.time.data[i - 1];
-            if (dDist > 0 && dTime > 0) paceStream.push(dTime / dDist); // s/m
+            const dDist = streams.distance.data[i] - streams.distance.data[i-1];
+            const dTime = streams.time.data[i] - streams.time.data[i-1];
+            if (dDist > 0 && dTime > 0) paceStream.push(dTime / dDist);
         }
     }
     const paceCV = parseFloat(calculateVariability(paceStream).replace('%', ''));
     const hrCV = parseFloat(calculateVariability(streams?.heartrate?.data).replace('%', ''));
 
-    // Asumimos una FC Máxima teórica para calcular zonas si no está disponible la real
-    const maxHr = act.max_heartrate || USER_MAX_HR + 5;
-    const avgHrRatio = act.average_heartrate / maxHr;
+    const timeInZones = hrZones ? calculateTimeInZones(streams.heartrate, streams.time, hrZones) : [];
+    const totalTimeInZones = timeInZones.reduce((a, b) => a + b, 0);
+    
+    let pctTimeInLowZones = 0; // % en Z1-Z2
+    let pctTimeInTempoZones = 0; // % en Z3-Z4
+    let pctTimeInHighZones = 0; // % en Z4-Z5
+    if (totalTimeInZones > 0 && timeInZones.length >= 5) {
+        pctTimeInLowZones = ((timeInZones[0] + timeInZones[1]) / totalTimeInZones) * 100;
+        pctTimeInTempoZones = ((timeInZones[2] + timeInZones[3]) / totalTimeInZones) * 100;
+        pctTimeInHighZones = ((timeInZones[3] + timeInZones[4]) / totalTimeInZones) * 100;
+    }
 
-    // Análisis de Negative Split para carreras progresivas
-    const firstHalfTime = act.moving_time / 2;
     let timeAtHalfway = 0;
-    if (streams && streams.distance) {
+    if (streams?.distance?.data) {
         const halfwayPoint = act.distance / 2;
         const halfwayIndex = streams.distance.data.findIndex(d => d >= halfwayPoint);
-        if (halfwayIndex > 0) {
-            timeAtHalfway = streams.time.data[halfwayIndex];
-        }
+        if (halfwayIndex > 0) timeAtHalfway = streams.time.data[halfwayIndex];
     }
     const secondHalfTime = act.moving_time - timeAtHalfway;
     const negativeSplitRatio = timeAtHalfway > 0 ? secondHalfTime / timeAtHalfway : 1;
-
-
-    // --- 2. Definir las reglas para cada tipo de entrenamiento ---
+    
+    // --- 2. Definir los tipos de carrera ---
     const runTypes = {
         'Race': 0, 'Long Run': 0, 'Trail Run': 0, 'Hill Repeats': 0,
         'Intervals': 0, 'Fartlek': 0, 'Tempo Run': 0, 'Progressive Run': 0,
         'Easy Run': 0, 'Recovery Run': 0
     };
 
-    // --- Sistema de Puntuación ---
+    // --- 3. Sistema de Puntuación Híbrido ---
+    
+    // Etiquetas de Strava (máxima prioridad)
+    if (act.workout_type === 1) runTypes['Race'] += 150;
+    if (act.type === 'TrailRun') runTypes['Trail Run'] += 150;
 
-    // Recovery Run (muy estricto)
-    if (distKm < 8 && effort < 25 && avgHrRatio < 0.70) runTypes['Recovery Run'] += 60;
+    // Reglas de Esfuerzo, Distancia y Variabilidad (de tu sistema original)
+    if (distKm < 8 && effort < 25) runTypes['Recovery Run'] += 60;
     if (paceCV < 4) runTypes['Recovery Run'] += 15;
-    if (paceAvg > 6) runTypes['Recovery Run'] += 10;
-    if (heartRateAvg < 135) runTypes['Recovery Run'] += 5;
-
-    // Easy Run
-    if (effort >= 15 && effort < 60 && avgHrRatio < 0.78) runTypes['Easy Run'] += 50;
+    if (paceAvgMinKm > 6) runTypes['Recovery Run'] += 10;
+    
+    if (effort >= 15 && effort < 60) runTypes['Easy Run'] += 50;
     if (distKm > 4 && distKm < 13) runTypes['Easy Run'] += 10;
     if (paceCV < 5 && elevationPerKm < 30) runTypes['Easy Run'] += 20;
-    if (paceAvg > 5.75) runTypes['Easy Run'] += 10;
-    if (heartRateAvg < 150) runTypes['Easy Run'] += 5;
+    if (paceAvgMinKm > 5.75) runTypes['Easy Run'] += 10;
 
-    // Long Run
     if (distKm > 14.9) runTypes['Long Run'] += 60;
     if (effort > 60 && effort < 160) runTypes['Long Run'] += 20;
     if (paceCV < 7) runTypes['Long Run'] += 10;
-    if (paceAvg > 5.25) runTypes['Long Run'] += 5;
-    if (heartRateAvg < 155) runTypes['Long Run'] += 5;
-
-
-    // Race (alta prioridad si se cumplen las condiciones)
+    if (paceAvgMinKm > 5.25) runTypes['Long Run'] += 5;
+    
     const isRaceDist = [5, 10, 21.1, 42.2].some(d => Math.abs(distKm - d) < 0.5);
-    if (isRaceDist && effort > 150 && avgHrRatio > 0.88 && paceCV < 4) runTypes['Race'] += 100;
-    if (act.workout_type === 1) runTypes['Race'] += 150; // ¡La etiqueta de Strava es el mejor indicador!
-    if (heartRateAvg > 170) runTypes['Race'] += 5;
+    if (isRaceDist && effort > 150 && paceCV < 4) runTypes['Race'] += 100;
 
-    // Tempo Run
-    if (distKm > 5 && distKm < 16 && avgHrRatio > 0.84 && avgHrRatio < 0.91) runTypes['Tempo Run'] += 60;
     if (paceCV < 4.5) runTypes['Tempo Run'] += 25;
-    if (heartRateAvg > 165) runTypes['Tempo Run'] += 5;
-    if (paceAvg < 5) runTypes['Tempo Run'] += 10;
 
-    // Progressive Run
-    if (distKm > 8 && negativeSplitRatio < 0.99) runTypes['Progressive Run'] += 70; // 1% negative split
+    if (distKm > 8 && negativeSplitRatio < 0.99) runTypes['Progressive Run'] += 70;
     if (paceCV > 5 && paceCV < 12) runTypes['Progressive Run'] += 15;
 
-    // Intervals / Series
     if (paceCV > 12 && hrCV > 8) runTypes['Intervals'] += 70;
     if (effort > 100) runTypes['Intervals'] += 20;
-    if (paceAvg < 5.25) runTypes['Intervals'] += 10;
-    if (heartRateAvg > 166) runTypes['Intervals'] += 5;
+    if (paceAvgMinKm < 5.25) runTypes['Intervals'] += 10;
 
-    // Fartlek (menos estructurado que los intervalos)
     if (paceCV > 7 && paceCV < 15 && hrCV > 5) runTypes['Fartlek'] += 60;
     if (distKm > 5 && distKm < 16) runTypes['Fartlek'] += 10;
-    if (paceAvg < 5.25) runTypes['Fartlek'] += 10;
-    if (heartRateAvg > 166) runTypes['Fartlek'] += 5;
+    if (paceAvgMinKm < 5.25) runTypes['Fartlek'] += 10;
 
-    // Hill Repeats
     if (elevationPerKm > 30 && paceCV > 9) runTypes['Hill Repeats'] += 70;
-    if (heartRateAvg > 166) runTypes['Hill Repeats'] += 5;
-    if (paceAvg > 5.25) runTypes['Hill Repeats'] += 5;
+    if (paceAvgMinKm > 5.25) runTypes['Hill Repeats'] += 5;
 
-    // Trail Run
     if (elevationPerKm > 40) runTypes['Trail Run'] += 50;
-    if (moveRatio < 0.75) runTypes['Trail Run'] += 30; // Mucho tiempo parado = técnico
-    if (heartRateAvg > 170) runTypes['Trail Run'] += 5;
-    if (paceAvg > 5.25) runTypes['Trail Run'] += 5;
-    if (act.sport_type === 'TrailRun') runTypes['Trail Run'] += 100;
+    if (moveRatio < 0.95) runTypes['Trail Run'] += 30; // Ajustado a 0.95
+    if (paceAvgMinKm > 5.25) runTypes['Trail Run'] += 5;
 
-    // HEART RATE
-    if (heartRateAvg < 135) runTypes['Recovery Run'] += 70;
-    if (heartRateAvg < 140 && heartRateAvg > 130) runTypes['Easy Run'] += 40;
-    if (heartRateAvg < 160 && heartRateAvg > 150) runTypes['Long Run'] += 10;
-    if (heartRateAvg < 170 && heartRateAvg > 150) runTypes['Tempo Run'] += 10;
-    if (heartRateAvg < 180 && heartRateAvg > 170) runTypes['Intervals'] += 10;
-    if (heartRateAvg > 180) runTypes['Race'] += 60;
-    if (heartRateAvg < 175 && heartRateAvg > 160) runTypes['Fartlek'] += 10;
-    if (heartRateAvg < 180 && heartRateAvg > 160) runTypes['Hill Repeats'] += 10;
-    if (heartRateAvg > 170) runTypes['Trail Run'] += 20;
-    if (heartRateAvg < 180 && heartRateAvg > 160) runTypes['Progressive Run'] += 20;
-
-    // DISTANCE
+    // Reglas de Distancia adicionales
     if (distKm < 5) runTypes['Recovery Run'] += 50;
-    if (distKm < 10 && distKm > 5) runTypes['Easy Run'] += 30;
-    if (distKm > 15) runTypes['Long Run'] += 30;
-    if (distKm < 14 && distKm > 6) runTypes['Tempo Run'] += 10;
-    if (distKm > 5) runTypes['Intervals'] += 10;
-    if (distKm > 6) runTypes['Fartlek'] += 10;
+    if (distKm >= 5 && distKm < 10) runTypes['Easy Run'] += 30;
+    if (distKm >= 15) runTypes['Long Run'] += 30;
+    if (distKm >= 6 && distKm < 14) runTypes['Tempo Run'] += 10;
+    if (distKm >= 5) runTypes['Intervals'] += 10;
+    if (distKm >= 6) runTypes['Fartlek'] += 10;
     if (distKm < 14) runTypes['Hill Repeats'] += 10;
-    if (distKm > 7) runTypes['Trail Run'] += 10;
-    if (distKm > 9) runTypes['Progressive Run'] += 30;
+    if (distKm >= 7) runTypes['Trail Run'] += 10;
+    if (distKm >= 9) runTypes['Progressive Run'] += 30;
 
-    // PACE CV
+    // Reglas de Variabilidad de Ritmo adicionales
     if (paceCV > 15) runTypes['Long Run'] += 30;
     if (paceCV < 14) runTypes['Tempo Run'] += 10;
     if (paceCV > 15) runTypes['Trail Run'] += 25;
@@ -762,9 +730,29 @@ function classifyRun(act, streams) {
     if (paceCV > 20) runTypes['Intervals'] += 30;
     if (paceCV > 20) runTypes['Fartlek'] += 30;
     if (paceCV < 10) runTypes['Race'] += 10;
-    
 
-    // --- 3. Calcular porcentajes y devolver los 3 mejores ---
+    // =========================================================
+    //      NUEVAS REGLAS DE PUNTUACIÓN BASADAS EN ZONAS DE FC
+    // =========================================================
+    if (hrZones && totalTimeInZones > 0) {
+        // Estas reglas se SUMAN a las anteriores, refinando la clasificación
+        if (pctTimeInLowZones > 90) runTypes['Recovery Run'] += 80;
+        if (pctTimeInLowZones > 75) runTypes['Easy Run'] += 50;
+        if (pctTimeInLowZones > 60) runTypes['Long Run'] += 30;
+        
+        if (pctTimeInTempoZones > 60) runTypes['Tempo Run'] += 70;
+        if (pctTimeInTempoZones > 40) runTypes['Progressive Run'] += 20;
+
+        if (pctTimeInHighZones > 50) runTypes['Intervals'] += 50;
+        if (pctTimeInHighZones > 60) runTypes['Race'] += 50;
+        if (pctTimeInHighZones > 40) runTypes['Hill Repeats'] += 30;
+        
+        // Fartlek es una mezcla, así que puntuamos si no es ni muy fácil ni muy a tope
+        if (pctTimeInLowZones < 70 && pctTimeInHighZones < 50) runTypes['Fartlek'] += 25;
+    }
+
+
+    // --- 4. Calcular porcentajes y devolver los 3 mejores ---
     const totalScore = Object.values(runTypes).reduce((sum, score) => sum + score, 0);
 
     if (totalScore === 0) {
@@ -779,7 +767,7 @@ function classifyRun(act, streams) {
         .filter(result => result.score > 0)
         .sort((a, b) => b.score - a.score);
 
-    return results.slice(0, 10);
+    return results.slice(0, 3);
 }
 
 
