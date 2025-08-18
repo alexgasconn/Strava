@@ -6,8 +6,7 @@ const STRAVA_CLIENT_ID = '143540';
 const REDIRECT_URI = window.location.origin + window.location.pathname;
 
 export function redirectToStrava() {
-    console.log("Función redirectToStrava() EJECUTADA. Redirigiendo...");
-    // const scope = 'read,activity:read_all';
+    console.log("Redirecting to Strava for authorization...");
     const scope = 'read,activity:read_all,profile:read_all';
     const authUrl = `https://www.strava.com/oauth/authorize?client_id=${STRAVA_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=${scope}`;
     window.location.href = authUrl;
