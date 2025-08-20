@@ -57,8 +57,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     function renderStartTimeHistogram(runs) {
         const hours = Array(24).fill(0);
         runs.forEach(run => {
-            const hour = new Date(run.start_date_local).getHours() - 2;
-            hours[hour - 2]++;
+            let hour = new Date(run.start_date_local).getHours();
+            hour = (hour - 2 + 24) % 24; // Subtract 2, wrap around if negative
+            hours[hour]++;
         });
         const labels = hours.map((_, i) => `${i}:00`);
         createChart('start-time-histogram', {
