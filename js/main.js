@@ -1,6 +1,6 @@
 // js/main.js
 import { redirectToStrava, logout, handleAuth } from './auth.js';
-import { setupDashboard, renderDashboard, showLoading, hideLoading, handleError, renderAthleteProfile, renderTrainingZones } from './ui.js';
+import { setupDashboard, renderDashboard, showLoading, hideLoading, handleError, renderAthleteProfile, renderTrainingZones, renderAthleteTab } from './ui.js';
 import { renderPlannerTab } from './planner.js';
 import { fetchAllActivities, fetchAthleteData, fetchTrainingZones } from './api.js'; // <-- Añade los nuevos imports
 
@@ -11,7 +11,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let allActivities = [];
     let dateFilterFrom = null;
     let dateFilterTo = null;
-    let plannerTabRendered = false; // <-- ¡AÑADE ESTA LÍNEA! La variable debe ser declarada aquí.
+    let plannerTabRendered = false;
+    let athleteTabRendered = false;
 
     // --- DOM REFERENCES ---
     const loginButton = document.getElementById('login-button');
@@ -42,6 +43,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     plannerTabRendered = true;
                 } else {
                     console.warn("Activities not loaded yet, can't render planner tab.");
+                }
+            }
+            if (tabId === 'athlete-tab' && !athleteTabRendered) {
+                if (allActivities.length > 0) {
+                    // Llamaremos a una nueva función que crearemos en ui.js
+                    renderAthleteTab(allActivities);
+                    athleteTabRendered = true;
+                } else {
+                    console.warn("Activities not loaded yet, can't render athlete tab.");
                 }
             }
         });
@@ -94,12 +104,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 fetchTrainingZones()
             ]);
 
+            localStorage.setItem('strava_athlete_data', JSON.stringify(athlete));
             localStorage.setItem('strava_training_zones', JSON.stringify(zones));
-            
+
             allActivities = activities;
-            renderAthleteProfile(athlete);
-            renderTrainingZones(zones);
-            
+            // renderAthleteProfile(athlete);
+            // renderTrainingZones(zones);
+
             setupDashboard(allActivities);
             renderDashboard(allActivities, dateFilterFrom, dateFilterTo);
             setupYearlySelector();

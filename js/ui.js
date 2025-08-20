@@ -37,7 +37,6 @@ export function handleError(message, error) {
 export function setupDashboard(activities) {
     loginSection.classList.add('hidden');
     appSection.classList.remove('hidden');
-
     athleteName.textContent = `Running Dashboard`;
 
     const dates = activities.map(a => a.start_date_local.substring(0, 10)).sort();
@@ -59,9 +58,7 @@ export function renderDashboard(allActivities, dateFilterFrom, dateFilterTo) {
     renderAllCharts(runs);
     renderRaceList(runs);
     renderAllRunsTable(runs);
-    renderGearSection(runs);
     renderStreaks(runs);
-    renderPersonalBests(runs);
 }
 
 
@@ -85,8 +82,8 @@ function renderAllCharts(runs) {
     charts.renderDistanceHistogram(runs);
     charts.renderVo2maxChart(runs);
     charts.renderFitnessChart(runs);
-    charts.renderStackedAreaGearChart(runs); // <--- SIN gearIdToName
-    charts.renderGearGanttChart(runs);       // <--- SIN gearIdToName
+    charts.renderStackedAreaGearChart(runs);
+    charts.renderGearGanttChart(runs);
     charts.renderAccumulatedDistanceChart(runs);
     charts.renderRollingMeanDistanceChart(runs);
     charts.renderDistanceVsElevationChart(runs);
@@ -503,6 +500,96 @@ async function renderGearSection(runs) {
         gearListContainer.innerHTML = '<p>Error loading gear details. Check the console.</p>';
     }
 }
+
+
+export function renderAthleteTab(allActivities) {
+    console.log("Initializing Athlete Tab...");
+    const runs = allActivities.filter(a => a.type && a.type.includes('Run'));
+
+    const athleteData = JSON.parse(localStorage.getItem('strava_athlete_data'));
+    const zonesData = JSON.parse(localStorage.getItem('strava_training_zones'));
+    
+    if (athleteData) renderAthleteProfile(athleteData);
+    if (zonesData) renderTrainingZones(zonesData);
+
+    renderAllTimeStats(runs);
+    renderPersonalBests(runs);
+    renderRecordStats(runs);
+    renderConsistencyStats(runs);
+    renderGearSection(runs);
+}
+
+
+function renderRecordStats(runs) {
+    const container = document.getElementById('record-stats');
+    if (!container || runs.length === 0) {
+        container.innerHTML = "<p>No run data available.</p>";
+        return;
+    };
+
+    const longestRun = [...runs].sort((a,b) => b.distance - a.distance)[0];
+    const longestTime = [...runs].sort((a,b) => b.moving_time - a.moving_time)[0];
+    const mostElev = [...runs].sort((a,b) => b.total_elevation_gain - a.total_elevation_gain)[0];
+
+    container.innerHTML = `
+        <ul style="list-style: none; padding-left: 0; line-height: 1.8;">
+            <li><strong>Longest Run:</strong> ${(longestRun.distance / 1000).toFixed(2)} km
+                (<a href="activity.html?id=${longestRun.id}" target="_blank">View</a>)</li>
+            <li><strong>Longest Duration:</strong> ${new Date(longestTime.moving_time * 1000).toISOString().substr(11, 8)}
+                (<a href="activity.html?id=${longestTime.id}" target="_blank">View</a>)</li>
+            <li><strong>Most Elevation:</strong> ${Math.round(mostElev.total_elevation_gain)} m
+                (<a href="activity.html?id=${mostElev.id}" target="_blank">View</a>)</li>
+        </ul>
+    `;
+}
+
+
+function renderConsistencyStats(runs) {
+    const container = document.getElementById('consistency-stats');
+    if (!container || runs.length === 0) {
+        container.innerHTML = "<p>No run data available.</p>";
+        return;
+    }
+
+    const avgDist = (runs.reduce((sum, act) => sum + act.distance, 0) / runs.length / 1000).toFixed(1);
+    const avgTime = (runs.reduce((sum, act) => sum + act.moving_time, 0) / runs.length);
+
+    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const dayCounts = new Array(7).fill(0);
+    runs.forEach(act => {
+        const dayIndex = new Date(act.start_date_local).getDay();
+        dayCounts[dayIndex]++;
+    });
+    const mostActiveDayIndex = dayCounts.indexOf(Math.max(...dayCounts));
+    
+    container.innerHTML = `
+        <ul style="list-style: none; padding-left: 0; line-height: 1.8;">
+            <li><strong>Average Distance:</strong> ${avgDist} km / run</li>
+            <li><strong>Average Time:</strong> ${new Date(avgTime * 1000).toISOString().substr(14, 5)} / run</li>
+            <li><strong>Most Active Day:</strong> ${daysOfWeek[mostActiveDayIndex]}</li>
+        </ul>
+    `;
+}
+
+
+function renderAllTimeStats(runs) {
+    const container = document.getElementById('all-time-stats-cards');
+    if (!container) return;
+
+    const totalDist = (runs.reduce((sum, act) => sum + act.distance, 0) / 1000).toFixed(0);
+    const totalTime = (runs.reduce((sum, act) => sum + act.moving_time, 0) / 3600).toFixed(1);
+    const totalElev = runs.reduce((sum, act) => sum + act.total_elevation_gain, 0).toLocaleString();
+
+    container.innerHTML = `
+        <div class="card"><h3>Total Runs</h3><p>${runs.length}</p></div>
+        <div class="card"><h3>Total Distance</h3><p>${totalDist} km</p></div>
+        <div class="card"><h3>Total Time</h3><p>${totalTime} h</p></div>
+        <div class="card"><h3>Total Elevation</h3><p>${totalElev} m</p></div>
+    `;
+}
+
+
+
 
 function renderGearCards(apiResults, usageData, allRuns) {
     const gearListContainer = document.getElementById('gear-info-list');
