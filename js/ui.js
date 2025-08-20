@@ -638,22 +638,6 @@ async function renderGearSection(runs) {
 }
 
 
-export function renderAthleteTab(allActivities) {
-    console.log("Initializing Athlete Tab...");
-    const runs = allActivities.filter(a => a.type && a.type.includes('Run'));
-
-    const athleteData = JSON.parse(localStorage.getItem('strava_athlete_data'));
-    const zonesData = JSON.parse(localStorage.getItem('strava_training_zones'));
-    
-    if (athleteData) renderAthleteProfile(athleteData);
-    if (zonesData) renderTrainingZones(zonesData);
-
-    renderAllTimeStats(runs);
-    renderPersonalBests(runs);
-    renderRecordStats(runs);
-    renderConsistencyStats(runs);
-    renderGearSection(runs);
-}
 
 
 function renderRecordStats(runs) {
