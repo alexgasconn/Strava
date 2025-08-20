@@ -250,79 +250,88 @@ function renderPerformanceOverTime(runs) {
 }
 
 function renderYearlyComparison(runs) {
-        const byYear = runs.reduce((acc, run) => {
-            const year = run.start_date_local.substring(0, 4);
-            if (!acc[year]) acc[year] = { distance: 0, count: 0, elevation: 0, movingTime: 0 };
-            acc[year].distance += run.distance / 1000;
-            acc[year].count++;
-            acc[year].elevation += run.total_elevation_gain;
-            acc[year].movingTime += run.moving_time / 3600;
-            return acc;
-        }, {});
+    const byYear = runs.reduce((acc, run) => {
+        const year = run.start_date_local.substring(0, 4);
+        if (!acc[year]) acc[year] = { distance: 0, count: 0, elevation: 0, movingTime: 0 };
+        acc[year].distance += run.distance / 1000;
+        acc[year].count++;
+        acc[year].elevation += run.total_elevation_gain;
+        acc[year].movingTime += run.moving_time / 3600;
+        return acc;
+    }, {});
 
-        const years = Object.keys(byYear).sort();
-        const distData = years.map(y => byYear[y].distance);
-        const countData = years.map(y => byYear[y].count);
-        const elevData = years.map(y => byYear[y].elevation);
-        const timeData = years.map(y => byYear[y].movingTime);
+    const years = Object.keys(byYear).sort();
+    // Get max for each measure
+    const distDataRaw = years.map(y => byYear[y].distance);
+    const countDataRaw = years.map(y => byYear[y].count);
+    const elevDataRaw = years.map(y => byYear[y].elevation);
+    const timeDataRaw = years.map(y => byYear[y].movingTime);
 
-        const datasets = [
-            {
-                label: 'Total Distance (km)',
-                data: distData,
-                backgroundColor: 'rgba(0, 116, 217, 0.8)',
-                yAxisID: 'yDist',
-                hidden: false // Show by default
-            },
-            {
-                label: 'Number of Runs',
-                data: countData,
-                backgroundColor: 'rgba(252, 82, 0, 0.8)',
-                yAxisID: 'yCount',
-                hidden: true // Hide by default
-            },
-            {
-                label: 'Total Elevation Gain (m)',
-                data: elevData,
-                backgroundColor: 'rgba(0, 200, 83, 0.7)',
-                yAxisID: 'yElev',
-                hidden: true // Hide by default
-            },
-            {
-                label: 'Total Moving Time (h)',
-                data: timeData,
-                backgroundColor: 'rgba(255, 193, 7, 0.7)',
-                yAxisID: 'yTime',
-                hidden: true // Hide by default
-            }
-        ];
+    const maxDist = Math.max(...distDataRaw) || 1;
+    const maxCount = Math.max(...countDataRaw) || 1;
+    const maxElev = Math.max(...elevDataRaw) || 1;
+    const maxTime = Math.max(...timeDataRaw) || 1;
 
-        createUiChart('yearly-comparison-chart', {
-            type: 'bar',
-            data: {
-                labels: years,
-                datasets
-            },
-            options: {
-                plugins: {
-                    legend: {
-                        onClick: (e, legendItem, legend) => {
-                            const chart = legend.chart;
-                            const idx = legendItem.datasetIndex;
-                            chart.data.datasets[idx].hidden = !chart.data.datasets[idx].hidden;
-                            chart.update();
-                        }
+    // Scale to [0, 1]
+    const distData = distDataRaw.map(v => v / maxDist);
+    const countData = countDataRaw.map(v => v / maxCount);
+    const elevData = elevDataRaw.map(v => v / maxElev);
+    const timeData = timeDataRaw.map(v => v / maxTime);
+
+    const datasets = [
+        {
+            label: 'Total Distance (scaled)',
+            data: distData,
+            backgroundColor: 'rgba(0, 116, 217, 0.8)',
+            hidden: false
+        },
+        {
+            label: 'Number of Runs (scaled)',
+            data: countData,
+            backgroundColor: 'rgba(252, 82, 0, 0.8)',
+            hidden: true
+        },
+        {
+            label: 'Total Elevation Gain (scaled)',
+            data: elevData,
+            backgroundColor: 'rgba(0, 200, 83, 0.7)',
+            hidden: true
+        },
+        {
+            label: 'Total Moving Time (scaled)',
+            data: timeData,
+            backgroundColor: 'rgba(255, 193, 7, 0.7)',
+            hidden: true
+        }
+    ];
+
+    createUiChart('yearly-comparison-chart', {
+        type: 'bar',
+        data: {
+            labels: years,
+            datasets
+        },
+        options: {
+            plugins: {
+                legend: {
+                    onClick: (e, legendItem, legend) => {
+                        const chart = legend.chart;
+                        const idx = legendItem.datasetIndex;
+                        chart.data.datasets[idx].hidden = !chart.data.datasets[idx].hidden;
+                        chart.update();
                     }
-                },
-                scales: {
-                    yDist: { position: 'left', title: { display: true, text: 'Distance (km)' } },
-                    yCount: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: '# of Runs' } },
-                    yElev: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Elevation Gain (m)' } },
-                    yTime: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Moving Time (h)' } }
+                }
+            },
+            scales: {
+                y: {
+                    min: 0,
+                    max: 1,
+                    title: { display: true, text: 'Scaled Value (0-1)' }
                 }
             }
-        });
-    }
+        }
+    });
+}
 
 
 
