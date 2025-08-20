@@ -300,9 +300,10 @@ export function renderVo2maxChart(runs) {
         data: {
             labels: allMonths,
             datasets: [{
-                label: `Estimated VO₂max (${ROLLING_WINDOW}-month rolling mean)`,
+                label: `Estimated VO₂max per Month)`,
                 data: vo2maxRolling,
                 borderColor: 'rgba(54, 162, 235, 1)',
+                backgroundColor: 'rgba(54, 162, 235, 0.5)', // soft blue fill
                 tension: 0.2,
                 spanGaps: true, // Permite saltar huecos
                 fill: 'origin',
