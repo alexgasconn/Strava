@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function renderStartTimeHistogram(runs) {
         const hours = Array(24).fill(0);
         runs.forEach(run => {
-            const hour = new Date(run.start_date_local).getHours();
+            const hour = new Date(run.start_date_local).getHours() - 2;
             hours[hour]++;
         });
         const labels = hours.map((_, i) => `${i}:00`);
