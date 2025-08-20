@@ -283,25 +283,29 @@ function renderYearlyComparison(runs) {
             label: 'Total Distance (scaled)',
             data: distData,
             backgroundColor: 'rgba(0, 116, 217, 0.8)',
-            hidden: false
+            hidden: false,
+            realData: distDataRaw
         },
         {
             label: 'Number of Runs (scaled)',
             data: countData,
             backgroundColor: 'rgba(252, 82, 0, 0.8)',
-            hidden: true
+            hidden: true,
+            realData: countDataRaw
         },
         {
             label: 'Total Elevation Gain (scaled)',
             data: elevData,
             backgroundColor: 'rgba(0, 200, 83, 0.7)',
-            hidden: true
+            hidden: true,
+            realData: elevDataRaw
         },
         {
             label: 'Total Moving Time (scaled)',
             data: timeData,
             backgroundColor: 'rgba(255, 193, 7, 0.7)',
-            hidden: true
+            hidden: true,
+            realData: timeDataRaw
         }
     ];
 
@@ -319,6 +323,30 @@ function renderYearlyComparison(runs) {
                         const idx = legendItem.datasetIndex;
                         chart.data.datasets[idx].hidden = !chart.data.datasets[idx].hidden;
                         chart.update();
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const dataset = context.dataset;
+                            const yearIdx = context.dataIndex;
+                            let label = dataset.label.replace(' (scaled)', '');
+                            let value = dataset.realData ? dataset.realData[yearIdx] : context.parsed.y;
+                            // Format value depending on dataset
+                            if (label === 'Total Distance') {
+                                return `${label}: ${value.toLocaleString(undefined, {maximumFractionDigits: 1})} km`;
+                            }
+                            if (label === 'Number of Runs') {
+                                return `${label}: ${value}`;
+                            }
+                            if (label === 'Total Elevation Gain') {
+                                return `${label}: ${value.toLocaleString()} m`;
+                            }
+                            if (label === 'Total Moving Time') {
+                                return `${label}: ${value.toLocaleString(undefined, {maximumFractionDigits: 1})} h`;
+                            }
+                            return `${label}: ${value}`;
+                        }
                     }
                 }
             },
