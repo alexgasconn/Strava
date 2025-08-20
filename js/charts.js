@@ -304,7 +304,8 @@ export function renderVo2maxChart(runs) {
                 data: vo2maxRolling,
                 borderColor: 'rgba(54, 162, 235, 1)',
                 tension: 0.2,
-                spanGaps: true // Permite saltar huecos
+                spanGaps: true, // Permite saltar huecos
+                fill: 'origin',
             }]
         },
         options: { scales: { y: { title: { display: true, text: 'VO₂max' } } } }
