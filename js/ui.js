@@ -11,8 +11,22 @@ const athleteName = document.getElementById('athlete-name');
 const loginSection = document.getElementById('login-section');
 const appSection = document.getElementById('app-section');
 
-// --- UI HELPERS ---
 
+let uiCharts = {}; // Almacén de gráficos para la pestaña "Athlete" para no interferir con los del dashboard principal
+function createUiChart(canvasId, config) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) {
+        console.error(`Canvas with id ${canvasId} not found.`);
+        return;
+    }
+    if (uiCharts[canvasId]) {
+        uiCharts[canvasId].destroy();
+    }
+    uiCharts[canvasId] = new Chart(canvas, config);
+}
+
+
+// --- UI HELPERS ---
 export function showLoading(message) {
     if (loadingOverlay) {
         loadingMessage.textContent = message;
