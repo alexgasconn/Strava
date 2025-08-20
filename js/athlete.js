@@ -126,36 +126,57 @@ document.addEventListener('DOMContentLoaded', async () => {
     function renderYearlyComparison(runs) {
         const byYear = runs.reduce((acc, run) => {
             const year = run.start_date_local.substring(0, 4);
-            if (!acc[year]) acc[year] = { distance: 0, count: 0 };
+            if (!acc[year]) acc[year] = { distance: 0, count: 0, elevation: 0, movingTime: 0 };
             acc[year].distance += run.distance / 1000;
             acc[year].count++;
+            acc[year].elevation += run.total_elevation_gain;
+            acc[year].movingTime += run.moving_time / 3600;
             return acc;
         }, {});
 
         const years = Object.keys(byYear).sort();
         const distData = years.map(y => byYear[y].distance);
         const countData = years.map(y => byYear[y].count);
+        const elevData = years.map(y => byYear[y].elevation);
+        const timeData = years.map(y => byYear[y].movingTime);
 
         createChart('yearly-comparison-chart', {
             type: 'bar',
             data: {
                 labels: years,
-                datasets: [{
-                    label: 'Total Distance (km)',
-                    data: distData,
-                    backgroundColor: 'rgba(0, 116, 217, 0.8)',
-                    yAxisID: 'yDist'
-                }, {
-                    label: 'Number of Runs',
-                    data: countData,
-                    backgroundColor: 'rgba(252, 82, 0, 0.8)',
-                    yAxisID: 'yCount'
-                }]
+                datasets: [
+                    {
+                        label: 'Total Distance (km)',
+                        data: distData,
+                        backgroundColor: 'rgba(0, 116, 217, 0.8)',
+                        yAxisID: 'yDist'
+                    },
+                    {
+                        label: 'Number of Runs',
+                        data: countData,
+                        backgroundColor: 'rgba(252, 82, 0, 0.8)',
+                        yAxisID: 'yCount'
+                    },
+                    {
+                        label: 'Total Elevation Gain (m)',
+                        data: elevData,
+                        backgroundColor: 'rgba(0, 200, 83, 0.7)',
+                        yAxisID: 'yElev'
+                    },
+                    {
+                        label: 'Total Moving Time (h)',
+                        data: timeData,
+                        backgroundColor: 'rgba(255, 193, 7, 0.7)',
+                        yAxisID: 'yTime'
+                    }
+                ]
             },
             options: {
                 scales: {
-                    yDist: { position: 'left', title: { display: true, text: 'Distance (km)'}},
-                    yCount: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: '# of Runs'}}
+                    yDist: { position: 'left', title: { display: true, text: 'Distance (km)' } },
+                    yCount: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: '# of Runs' } },
+                    yElev: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Elevation Gain (m)' } },
+                    yTime: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Moving Time (h)' } }
                 }
             }
         });
