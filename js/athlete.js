@@ -38,18 +38,52 @@ document.addEventListener('DOMContentLoaded', async () => {
         const container = document.getElementById('record-stats');
         if (!container || runs.length === 0) return;
 
-        const longestRun = [...runs].sort((a,b) => b.distance - a.distance)[0];
-        const fastestRun = [...runs].filter(r => r.distance > 1000).sort((a,b) => a.average_speed - b.average_speed).reverse()[0];
-        const mostElev = [...runs].sort((a,b) => b.total_elevation_gain - a.total_elevation_gain)[0];
-        
+        // Longest run
+        const longestRun = [...runs].sort((a, b) => b.distance - a.distance)[0];
+
+        // Fastest run (pace)
+        const fastestRun = [...runs].filter(r => r.distance > 1000).sort((a, b) => a.average_speed - b.average_speed).reverse()[0];
         const paceMin = fastestRun.average_speed > 0 ? (1000 / fastestRun.average_speed) / 60 : 0;
         const paceStr = paceMin > 0 ? `${Math.floor(paceMin)}:${Math.round((paceMin % 1) * 60).toString().padStart(2, '0')}` : '-';
+
+        // Most elevation
+        const mostElev = [...runs].sort((a, b) => b.total_elevation_gain - a.total_elevation_gain)[0];
+
+        // More time transcurred (oldest to newest)
+        const oldestRun = [...runs].sort((a, b) => new Date(a.start_date_local) - new Date(b.start_date_local))[0];
+        const newestRun = [...runs].sort((a, b) => new Date(b.start_date_local) - new Date(a.start_date_local))[0];
+        const timeDiffMs = new Date(newestRun.start_date_local) - new Date(oldestRun.start_date_local);
+        const timeDiffDays = Math.floor(timeDiffMs / (1000 * 60 * 60 * 24));
+
+        // Favourite hour of the day
+        const hourCounts = Array(24).fill(0);
+        runs.forEach(run => {
+            let hour = new Date(run.start_date_local).getHours();
+            hour = (hour - 2 + 24) % 24; // adjust for timezone as in histogram
+            hourCounts[hour]++;
+        });
+        const favHour = hourCounts.indexOf(Math.max(...hourCounts));
+
+        // Average distance
+        const avgDist = runs.length ? (runs.reduce((s, a) => s + a.distance, 0) / runs.length / 1000).toFixed(2) : 0;
+
+        // Average pace
+        const avgPaceMin = runs.length
+            ? (runs.reduce((s, r) => s + (r.average_speed > 0 ? (1000 / r.average_speed) / 60 : 0), 0) / runs.length)
+            : 0;
+        const avgPaceStr = avgPaceMin > 0
+            ? `${Math.floor(avgPaceMin)}:${Math.round((avgPaceMin % 1) * 60).toString().padStart(2, '0')}`
+            : '-';
 
         container.innerHTML = `
             <ul style="list-style: none; padding-left: 0; line-height: 1.8;">
                 <li><strong>Longest Run:</strong> ${(longestRun.distance / 1000).toFixed(2)} km (<a href="activity.html?id=${longestRun.id}" target="_blank">View</a>)</li>
                 <li><strong>Fastest Run (Pace):</strong> ${paceStr} /km over ${(fastestRun.distance / 1000).toFixed(1)}k (<a href="activity.html?id=${fastestRun.id}" target="_blank">View</a>)</li>
                 <li><strong>Most Elevation:</strong> ${Math.round(mostElev.total_elevation_gain)} m (<a href="activity.html?id=${mostElev.id}" target="_blank">View</a>)</li>
+                <li><strong>Time Span:</strong> ${timeDiffDays} days (${oldestRun.start_date_local.substring(0, 10)} to ${newestRun.start_date_local.substring(0, 10)})</li>
+                <li><strong>Favourite Hour:</strong> ${favHour}:00</li>
+                <li><strong>Average Distance:</strong> ${avgDist} km</li>
+                <li><strong>Average Pace:</strong> ${avgPaceStr} /km</li>
             </ul>
         `;
     }
@@ -58,7 +92,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const hours = Array(24).fill(0);
         runs.forEach(run => {
             let hour = new Date(run.start_date_local).getHours();
-            hour = (hour - 2 + 24) % 24; // Subtract 2, wrap around if negative
+            hour = (hour - 2 + 24) % 24;
             hours[hour]++;
         });
         const labels = hours.map((_, i) => `${i}:00`);

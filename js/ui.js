@@ -116,11 +116,11 @@ export function renderAthleteTab(allActivities) {
 
     const athleteData = JSON.parse(localStorage.getItem('strava_athlete_data'));
     const zonesData = JSON.parse(localStorage.getItem('strava_training_zones'));
-    
+
     // Renderizar componentes
     if (athleteData) renderAthleteProfile(athleteData);
     if (zonesData) renderTrainingZones(zonesData);
-    
+
     renderAllTimeStats(runs);
     renderPersonalBests(runs);
     renderRecordStats(runs);
@@ -148,41 +148,83 @@ function renderRecordStats(runs) {
     const container = document.getElementById('record-stats');
     if (!container || runs.length === 0) return;
 
-    const longestRun = [...runs].sort((a,b) => b.distance - a.distance)[0];
-    const fastestRun = [...runs].filter(r => r.distance > 1000).sort((a,b) => b.average_speed - a.average_speed)[0];
-    const mostElev = [...runs].sort((a,b) => b.total_elevation_gain - a.total_elevation_gain)[0];
-    
+    // Longest run
+    const longestRun = [...runs].sort((a, b) => b.distance - a.distance)[0];
+
+    // Fastest run (pace)
+    const fastestRun = [...runs].filter(r => r.distance > 1000).sort((a, b) => a.average_speed - b.average_speed).reverse()[0];
     const paceMin = fastestRun.average_speed > 0 ? (1000 / fastestRun.average_speed) / 60 : 0;
     const paceStr = paceMin > 0 ? `${Math.floor(paceMin)}:${Math.round((paceMin % 1) * 60).toString().padStart(2, '0')}` : '-';
 
+    // Most elevation
+    const mostElev = [...runs].sort((a, b) => b.total_elevation_gain - a.total_elevation_gain)[0];
+
+    // More time transcurred (oldest to newest)
+    const oldestRun = [...runs].sort((a, b) => new Date(a.start_date_local) - new Date(b.start_date_local))[0];
+    const newestRun = [...runs].sort((a, b) => new Date(b.start_date_local) - new Date(a.start_date_local))[0];
+    const timeDiffMs = new Date(newestRun.start_date_local) - new Date(oldestRun.start_date_local);
+    const timeDiffDays = Math.floor(timeDiffMs / (1000 * 60 * 60 * 24));
+
+    // Favourite hour of the day
+    const hourCounts = Array(24).fill(0);
+    runs.forEach(run => {
+        let hour = new Date(run.start_date_local).getHours();
+        hour = (hour - 2 + 24) % 24; // adjust for timezone as in histogram
+        hourCounts[hour]++;
+    });
+    const favHour = hourCounts.indexOf(Math.max(...hourCounts));
+
+    // Average distance
+    const avgDist = runs.length ? (runs.reduce((s, a) => s + a.distance, 0) / runs.length / 1000).toFixed(2) : 0;
+
+    // Average pace
+    const avgPaceMin = runs.length
+        ? (runs.reduce((s, r) => s + (r.average_speed > 0 ? (1000 / r.average_speed) / 60 : 0), 0) / runs.length)
+        : 0;
+    const avgPaceStr = avgPaceMin > 0
+        ? `${Math.floor(avgPaceMin)}:${Math.round((avgPaceMin % 1) * 60).toString().padStart(2, '0')}`
+        : '-';
+
     container.innerHTML = `
-        <ul style="list-style: none; padding-left: 0; line-height: 1.8;">
-            <li><strong>Longest:</strong> ${(longestRun.distance / 1000).toFixed(2)} km (<a href="activity.html?id=${longestRun.id}" target="_blank">View</a>)</li>
-            <li><strong>Fastest:</strong> ${paceStr}/km over ${(fastestRun.distance / 1000).toFixed(1)}k (<a href="activity.html?id=${fastestRun.id}" target="_blank">View</a>)</li>
-            <li><strong>Hilliest:</strong> ${Math.round(mostElev.total_elevation_gain)} m (<a href="activity.html?id=${mostElev.id}" target="_blank">View</a>)</li>
-        </ul>
-    `;
+            <ul style="list-style: none; padding-left: 0; line-height: 1.8;">
+                <li><strong>Longest Run:</strong> ${(longestRun.distance / 1000).toFixed(2)} km (<a href="activity.html?id=${longestRun.id}" target="_blank">View</a>)</li>
+                <li><strong>Fastest Run (Pace):</strong> ${paceStr} /km over ${(fastestRun.distance / 1000).toFixed(1)}k (<a href="activity.html?id=${fastestRun.id}" target="_blank">View</a>)</li>
+                <li><strong>Most Elevation:</strong> ${Math.round(mostElev.total_elevation_gain)} m (<a href="activity.html?id=${mostElev.id}" target="_blank">View</a>)</li>
+                <li><strong>Time Span:</strong> ${timeDiffDays} days (${oldestRun.start_date_local.substring(0, 10)} to ${newestRun.start_date_local.substring(0, 10)})</li>
+                <li><strong>Favourite Hour:</strong> ${favHour}:00</li>
+                <li><strong>Average Distance:</strong> ${avgDist} km</li>
+                <li><strong>Average Pace:</strong> ${avgPaceStr} /km</li>
+            </ul>
+        `;
 }
 
 function renderStartTimeHistogram(runs) {
     const hours = Array(24).fill(0);
     runs.forEach(run => {
-        const hour = new Date(run.start_date_local).getHours();
+        let hour = new Date(run.start_date_local).getHours();
+        hour = (hour - 2 + 24) % 24;
         hours[hour]++;
     });
     const labels = hours.map((_, i) => `${i}:00`);
-    createUiChart('start-time-histogram', {
+    createChart('start-time-histogram', {
         type: 'bar',
         data: {
             labels,
-            datasets: [{ label: '# of Runs', data: hours, backgroundColor: 'rgba(252, 82, 0, 0.7)' }]
+            datasets: [{
+                label: '# of Runs',
+                data: hours,
+                backgroundColor: 'rgba(252, 82, 0, 0.7)'
+            }]
         },
-        options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { stepSize: 1 } } } }
+        options: {
+            plugins: { legend: { display: false } },
+            scales: { y: { ticks: { stepSize: 1 } } }
+        }
     });
 }
 
 function renderPerformanceOverTime(runs) {
-    const sortedRuns = [...runs].sort((a,b) => new Date(a.start_date_local) - new Date(b.start_date_local));
+    const sortedRuns = [...runs].sort((a, b) => new Date(a.start_date_local) - new Date(b.start_date_local));
     const labels = sortedRuns.map(r => r.start_date_local.substring(0, 10));
     const paceData = sortedRuns.map(r => r.average_speed > 0 ? (1000 / r.average_speed) / 60 : null);
     const elevData = sortedRuns.map(r => r.distance > 0 ? r.total_elevation_gain / (r.distance / 1000) : null);
@@ -201,44 +243,87 @@ function renderPerformanceOverTime(runs) {
         },
         options: {
             scales: {
-                yPace: { type: 'linear', position: 'left', reverse: true, title: { display: true, text: 'Pace (min/km)'}},
-                yElev: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Elevation (m/km)'}}
+                yPace: { type: 'linear', position: 'left', reverse: true, title: { display: true, text: 'Pace (min/km)' } },
+                yElev: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Elevation (m/km)' } }
             }
         }
     });
 }
 
 function renderYearlyComparison(runs) {
-    const byYear = runs.reduce((acc, run) => {
-        const year = run.start_date_local.substring(0, 4);
-        if (!acc[year]) acc[year] = { distance: 0, count: 0 };
-        acc[year].distance += run.distance / 1000;
-        acc[year].count++;
-        return acc;
-    }, {});
+        const byYear = runs.reduce((acc, run) => {
+            const year = run.start_date_local.substring(0, 4);
+            if (!acc[year]) acc[year] = { distance: 0, count: 0, elevation: 0, movingTime: 0 };
+            acc[year].distance += run.distance / 1000;
+            acc[year].count++;
+            acc[year].elevation += run.total_elevation_gain;
+            acc[year].movingTime += run.moving_time / 3600;
+            return acc;
+        }, {});
 
-    const years = Object.keys(byYear).sort();
-    const distData = years.map(y => byYear[y].distance);
-    const countData = years.map(y => byYear[y].count);
+        const years = Object.keys(byYear).sort();
+        const distData = years.map(y => byYear[y].distance);
+        const countData = years.map(y => byYear[y].count);
+        const elevData = years.map(y => byYear[y].elevation);
+        const timeData = years.map(y => byYear[y].movingTime);
 
-    createUiChart('yearly-comparison-chart', {
-        type: 'bar',
-        data: {
-            labels: years,
-            datasets: [{
-                label: 'Total Distance (km)', data: distData, backgroundColor: 'rgba(0, 116, 217, 0.8)', yAxisID: 'yDist'
-            }, {
-                label: 'Number of Runs', data: countData, backgroundColor: 'rgba(252, 82, 0, 0.8)', yAxisID: 'yCount'
-            }]
-        },
-        options: {
-            scales: {
-                yDist: { position: 'left', title: { display: true, text: 'Distance (km)'}},
-                yCount: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: '# of Runs'}}
+        const datasets = [
+            {
+                label: 'Total Distance (km)',
+                data: distData,
+                backgroundColor: 'rgba(0, 116, 217, 0.8)',
+                yAxisID: 'yDist',
+                hidden: false // Show by default
+            },
+            {
+                label: 'Number of Runs',
+                data: countData,
+                backgroundColor: 'rgba(252, 82, 0, 0.8)',
+                yAxisID: 'yCount',
+                hidden: true // Hide by default
+            },
+            {
+                label: 'Total Elevation Gain (m)',
+                data: elevData,
+                backgroundColor: 'rgba(0, 200, 83, 0.7)',
+                yAxisID: 'yElev',
+                hidden: true // Hide by default
+            },
+            {
+                label: 'Total Moving Time (h)',
+                data: timeData,
+                backgroundColor: 'rgba(255, 193, 7, 0.7)',
+                yAxisID: 'yTime',
+                hidden: true // Hide by default
             }
-        }
-    });
-}
+        ];
+
+        createChart('yearly-comparison-chart', {
+            type: 'bar',
+            data: {
+                labels: years,
+                datasets
+            },
+            options: {
+                plugins: {
+                    legend: {
+                        onClick: (e, legendItem, legend) => {
+                            const chart = legend.chart;
+                            const idx = legendItem.datasetIndex;
+                            chart.data.datasets[idx].hidden = !chart.data.datasets[idx].hidden;
+                            chart.update();
+                        }
+                    }
+                },
+                scales: {
+                    yDist: { position: 'left', title: { display: true, text: 'Distance (km)' } },
+                    yCount: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: '# of Runs' } },
+                    yElev: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Elevation Gain (m)' } },
+                    yTime: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Moving Time (h)' } }
+                }
+            }
+        });
+    }
 
 
 
@@ -671,7 +756,7 @@ function renderConsistencyStats(runs) {
         dayCounts[dayIndex]++;
     });
     const mostActiveDayIndex = dayCounts.indexOf(Math.max(...dayCounts));
-    
+
     container.innerHTML = `
         <ul style="list-style: none; padding-left: 0; line-height: 1.8;">
             <li><strong>Average Distance:</strong> ${avgDist} km / run</li>
@@ -821,13 +906,13 @@ export function renderTrainingZones(zones) {
     if (!container) return;
     const contentDiv = container.querySelector('.zones-content');
     if (!contentDiv) return;
-    
+
     let html = '';
 
     // Renderizar Zonas de Frecuencia Cardíaca (Versión Robusta)
     if (zones.heart_rate && zones.heart_rate.zones && zones.heart_rate.custom_zones) {
         const hrZones = zones.heart_rate.zones;
-        
+
         // La API a veces devuelve la primera zona con min y max 0, la filtramos.
         // También nos aseguramos de que haya zonas válidas.
         const validZones = hrZones.filter(z => typeof z.min !== 'undefined' && typeof z.max !== 'undefined' && z.max > 0);
@@ -842,7 +927,7 @@ export function renderTrainingZones(zones) {
                 const zoneNumber = index + 1;
                 // Si es la última zona, el texto es "min+"
                 const zoneText = (index === validZones.length - 1) ? `${zone.min}+` : zone.max;
-                
+
                 return `<div class="zone-segment hr-z${zoneNumber}" style="flex-basis: ${zoneWidth}%;" title="Z${zoneNumber}: ${zone.min}-${zone.max}">${zoneText}</div>`;
             }).join('');
 
@@ -868,6 +953,6 @@ export function renderTrainingZones(zones) {
                 </div>`;
         }
     }
-    
+
     contentDiv.innerHTML = html || '<p>No custom training zones configured in your Strava profile.</p>';
 }
