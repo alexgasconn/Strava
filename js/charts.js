@@ -300,17 +300,40 @@ export function renderVo2maxChart(runs) {
         data: {
             labels: allMonths,
             datasets: [{
-                label: `Estimated VO₂max per Month)`,
+                label: `Estimated VO₂max (${ROLLING_WINDOW}-month rolling mean)`,
                 data: vo2maxRolling,
                 borderColor: 'rgba(54, 162, 235, 1)',
-                backgroundColor: 'rgba(54, 162, 235, 0.5)', // soft blue fill
+                backgroundColor: 'rgba(54, 162, 235, 0.3)', // softer blue fill
                 tension: 0.2,
-                spanGaps: true, // Permite saltar huecos
+                spanGaps: true,
                 fill: 'origin',
             }]
         },
-        options: { scales: { y: { title: { display: true, text: 'VO₂max' } } } }
+        options: {
+            plugins: {
+                title: { display: true, text: 'Estimated VO₂max Over Time' }
+            },
+            scales: {
+                y: { title: { display: true, text: 'VO₂max' } }
+            }
+        }
     });
+
+    // Add disclaimer under the chart
+    const chartEl = document.getElementById('vo2max-over-time');
+    if (chartEl) {
+        const disclaimer = document.createElement('div');
+        disclaimer.className = 'disclaimer';
+        disclaimer.style.fontSize = '0.8em';
+        disclaimer.style.color = '#666';
+        disclaimer.style.marginTop = '10px';
+        disclaimer.innerHTML = `
+            VO₂max values are estimated from pace and heart rate data. 
+            They provide a general trend, not a direct laboratory measurement. 
+            Fluctuations may reflect daily conditions as well as training effects.
+        `;
+        chartEl.parentNode.insertBefore(disclaimer, chartEl.nextSibling);
+    }
 }
 
 export function renderFitnessChart(runs) {
