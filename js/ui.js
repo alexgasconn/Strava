@@ -205,7 +205,7 @@ function renderStartTimeHistogram(runs) {
         hours[hour]++;
     });
     const labels = hours.map((_, i) => `${i}:00`);
-    createChart('start-time-histogram', {
+    createUiChart('start-time-histogram', {
         type: 'bar',
         data: {
             labels,
