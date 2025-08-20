@@ -92,6 +92,142 @@ function renderAllCharts(runs) {
 }
 
 
+// =======================================================
+//          NUEVA SECCIÓN: RENDERIZADO DE LA PESTAÑA "ATHLETE"
+// =======================================================
+
+export function renderAthleteTab(allActivities) {
+    console.log("Initializing Athlete Tab...");
+    const runs = allActivities.filter(a => a.type && a.type.includes('Run'));
+
+    const athleteData = JSON.parse(localStorage.getItem('strava_athlete_data'));
+    const zonesData = JSON.parse(localStorage.getItem('strava_training_zones'));
+    
+    // Renderizar componentes
+    if (athleteData) renderAthleteProfile(athleteData);
+    if (zonesData) renderTrainingZones(zonesData);
+    
+    renderAllTimeStats(runs);
+    renderPersonalBests(runs);
+    renderRecordStats(runs);
+    renderStartTimeHistogram(runs);
+    renderPerformanceOverTime(runs);
+    renderYearlyComparison(runs);
+    renderGearSection(runs);
+}
+
+function renderAllTimeStats(runs) {
+    const container = document.getElementById('all-time-stats-cards');
+    if (!container) return;
+    const totalDist = (runs.reduce((s, a) => s + a.distance, 0) / 1000).toFixed(0);
+    const totalTime = (runs.reduce((s, a) => s + a.moving_time, 0) / 3600).toFixed(1);
+    const totalElev = runs.reduce((s, a) => s + a.total_elevation_gain, 0).toLocaleString();
+    container.innerHTML = `
+        <div class="card"><h3>Total Runs</h3><p>${runs.length}</p></div>
+        <div class="card"><h3>Total Distance</h3><p>${totalDist} km</p></div>
+        <div class="card"><h3>Total Time</h3><p>${totalTime} h</p></div>
+        <div class="card"><h3>Total Elevation</h3><p>${totalElev} m</p></div>
+    `;
+}
+
+function renderRecordStats(runs) {
+    const container = document.getElementById('record-stats');
+    if (!container || runs.length === 0) return;
+
+    const longestRun = [...runs].sort((a,b) => b.distance - a.distance)[0];
+    const fastestRun = [...runs].filter(r => r.distance > 1000).sort((a,b) => b.average_speed - a.average_speed)[0];
+    const mostElev = [...runs].sort((a,b) => b.total_elevation_gain - a.total_elevation_gain)[0];
+    
+    const paceMin = fastestRun.average_speed > 0 ? (1000 / fastestRun.average_speed) / 60 : 0;
+    const paceStr = paceMin > 0 ? `${Math.floor(paceMin)}:${Math.round((paceMin % 1) * 60).toString().padStart(2, '0')}` : '-';
+
+    container.innerHTML = `
+        <ul style="list-style: none; padding-left: 0; line-height: 1.8;">
+            <li><strong>Longest:</strong> ${(longestRun.distance / 1000).toFixed(2)} km (<a href="activity.html?id=${longestRun.id}" target="_blank">View</a>)</li>
+            <li><strong>Fastest:</strong> ${paceStr}/km over ${(fastestRun.distance / 1000).toFixed(1)}k (<a href="activity.html?id=${fastestRun.id}" target="_blank">View</a>)</li>
+            <li><strong>Hilliest:</strong> ${Math.round(mostElev.total_elevation_gain)} m (<a href="activity.html?id=${mostElev.id}" target="_blank">View</a>)</li>
+        </ul>
+    `;
+}
+
+function renderStartTimeHistogram(runs) {
+    const hours = Array(24).fill(0);
+    runs.forEach(run => {
+        const hour = new Date(run.start_date_local).getHours();
+        hours[hour]++;
+    });
+    const labels = hours.map((_, i) => `${i}:00`);
+    createUiChart('start-time-histogram', {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{ label: '# of Runs', data: hours, backgroundColor: 'rgba(252, 82, 0, 0.7)' }]
+        },
+        options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { stepSize: 1 } } } }
+    });
+}
+
+function renderPerformanceOverTime(runs) {
+    const sortedRuns = [...runs].sort((a,b) => new Date(a.start_date_local) - new Date(b.start_date_local));
+    const labels = sortedRuns.map(r => r.start_date_local.substring(0, 10));
+    const paceData = sortedRuns.map(r => r.average_speed > 0 ? (1000 / r.average_speed) / 60 : null);
+    const elevData = sortedRuns.map(r => r.distance > 0 ? r.total_elevation_gain / (r.distance / 1000) : null);
+
+    createUiChart('performance-over-time-chart', {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Avg Pace (min/km, 10-run avg)', data: utils.rollingMean(paceData, 10),
+                borderColor: '#FC5200', yAxisID: 'yPace', tension: 0.2, pointRadius: 0
+            }, {
+                label: 'Avg Elevation (m/km, 10-run avg)', data: utils.rollingMean(elevData, 10),
+                borderColor: '#0074D9', yAxisID: 'yElev', tension: 0.2, pointRadius: 0
+            }]
+        },
+        options: {
+            scales: {
+                yPace: { type: 'linear', position: 'left', reverse: true, title: { display: true, text: 'Pace (min/km)'}},
+                yElev: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Elevation (m/km)'}}
+            }
+        }
+    });
+}
+
+function renderYearlyComparison(runs) {
+    const byYear = runs.reduce((acc, run) => {
+        const year = run.start_date_local.substring(0, 4);
+        if (!acc[year]) acc[year] = { distance: 0, count: 0 };
+        acc[year].distance += run.distance / 1000;
+        acc[year].count++;
+        return acc;
+    }, {});
+
+    const years = Object.keys(byYear).sort();
+    const distData = years.map(y => byYear[y].distance);
+    const countData = years.map(y => byYear[y].count);
+
+    createUiChart('yearly-comparison-chart', {
+        type: 'bar',
+        data: {
+            labels: years,
+            datasets: [{
+                label: 'Total Distance (km)', data: distData, backgroundColor: 'rgba(0, 116, 217, 0.8)', yAxisID: 'yDist'
+            }, {
+                label: 'Number of Runs', data: countData, backgroundColor: 'rgba(252, 82, 0, 0.8)', yAxisID: 'yCount'
+            }]
+        },
+        options: {
+            scales: {
+                yDist: { position: 'left', title: { display: true, text: 'Distance (km)'}},
+                yCount: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: '# of Runs'}}
+            }
+        }
+    });
+}
+
+
+
 // --- HTML/TABLE RENDERING FUNCTIONS ----
 
 function renderRaceList(runs) {

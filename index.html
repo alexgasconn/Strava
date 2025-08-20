@@ -41,7 +41,7 @@
 
             <!-- BARRA DE NAVEGACIÓN DE PESTAÑAS -->
             <button class="tab-link active" data-tab="dashboard-tab">📈 Dashboard</button>
-            <button class="tab-link" data-tab="athlete-tab">👤 Athlete</button> <!-- ¡NUEVO! -->
+            <button class="tab-link" data-tab="athlete-tab">👤 Athlete</button>
             <button class="tab-link" data-tab="planner-tab">📅 Planner & Tools</button>
 
 
@@ -197,38 +197,38 @@
                         </div>
                     </div>
 
-                    <!-- NUEVAS TARJETAS DE ESTADÍSTICAS GLOBALES -->
+                    <!-- Estadísticas All-Time -->
                     <h3>All-Time Stats</h3>
-                    <div id="all-time-stats-cards" class="summary-grid">
-                        <!-- Se generará con JS -->
-                    </div>
+                    <div id="all-time-stats-cards" class="summary-grid"></div>
 
+                    <!-- Grid de Gráficos y Datos Avanzados -->
                     <div class="charts-grid">
-                        <!-- ¡MOVIDO AQUÍ! -->
                         <div class="chart-container">
                             <h3>Personal Bests</h3>
                             <div id="personal-bests"></div>
                         </div>
-
-                        <!-- NUEVAS ESTADÍSTICAS AVANZADAS -->
-                        <div class="chart-container">
-                            <h3>Consistency & Averages</h3>
-                            <div id="consistency-stats">
-                                <!-- Se generará con JS -->
-                            </div>
-                        </div>
                         <div class="chart-container">
                             <h3>Record Activities</h3>
-                            <div id="record-stats">
-                                <!-- Se generará con JS -->
-                            </div>
+                            <div id="record-stats"></div>
+                        </div>
+                        <div class="chart-container">
+                            <h3>Run Start Time (Hour of Day)</h3>
+                            <canvas id="start-time-histogram"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3>Performance Over Time</h3>
+                            <canvas id="performance-over-time-chart"></canvas>
+                        </div>
+                        <div class="chart-container full-width">
+                            <h3>Year-over-Year Comparison</h3>
+                            <canvas id="yearly-comparison-chart"></canvas>
                         </div>
                     </div>
 
-                    <!-- ¡MOVIDO AQUÍ! -->
+                    <!-- Sección de Material -->
                     <div id="gear-info-section" class="chart-container full-width">
                         <h3>My Gear</h3>
-                        <div id="gear-info-list" class="gear-info-list"></div>
+                        <div id="gear-info-list"></div>
                     </div>
                 </div>
 

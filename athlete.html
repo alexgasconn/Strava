@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Athlete Center - Strava Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>👤 Athlete Center</h1>
+            <nav>
+                <a href="index.html" style="text-decoration: none;"><button>📈 Back to Dashboard</button></a>
+            </nav>
+        </header>
+
+        <main id="athlete-content" class="hidden">
+            <!-- Perfil y Zonas -->
+            <div class="profile-and-zones-container">
+                <div id="athlete-profile-card" class="chart-container">
+                    <h3>Athlete Profile</h3>
+                    <div class="profile-content"><p>Loading profile...</p></div>
+                </div>
+                <div id="training-zones-card" class="chart-container">
+                    <h3>Training Zones</h3>
+                    <div class="zones-content"><p>Loading zones...</p></div>
+                </div>
+            </div>
+
+            <!-- Estadísticas All-Time -->
+            <h3>All-Time Stats</h3>
+            <div id="all-time-stats-cards" class="summary-grid"></div>
+
+            <!-- Grid de Gráficos y Datos Avanzados -->
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <h3>Personal Bests</h3>
+                    <div id="personal-bests"></div>
+                </div>
+                <div class="chart-container">
+                    <h3>Record Activities</h3>
+                    <div id="record-stats"></div>
+                </div>
+                <div class="chart-container">
+                    <h3>Run Start Time (Hour of Day)</h3>
+                    <canvas id="start-time-histogram"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Performance Over Time</h3>
+                    <canvas id="performance-over-time-chart"></canvas>
+                </div>
+                <div class="chart-container full-width">
+                    <h3>Year-over-Year Comparison</h3>
+                    <canvas id="yearly-comparison-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Sección de Material -->
+            <div id="gear-info-section" class="chart-container full-width">
+                <h3>My Gear</h3>
+                <div id="gear-info-list"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Pantalla de Carga -->
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <p id="loading-message">Loading Athlete Data...</p>
+    </div>
+
+    <!-- Script para esta página -->
+    <script type="module" src="js/athlete.js"></script>
+</body>
+</html>
