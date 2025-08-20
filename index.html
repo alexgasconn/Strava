@@ -233,10 +233,11 @@
                 </div>
 
                 <!-- ============================================= -->
-                <!-- PESTAÑA 2: PLANNER & TOOLS                    -->
+                <!-- PESTAÑA 3: PLANNER & TOOLS                    -->
                 <!-- ============================================= -->
                 <div id="planner-tab" class="tab-content">
 
+                    <!-- ¡ESTE ES EL BLOQUE QUE FALTA O ESTÁ INCOMPLETO! -->
                     <div id="prediction-controls" class="prediction-controls">
                         <fieldset>
                             <legend>Prediction Mood</legend>
@@ -250,30 +251,32 @@
                         </fieldset>
                         <fieldset>
                             <legend>Model Weights</legend>
-                            <div class="control-group sliders" style="display: flex; gap: 2em; align-items: center;">
-                                <div style="display: flex; flex-direction: column; align-items: center;">
+                            <div class="control-group sliders">
+                                <div>
                                     <label for="riegel-weight">Riegel Formula: <span
                                             id="riegel-weight-val">50%</span></label>
                                     <input type="range" id="riegel-weight" min="0" max="100" value="50">
                                 </div>
-                                <div style="display: flex; flex-direction: column; align-items: center;">
+                                <div>
                                     <label for="ml-weight">Personal Curve (ML): <span
                                             id="ml-weight-val">25%</span></label>
                                     <input type="range" id="ml-weight" min="0" max="100" value="25">
                                 </div>
-
+                                <div>
+                                    <label for="pb-weight">Personal Bests (PBs): <span
+                                            id="pb-weight-val">40%</span></label>
+                                    <input type="range" id="pb-weight" min="0" max="100" value="40">
+                                </div>
                             </div>
                         </fieldset>
                         <button id="update-predictions-btn">Update Predictions</button>
                     </div>
 
-
-
                     <!-- SECCIÓN DE PREDICCIÓN -->
                     <div class="chart-container">
-                        <h3>Predicción de Tiempos (Riegel)</h3>
+                        <h3>Race Time Predictions</h3>
                         <div id="riegel-predictions">
-                            <p>Loading run data...</p> <!-- Mensaje inicial -->
+                            <p>Select a mood and weights, then click "Update" to see your predicted race times.</p>
                         </div>
                     </div>
 
@@ -285,6 +288,7 @@
                             <iframe src='https://vdoto2.com/calculator/embed' frameborder='0'></iframe>
                         </div>
                     </div>
+
                 </div>
 
 
