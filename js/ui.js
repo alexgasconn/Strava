@@ -121,10 +121,8 @@ export function renderAthleteTab(allActivities) {
     if (zonesData) renderTrainingZones(zonesData);
 
     renderAllTimeStats(runs);
-    renderPersonalBests(runs);
     renderRecordStats(runs);
     renderStartTimeHistogram(runs);
-    renderPerformanceOverTime(runs);
     renderYearlyComparison(runs);
     renderGearSection(runs);
 }
@@ -222,32 +220,7 @@ function renderStartTimeHistogram(runs) {
     });
 }
 
-function renderPerformanceOverTime(runs) {
-    const sortedRuns = [...runs].sort((a, b) => new Date(a.start_date_local) - new Date(b.start_date_local));
-    const labels = sortedRuns.map(r => r.start_date_local.substring(0, 10));
-    const paceData = sortedRuns.map(r => r.average_speed > 0 ? (1000 / r.average_speed) / 60 : null);
-    const elevData = sortedRuns.map(r => r.distance > 0 ? r.total_elevation_gain / (r.distance / 1000) : null);
 
-    createUiChart('performance-over-time-chart', {
-        type: 'line',
-        data: {
-            labels,
-            datasets: [{
-                label: 'Avg Pace (min/km, 10-run avg)', data: utils.rollingMean(paceData, 10),
-                borderColor: '#FC5200', yAxisID: 'yPace', tension: 0.2, pointRadius: 0
-            }, {
-                label: 'Avg Elevation (m/km, 10-run avg)', data: utils.rollingMean(elevData, 10),
-                borderColor: '#0074D9', yAxisID: 'yElev', tension: 0.2, pointRadius: 0
-            }]
-        },
-        options: {
-            scales: {
-                yPace: { type: 'linear', position: 'left', reverse: true, title: { display: true, text: 'Pace (min/km)' } },
-                yElev: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Elevation (m/km)' } }
-            }
-        }
-    });
-}
 
 function renderYearlyComparison(runs) {
     const byYear = runs.reduce((acc, run) => {
@@ -583,20 +556,19 @@ function renderStreaks(runs) {
         }
     }
 
-    // Renderiza el resultado en dos columnas: Mejor racha histórica y racha actual
     streaksInfo.innerHTML = `
       <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
         <div>
-          <h4>🏆 Mejor racha histórica</h4>
-          <div><b>Días consecutivos:</b> ${maxDayStreak}</div>
-          <div><b>Semanas consecutivas:</b> ${maxWeekStreak}</div>
-          <div><b>Meses consecutivos:</b> ${maxMonthStreak}</div>
+          <h4>🏆 Best Historical Streak</h4>
+          <div><b>Consecutive Days:</b> ${maxDayStreak}</div>
+          <div><b>Consecutive Weeks:</b> ${maxWeekStreak}</div>
+          <div><b>Consecutive Months:</b> ${maxMonthStreak}</div>
         </div>
         <div>
-          <h4>🔥 Racha actual</h4>
-          <div><b>Días consecutivos:</b> ${currentDayStreakValue}</div>
-          <div><b>Semanas consecutivas:</b> ${currentWeekStreakValue}</div>
-          <div><b>Meses consecutivos:</b> ${currentMonthStreakValue}</div>
+          <h4>🔥 Current Streak</h4>
+          <div><b>Consecutive Days:</b> ${currentDayStreakValue}</div>
+          <div><b>Consecutive Weeks:</b> ${currentWeekStreakValue}</div>
+          <div><b>Consecutive Months:</b> ${currentMonthStreakValue}</div>
         </div>
       </div>
     `;
