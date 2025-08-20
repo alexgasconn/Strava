@@ -640,30 +640,6 @@ async function renderGearSection(runs) {
 
 
 
-function renderRecordStats(runs) {
-    const container = document.getElementById('record-stats');
-    if (!container || runs.length === 0) {
-        container.innerHTML = "<p>No run data available.</p>";
-        return;
-    };
-
-    const longestRun = [...runs].sort((a,b) => b.distance - a.distance)[0];
-    const longestTime = [...runs].sort((a,b) => b.moving_time - a.moving_time)[0];
-    const mostElev = [...runs].sort((a,b) => b.total_elevation_gain - a.total_elevation_gain)[0];
-
-    container.innerHTML = `
-        <ul style="list-style: none; padding-left: 0; line-height: 1.8;">
-            <li><strong>Longest Run:</strong> ${(longestRun.distance / 1000).toFixed(2)} km
-                (<a href="activity.html?id=${longestRun.id}" target="_blank">View</a>)</li>
-            <li><strong>Longest Duration:</strong> ${new Date(longestTime.moving_time * 1000).toISOString().substr(11, 8)}
-                (<a href="activity.html?id=${longestTime.id}" target="_blank">View</a>)</li>
-            <li><strong>Most Elevation:</strong> ${Math.round(mostElev.total_elevation_gain)} m
-                (<a href="activity.html?id=${mostElev.id}" target="_blank">View</a>)</li>
-        </ul>
-    `;
-}
-
-
 function renderConsistencyStats(runs) {
     const container = document.getElementById('consistency-stats');
     if (!container || runs.length === 0) {
