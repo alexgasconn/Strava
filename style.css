@@ -944,3 +944,10 @@ main {
 #activity-map {
     height: 450px; /* Un poco más alto para que aproveche el ancho completo */
 }
+
+.disclaimer {
+    font-size: 0.8em;
+    color: #666;
+    margin-top: 10px;
+    line-height: 1.4;
+}
