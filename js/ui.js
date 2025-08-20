@@ -2,7 +2,6 @@
 import { fetchGearById } from './api.js';
 import * as charts from './charts.js';
 import * as utils from './utils.js';
-import { getISOWeek } from './utils.js';
 
 // --- DOM REFERENCES  ---
 const loadingOverlay = document.getElementById('loading-overlay');
@@ -298,7 +297,7 @@ function renderYearlyComparison(runs) {
             }
         ];
 
-        createChart('yearly-comparison-chart', {
+        createUiChart('yearly-comparison-chart', {
             type: 'bar',
             data: {
                 labels: years,
