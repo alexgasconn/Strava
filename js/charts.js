@@ -601,25 +601,6 @@ export function renderRollingMeanDistanceChart(runs) {
 
 
 export function renderRunsHeatmap(runs) {
-    // Verificación más detallada de las librerías
-    console.log("=== LEAFLET DEBUG ===");
-    console.log("window.L existe:", !!window.L);
-    console.log("L.version:", window.L ? window.L.version : "No disponible");
-    console.log("Todas las propiedades de L:", window.L ? Object.keys(window.L) : "No disponible");
-    
-    // Verificar si heatmap.js está cargado correctamente
-    if (window.heatmapjs) {
-        console.log("heatmapjs existe:", !!window.heatmapjs);
-    } else {
-        console.warn("heatmapjs no está cargado.");
-    }
-    
-    if (window.HeatmapOverlay) {
-        console.log("HeatmapOverlay existe:", !!window.HeatmapOverlay);
-    } else {
-        console.warn("HeatmapOverlay no está cargado.");
-    }
-    
     if (!window.L) {
         console.error("Leaflet.js no está cargado.");
         return;
@@ -628,40 +609,33 @@ export function renderRunsHeatmap(runs) {
     const heatmapDiv = document.getElementById('runs-heatmap');
     if (!heatmapDiv) return;
 
-    // Asegura tamaño visible
     heatmapDiv.style.width = '100%';
     heatmapDiv.style.height = '400px';
 
-    // Extrae TODOS los puntos disponibles (no solo start_latlng)
     const points = [];
     
     runs.forEach(run => {
-        // Añadir punto de inicio con mayor intensidad
         if (run.start_latlng && Array.isArray(run.start_latlng) && 
             run.start_latlng.length === 2 && run.start_latlng[0] && run.start_latlng[1]) {
-            points.push([run.start_latlng[0], run.start_latlng[1], 1.0]); // [lat, lng, intensity]
+            points.push([run.start_latlng[0], run.start_latlng[1], 1.0]);
         }
         
-        // Añadir punto de fin si existe
         if (run.end_latlng && Array.isArray(run.end_latlng) && 
             run.end_latlng.length === 2 && run.end_latlng[0] && run.end_latlng[1]) {
             points.push([run.end_latlng[0], run.end_latlng[1], 0.8]);
         }
         
-        // Si tienes datos de ruta completa (polyline decodificada), úsala
         if (run.map && run.map.polyline) {
             try {
-                // Asumiendo que tienes una función para decodificar polyline
                 const decodedPath = decodePolyline(run.map.polyline);
                 decodedPath.forEach(point => {
                     points.push([point[0], point[1], 0.3]);
                 });
             } catch (error) {
-                console.warn("Error decodificando polyline:", error);
+                // Silenciar error
             }
         }
         
-        // Si no tienes polyline pero tienes coordenadas adicionales, úsalas
         if (run.coordinates && Array.isArray(run.coordinates)) {
             run.coordinates.forEach(coord => {
                 if (Array.isArray(coord) && coord.length >= 2) {
@@ -671,27 +645,9 @@ export function renderRunsHeatmap(runs) {
         }
     });
 
-    // DEBUG: Mostrar estructura de datos
-    const debugInfo = document.createElement('div');
-    debugInfo.style.cssText = 'background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; font-family: monospace; font-size: 12px;';
-    
-    if (runs.length > 0) {
-        const sampleRun = runs[0];
-        const keys = Object.keys(sampleRun);
-        debugInfo.innerHTML = `
-            <strong>DEBUG - Run structure (${runs.length} total runs):</strong><br>
-            Keys: ${keys.join(', ')}<br>
-            Sample run: ${JSON.stringify(sampleRun, null, 2).substring(0, 500)}...
-        `;
-    } else {
-        debugInfo.innerHTML = '<strong>DEBUG:</strong> No runs data available';
-    }
-    
-    heatmapDiv.appendChild(debugInfo);
-
     if (points.length === 0) {
         const noDataMsg = document.createElement('p');
-        noDataMsg.textContent = `No valid coordinates found. Total runs: ${runs.length}, Valid points: ${points.length}`;
+        noDataMsg.textContent = `No valid coordinates found. Total runs: ${runs.length}`;
         heatmapDiv.appendChild(noDataMsg);
         
         if (window.runsHeatmapMap) {
@@ -701,16 +657,13 @@ export function renderRunsHeatmap(runs) {
         return;
     }
 
-    // Si ya hay un mapa, elimínalo completamente
     if (window.runsHeatmapMap) {
         window.runsHeatmapMap.remove();
         window.runsHeatmapMap = null;
     }
 
-    // Limpiar el div completamente
     heatmapDiv.innerHTML = '';
 
-    // Crea el mapa centrado en el primer punto
     const firstPoint = points[0];
     window.runsHeatmapMap = L.map('runs-heatmap').setView([firstPoint[0], firstPoint[1]], 12);
     
@@ -719,25 +672,23 @@ export function renderRunsHeatmap(runs) {
         maxZoom: 18
     }).addTo(window.runsHeatmapMap);
 
-    // Adapt points to heatmap.js format
     const heatmapData = {
-        max: 1.0,  // Your max intensity
-        data: points.map(p => ({ lat: p[0], lng: p[1], count: p[2] }))  // Use 'count' as intensity field
+        max: 1.0,
+        data: points.map(p => ({ lat: p[0], lng: p[1], count: p[2] }))
     };
 
-    // Config (adapted from your options)
     const cfg = {
-        radius: 30,           // Your radius
-        blur: 10,             // Your blur
-        maxOpacity: 0.8,      // Similar to minOpacity but for max
-        minOpacity: 0.8,      // Make it visible
-        scaleRadius: false,   // False for pixel-based radius (true for map-scale)
-        useLocalExtrema: false,  // False for global max; true for view-based
+        radius: 50,           // Aumentado para más "heat" visible
+        blur: 20,             // Ajustado para difusión
+        maxOpacity: 0.9,      // Opacidad máxima alta
+        minOpacity: 0.2,      // Opacidad mínima baja para gradiente
+        scaleRadius: true,    // Escala con zoom para mejor heatmap
+        useLocalExtrema: true,// Extremos locales para mejor visibilidad en áreas dispersas
         latField: 'lat',
         lngField: 'lng',
-        valueField: 'count',  // Intensity field
-        gradient: {           // Your gradient
-            0.0: 'blue',
+        valueField: 'count',
+        gradient: {
+            0.1: 'blue',
             0.3: 'cyan', 
             0.5: 'lime',
             0.7: 'yellow',
@@ -746,61 +697,38 @@ export function renderRunsHeatmap(runs) {
         }
     };
 
-    // Añade la capa de calor con configuración mejorada
-    console.log("Intentando crear HeatmapOverlay con", points.length, "puntos");
-    
     try {
         const heatmapLayer = new HeatmapOverlay(cfg);
         heatmapLayer.addTo(window.runsHeatmapMap);
         heatmapLayer.setData(heatmapData);
-        console.log("HeatmapOverlay creado y añadido:", heatmapLayer);
         
-        // Verificar que la capa está visible
         setTimeout(() => {
-            const canvas = window.runsHeatmapMap.getContainer().querySelector('canvas');
-            console.log("Canvas del heatmap encontrado:", !!canvas);
-            if (canvas) {
-                console.log("Canvas dimensions:", canvas.width, "x", canvas.height);
-                console.log("Canvas style:", canvas.style.cssText);
-                console.log("Canvas opacity:", canvas.style.opacity || "default");
-            }
-            
-            // Hacer zoom a la primera ubicación con heat
             if (points.length > 0) {
-                window.runsHeatmapMap.setView([points[0][0], points[0][1]], 14);
-                console.log("Zoom ajustado a:", points[0][0], points[0][1]);
+                window.runsHeatmapMap.setView([points[0][0], points[0][1]], 13);
             }
-        }, 1000);
+        }, 500);
         
     } catch (error) {
-        console.error("Error creando HeatmapOverlay:", error);
+        console.error("Error creando heatmap:", error);
         
-        // FALLBACK: mostrar puntos normales si el heatmap falla
-        console.log("Mostrando puntos como marcadores normales...");
-        points.slice(0, 50).forEach(point => { // Solo primeros 50 para no saturar
-            L.circleMarker([point[0], point[1]], {
-                radius: 3,
-                fillColor: 'red',
+        // Fallback mejorado: círculos más grandes para simular heat
+        points.forEach(point => {
+            L.circle([point[0], point[1]], {
+                radius: 500,  // Radio en metros para más visibilidad
                 color: 'red',
-                weight: 1,
-                opacity: 0.8,
-                fillOpacity: 0.6
+                fillColor: 'red',
+                fillOpacity: 0.3,
+                weight: 1
             }).addTo(window.runsHeatmapMap);
         });
     }
 
-    // Ajusta la vista para mostrar todos los puntos
     if (points.length > 1) {
         const bounds = L.latLngBounds(points.map(p => [p[0], p[1]]));
-        window.runsHeatmapMap.fitBounds(bounds, { padding: [20, 20] });
+        window.runsHeatmapMap.fitBounds(bounds, { padding: [50, 50] });
     }
-
-    // Debug: mostrar información en consola
-    console.log(`Heatmap creado con ${points.length} puntos`);
-    console.log('Puntos de muestra:', points.slice(0, 5));
 }
 
-// Función auxiliar para decodificar polylines de Google (si la necesitas)
 export function decodePolyline(str, precision = 5) {
     let index = 0;
     let lat = 0;
