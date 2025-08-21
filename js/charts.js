@@ -602,39 +602,141 @@ export function renderRunsHeatmap(runs) {
     heatmapDiv.style.width = '100%';
     heatmapDiv.style.height = '400px';
 
-    // Extrae todos los puntos de inicio válidos
-    const points = runs
-        .map(act => act.start_latlng)
-        .filter(latlng => Array.isArray(latlng) && latlng.length === 2 && latlng[0] && latlng[1]);
+    // Extrae TODOS los puntos disponibles (no solo start_latlng)
+    const points = [];
+    
+    runs.forEach(run => {
+        // Añadir punto de inicio con mayor intensidad
+        if (run.start_latlng && Array.isArray(run.start_latlng) && 
+            run.start_latlng.length === 2 && run.start_latlng[0] && run.start_latlng[1]) {
+            points.push([run.start_latlng[0], run.start_latlng[1], 1.0]); // [lat, lng, intensity]
+        }
+        
+        // Añadir punto de fin si existe
+        if (run.end_latlng && Array.isArray(run.end_latlng) && 
+            run.end_latlng.length === 2 && run.end_latlng[0] && run.end_latlng[1]) {
+            points.push([run.end_latlng[0], run.end_latlng[1], 0.8]);
+        }
+        
+        // Si tienes datos de ruta completa (polyline decodificada), úsala
+        if (run.map && run.map.polyline) {
+            try {
+                // Asumiendo que tienes una función para decodificar polyline
+                // const decodedPath = decodePolyline(run.map.polyline);
+                // decodedPath.forEach(point => {
+                //     points.push([point[0], point[1], 0.3]);
+                // });
+            } catch (error) {
+                console.warn("Error decodificando polyline:", error);
+            }
+        }
+        
+        // Si no tienes polyline pero tienes coordenadas adicionales, úsalas
+        if (run.coordinates && Array.isArray(run.coordinates)) {
+            run.coordinates.forEach(coord => {
+                if (Array.isArray(coord) && coord.length >= 2) {
+                    points.push([coord[0], coord[1], 0.5]);
+                }
+            });
+        }
+    });
 
     if (points.length === 0) {
         heatmapDiv.innerHTML = '<p>No map data available for this period.</p>';
-        if (runsHeatmapMap) {
-            runsHeatmapMap.remove();
-            runsHeatmapMap = null;
-            runsHeatmapLayer = null;
+        if (window.runsHeatmapMap) {
+            window.runsHeatmapMap.remove();
+            window.runsHeatmapMap = null;
+            window.runsHeatmapLayer = null;
         }
         return;
     }
 
     // Si ya hay un mapa, elimínalo completamente
-    if (runsHeatmapMap) {
-        runsHeatmapMap.remove();
-        runsHeatmapMap = null;
-        runsHeatmapLayer = null;
+    if (window.runsHeatmapMap) {
+        window.runsHeatmapMap.remove();
+        window.runsHeatmapMap = null;
+        window.runsHeatmapLayer = null;
     }
 
-    // Crea el mapa centrado en el primer punto
-    runsHeatmapMap = L.map('runs-heatmap').setView(points[0], 11);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(runsHeatmapMap);
+    // Limpiar el div completamente
+    heatmapDiv.innerHTML = '';
 
-    // Añade la capa de calor
-    runsHeatmapLayer = L.heatLayer(points, { radius: 20, blur: 25, maxZoom: 11 }).addTo(runsHeatmapMap);
+    // Crea el mapa centrado en el primer punto
+    const firstPoint = points[0];
+    window.runsHeatmapMap = L.map('runs-heatmap').setView([firstPoint[0], firstPoint[1]], 12);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 18
+    }).addTo(window.runsHeatmapMap);
+
+    // Configuración mejorada del heatmap
+    const heatmapOptions = {
+        radius: 25,           // Radio más grande para mejor visualización
+        blur: 15,             // Menos blur para definición más clara
+        maxZoom: 15,          // Permitir más zoom
+        max: 1.0,             // Valor máximo de intensidad
+        minOpacity: 0.4,      // Opacidad mínima para que sea visible
+        gradient: {           // Gradiente personalizado más visible
+            0.0: 'blue',
+            0.2: 'cyan', 
+            0.4: 'lime',
+            0.6: 'yellow',
+            0.8: 'orange',
+            1.0: 'red'
+        }
+    };
+
+    // Añade la capa de calor con configuración mejorada
+    window.runsHeatmapLayer = L.heatLayer(points, heatmapOptions).addTo(window.runsHeatmapMap);
 
     // Ajusta la vista para mostrar todos los puntos
     if (points.length > 1) {
-        runsHeatmapMap.fitBounds(points);
+        const bounds = L.latLngBounds(points.map(p => [p[0], p[1]]));
+        window.runsHeatmapMap.fitBounds(bounds, { padding: [20, 20] });
     }
+
+    // Debug: mostrar información en consola
+    console.log(`Heatmap creado con ${points.length} puntos`);
+    console.log('Puntos de muestra:', points.slice(0, 5));
+}
+
+// Función auxiliar para decodificar polylines de Google (si la necesitas)
+export function decodePolyline(str, precision = 5) {
+    let index = 0;
+    let lat = 0;
+    let lng = 0;
+    const coordinates = [];
+    const factor = Math.pow(10, precision);
+
+    while (index < str.length) {
+        let byte = null;
+        let shift = 0;
+        let result = 0;
+
+        do {
+            byte = str.charCodeAt(index++) - 63;
+            result |= (byte & 0x1f) << shift;
+            shift += 5;
+        } while (byte >= 0x20);
+
+        const deltaLat = ((result & 1) !== 0 ? ~(result >> 1) : (result >> 1));
+        lat += deltaLat;
+
+        shift = 0;
+        result = 0;
+
+        do {
+            byte = str.charCodeAt(index++) - 63;
+            result |= (byte & 0x1f) << shift;
+            shift += 5;
+        } while (byte >= 0x20);
+
+        const deltaLng = ((result & 1) !== 0 ? ~(result >> 1) : (result >> 1));
+        lng += deltaLng;
+
+        coordinates.push([lat / factor, lng / factor]);
+    }
+
+    return coordinates;
 }
