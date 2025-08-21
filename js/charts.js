@@ -591,10 +591,56 @@ export function renderRollingMeanDistanceChart(runs) {
 
 
 
+
+
+
+
 export function renderRunsHeatmap(runs) {
-    if (!window.L || !window.L.heatLayer) {
-        console.error("Leaflet.js o leaflet.heat no están cargados.");
+    // Verificación más detallada de las librerías
+    console.log("=== LEAFLET DEBUG ===");
+    console.log("window.L existe:", !!window.L);
+    console.log("L.heatLayer existe:", !!(window.L && window.L.heatLayer));
+    console.log("L.version:", window.L ? window.L.version : "No disponible");
+    console.log("Todas las propiedades de L:", window.L ? Object.keys(window.L) : "No disponible");
+    
+    // Verificar si leaflet-heat está cargado correctamente
+    if (window.L) {
+        console.log("L.HeatLayer existe:", !!window.L.HeatLayer);
+        console.log("L.heatLayer existe:", !!window.L.heatLayer);
+        
+        // Intentar acceder directamente al plugin
+        try {
+            const testLayer = window.L.heatLayer([[41.40344, 2.177883, 1]], { radius: 20 });
+            console.log("Test heatLayer creado exitosamente:", testLayer);
+        } catch (error) {
+            console.error("Error creando test heatLayer:", error);
+        }
+    }
+    
+    if (!window.L) {
+        console.error("Leaflet.js no está cargado.");
         return;
+    }
+    
+    if (!window.L.heatLayer) {
+        console.error("leaflet.heat no está cargado. Intentando cargar dinámicamente...");
+        
+        // Intentar cargar leaflet.heat dinámicamente
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js';
+            script.onload = () => {
+                console.log("leaflet.heat cargado dinámicamente");
+                console.log("L.heatLayer después de carga dinámica:", !!window.L.heatLayer);
+                renderRunsHeatmap(runs); // Reintentar
+                resolve();
+            };
+            script.onerror = (error) => {
+                console.error("Error cargando leaflet.heat:", error);
+                reject(error);
+            };
+            document.head.appendChild(script);
+        });
     }
 
     const heatmapDiv = document.getElementById('runs-heatmap');
@@ -711,7 +757,40 @@ export function renderRunsHeatmap(runs) {
     };
 
     // Añade la capa de calor con configuración mejorada
-    window.runsHeatmapLayer = L.heatLayer(points, heatmapOptions).addTo(window.runsHeatmapMap);
+    console.log("Intentando crear heatLayer con", points.length, "puntos");
+    
+    try {
+        window.runsHeatmapLayer = L.heatLayer(points, heatmapOptions);
+        console.log("HeatLayer creado:", window.runsHeatmapLayer);
+        
+        window.runsHeatmapLayer.addTo(window.runsHeatmapMap);
+        console.log("HeatLayer añadido al mapa");
+        
+        // Verificar que la capa está visible
+        setTimeout(() => {
+            const canvas = window.runsHeatmapMap.getContainer().querySelector('canvas');
+            console.log("Canvas del heatmap encontrado:", !!canvas);
+            if (canvas) {
+                console.log("Canvas dimensions:", canvas.width, "x", canvas.height);
+            }
+        }, 1000);
+        
+    } catch (error) {
+        console.error("Error creando heatLayer:", error);
+        
+        // FALLBACK: mostrar puntos normales si el heatmap falla
+        console.log("Mostrando puntos como marcadores normales...");
+        points.slice(0, 50).forEach(point => { // Solo primeros 50 para no saturar
+            L.circleMarker([point[0], point[1]], {
+                radius: 3,
+                fillColor: 'red',
+                color: 'red',
+                weight: 1,
+                opacity: 0.8,
+                fillOpacity: 0.6
+            }).addTo(window.runsHeatmapMap);
+        });
+    }
 
     // Ajusta la vista para mostrar todos los puntos
     if (points.length > 1) {
