@@ -604,48 +604,25 @@ export function renderRunsHeatmap(runs) {
     // Verificación más detallada de las librerías
     console.log("=== LEAFLET DEBUG ===");
     console.log("window.L existe:", !!window.L);
-    console.log("L.heatLayer existe:", !!(window.L && window.L.heatLayer));
     console.log("L.version:", window.L ? window.L.version : "No disponible");
     console.log("Todas las propiedades de L:", window.L ? Object.keys(window.L) : "No disponible");
     
-    // Verificar si leaflet-heat está cargado correctamente
-    if (window.L) {
-        console.log("L.HeatLayer existe:", !!window.L.HeatLayer);
-        console.log("L.heatLayer existe:", !!window.L.heatLayer);
-        
-        // Intentar acceder directamente al plugin
-        try {
-            const testLayer = window.L.heatLayer([[41.40344, 2.177883, 1]], { radius: 20 });
-            console.log("Test heatLayer creado exitosamente:", testLayer);
-        } catch (error) {
-            console.error("Error creando test heatLayer:", error);
-        }
+    // Verificar si heatmap.js está cargado correctamente
+    if (window.heatmapjs) {
+        console.log("heatmapjs existe:", !!window.heatmapjs);
+    } else {
+        console.warn("heatmapjs no está cargado.");
+    }
+    
+    if (window.HeatmapOverlay) {
+        console.log("HeatmapOverlay existe:", !!window.HeatmapOverlay);
+    } else {
+        console.warn("HeatmapOverlay no está cargado.");
     }
     
     if (!window.L) {
         console.error("Leaflet.js no está cargado.");
         return;
-    }
-    
-    if (!window.L.heatLayer) {
-        console.error("leaflet.heat no está cargado. Intentando cargar dinámicamente...");
-        
-        // Intentar cargar leaflet.heat dinámicamente
-        return new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js';
-            script.onload = () => {
-                console.log("leaflet.heat cargado dinámicamente");
-                console.log("L.heatLayer después de carga dinámica:", !!window.L.heatLayer);
-                renderRunsHeatmap(runs); // Reintentar
-                resolve();
-            };
-            script.onerror = (error) => {
-                console.error("Error cargando leaflet.heat:", error);
-                reject(error);
-            };
-            document.head.appendChild(script);
-        });
     }
 
     const heatmapDiv = document.getElementById('runs-heatmap');
@@ -675,10 +652,10 @@ export function renderRunsHeatmap(runs) {
         if (run.map && run.map.polyline) {
             try {
                 // Asumiendo que tienes una función para decodificar polyline
-                // const decodedPath = decodePolyline(run.map.polyline);
-                // decodedPath.forEach(point => {
-                //     points.push([point[0], point[1], 0.3]);
-                // });
+                const decodedPath = decodePolyline(run.map.polyline);
+                decodedPath.forEach(point => {
+                    points.push([point[0], point[1], 0.3]);
+                });
             } catch (error) {
                 console.warn("Error decodificando polyline:", error);
             }
@@ -720,7 +697,6 @@ export function renderRunsHeatmap(runs) {
         if (window.runsHeatmapMap) {
             window.runsHeatmapMap.remove();
             window.runsHeatmapMap = null;
-            window.runsHeatmapLayer = null;
         }
         return;
     }
@@ -729,7 +705,6 @@ export function renderRunsHeatmap(runs) {
     if (window.runsHeatmapMap) {
         window.runsHeatmapMap.remove();
         window.runsHeatmapMap = null;
-        window.runsHeatmapLayer = null;
     }
 
     // Limpiar el div completamente
@@ -744,14 +719,24 @@ export function renderRunsHeatmap(runs) {
         maxZoom: 18
     }).addTo(window.runsHeatmapMap);
 
-    // Configuración mejorada del heatmap (más visible)
-    const heatmapOptions = {
-        radius: 30,           // Radio más grande
-        blur: 10,             // Menos blur para mejor definición
-        maxZoom: 18,          // Permitir más zoom
-        max: 1.0,             // Valor máximo de intensidad
-        minOpacity: 0.8,      // Opacidad MUCHO más alta para ser visible
-        gradient: {           // Gradiente más contrastante
+    // Adapt points to heatmap.js format
+    const heatmapData = {
+        max: 1.0,  // Your max intensity
+        data: points.map(p => ({ lat: p[0], lng: p[1], count: p[2] }))  // Use 'count' as intensity field
+    };
+
+    // Config (adapted from your options)
+    const cfg = {
+        radius: 30,           // Your radius
+        blur: 10,             // Your blur
+        maxOpacity: 0.8,      // Similar to minOpacity but for max
+        minOpacity: 0.8,      // Make it visible
+        scaleRadius: false,   // False for pixel-based radius (true for map-scale)
+        useLocalExtrema: false,  // False for global max; true for view-based
+        latField: 'lat',
+        lngField: 'lng',
+        valueField: 'count',  // Intensity field
+        gradient: {           // Your gradient
             0.0: 'blue',
             0.3: 'cyan', 
             0.5: 'lime',
@@ -762,14 +747,13 @@ export function renderRunsHeatmap(runs) {
     };
 
     // Añade la capa de calor con configuración mejorada
-    console.log("Intentando crear heatLayer con", points.length, "puntos");
+    console.log("Intentando crear HeatmapOverlay con", points.length, "puntos");
     
     try {
-        window.runsHeatmapLayer = L.heatLayer(points, heatmapOptions);
-        console.log("HeatLayer creado:", window.runsHeatmapLayer);
-        
-        window.runsHeatmapLayer.addTo(window.runsHeatmapMap);
-        console.log("HeatLayer añadido al mapa");
+        const heatmapLayer = new HeatmapOverlay(cfg);
+        heatmapLayer.addTo(window.runsHeatmapMap);
+        heatmapLayer.setData(heatmapData);
+        console.log("HeatmapOverlay creado y añadido:", heatmapLayer);
         
         // Verificar que la capa está visible
         setTimeout(() => {
@@ -779,10 +763,6 @@ export function renderRunsHeatmap(runs) {
                 console.log("Canvas dimensions:", canvas.width, "x", canvas.height);
                 console.log("Canvas style:", canvas.style.cssText);
                 console.log("Canvas opacity:", canvas.style.opacity || "default");
-                
-                // Forzar un redraw del heatmap
-                window.runsHeatmapLayer.redraw();
-                console.log("Heatmap redraw forzado");
             }
             
             // Hacer zoom a la primera ubicación con heat
@@ -793,7 +773,7 @@ export function renderRunsHeatmap(runs) {
         }, 1000);
         
     } catch (error) {
-        console.error("Error creando heatLayer:", error);
+        console.error("Error creando HeatmapOverlay:", error);
         
         // FALLBACK: mostrar puntos normales si el heatmap falla
         console.log("Mostrando puntos como marcadores normales...");
