@@ -72,6 +72,7 @@ export function renderDashboard(allActivities, dateFilterFrom, dateFilterTo) {
     renderRaceList(runs);
     renderAllRunsTable(runs);
     renderStreaks(runs);
+    renderPersonalBests(runs)
 }
 
 
@@ -125,7 +126,7 @@ export function renderAthleteTab(allActivities) {
     renderStartTimeHistogram(runs);
     renderYearlyComparison(runs);
     renderGearSection(runs);
-    renderPersonalBests(runs);
+    // renderPersonalBests(runs);
     renderWeeklyMixChart(runs)
 }
 
