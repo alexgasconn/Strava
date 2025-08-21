@@ -173,6 +173,20 @@ function renderRecordStats(runs) {
     });
     const favHour = hourCounts.indexOf(Math.max(...hourCounts));
 
+    // Favourite day of the week
+    const dayCounts = Array(7).fill(0);
+    runs.forEach(run => {
+        const date = new Date(run.start_date_local);
+        // getDay(): 0=Sunday, 1=Monday, ..., 6=Saturday
+        let dayIdx = date.getDay();
+        // Shift so Monday=0, Sunday=6
+        dayIdx = (dayIdx + 6) % 7;
+        dayCounts[dayIdx]++;
+    });
+    const favDayIdx = dayCounts.indexOf(Math.max(...dayCounts));
+    const dayLabels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const favDay = dayLabels[favDayIdx];
+
     // Average distance
     const avgDist = runs.length ? (runs.reduce((s, a) => s + a.distance, 0) / runs.length / 1000).toFixed(2) : 0;
 
@@ -191,6 +205,7 @@ function renderRecordStats(runs) {
                 <li><strong>Most Elevation:</strong> ${Math.round(mostElev.total_elevation_gain)} m (<a href="activity.html?id=${mostElev.id}" target="_blank">View</a>)</li>
                 <li><strong>Time Span:</strong> ${timeDiffDays} days (${oldestRun.start_date_local.substring(0, 10)} to ${newestRun.start_date_local.substring(0, 10)})</li>
                 <li><strong>Favourite Hour:</strong> ${favHour}:00</li>
+                <li><strong>Favourite Day:</strong> ${favDay}</li>
                 <li><strong>Average Distance:</strong> ${avgDist} km</li>
                 <li><strong>Average Pace:</strong> ${avgPaceStr} /km</li>
             </ul>
@@ -334,6 +349,7 @@ function renderYearlyComparison(runs) {
             }
         }
     });
+}
 
 
 function renderWeeklyMixChart(runs) {
