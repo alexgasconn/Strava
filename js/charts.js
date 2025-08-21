@@ -589,6 +589,8 @@ export function renderRollingMeanDistanceChart(runs) {
     });
 }
 
+
+
 export function renderRunsHeatmap(runs) {
     if (!window.L || !window.L.heatLayer) {
         console.error("Leaflet.js o leaflet.heat no están cargados.");
@@ -641,8 +643,29 @@ export function renderRunsHeatmap(runs) {
         }
     });
 
+    // DEBUG: Mostrar estructura de datos
+    const debugInfo = document.createElement('div');
+    debugInfo.style.cssText = 'background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; font-family: monospace; font-size: 12px;';
+    
+    if (runs.length > 0) {
+        const sampleRun = runs[0];
+        const keys = Object.keys(sampleRun);
+        debugInfo.innerHTML = `
+            <strong>DEBUG - Run structure (${runs.length} total runs):</strong><br>
+            Keys: ${keys.join(', ')}<br>
+            Sample run: ${JSON.stringify(sampleRun, null, 2).substring(0, 500)}...
+        `;
+    } else {
+        debugInfo.innerHTML = '<strong>DEBUG:</strong> No runs data available';
+    }
+    
+    heatmapDiv.appendChild(debugInfo);
+
     if (points.length === 0) {
-        heatmapDiv.innerHTML = '<p>No map data available for this period.</p>';
+        const noDataMsg = document.createElement('p');
+        noDataMsg.textContent = `No valid coordinates found. Total runs: ${runs.length}, Valid points: ${points.length}`;
+        heatmapDiv.appendChild(noDataMsg);
+        
         if (window.runsHeatmapMap) {
             window.runsHeatmapMap.remove();
             window.runsHeatmapMap = null;
