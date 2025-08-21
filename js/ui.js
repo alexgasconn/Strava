@@ -125,6 +125,7 @@ export function renderAthleteTab(allActivities) {
     renderStartTimeHistogram(runs);
     renderYearlyComparison(runs);
     renderGearSection(runs);
+    renderPersonalBests(runs)
 }
 
 function renderAllTimeStats(runs) {
