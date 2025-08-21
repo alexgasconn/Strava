@@ -595,6 +595,11 @@ export function renderRollingMeanDistanceChart(runs) {
 
 
 
+
+
+
+
+
 export function renderRunsHeatmap(runs) {
     // Verificación más detallada de las librerías
     console.log("=== LEAFLET DEBUG ===");
@@ -739,19 +744,19 @@ export function renderRunsHeatmap(runs) {
         maxZoom: 18
     }).addTo(window.runsHeatmapMap);
 
-    // Configuración mejorada del heatmap
+    // Configuración mejorada del heatmap (más visible)
     const heatmapOptions = {
-        radius: 25,           // Radio más grande para mejor visualización
-        blur: 15,             // Menos blur para definición más clara
-        maxZoom: 15,          // Permitir más zoom
+        radius: 30,           // Radio más grande
+        blur: 10,             // Menos blur para mejor definición
+        maxZoom: 18,          // Permitir más zoom
         max: 1.0,             // Valor máximo de intensidad
-        minOpacity: 0.4,      // Opacidad mínima para que sea visible
-        gradient: {           // Gradiente personalizado más visible
+        minOpacity: 0.8,      // Opacidad MUCHO más alta para ser visible
+        gradient: {           // Gradiente más contrastante
             0.0: 'blue',
-            0.2: 'cyan', 
-            0.4: 'lime',
-            0.6: 'yellow',
-            0.8: 'orange',
+            0.3: 'cyan', 
+            0.5: 'lime',
+            0.7: 'yellow',
+            0.9: 'orange',
             1.0: 'red'
         }
     };
@@ -772,6 +777,18 @@ export function renderRunsHeatmap(runs) {
             console.log("Canvas del heatmap encontrado:", !!canvas);
             if (canvas) {
                 console.log("Canvas dimensions:", canvas.width, "x", canvas.height);
+                console.log("Canvas style:", canvas.style.cssText);
+                console.log("Canvas opacity:", canvas.style.opacity || "default");
+                
+                // Forzar un redraw del heatmap
+                window.runsHeatmapLayer.redraw();
+                console.log("Heatmap redraw forzado");
+            }
+            
+            // Hacer zoom a la primera ubicación con heat
+            if (points.length > 0) {
+                window.runsHeatmapMap.setView([points[0][0], points[0][1]], 14);
+                console.log("Zoom ajustado a:", points[0][0], points[0][1]);
             }
         }, 1000);
         
