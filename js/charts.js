@@ -319,21 +319,21 @@ export function renderVo2maxChart(runs) {
         }
     });
 
-    // Add disclaimer under the chart
-    const chartEl = document.getElementById('vo2max-over-time');
-    if (chartEl) {
-        const disclaimer = document.createElement('div');
-        disclaimer.className = 'disclaimer';
-        disclaimer.style.fontSize = '0.8em';
-        disclaimer.style.color = '#666';
-        disclaimer.style.marginTop = '10px';
-        disclaimer.innerHTML = `
-            VO₂max values are estimated from pace and heart rate data. 
-            They provide a general trend, not a direct laboratory measurement. 
-            Fluctuations may reflect daily conditions as well as training effects.
-        `;
-        chartEl.parentNode.insertBefore(disclaimer, chartEl.nextSibling);
-    }
+    // // Add disclaimer under the chart
+    // const chartEl = document.getElementById('vo2max-over-time');
+    // if (chartEl) {
+    //     const disclaimer = document.createElement('div');
+    //     disclaimer.className = 'disclaimer';
+    //     disclaimer.style.fontSize = '0.8em';
+    //     disclaimer.style.color = '#666';
+    //     disclaimer.style.marginTop = '10px';
+    //     disclaimer.innerHTML = `
+    //         VO₂max values are estimated from pace and heart rate data. 
+    //         They provide a general trend, not a direct laboratory measurement. 
+    //         Fluctuations may reflect daily conditions as well as training effects.
+    //     `;
+    //     chartEl.parentNode.insertBefore(disclaimer, chartEl.nextSibling);
+    // }
 }
 
 export function renderFitnessChart(runs) {
