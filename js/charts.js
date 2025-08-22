@@ -245,65 +245,39 @@ export function renderDistanceHistogram(runs) {
 
 export function renderVo2maxChart(runs) {
     const USER_MAX_HR = 195;
-    const ROLLING_WINDOW = 2; // Cambia este valor para ajustar la ventana del rolling mean
+    const ROLLING_WINDOW = 10; // Window of 10 runs
+
+    // Calculate VO2max for each run
     const vo2maxData = runs
         .filter(act => act.average_heartrate && act.moving_time > 0 && act.distance > 0)
         .map(act => {
             const vel_m_min = (act.distance / act.moving_time) * 60;
             const vo2_at_pace = (vel_m_min * 0.2) + 3.5;
             const vo2max = vo2_at_pace / (act.average_heartrate / USER_MAX_HR);
-            return { yearMonth: act.start_date_local.substring(0, 7), vo2max };
+            return { date: act.start_date_local.substring(0, 10), vo2max };
         });
 
-    // Genera todos los meses entre el primero y el último, para evitar huecos
-    const allMonths = (() => {
-        if (vo2maxData.length === 0) return [];
-        const monthsSorted = vo2maxData.map(d => d.yearMonth).sort();
-        const first = monthsSorted[0];
-        const last = monthsSorted[monthsSorted.length - 1];
-        const result = [];
-        let [sy, sm] = first.split('-').map(Number);
-        let [ey, em] = last.split('-').map(Number);
-        while (sy < ey || (sy === ey && sm <= em)) {
-            result.push(`${sy.toString().padStart(4, '0')}-${sm.toString().padStart(2, '0')}`);
-            sm++;
-            if (sm > 12) {
-                sm = 1;
-                sy++;
-            }
-        }
-        return result;
-    })();
+    // Sort by date
+    const sorted = vo2maxData.sort((a, b) => new Date(a.date) - new Date(b.date));
+    const labels = sorted.map(d => d.date);
+    const values = sorted.map(d => d.vo2max);
 
-    // Agrupa los valores por mes
-    const vo2maxByMonth = vo2maxData.reduce((acc, d) => {
-        if (!acc[d.yearMonth]) acc[d.yearMonth] = [];
-        acc[d.yearMonth].push(d.vo2max);
-        return acc;
-    }, {});
-
-    // Calcula el promedio mensual, usando null para meses sin datos
-    const vo2maxMonthlyAvg = allMonths.map(m => {
-        const vals = vo2maxByMonth[m];
-        return vals && vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-    });
-
-    // Rolling mean configurable
+    // Rolling mean over 10 runs
     const vo2maxRolling = [];
-    for (let i = 0; i < vo2maxMonthlyAvg.length; i++) {
-        const window = vo2maxMonthlyAvg.slice(Math.max(0, i - (ROLLING_WINDOW - 1)), i + 1).filter(v => v !== null);
+    for (let i = 0; i < values.length; i++) {
+        const window = values.slice(Math.max(0, i - (ROLLING_WINDOW - 1)), i + 1);
         vo2maxRolling.push(window.length === ROLLING_WINDOW ? window.reduce((a, b) => a + b, 0) / ROLLING_WINDOW : null);
     }
 
     createChart('vo2max-over-time', {
         type: 'line',
         data: {
-            labels: allMonths,
+            labels,
             datasets: [{
-                label: `Estimated VO₂max (${ROLLING_WINDOW}-month rolling mean)`,
+                label: `Estimated VO₂max (${ROLLING_WINDOW}-run rolling mean)`,
                 data: vo2maxRolling,
                 borderColor: 'rgba(54, 162, 235, 1)',
-                backgroundColor: 'rgba(54, 162, 235, 0.3)', // softer blue fill
+                backgroundColor: 'rgba(54, 162, 235, 0.3)',
                 tension: 0.2,
                 spanGaps: true,
                 fill: 'origin',
@@ -318,22 +292,6 @@ export function renderVo2maxChart(runs) {
             }
         }
     });
-
-    // // Add disclaimer under the chart
-    // const chartEl = document.getElementById('vo2max-over-time');
-    // if (chartEl) {
-    //     const disclaimer = document.createElement('div');
-    //     disclaimer.className = 'disclaimer';
-    //     disclaimer.style.fontSize = '0.8em';
-    //     disclaimer.style.color = '#666';
-    //     disclaimer.style.marginTop = '10px';
-    //     disclaimer.innerHTML = `
-    //         VO₂max values are estimated from pace and heart rate data. 
-    //         They provide a general trend, not a direct laboratory measurement. 
-    //         Fluctuations may reflect daily conditions as well as training effects.
-    //     `;
-    //     chartEl.parentNode.insertBefore(disclaimer, chartEl.nextSibling);
-    // }
 }
 
 export function renderFitnessChart(runs) {
