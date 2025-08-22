@@ -245,7 +245,6 @@ export function renderDistanceHistogram(runs) {
 
 export function renderVo2maxChart(runs) {
     const USER_MAX_HR = 195;
-    const ROLLING_WINDOW = 10; // Window of 10 runs
 
     // Calculate VO2max for each run
     const vo2maxData = runs
@@ -257,25 +256,52 @@ export function renderVo2maxChart(runs) {
             return { date: act.start_date_local.substring(0, 10), vo2max };
         });
 
-    // Sort by date
-    const sorted = vo2maxData.sort((a, b) => new Date(a.date) - new Date(b.date));
-    const labels = sorted.map(d => d.date);
-    const values = sorted.map(d => d.vo2max);
+    // Group by week (ISO week)
+    const weekMap = {};
+    vo2maxData.forEach(({ date, vo2max }) => {
+        const d = new Date(date);
+        // ISO week calculation
+        const dayNum = d.getUTCDay() || 7;
+        d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+        const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+        const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+        const weekKey = `${d.getUTCFullYear()}-W${weekNo.toString().padStart(2, '0')}`;
+        if (!weekMap[weekKey]) weekMap[weekKey] = [];
+        weekMap[weekKey].push(vo2max);
+    });
 
-    // Rolling mean over 10 runs
-    const vo2maxRolling = [];
-    for (let i = 0; i < values.length; i++) {
-        const window = values.slice(Math.max(0, i - (ROLLING_WINDOW - 1)), i + 1);
-        vo2maxRolling.push(window.length === ROLLING_WINDOW ? window.reduce((a, b) => a + b, 0) / ROLLING_WINDOW : null);
+    // Find all weeks between first and last run
+    const dates = vo2maxData.map(d => d.date).sort();
+    if (dates.length === 0) return;
+    const firstDate = new Date(dates[0]);
+    const lastDate = new Date(dates[dates.length - 1]);
+    const weeks = [];
+    let d = new Date(firstDate);
+    while (d <= lastDate) {
+        // ISO week calculation
+        const dayNum = d.getUTCDay() || 7;
+        d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+        const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+        const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+        const weekKey = `${d.getUTCFullYear()}-W${weekNo.toString().padStart(2, '0')}`;
+        if (!weeks.includes(weekKey)) weeks.push(weekKey);
+        d.setUTCDate(d.getUTCDate() + 3); // Move to next week
+        d.setUTCDate(d.getUTCDate() + 7);
     }
+
+    // Build weekly averages, null if no data
+    const weeklyAvg = weeks.map(week => {
+        const arr = weekMap[week];
+        return arr && arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+    });
 
     createChart('vo2max-over-time', {
         type: 'line',
         data: {
-            labels,
+            labels: weeks,
             datasets: [{
-                label: `Estimated VO₂max (${ROLLING_WINDOW}-run rolling mean)`,
-                data: vo2maxRolling,
+                label: 'Estimated VO₂max (weekly avg)',
+                data: weeklyAvg,
                 borderColor: 'rgba(54, 162, 235, 1)',
                 backgroundColor: 'rgba(54, 162, 235, 0.3)',
                 tension: 0.2,
@@ -284,9 +310,6 @@ export function renderVo2maxChart(runs) {
             }]
         },
         options: {
-            // plugins: {
-            //     title: { display: true, text: 'Estimated VO₂max Over Time' }
-            // },
             scales: {
                 y: { title: { display: true, text: 'VO₂max' } }
             }
