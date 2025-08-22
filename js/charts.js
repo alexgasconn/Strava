@@ -295,19 +295,51 @@ export function renderVo2maxChart(runs) {
         return arr && arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
     });
 
+    // Tendencia: rolling mean muy general (window = 8 semanas)
+    function rollingMean(arr, window) {
+        const out = [];
+        for (let i = 0; i < arr.length; i++) {
+            let sum = 0, count = 0;
+            for (let j = Math.max(0, i - window + 1); j <= i; j++) {
+                if (arr[j] != null) {
+                    sum += arr[j];
+                    count++;
+                }
+            }
+            out.push(count > 0 ? sum / count : null);
+        }
+        return out;
+    }
+    const trend = rollingMean(weeklyAvg, 8);
+
     createChart('vo2max-over-time', {
         type: 'line',
         data: {
             labels: weeks,
-            datasets: [{
-                label: 'Estimated VO₂max (weekly avg)',
-                data: weeklyAvg,
-                borderColor: 'rgba(54, 162, 235, 1)',
-                backgroundColor: 'rgba(54, 162, 235, 0.3)',
-                tension: 0.2,
-                spanGaps: true,
-                fill: 'origin',
-            }]
+            datasets: [
+                {
+                    label: 'Estimated VO₂max (weekly avg)',
+                    data: weeklyAvg,
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.3)',
+                    tension: 0.2,
+                    spanGaps: true,
+                    fill: 'origin',
+                },
+                {
+                    label: 'Tendencia (rolling mean)',
+                    data: trend,
+                    borderColor: 'rgba(252,82,0,0.2)',
+                    backgroundColor: 'rgba(252,82,0,0.05)',
+                    borderWidth: 3,
+                    pointRadius: 0,
+                    fill: false,
+                    tension: 0.3,
+                    spanGaps: true,
+                    hidden: false,
+                    order: 0
+                }
+            ]
         },
         options: {
             scales: {
