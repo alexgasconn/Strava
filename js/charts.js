@@ -284,9 +284,9 @@ export function renderVo2maxChart(runs) {
             }]
         },
         options: {
-            plugins: {
-                title: { display: true, text: 'Estimated VO₂max Over Time' }
-            },
+            // plugins: {
+            //     title: { display: true, text: 'Estimated VO₂max Over Time' }
+            // },
             scales: {
                 y: { title: { display: true, text: 'VO₂max' } }
             }
