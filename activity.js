@@ -808,8 +808,8 @@ function classifyRun(act = {}, streams = {}) {
     const scores = emptyScores();
 
     // 1) sport_type strong hints
-    if (act.sport_type === 'TrailRun') addScores(scores, { 'Trail Run': 200 });
-    if (act.workout_type === 1) addScores(scores, { 'Race': 200 });
+    if (act.sport_type === 'TrailRun') addScores(scores, { 'Trail Run': 400 });
+    if (act.workout_type === 1) addScores(scores, { 'Race': 500 });
     if (act.workout_type === 2) addScores(scores, { 'Long Run': 200 });
 
     // 2) Distance: piecewise diminishing/ascending influence
