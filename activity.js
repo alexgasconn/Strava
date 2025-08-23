@@ -867,6 +867,14 @@ function classifyRun(act = {}, streams = {}) {
     if (pctZ.tempo > 35 && pctZ.tempo <= 50) hrComp['Progressive Run'] = 40;
     if (pctZ.high > 40) hrComp['Intervals'] = 90;
     if (pctZ.high > 60) hrComp['Race'] = 120;
+    if (timeInZones && timeInZones.length >= 2) {
+        if (timeInZones[0] > timeInZones[1]) {
+            hrComp['Recovery Run'] += 40;
+        } else if (timeInZones[1] > timeInZones[0]) {
+            hrComp['Easy Run'] += 40;
+            hrComp['Recovery Run'] -= 40;
+        }
+    }
     // Fartlek: moderate spread across zones
     if (pctZ.low > 20 && pctZ.high > 10 && pctZ.tempo > 10) hrComp['Fartlek'] = 30;
     addScores(scores, hrComp, 1.6);
