@@ -22,84 +22,84 @@ function createChart(canvasId, config) {
 
 // --- CHART RENDERING FUNCTIONS ---
 
-export function renderConsistencyChart(runs) {
-    const heatmapContainer = document.getElementById('cal-heatmap');
-    if (!heatmapContainer) {
-        console.error("Heatmap container 'cal-heatmap' not found.");
-        return;
-    }
+// export function renderConsistencyChart(runs) {
+//     const heatmapContainer = document.getElementById('cal-heatmap');
+//     if (!heatmapContainer) {
+//         console.error("Heatmap container 'cal-heatmap' not found.");
+//         return;
+//     }
 
-    // 1. Manejo del caso sin datos: Si no hay carreras, muestra un mensaje y termina.
-    if (!runs || runs.length === 0) {
-        heatmapContainer.innerHTML = '<p style="text-align: center; color: #8c8c8c;">No activity data for this period.</p>';
-        return;
-    }
+//     // 1. Manejo del caso sin datos: Si no hay carreras, muestra un mensaje y termina.
+//     if (!runs || runs.length === 0) {
+//         heatmapContainer.innerHTML = '<p style="text-align: center; color: #8c8c8c;">No activity data for this period.</p>';
+//         return;
+//     }
 
-    // 2. Agregación de datos: Sumamos la distancia total (en km) por día.
-    const aggregatedData = runs.reduce((acc, act) => {
-        const date = act.start_date_local.substring(0, 10);
-        acc[date] = (acc[date] || 0) + (act.distance ? act.distance / 1000 : 0);
-        return acc;
-    }, {});
+//     // 2. Agregación de datos: Sumamos la distancia total (en km) por día.
+//     const aggregatedData = runs.reduce((acc, act) => {
+//         const date = act.start_date_local.substring(0, 10);
+//         acc[date] = (acc[date] || 0) + (act.distance ? act.distance / 1000 : 0);
+//         return acc;
+//     }, {});
 
-    // 3. Configuración del calendario (CalHeatmap)
-    const cal = new CalHeatmap();
-    heatmapContainer.innerHTML = ''; // Limpiamos el contenedor antes de dibujar
+//     // 3. Configuración del calendario (CalHeatmap)
+//     const cal = new CalHeatmap();
+//     heatmapContainer.innerHTML = ''; // Limpiamos el contenedor antes de dibujar
 
-    // 4. Determinamos el rango de fechas dinámicamente
-    const lastDateStr = runs.reduce((max, act) => act.start_date_local > max ? act.start_date_local : max, runs[0].start_date_local);
-    const lastDate = new Date(lastDateStr);
+//     // 4. Determinamos el rango de fechas dinámicamente
+//     const lastDateStr = runs.reduce((max, act) => act.start_date_local > max ? act.start_date_local : max, runs[0].start_date_local);
+//     const lastDate = new Date(lastDateStr);
 
-    // La fecha de inicio del calendario será 365 días ANTES de la última actividad
-    const startDate = new Date(lastDate);
-    startDate.setDate(startDate.getDate() - 365);
+//     // La fecha de inicio del calendario será 365 días ANTES de la última actividad
+//     const startDate = new Date(lastDate);
+//     startDate.setDate(startDate.getDate() - 365);
 
-    // 5. Calculamos los umbrales de color en función de los datos (percentiles)
-    const kmValues = Object.values(aggregatedData).filter(v => v > 0).sort((a, b) => a - b);
-    // Si hay pocos datos, usamos valores fijos razonables
-    const thresholds = kmValues.length >= 5
-        ? [
-            kmValues[Math.floor(0.2 * kmValues.length)],
-            kmValues[Math.floor(0.4 * kmValues.length)],
-            kmValues[Math.floor(0.6 * kmValues.length)],
-            kmValues[Math.floor(0.8 * kmValues.length)]
-        ]
-        : [2, 5, 10, 15];
+//     // 5. Calculamos los umbrales de color en función de los datos (percentiles)
+//     const kmValues = Object.values(aggregatedData).filter(v => v > 0).sort((a, b) => a - b);
+//     // Si hay pocos datos, usamos valores fijos razonables
+//     const thresholds = kmValues.length >= 5
+//         ? [
+//             kmValues[Math.floor(0.2 * kmValues.length)],
+//             kmValues[Math.floor(0.4 * kmValues.length)],
+//             kmValues[Math.floor(0.6 * kmValues.length)],
+//             kmValues[Math.floor(0.8 * kmValues.length)]
+//         ]
+//         : [2, 5, 10, 15];
 
-    // 6. Renderizado del heatmap
-    cal.paint({
-        itemSelector: heatmapContainer,
-        domain: {
-            type: "month",
-            label: { text: "MMM", position: "bottom" },
-            paddding: 5
-        },
-        subDomain: {
-            type: "ghDay",
-            radius: 2,
-            width: 11,
-            height: 11,
-            gutter: 4
-        },
-        range: 12, // Muestra 12 meses
-        data: {
-            source: Object.entries(aggregatedData).map(([date, value]) => ({ date, value })),
-            x: 'date',
-            y: 'value'
-        },
-        scale: {
-            color: {
-                type: 'threshold',
-                range: ['#ebedf0', '#fcbba1', '#fc9272', '#fb6a4a', '#de2d26'],
-                domain: thresholds
-            }
-        },
-        date: {
-            start: startDate // Usamos la fecha de inicio calculada
-        },
-        itemSelector: "#cal-heatmap",
-    });
-}
+//     // 6. Renderizado del heatmap
+//     cal.paint({
+//         itemSelector: heatmapContainer,
+//         domain: {
+//             type: "month",
+//             label: { text: "MMM", position: "bottom" },
+//             paddding: 5
+//         },
+//         subDomain: {
+//             type: "ghDay",
+//             radius: 2,
+//             width: 11,
+//             height: 11,
+//             gutter: 4
+//         },
+//         range: 12, // Muestra 12 meses
+//         data: {
+//             source: Object.entries(aggregatedData).map(([date, value]) => ({ date, value })),
+//             x: 'date',
+//             y: 'value'
+//         },
+//         scale: {
+//             color: {
+//                 type: 'threshold',
+//                 range: ['#ebedf0', '#fcbba1', '#fc9272', '#fb6a4a', '#de2d26'],
+//                 domain: thresholds
+//             }
+//         },
+//         date: {
+//             start: startDate // Usamos la fecha de inicio calculada
+//         },
+//         itemSelector: "#cal-heatmap",
+//     });
+// }
 
 export function renderActivityTypeChart(runs) {
     const p90Distance = runs.length > 0 ? [...runs].map(a => a.distance).sort((a, b) => a - b)[Math.floor(0.9 * runs.length)] : 0;

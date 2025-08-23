@@ -89,7 +89,7 @@ function renderSummaryCards(runs) {
 }
 
 function renderAllCharts(runs) {
-    charts.renderConsistencyChart(runs);
+    // charts.renderConsistencyChart(runs);
     charts.renderActivityTypeChart(runs);
     charts.renderMonthlyDistanceChart(runs);
     charts.renderPaceVsDistanceChart(runs);

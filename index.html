@@ -8,26 +8,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Strava Dashboard</title>
     <!-- Load libraries and our CSS -->
-
-    <!-- Chart.js para los gráficos -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cal-heatmap@4.2.2/dist/cal-heatmap.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@4.1.0/dist/chartjs-chart-matrix.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cal-heatmap@4.2.2/dist/cal-heatmap.css">
+    <link rel="stylesheet" href="style.css">
+    <!-- <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" /> -->
+    <!-- <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script> -->
+    <!-- <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script> -->
+    <!-- <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script> -->
 
-    <!-- Cal-Heatmap y su dependencia D3.js (desde un CDN fiable) -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cal-heatmap/4.2.2/cal-heatmap.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cal-heatmap/4.2.2/cal-heatmap.min.js"></script>
-
-    <!-- Leaflet para el mapa (una sola versión) -->
+    <!-- <link rel="stylesheet" href="https://unpkg.com/leaflet@1.8.0/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.8.0/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script> -->
+    <!-- <script src="https://www.patrick-wied.at/static/heatmapjs/heatmap.js"></script>
+    <script src="https://www.patrick-wied.at/static/heatmapjs/plugin-leaflet-layer.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
-    <!-- Plugin de Heatmap para Leaflet (leaflet-heat) -->
-    <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
-    
-    <!-- Tu hoja de estilos personalizada, siempre al final -->
-    <link rel="stylesheet" href="style.css">
-
-
+    <script src="https://www.patrick-wied.at/static/heatmapjs/heatmap.js"></script>
+    <script src="https://www.patrick-wied.at/static/heatmapjs/plugin-leaflet-layer.js"></script> -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://www.patrick-wied.at/static/heatmapjs/heatmap.js"></script>
+    <script src="https://www.patrick-wied.at/static/heatmapjs/plugin-leaflet-layer.js"></script>
 
 </head>
 
@@ -83,10 +88,10 @@
                     <div id="summary-cards" class="summary-grid"></div>
 
                     <!-- Consistency Calendar -->
-                    <div class="chart-container">
+                    <!-- <div class="chart-container">
                         <h3>Consistency (Last Year)</h3>
                         <div id="cal-heatmap"></div>
-                    </div>
+                    </div> -->
 
 
                     <!-- Grid for detailed charts -->
