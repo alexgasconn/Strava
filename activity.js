@@ -962,7 +962,7 @@ function renderClassifierResults(classificationData) {
 
 
 // =================================================================
-//     NUEVO MÓDULO: GRÁFICO DE DISTRIBUCIÓN DE ZONAS DE FC
+//     NUEVO MÓDULO: GRÁFICO DE DISTRIBUCIÓN DE ZONAS DE FC (Barra)
 // =================================================================
 
 /**
@@ -977,45 +977,37 @@ function calculateTimeInZones(heartrateStream, timeStream, zones) {
         return [];
     }
 
-    // Inicializamos un array para guardar los segundos en cada zona.
     const timeInZones = Array(zones.length).fill(0);
 
     for (let i = 1; i < heartrateStream.data.length; i++) {
         const hr = heartrateStream.data[i];
         if (hr === null) continue;
-
-        // El tiempo transcurrido en este segmento del stream
         const deltaTime = timeStream.data[i] - timeStream.data[i - 1];
 
-        // Encontrar en qué zona cae la FC actual
         let zoneIndex = -1;
         for (let j = 0; j < zones.length; j++) {
             const zone = zones[j];
-            // La última zona no tiene máximo
             const max = zone.max === -1 ? Infinity : zone.max;
             if (hr >= zone.min && hr < max) {
                 zoneIndex = j;
                 break;
             }
         }
-
         if (zoneIndex !== -1) {
             timeInZones[zoneIndex] += deltaTime;
         }
     }
-
     return timeInZones;
 }
 
-
 /**
- * Renderiza un gráfico circular (pie chart) con la distribución del tiempo en zonas de FC.
+ * Renderiza un gráfico de barras con la distribución del tiempo en zonas de FC.
  * @param {object} streams - Los streams de la actividad.
  */
 function renderHrZoneDistributionChart(streams) {
-    const canvas = document.getElementById('hr-zones-pie-chart');
+    const canvas = document.getElementById('hr-zones-chart');
     if (!canvas || !streams.heartrate || !streams.time) {
-        return; // No se puede renderizar si no hay canvas o datos de FC/tiempo
+        return;
     }
 
     // 1. Obtener las zonas de FC del atleta desde localStorage
@@ -1037,48 +1029,49 @@ function renderHrZoneDistributionChart(streams) {
 
     // 3. Preparar los datos para Chart.js
     const labels = hrZones.map((zone, i) => `Z${i + 1} (${zone.min}-${zone.max === -1 ? '∞' : zone.max})`);
-    const data = timeInZones.map(time => (time / 60).toFixed(1)); // Convertir a minutos
+    const data = timeInZones.map(time => +(time / 60).toFixed(1)); // minutos
 
-    const backgroundColors = [ // Colores que definimos en style.css
-        '#d1d5db', // Z1
-        '#60a5fa', // Z2
-        '#34d399', // Z3
-        '#f59e0b', // Z4
-        '#ef4444'  // Z5
+    // 4. Colores: gradiente de rojo (de claro a oscuro)
+    const gradientColors = [
+        "#fde0e0", // Z1 - rojo muy claro
+        "#fababa", // Z2 - rojo claro
+        "#fa7a7a", // Z3 - rojo medio
+        "#f44336", // Z4 - rojo fuerte
+        "#b71c1c"  // Z5 - rojo oscuro
     ];
 
-    // 4. Crear el gráfico
+    // 5. Crear el gráfico de barras
     new Chart(canvas, {
-        type: 'pie',
+        type: 'bar',
         data: {
             labels: labels,
             datasets: [{
-                label: 'Time in Zone (minutes)',
+                label: 'Time in Zone (min)',
                 data: data,
-                backgroundColor: backgroundColors.slice(0, hrZones.length),
-                borderColor: '#ffffff',
+                backgroundColor: gradientColors.slice(0, hrZones.length),
+                borderColor: gradientColors.slice(0, hrZones.length),
                 borderWidth: 2
             }]
         },
         options: {
             responsive: true,
             plugins: {
-                legend: {
-                    position: 'top',
-                },
+                legend: { display: false },
                 tooltip: {
                     callbacks: {
                         label: function (context) {
-                            let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.parsed !== null) {
-                                label += `${context.parsed} min`;
-                            }
-                            return label;
+                            return `${context.dataset.label}: ${context.parsed} min`;
                         }
                     }
+                }
+            },
+            scales: {
+                x: {
+                    title: { display: true, text: 'HR Zone' }
+                },
+                y: {
+                    title: { display: true, text: 'Time (min)' },
+                    beginAtZero: true
                 }
             }
         }
