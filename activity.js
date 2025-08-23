@@ -862,7 +862,7 @@ function classifyRun(act = {}, streams = {}) {
     // 6) HR zones: strong signal for recovery/easy/tempo/intervals/race
     const hrComp = {};
     if (pctZ.low > 80) hrComp['Recovery Run'] = 120, hrComp['Easy Run'] = 40;
-    if (pctZ.low > 60 && pctZ.low <= 80) hrComp['Easy Run'] = 80;
+    if (pctZ.low > 60 && pctZ.low <= 80) hrComp['Easy Run'] = 100;
     if (pctZ.tempo > 50) hrComp['Tempo Run'] = 100;
     if (pctZ.tempo > 35 && pctZ.tempo <= 50) hrComp['Progressive Run'] = 40;
     if (pctZ.high > 40) hrComp['Intervals'] = 90;
@@ -873,9 +873,6 @@ function classifyRun(act = {}, streams = {}) {
 
     // 7) Pace and pace variability: intervals/fartlek/progressive/race
     const paceComp = {};
-    // fast avg pace -> race/intervals
-    if (paceAvgMinKm && paceAvgMinKm < 4.75) paceComp['Race'] = 60;
-    if (paceAvgMinKm && paceAvgMinKm < 5.25) paceComp['Intervals'] = (paceAvgMinKm < 4.75 ? 40 : 15);
     // paceCV high => intervals/fartlek/progressive
     if (paceCV > 20) { paceComp['Intervals'] = (paceComp['Intervals'] || 0) + 80; paceComp['Fartlek'] = 60; }
     else if (paceCV > 12) { paceComp['Fartlek'] = 40; paceComp['Progressive Run'] = 30; }
