@@ -815,10 +815,10 @@ function classifyRun(act = {}, streams = {}) {
     // 2) Distance: piecewise diminishing/ascending influence
     const distComponent = {};
     // long run base
-    if (distKm >= 15) distComponent['Long Run'] = 80 + (distKm - 15) * 2; // more for longer
-    else if (distKm >= 14) distComponent['Long Run'] = 70;
-    else if (distKm >= 13) distComponent['Long Run'] = 55;
-    else if (distKm >= 12) distComponent['Long Run'] = 40;
+    if (distKm >= 15) distComponent['Long Run'] = 120 + (distKm - 15) * 2; // more for longer
+    else if (distKm >= 14) distComponent['Long Run'] = 90;
+    else if (distKm >= 13) distComponent['Long Run'] = 75;
+    else if (distKm >= 12) distComponent['Long Run'] = 50;
     // short distance: recovery and easy strong
     if (distKm < 5) distComponent['Recovery Run'] = 70;
     if (distKm < 5) distComponent['Easy Run'] = 50;
