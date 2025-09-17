@@ -495,7 +495,8 @@ function renderDashboard(activities) {
                     borderColor: '#2ECC40',
                     backgroundColor: 'rgba(46,204,64,0.1)',
                     fill: false,
-                    tension: 0.2
+                    tension: 0.2,
+                    hidden: true
                 }
             ]
         },
