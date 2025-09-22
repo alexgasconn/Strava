@@ -457,8 +457,8 @@ function renderHourMatrix(runs) {
                 label: 'Runs',
                 data: data,
                 backgroundColor: data.map(d => getColor(d.v)),
-                width: ({ chart }) => (chart.chartArea.width / 24) - 1,
-                height: ({ chart }) => (chart.chartArea.height / 7) - 1
+                width: 20,
+                height: 20
             }]
         },
         options: {
