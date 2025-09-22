@@ -433,6 +433,13 @@ function renderHourMatrix(runs) {
         let dayIdx = (date.getDay() + 6) % 7; // Lunes=0
         let hour = (date.getHours() - 2 + 24) % 24; // Ajuste de zona horaria
         matrix[dayIdx][hour]++;
+        console.log(`Run on ${date.toISOString()} -> dayIdx: ${dayIdx} (${dayLabels[dayIdx]}), hour: ${hour}`);
+    });
+
+    // Log the resulting matrix for debugging
+    console.log("Hour matrix (rows=days, cols=hours):");
+    matrix.forEach((row, i) => {
+        console.log(`${dayLabels[i]}:`, row);
     });
 
     // Crear datasets (uno por día) con colores transparentes que dependen del valor
