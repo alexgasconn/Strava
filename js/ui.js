@@ -424,201 +424,72 @@ function renderHourHeatmap(runs) {
     const containerId = 'hour-heatmap';
     const container = document.getElementById(containerId);
 
-    // 1. Verificar que el contenedor existe
     if (!container) {
         console.error(`Container with id '${containerId}' not found for Hour Heatmap.`);
         return;
     }
 
-    // 2. Manejar el caso de no tener carreras para el heatmap
     if (!runs || runs.length === 0) {
-        container.innerHTML = '<p class="no-data-message">No run data available to generate the Hour Heatmap.</p>';
+        container.innerHTML = '<p>No run data available.</p>';
         return;
     }
 
-    // 3. Preparar la matriz 7x24: filas = días de la semana (Lun-Dom), cols = horas (0-23)
+    // Crear matriz 7x24 (días x horas)
     const heatmap = Array.from({ length: 7 }, () => Array(24).fill(0));
     
     runs.forEach(run => {
         try {
             const date = new Date(run.start_date_local);
-            // getDay(): 0=Sunday, 1=Monday, ..., 6=Saturday
-            // Cambiamos para que Monday=0, Sunday=6
-            let dayIdx = (date.getDay() + 6) % 7;
-            // Ajustar para la zona horaria (manteniendo tu lógica original)
-            let hour = (date.getHours() - 2 + 24) % 24;
-            
-            // Incrementa el contador para esa celda del heatmap
+            let dayIdx = (date.getDay() + 6) % 7; // Lun=0, Dom=6
+            let hour = (date.getHours() - 2 + 24) % 24; // Ajuste timezone
             heatmap[dayIdx][hour]++;
         } catch (e) {
-            console.warn("Error processing run date for heatmap:", run.start_date_local, e);
+            console.warn("Error processing run date:", run.start_date_local, e);
         }
     });
 
     const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const hourLabels = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
-
-    // Encontrar el valor máximo para la escala de colores
-    const maxCount = Math.max(...heatmap.flat());
-
-    // Función para obtener el color basado en el count
-    const getColor = (count) => {
-        if (count === 0) return '#f3f4f6';
-        const intensity = count / maxCount;
-        
-        // Colores naranjas como en tu tema (FC5200)
-        const colors = [
-            '#fff5f0', // Muy claro
-            '#fed7d7', // Claro
-            '#feb2b2', // Medio claro
-            '#fc8181', // Medio
-            '#f56565', // Medio oscuro
-            '#e53e3e', // Oscuro
-            '#c53030', // Muy oscuro
-            '#9c2a2a'  // Más oscuro
-        ];
-        
-        const index = Math.min(Math.floor(intensity * colors.length), colors.length - 1);
-        return colors[index];
-    };
-
-    // Crear el HTML del heatmap
-    let heatmapHTML = `
-        <div class="hour-heatmap-container" style="
-            font-family: Arial, sans-serif;
-            max-width: 100%;
-            overflow-x: auto;
-            padding: 10px;
-        ">
-            <div style="margin-bottom: 10px;">
-                <div style="display: flex; margin-left: 50px;">
-    `;
-
-    // Headers de horas
-    hourLabels.forEach((hour, i) => {
-        heatmapHTML += `
-            <div style="
-                width: 20px;
-                height: 20px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 9px;
-                color: #666;
-            ">
-                ${i % 2 === 0 ? hour : ''}
-            </div>
-        `;
-    });
-
-    heatmapHTML += `
-                </div>
-            </div>
-            <div>
-    `;
-
-    // Filas del heatmap
-    dayLabels.forEach((day, dayIndex) => {
-        heatmapHTML += `
-            <div style="display: flex; align-items: center; margin-bottom: 2px;">
-                <div style="
-                    width: 45px;
-                    text-align: right;
-                    padding-right: 5px;
-                    font-size: 12px;
-                    font-weight: bold;
-                    color: #333;
-                ">
-                    ${day}
-                </div>
-                <div style="display: flex;">
-        `;
-
-        // Celdas de horas para este día
-        for (let hourIndex = 0; hourIndex < 24; hourIndex++) {
-            const count = heatmap[dayIndex][hourIndex];
-            const color = getColor(count);
-            
-            heatmapHTML += `
-                <div 
-                    title="${day} ${hourIndex}:00 - ${count} run${count !== 1 ? 's' : ''}"
-                    style="
-                        width: 20px;
-                        height: 20px;
-                        background-color: ${color};
-                        border: 1px solid #fff;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        font-size: 10px;
-                        font-weight: bold;
-                        color: ${count > maxCount * 0.5 ? '#fff' : '#333'};
-                        cursor: pointer;
-                        position: relative;
-                    "
-                    onmouseover="this.style.opacity='0.8'"
-                    onmouseout="this.style.opacity='1'"
-                >
-                    ${count > 0 ? count : ''}
-                </div>
-            `;
-        }
-
-        heatmapHTML += `
-                </div>
-            </div>
-        `;
-    });
-
-    // Leyenda
-    heatmapHTML += `
-            </div>
-            <div style="
-                margin-top: 20px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 10px;
-            ">
-                <span style="font-size: 12px; color: #666;">Less</span>
-                <div style="display: flex; gap: 2px;">
-    `;
-
-    // Crear escala de leyenda
-    for (let i = 0; i <= 5; i++) {
-        const intensity = i / 5;
-        const count = Math.ceil(maxCount * intensity);
-        const color = getColor(count);
-        
-        heatmapHTML += `
-            <div style="
-                width: 12px;
-                height: 12px;
-                background-color: ${color};
-                border: 1px solid #ddd;
-            " title="${count} runs"></div>
-        `;
+    
+    // Generar texto simple
+    let output = '<pre style="font-family: monospace; font-size: 12px; line-height: 1.2;">\n';
+    
+    // Header con horas
+    output += '     ';
+    for (let h = 0; h < 24; h++) {
+        output += h.toString().padStart(2, '0') + ' ';
     }
-
-    heatmapHTML += `
-                </div>
-                <span style="font-size: 12px; color: #666;">More</span>
-            </div>
-            <div style="
-                margin-top: 10px;
-                text-align: center;
-                font-size: 12px;
-                color: #666;
-            ">
-                <p>Total events: ${heatmap.flat().reduce((a, b) => a + b, 0)} | Peak activity: ${maxCount} runs</p>
-            </div>
-        </div>
-    `;
-
-    // Insertar el HTML en el contenedor
-    container.innerHTML = heatmapHTML;
-
-    // Limpiar la referencia del chart si existe
+    output += '\n';
+    
+    // Filas por día
+    dayLabels.forEach((day, dayIndex) => {
+        output += day + ': ';
+        for (let h = 0; h < 24; h++) {
+            const count = heatmap[dayIndex][h];
+            if (count === 0) {
+                output += ' . ';
+            } else if (count < 10) {
+                output += ' ' + count + ' ';
+            } else {
+                output += count + ' ';
+            }
+        }
+        output += '\n';
+    });
+    
+    output += '</pre>';
+    
+    // Añadir estadísticas
+    const totalRuns = heatmap.flat().reduce((a, b) => a + b, 0);
+    const maxCount = Math.max(...heatmap.flat());
+    
+    output += `<p style="margin-top: 10px; font-size: 12px;">`;
+    output += `Total runs: ${totalRuns} | Peak activity: ${maxCount} runs<br>`;
+    output += `"." = no runs, numbers = run count for that hour`;
+    output += `</p>`;
+    
+    container.innerHTML = output;
+    
+    // Limpiar referencia de chart si existe
     if (uiCharts[containerId]) {
         delete uiCharts[containerId];
     }
