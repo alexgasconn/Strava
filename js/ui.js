@@ -421,50 +421,66 @@ function renderWeeklyMixChart(runs) {
     });
 }
 
-function renderHourMatrix(runs) {
+function renderHourMatrixHeatmap(runs) {
     const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const hourLabels = Array.from({ length: 24 }, (_, i) => `${i}:00`);
 
-    // Inicializar matriz [7 días][24 horas]
-    const matrix = Array.from({ length: 7 }, () => Array(24).fill(0));
+    // Prepare data points
+    const data = [];
+    const counts = Array.from({ length: 7 }, () => Array(24).fill(0));
 
     runs.forEach(run => {
         const date = new Date(run.start_date_local);
-        let dayIdx = (date.getDay() + 6) % 7; // Lunes=0
-        let hour = (date.getHours() - 2 + 24) % 24; // Ajuste de zona horaria
-        matrix[dayIdx][hour]++;
-        console.log(`Run on ${date.toISOString()} -> dayIdx: ${dayIdx} (${dayLabels[dayIdx]}), hour: ${hour}`);
+        let dayIdx = (date.getDay() + 6) % 7; // Monday=0
+        let hour = (date.getHours() - 2 + 24) % 24;
+        counts[dayIdx][hour]++;
     });
 
-    // Log the resulting matrix for debugging
-    console.log("Hour matrix (rows=days, cols=hours):");
-    matrix.forEach((row, i) => {
-        console.log(`${dayLabels[i]}:`, row);
-    });
-
-    // Crear datasets (uno por día) con colores transparentes que dependen del valor
-    const datasets = matrix.map((hourCounts, dayIdx) => ({
-        label: dayLabels[dayIdx],
-        data: hourCounts,
-        backgroundColor: hourCounts.map(v => `rgba(252,82,0,${0.2 + Math.min(v / 10, 0.8)})`)
-    }));
+    for (let day = 0; day < 7; day++) {
+        for (let hour = 0; hour < 24; hour++) {
+            data.push({
+                x: hour,
+                y: day,
+                v: counts[day][hour]
+            });
+        }
+    }
 
     createUiChart('hour-matrix', {
-        type: 'bar',
+        type: 'scatter',
         data: {
-            labels: hourLabels,
-            datasets
+            datasets: [{
+                label: 'Runs',
+                data: data,
+                pointStyle: 'rect',
+                pointRadius: 20, // adjust size
+                backgroundColor: data.map(d => `rgba(252,82,0,${0.2 + Math.min(d.v/10,0.8)})`)
+            }]
         },
         options: {
-            plugins: { legend: { position: 'top' } },
-            responsive: true,
             scales: {
-                x: { stacked: true, title: { display: true, text: 'Hour of Day' } },
-                y: { stacked: true, title: { display: true, text: '# of Runs' }, beginAtZero: true }
-            }
+                x: {
+                    type: 'linear',
+                    min: 0,
+                    max: 23,
+                    title: { display: true, text: 'Hour' },
+                    ticks: { stepSize: 1 }
+                },
+                y: {
+                    type: 'linear',
+                    min: -0.5,
+                    max: 6.5,
+                    title: { display: true, text: 'Weekday' },
+                    ticks: {
+                        stepSize: 1,
+                        callback: val => dayLabels[val] || ''
+                    }
+                }
+            },
+            plugins: { legend: { display: false } }
         }
     });
 }
+
 
 
 
