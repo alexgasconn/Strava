@@ -951,3 +951,15 @@ main {
     margin-top: 10px;
     line-height: 1.4;
 }
+/* Contenedor del gráfico */
+.chart-container #hour-matrix {
+    width: 100%;         /* que ocupe todo el ancho del contenedor */
+    max-width: 900px;    /* opcional: limitar ancho máximo */
+    height: 350px;       /* altura fija */
+    margin: auto;        /* centrar horizontalmente */
+}
+
+/* Opcional: si quieres que todos los gráficos tengan un límite similar */
+.chart-container canvas {
+    max-height: 400px;
+}
