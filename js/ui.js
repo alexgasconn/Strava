@@ -423,7 +423,6 @@ function renderWeeklyMixChart(runs) {
 
 function renderHourMatrix(runs) {
     const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
     // Prepare data points
     const data = [];
     const counts = Array.from({ length: 7 }, () => Array(24).fill(0));
@@ -452,8 +451,10 @@ function renderHourMatrix(runs) {
                 label: 'Runs',
                 data: data,
                 pointStyle: 'rect',
-                pointRadius: 20, // adjust size
-                backgroundColor: data.map(d => `rgba(252,82,0,${0.2 + Math.min(d.v/10,0.8)})`)
+                pointRadius: 16,
+                backgroundColor: data.map(d =>
+                    d.v === 0 ? 'rgba(0,0,0,0)' : 'rgba(252,82,0,0.7)'
+                )
             }]
         },
         options: {
@@ -472,7 +473,9 @@ function renderHourMatrix(runs) {
                     title: { display: true, text: 'Weekday' },
                     ticks: {
                         stepSize: 1,
-                        callback: val => dayLabels[val] || ''
+                        callback: function(val) {
+                            return dayLabels[val] || '';
+                        }
                     }
                 }
             },
