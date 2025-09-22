@@ -127,7 +127,8 @@ export function renderAthleteTab(allActivities) {
     renderYearlyComparison(runs);
     renderGearSection(runs);
     // renderPersonalBests(runs);
-    renderWeeklyMixChart(runs)
+    renderWeeklyMixChart(runs);
+    renderHourHeatmap(runs);
 }
 
 function renderAllTimeStats(runs) {
@@ -413,6 +414,97 @@ function renderWeeklyMixChart(runs) {
                     title: { display: true, text: 'Distance (km)' },
                     beginAtZero: true,
                     grid: { drawOnChartArea: false }
+                }
+            }
+        }
+    });
+}
+
+function renderHourHeatmap(runs) {
+    const containerId = 'hour-heatmap';
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    // Prepare 7x24 matrix: rows = weekdays (Mon-Sun), cols = hours (0-23)
+    const heatmap = Array.from({ length: 7 }, () => Array(24).fill(0));
+    runs.forEach(run => {
+        const date = new Date(run.start_date_local);
+        // getDay(): 0=Sunday, 1=Monday, ..., 6=Saturday
+        let dayIdx = (date.getDay() + 6) % 7; // Monday=0, Sunday=6
+        let hour = (date.getHours() - 2 + 24) % 24; // adjust for timezone as in other charts
+        heatmap[dayIdx][hour]++;
+    });
+
+    const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const hourLabels = Array.from({ length: 24 }, (_, i) => `${i}:00`);
+
+    // Flatten data for Chart.js matrix
+    const data = [];
+    for (let day = 0; day < 7; day++) {
+        for (let hour = 0; hour < 24; hour++) {
+            data.push({ x: hour, y: day, v: heatmap[day][hour] });
+        }
+    }
+
+    // Remove previous chart if exists
+    if (uiCharts[containerId]) {
+        uiCharts[containerId].destroy();
+    }
+
+    // Chart.js Matrix plugin required
+    uiCharts[containerId] = new Chart(container, {
+        type: 'matrix',
+        data: {
+            datasets: [{
+                label: 'Runs',
+                data,
+                backgroundColor: ctx => {
+                    const v = ctx.raw.v;
+                    if (v === 0) return '#eee';
+                    // Color scale: light orange to deep orange
+                    const alpha = Math.min(0.15 + v / 10, 1);
+                    return `rgba(252, 82, 0, ${alpha})`;
+                },
+                borderWidth: 1,
+                borderColor: '#fff',
+                width: ({ chart }) => (chart.chartArea || {}).width / 24 - 2,
+                height: ({ chart }) => (chart.chartArea || {}).height / 7 - 2,
+            }]
+        },
+        options: {
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        title: ctx => {
+                            const d = ctx[0].raw;
+                            return `${dayLabels[d.y]}, ${hourLabels[d.x]}`;
+                        },
+                        label: ctx => `Runs: ${ctx.raw.v}`
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    type: 'linear',
+                    min: 0,
+                    max: 23,
+                    ticks: {
+                        callback: v => hourLabels[v],
+                        autoSkip: true,
+                        maxTicksLimit: 12
+                    },
+                    title: { display: true, text: 'Hour of Day' }
+                },
+                y: {
+                    type: 'linear',
+                    min: 0,
+                    max: 6,
+                    ticks: {
+                        callback: v => dayLabels[v]
+                    },
+                    title: { display: true, text: 'Day of Week' },
+                    reverse: false
                 }
             }
         }
