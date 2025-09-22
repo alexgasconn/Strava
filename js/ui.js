@@ -423,27 +423,21 @@ function renderWeeklyMixChart(runs) {
 
 function renderHourMatrix(runs) {
     const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    // Prepare data points
-    const data = [];
+    const hourLabels = Array.from({ length: 24 }, (_, i) => i);
+
+    // Inicializar matriz de conteos
     const counts = Array.from({ length: 7 }, () => Array(24).fill(0));
 
     runs.forEach(run => {
         const date = new Date(run.start_date_local);
-        let dayIdx = (date.getDay() + 6) % 7; // Monday=0
-        let hour = (date.getHours() - 2 + 24) % 24;
+        const dayIdx = (date.getDay() + 6) % 7; // Monday=0
+        const hour = (date.getHours() - 2 + 24) % 24;
         counts[dayIdx][hour]++;
     });
 
-    // Find max count for color scaling
+    // Convertir matriz a datos para matrix chart
+    const data = [];
     const maxCount = Math.max(...counts.flat());
-
-    // Color scale: from light to deep orange
-    function getColor(v) {
-        if (v === 0) return 'rgba(0,0,0,0)';
-        // Scale intensity from 0.2 to 1
-        const alpha = 0.2 + 0.8 * (v / maxCount);
-        return `rgba(252,82,0,${alpha.toFixed(2)})`;
-    }
 
     for (let day = 0; day < 7; day++) {
         for (let hour = 0; hour < 24; hour++) {
@@ -455,47 +449,71 @@ function renderHourMatrix(runs) {
         }
     }
 
+    // Función para colorear las celdas según la intensidad
+    function getColor(v) {
+        if (v === 0) return 'rgba(255,255,255,0)'; // transparente para 0
+        const alpha = 0.3 + 0.7 * (v / maxCount); // escala de 0.3 a 1
+        return `rgba(252,82,0,${alpha.toFixed(2)})`;
+    }
+
     createUiChart('hour-matrix', {
-        type: 'scatter',
+        type: 'matrix',
         data: {
             datasets: [{
                 label: 'Runs',
                 data: data,
-                pointStyle: 'rect',
-                pointRadius: 16,
-                backgroundColor: data.map(d => getColor(d.v))
+                backgroundColor: data.map(d => getColor(d.v)),
+                width: ({ chart }) => (chart.chartArea || {}).width / 24 - 2,
+                height: ({ chart }) => (chart.chartArea || {}).height / 7 - 2
             }]
         },
         options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        title: (tooltipItems) => {
+                            const item = tooltipItems[0];
+                            return `Hour: ${item.raw.x}:00, Day: ${dayLabels[item.raw.y]}`;
+                        },
+                        label: (tooltipItem) => `Runs: ${tooltipItem.raw.v}`
+                    }
+                },
+                legend: { display: false }
+            },
             scales: {
                 x: {
                     type: 'linear',
-                    min: 0,
-                    max: 23,
-                    title: { display: true, text: 'Hour' },
-                    ticks: { stepSize: 1 }
+                    min: -0.5,
+                    max: 23.5,
+                    ticks: {
+                        stepSize: 1,
+                        callback: val => `${val}:00`,
+                        color: '#333',
+                        font: { weight: 'bold' }
+                    },
+                    grid: { color: '#ddd' },
+                    title: { display: true, text: 'Hour of Day', font: { weight: 'bold' } }
                 },
                 y: {
                     type: 'linear',
                     min: -0.5,
                     max: 6.5,
-                    title: { display: true, text: 'Weekday' },
                     ticks: {
                         stepSize: 1,
-                        callback: function(val) {
-                            // Show label only for integer values in range
-                            if (Number.isInteger(val) && val >= 0 && val < dayLabels.length) {
-                                return dayLabels[val];
-                            }
-                            return '';
-                        }
-                    }
+                        callback: val => dayLabels[val] || '',
+                        color: '#333',
+                        font: { weight: 'bold' }
+                    },
+                    grid: { color: '#ddd' },
+                    title: { display: true, text: 'Weekday', font: { weight: 'bold' } }
                 }
-            },
-            plugins: { legend: { display: false } }
+            }
         }
     });
 }
+
 
 
 
