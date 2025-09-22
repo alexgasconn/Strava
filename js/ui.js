@@ -102,7 +102,7 @@ function renderAllCharts(runs) {
     charts.renderRollingMeanDistanceChart(runs);
     charts.renderDistanceVsElevationChart(runs);
     charts.renderElevationHistogram(runs);
-    charts.renderRunsHeatmap(runs);
+    // charts.renderRunsHeatmap(runs);
 }
 
 
@@ -421,79 +421,81 @@ function renderWeeklyMixChart(runs) {
 }
 
 function renderHourHeatmap(runs) {
-    const containerId = 'hour-heatmap';
-    const container = document.getElementById(containerId);
+    // Labels
+    const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const hourLabels = Array.from({ length: 24 }, (_, i) => `${i}:00`);
 
-    if (!container) {
-        console.error(`Container with id '${containerId}' not found for Hour Heatmap.`);
-        return;
-    }
+    // Inicializar matriz [7 días][24 horas]
+    const matrix = Array.from({ length: 7 }, () => Array(24).fill(0));
 
-    if (!runs || runs.length === 0) {
-        container.innerHTML = '<p>No run data available.</p>';
-        return;
-    }
-
-    // Crear matriz 7x24 (días x horas)
-    const heatmap = Array.from({ length: 7 }, () => Array(24).fill(0));
-    
     runs.forEach(run => {
-        try {
-            const date = new Date(run.start_date_local);
-            let dayIdx = (date.getDay() + 6) % 7; // Lun=0, Dom=6
-            let hour = (date.getHours() - 2 + 24) % 24; // Ajuste timezone
-            heatmap[dayIdx][hour]++;
-        } catch (e) {
-            console.warn("Error processing run date:", run.start_date_local, e);
-        }
+        const date = new Date(run.start_date_local);
+        let dayIdx = (date.getDay() + 6) % 7; // Lunes=0, Domingo=6
+        let hour = (date.getHours() - 2 + 24) % 24; // Ajuste de zona como en tu histograma
+        matrix[dayIdx][hour]++;
     });
 
-    const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    
-    // Generar texto simple
-    let output = '<pre style="font-family: monospace; font-size: 12px; line-height: 1.2;">\n';
-    
-    // Header con horas
-    output += '     ';
-    for (let h = 0; h < 24; h++) {
-        output += h.toString().padStart(2, '0') + ' ';
-    }
-    output += '\n';
-    
-    // Filas por día
-    dayLabels.forEach((day, dayIndex) => {
-        output += day + ': ';
-        for (let h = 0; h < 24; h++) {
-            const count = heatmap[dayIndex][h];
-            if (count === 0) {
-                output += ' . ';
-            } else if (count < 10) {
-                output += ' ' + count + ' ';
-            } else {
-                output += count + ' ';
+    // Convertimos a formato para chartjs-chart-matrix
+    const data = [];
+    dayLabels.forEach((day, y) => {
+        hourLabels.forEach((hour, x) => {
+            data.push({
+                x,   // columna → hora
+                y,   // fila → día
+                v: matrix[y][x]
+            });
+        });
+    });
+
+    const ctxId = 'hour-heatmap';
+    createUiChart(ctxId, {
+        type: 'matrix',
+        data: {
+            datasets: [{
+                label: 'Runs Heatmap',
+                data,
+                backgroundColor(ctx) {
+                    const value = ctx.dataset.data[ctx.dataIndex].v;
+                    return value > 0
+                        ? `rgba(252,82,0,${0.2 + value / 10})`
+                        : 'rgba(200,200,200,0.1)';
+                },
+                width: ({ chart }) => (chart.chartArea.width / 24) - 2,
+                height: ({ chart }) => (chart.chartArea.height / 7) - 2,
+            }]
+        },
+        options: {
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        title: ctx => {
+                            const d = dayLabels[ctx[0].raw.y];
+                            const h = hourLabels[ctx[0].raw.x];
+                            return `${d} ${h}`;
+                        },
+                        label: ctx => `${ctx.raw.v} runs`
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    type: 'category',
+                    labels: hourLabels,
+                    title: { display: true, text: 'Hour of Day' },
+                    offset: true,
+                    ticks: { maxRotation: 0, autoSkip: true }
+                },
+                y: {
+                    type: 'category',
+                    labels: dayLabels,
+                    title: { display: true, text: 'Weekday' },
+                    offset: true
+                }
             }
         }
-        output += '\n';
     });
-    
-    output += '</pre>';
-    
-    // Añadir estadísticas
-    const totalRuns = heatmap.flat().reduce((a, b) => a + b, 0);
-    const maxCount = Math.max(...heatmap.flat());
-    
-    output += `<p style="margin-top: 10px; font-size: 12px;">`;
-    output += `Total runs: ${totalRuns} | Peak activity: ${maxCount} runs<br>`;
-    output += `"." = no runs, numbers = run count for that hour`;
-    output += `</p>`;
-    
-    container.innerHTML = output;
-    
-    // Limpiar referencia de chart si existe
-    if (uiCharts[containerId]) {
-        delete uiCharts[containerId];
-    }
 }
+
 
 // --- HTML/TABLE RENDERING FUNCTIONS ----
 
