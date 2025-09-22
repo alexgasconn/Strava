@@ -128,7 +128,8 @@ export function renderAthleteTab(allActivities) {
     renderGearSection(runs);
     // renderPersonalBests(runs);
     renderWeeklyMixChart(runs);
-    renderHourHeatmap(runs);
+    // renderHourHeatmap(runs);
+    renderHourMatrix(runs);
 }
 
 function renderAllTimeStats(runs) {
