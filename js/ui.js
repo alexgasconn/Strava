@@ -434,6 +434,17 @@ function renderHourMatrix(runs) {
         counts[dayIdx][hour]++;
     });
 
+    // Find max count for color scaling
+    const maxCount = Math.max(...counts.flat());
+
+    // Color scale: from light to deep orange
+    function getColor(v) {
+        if (v === 0) return 'rgba(0,0,0,0)';
+        // Scale intensity from 0.2 to 1
+        const alpha = 0.2 + 0.8 * (v / maxCount);
+        return `rgba(252,82,0,${alpha.toFixed(2)})`;
+    }
+
     for (let day = 0; day < 7; day++) {
         for (let hour = 0; hour < 24; hour++) {
             data.push({
@@ -452,9 +463,7 @@ function renderHourMatrix(runs) {
                 data: data,
                 pointStyle: 'rect',
                 pointRadius: 16,
-                backgroundColor: data.map(d =>
-                    d.v === 0 ? 'rgba(0,0,0,0)' : 'rgba(252,82,0,0.7)'
-                )
+                backgroundColor: data.map(d => getColor(d.v))
             }]
         },
         options: {
