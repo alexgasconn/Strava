@@ -421,7 +421,7 @@ function renderWeeklyMixChart(runs) {
     });
 }
 
-function renderHourMatrixHeatmap(runs) {
+function renderHourMatrix(runs) {
     const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
     // Prepare data points
