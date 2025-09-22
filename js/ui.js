@@ -422,23 +422,69 @@ function renderWeeklyMixChart(runs) {
 
 function renderHourHeatmap(runs) {
     const containerId = 'hour-heatmap';
-    const container = document.getElementById(containerId);
-    if (!container) return;
+    const canvas = document.getElementById(containerId);
 
-    // Prepare 7x24 matrix: rows = weekdays (Mon-Sun), cols = hours (0-23)
+    // 1. Verificar que el canvas existe
+    if (!canvas) {
+        console.error(`Canvas with id '${containerId}' not found for Hour Heatmap.`);
+        return; // Salir si el canvas no existe
+    }
+
+    // 2. Manejar el caso de no tener carreras para el heatmap
+    if (!runs || runs.length === 0) {
+        // Si el gráfico ya existe, destrúyelo.
+        if (uiCharts[containerId]) {
+            uiCharts[containerId].destroy();
+            delete uiCharts[containerId]; // Limpiar la referencia
+        }
+        // Mostrar un mensaje en lugar del gráfico
+        canvas.style.display = 'none'; // Ocultar el canvas si no hay datos
+        const parent = canvas.parentElement;
+        let noDataMessage = parent.querySelector('.no-data-message');
+        if (!noDataMessage) {
+            noDataMessage = document.createElement('p');
+            noDataMessage.className = 'no-data-message';
+            parent.appendChild(noDataMessage);
+        }
+        noDataMessage.textContent = "No run data available to generate the Hour Heatmap.";
+        noDataMessage.style.display = 'block';
+        return;
+    } else {
+        // Asegurarse de que el canvas esté visible y el mensaje oculto si hay datos
+        canvas.style.display = 'block';
+        const parent = canvas.parentElement;
+        const noDataMessage = parent.querySelector('.no-data-message');
+        if (noDataMessage) {
+            noDataMessage.style.display = 'none';
+        }
+    }
+
+
+    // Preparar la matriz 7x24: filas = días de la semana (Lun-Dom), cols = horas (0-23)
     const heatmap = Array.from({ length: 7 }, () => Array(24).fill(0));
     runs.forEach(run => {
-        const date = new Date(run.start_date_local);
-        // getDay(): 0=Sunday, 1=Monday, ..., 6=Saturday
-        let dayIdx = (date.getDay() + 6) % 7; // Monday=0, Sunday=6
-        let hour = (date.getHours() - 2 + 24) % 24; // adjust for timezone as in other charts
-        heatmap[dayIdx][hour]++;
+        try {
+            const date = new Date(run.start_date_local);
+            // getDay(): 0=Sunday, 1=Monday, ..., 6=Saturday
+            // Cambiamos para que Monday=0, Sunday=6
+            let dayIdx = (date.getDay() + 6) % 7;
+            // Ajustar para la zona horaria como en otros gráficos (si es necesario)
+            // (Tu ajuste original de -2 horas. Si tus datos ya están en UTC+0,
+            // y quieres mostrarlo en hora local del navegador, este ajuste podría no ser necesario,
+            // o necesitaría ser más dinámico). Mantengo tu lógica original aquí.
+            let hour = (date.getHours() - 2 + 24) % 24;
+            
+            // Incrementa el contador para esa celda del heatmap
+            heatmap[dayIdx][hour]++;
+        } catch (e) {
+            console.warn("Error processing run date for heatmap:", run.start_date_local, e);
+        }
     });
 
     const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const hourLabels = Array.from({ length: 24 }, (_, i) => `${i}:00`);
 
-    // Flatten data for Chart.js matrix
+    // Aplanar los datos para el plugin de matriz de Chart.js
     const data = [];
     for (let day = 0; day < 7; day++) {
         for (let hour = 0; hour < 24; hour++) {
@@ -446,13 +492,14 @@ function renderHourHeatmap(runs) {
         }
     }
 
-    // Remove previous chart if exists
+    // Destruir el gráfico anterior si existe para evitar conflictos de renderizado
     if (uiCharts[containerId]) {
         uiCharts[containerId].destroy();
+        delete uiCharts[containerId];
     }
 
-    // Chart.js Matrix plugin required
-    uiCharts[containerId] = new Chart(container, {
+    // Inicializar el nuevo gráfico de matriz
+    uiCharts[containerId] = new Chart(canvas, {
         type: 'matrix',
         data: {
             datasets: [{
@@ -460,9 +507,10 @@ function renderHourHeatmap(runs) {
                 data,
                 backgroundColor: ctx => {
                     const v = ctx.raw.v;
-                    if (v === 0) return '#eee';
-                    // Color scale: light orange to deep orange
-                    const alpha = Math.min(0.15 + v / 10, 1);
+                    if (v === 0) return '#eee'; // Color para celdas sin datos
+                    // Escala de color: de naranja claro a naranja intenso
+                    // Ajusta el factor para controlar la intensidad del color
+                    const alpha = Math.min(0.15 + v * 0.1, 1); // v*0.1 para que más carreras sean más oscuras
                     return `rgba(252, 82, 0, ${alpha})`;
                 },
                 borderWidth: 1,
@@ -491,10 +539,13 @@ function renderHourHeatmap(runs) {
                     max: 23,
                     ticks: {
                         callback: v => hourLabels[v],
-                        autoSkip: true,
-                        maxTicksLimit: 12
+                        autoSkip: true, // Auto-skip para evitar superposición de etiquetas
+                        maxTicksLimit: 12 // Limita el número de etiquetas visibles en el eje X
                     },
-                    title: { display: true, text: 'Hour of Day' }
+                    title: { display: true, text: 'Hour of Day' },
+                    grid: {
+                        display: false // Oculta las líneas de la cuadrícula en el eje X para mayor limpieza
+                    }
                 },
                 y: {
                     type: 'linear',
@@ -504,9 +555,14 @@ function renderHourHeatmap(runs) {
                         callback: v => dayLabels[v]
                     },
                     title: { display: true, text: 'Day of Week' },
-                    reverse: false
+                    reverse: false, // Asegura que "Mon" esté arriba y "Sun" abajo
+                    grid: {
+                        display: false // Oculta las líneas de la cuadrícula en el eje Y
+                    }
                 }
-            }
+            },
+            responsive: true,
+            maintainAspectRatio: false // Importante para que el heatmap ajuste su tamaño
         }
     });
 }
