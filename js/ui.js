@@ -483,7 +483,11 @@ function renderHourMatrix(runs) {
                     ticks: {
                         stepSize: 1,
                         callback: function(val) {
-                            return dayLabels[val] || '';
+                            // Show label only for integer values in range
+                            if (Number.isInteger(val) && val >= 0 && val < dayLabels.length) {
+                                return dayLabels[val];
+                            }
+                            return '';
                         }
                     }
                 }
