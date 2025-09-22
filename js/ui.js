@@ -102,7 +102,7 @@ function renderAllCharts(runs) {
     charts.renderRollingMeanDistanceChart(runs);
     charts.renderDistanceVsElevationChart(runs);
     charts.renderElevationHistogram(runs);
-    // charts.renderRunsHeatmap(runs);
+    charts.renderRunsHeatmap(runs);
 }
 
 
@@ -420,8 +420,7 @@ function renderWeeklyMixChart(runs) {
     });
 }
 
-function renderHourHeatmap(runs) {
-    // Labels
+function renderHourMatrix(runs) {
     const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const hourLabels = Array.from({ length: 24 }, (_, i) => `${i}:00`);
 
@@ -430,71 +429,35 @@ function renderHourHeatmap(runs) {
 
     runs.forEach(run => {
         const date = new Date(run.start_date_local);
-        let dayIdx = (date.getDay() + 6) % 7; // Lunes=0, Domingo=6
-        let hour = (date.getHours() - 2 + 24) % 24; // Ajuste de zona como en tu histograma
+        let dayIdx = (date.getDay() + 6) % 7; // Lunes=0
+        let hour = (date.getHours() - 2 + 24) % 24; // Ajuste de zona horaria
         matrix[dayIdx][hour]++;
     });
 
-    // Convertimos a formato para chartjs-chart-matrix
-    const data = [];
-    dayLabels.forEach((day, y) => {
-        hourLabels.forEach((hour, x) => {
-            data.push({
-                x,   // columna → hora
-                y,   // fila → día
-                v: matrix[y][x]
-            });
-        });
-    });
+    // Crear datasets (uno por día) con colores transparentes que dependen del valor
+    const datasets = matrix.map((hourCounts, dayIdx) => ({
+        label: dayLabels[dayIdx],
+        data: hourCounts,
+        backgroundColor: hourCounts.map(v => `rgba(252,82,0,${0.2 + Math.min(v / 10, 0.8)})`)
+    }));
 
-    const ctxId = 'hour-heatmap';
-    createUiChart(ctxId, {
-        type: 'matrix',
+    createUiChart('hour-matrix', {
+        type: 'bar',
         data: {
-            datasets: [{
-                label: 'Runs Heatmap',
-                data,
-                backgroundColor(ctx) {
-                    const value = ctx.dataset.data[ctx.dataIndex].v;
-                    return value > 0
-                        ? `rgba(252,82,0,${0.2 + value / 10})`
-                        : 'rgba(200,200,200,0.1)';
-                },
-                width: ({ chart }) => (chart.chartArea.width / 24) - 2,
-                height: ({ chart }) => (chart.chartArea.height / 7) - 2,
-            }]
+            labels: hourLabels,
+            datasets
         },
         options: {
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        title: ctx => {
-                            const d = dayLabels[ctx[0].raw.y];
-                            const h = hourLabels[ctx[0].raw.x];
-                            return `${d} ${h}`;
-                        },
-                        label: ctx => `${ctx.raw.v} runs`
-                    }
-                }
-            },
+            plugins: { legend: { position: 'top' } },
+            responsive: true,
             scales: {
-                x: {
-                    type: 'category',
-                    labels: hourLabels,
-                    title: { display: true, text: 'Hour of Day' },
-                    offset: true,
-                    ticks: { maxRotation: 0, autoSkip: true }
-                },
-                y: {
-                    type: 'category',
-                    labels: dayLabels,
-                    title: { display: true, text: 'Weekday' },
-                    offset: true
-                }
+                x: { stacked: true, title: { display: true, text: 'Hour of Day' } },
+                y: { stacked: true, title: { display: true, text: '# of Runs' }, beginAtZero: true }
             }
         }
     });
 }
+
 
 
 // --- HTML/TABLE RENDERING FUNCTIONS ----
