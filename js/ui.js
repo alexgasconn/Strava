@@ -479,8 +479,8 @@ function renderHourMatrix(runs) {
             scales: {
                 x: {
                     type: 'linear',
-                    min: -0.5,
-                    max: 23.5,
+                    min: 0,
+                    max: 24,
                     ticks: {
                         stepSize: 1,
                         callback: val => `${val}:00`,
