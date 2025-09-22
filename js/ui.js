@@ -425,7 +425,7 @@ function renderHourMatrix(runs) {
     const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const hourLabels = Array.from({ length: 24 }, (_, i) => i);
 
-    // Inicializar matriz de conteos
+    // Inicializar matriz de conteos [7 días x 24 horas]
     const counts = Array.from({ length: 7 }, () => Array(24).fill(0));
 
     runs.forEach(run => {
@@ -435,24 +435,18 @@ function renderHourMatrix(runs) {
         counts[dayIdx][hour]++;
     });
 
-    // Convertir matriz a datos para matrix chart
     const data = [];
     const maxCount = Math.max(...counts.flat());
 
     for (let day = 0; day < 7; day++) {
         for (let hour = 0; hour < 24; hour++) {
-            data.push({
-                x: hour,
-                y: day,
-                v: counts[day][hour]
-            });
+            data.push({ x: hour, y: day, v: counts[day][hour] });
         }
     }
 
-    // Función para colorear las celdas según la intensidad
     function getColor(v) {
-        if (v === 0) return 'rgba(255,255,255,0)'; // transparente para 0
-        const alpha = 0.3 + 0.7 * (v / maxCount); // escala de 0.3 a 1
+        if (v === 0) return 'rgba(255,255,255,0)';
+        const alpha = 0.2 + 0.8 * (v / maxCount);
         return `rgba(252,82,0,${alpha.toFixed(2)})`;
     }
 
@@ -463,8 +457,8 @@ function renderHourMatrix(runs) {
                 label: 'Runs',
                 data: data,
                 backgroundColor: data.map(d => getColor(d.v)),
-                width: ({ chart }) => (chart.chartArea || {}).width / 24 - 2,
-                height: ({ chart }) => (chart.chartArea || {}).height / 7 - 2
+                width: ({ chart }) => (chart.chartArea.width / 24) - 1,
+                height: ({ chart }) => (chart.chartArea.height / 7) - 1
             }]
         },
         options: {
@@ -473,11 +467,11 @@ function renderHourMatrix(runs) {
             plugins: {
                 tooltip: {
                     callbacks: {
-                        title: (tooltipItems) => {
-                            const item = tooltipItems[0];
-                            return `Hour: ${item.raw.x}:00, Day: ${dayLabels[item.raw.y]}`;
+                        title: item => {
+                            const d = item[0].raw;
+                            return `${dayLabels[d.y]} - ${d.x}:00`;
                         },
-                        label: (tooltipItem) => `Runs: ${tooltipItem.raw.v}`
+                        label: item => `Runs: ${item.raw.v}`
                     }
                 },
                 legend: { display: false }
@@ -493,7 +487,7 @@ function renderHourMatrix(runs) {
                         color: '#333',
                         font: { weight: 'bold' }
                     },
-                    grid: { color: '#ddd' },
+                    grid: { color: '#eee' },
                     title: { display: true, text: 'Hour of Day', font: { weight: 'bold' } }
                 },
                 y: {
@@ -506,13 +500,14 @@ function renderHourMatrix(runs) {
                         color: '#333',
                         font: { weight: 'bold' }
                     },
-                    grid: { color: '#ddd' },
+                    grid: { color: '#eee' },
                     title: { display: true, text: 'Weekday', font: { weight: 'bold' } }
                 }
             }
         }
     });
 }
+
 
 
 
