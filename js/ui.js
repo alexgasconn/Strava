@@ -102,7 +102,7 @@ function renderAllCharts(runs) {
     charts.renderRollingMeanDistanceChart(runs);
     charts.renderDistanceVsElevationChart(runs);
     charts.renderElevationHistogram(runs);
-    charts.renderRunsHeatmap(runs);
+    // charts.renderRunsHeatmap(runs);
 }
 
 
