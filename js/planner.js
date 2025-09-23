@@ -71,8 +71,13 @@ function updatePredictions(runs) {
 // Función de cálculo modificada para aceptar los settings del usuario
 function calculateAllPredictions(bestPerformances, model, settings) {
     const targetDistances = [
-        { name: 'Mile', km: 1.609 }, { name: '5K', km: 5 }, { name: '10K', km: 10 },
-        { name: 'Half Marathon', km: 21.097 }, { name: 'Marathon', km: 42.195 }
+        { name: 'Mile', km: 1.609 },
+        { name: '5K', km: 5 },
+        { name: '10K', km: 10 },
+        { name: '15K', km: 15 },
+        { name: 'Half Marathon', km: 21.097 },
+        { name: '30K', km: 30 },
+        { name: 'Marathon', km: 42.195 }
     ];
 
     const moodSettings = {
@@ -129,22 +134,15 @@ function calculateAllPredictions(bestPerformances, model, settings) {
             const predictedTime = combinedTime;
 
             if (predictedTime <= actualBest) {
-                // La predicción es MÁS RÁPIDA o igual que el PB.
-                // La confianza se basa en qué tan cerca está. Si es un 10% más rápida, la confianza baja.
                 const diff = (actualBest - predictedTime) / actualBest;
-                confidence = Math.max(10, 100 - (diff * 500)); // Un mínimo de 10% de confianza para predicciones muy optimistas.
+                confidence = Math.max(10, 100 - (diff * 500));
             } else {
-                // La predicción es MÁS LENTA que el PB.
-                // Ya has demostrado que puedes correr más rápido, así que la confianza es muy alta.
                 const diff = (predictedTime - actualBest) / actualBest;
-                // Si es un poco más lento (hasta 5%), la confianza es 99%. Si es mucho más lento, es 100%.
                 confidence = Math.min(100, 98 + (diff * 20));
             }
         } else {
-            // Caso 2: No tenemos un PB para esta distancia.
-            // La confianza se basa en la cantidad de datos de otras carreras.
             const sourceCount = Object.values(bestPerformances).flat().length;
-            confidence = Math.min(85, 20 + sourceCount * 5); // Un poco más generoso que antes.
+            confidence = Math.min(85, 20 + sourceCount * 5);
         }
 
         return { 
