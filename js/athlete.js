@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         yAxisID: 'yDist'
                     },
                     {
-                        label: 'Number of Runs',
+                        label: 'Number of Runssssssssssss',
                         data: countData,
                         backgroundColor: 'rgba(252, 82, 0, 0.8)',
                         yAxisID: 'yCount'
