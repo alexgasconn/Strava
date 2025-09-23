@@ -64,9 +64,8 @@ function renderDashboard(activities) {
     console.log(`Total running activities: ${runs.length}`);
     console.log(`Running activities:`, runs);
 
-    // 1. Get all distances
+
     const allDistances = runs.map(a => a.distance);
-    // 2. Calculate 90th percentile
     const sortedDistances = [...allDistances].sort((a, b) => a - b);
     const p90Index = Math.floor(0.9 * sortedDistances.length);
     const p90Distance = sortedDistances[p90Index] || 0;
@@ -84,7 +83,7 @@ function renderDashboard(activities) {
     if (summaryContainer) {
         summaryContainer.innerHTML = `
             <div class="card"><h3>Activities</h3><p>${runs.length}</p></div>
-            <div class="card"><h3>Total Distance</h3><p>${(runs.reduce((s, a) => s + a.distance, 0) / 1000).toFixed(0)} km</p></div>
+            <div class="card"><h3>Total! Distance</h3><p>${(runs.reduce((s, a) => s + a.distance, 0) / 1000).toFixed(0)} km</p></div>
             <div class="card"><h3>Total Time</h3><p>${(runs.reduce((s, a) => s + a.moving_time, 0) / 3600).toFixed(1)} h</p></div>
             <div class="card"><h3>Total Elevation</h3><p>${runs.reduce((s, a) => s + a.total_elevation_gain, 0).toLocaleString()} m</p></div>
         `;
