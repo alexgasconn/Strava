@@ -108,7 +108,7 @@ export function renderActivityTypeChart(runs) {
     const p80Distance = [...runs].map(a => a.distance)
         .sort((a, b) => a - b)[Math.floor(0.8 * runs.length)];
 
-    // Clasificación de cada actividad
+    // Clasificación de cada actividad.
     runs.forEach(a => {
         if (a.sport_type === 'TrailRun') {
             a.workout_type_classified = 'Trail Run';
