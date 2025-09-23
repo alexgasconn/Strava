@@ -104,15 +104,19 @@ function createChart(canvasId, config) {
 export function renderActivityTypeChart(runs) {
     const p90Distance = runs.length > 0 ? [...runs].map(a => a.distance).sort((a, b) => a - b)[Math.floor(0.9 * runs.length)] : 0;
     runs.forEach(a => {
-        if (a.workout_type !== 1 && a.distance >= p90Distance) {
+        if (a.sport_type === 'TrailRun') {
+            a.workout_type_classified = 3; // Trail Run
+        } else if (a.average_heartrate && a.average_heartrate < 144) {
+            a.workout_type_classified = 4; // Easy Run
+        } else if (a.workout_type !== 1 && a.distance >= p90Distance) {
             a.workout_type_classified = 2; // Long run
         } else {
             a.workout_type_classified = a.workout_type || 0;
         }
     });
 
-    const workoutTypeLabels = ['Workout', 'Race', 'Long Run'];
-    const workoutTypeCounts = [0, 0, 0];
+    const workoutTypeLabels = ['Standard training', 'Race', 'Long Run', 'Trail Run', 'Easy Run'];
+    const workoutTypeCounts = [0, 0, 0, 0, 0];
     runs.forEach(act => {
         const wt = act.workout_type_classified;
         if (workoutTypeCounts[wt] !== undefined) {
