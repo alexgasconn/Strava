@@ -77,13 +77,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         container.innerHTML = `
             <ul style="list-style: none; padding-left: 0; line-height: 1.8;">
-                <li><strong>Longest Run:</strong> ${(longestRun.distance / 1000).toFixed(2)} km (<a href="activity.html?id=${longestRun.id}" target="_blank">View</a>)</li>
-                <li><strong>Fastest Run (Pace):</strong> ${paceStr} /km over ${(fastestRun.distance / 1000).toFixed(1)}k (<a href="activity.html?id=${fastestRun.id}" target="_blank">View</a>)</li>
-                <li><strong>Most Elevation:</strong> ${Math.round(mostElev.total_elevation_gain)} m (<a href="activity.html?id=${mostElev.id}" target="_blank">View</a>)</li>
-                <li><strong>Time Span:</strong> ${timeDiffDays} days (${oldestRun.start_date_local.substring(0, 10)} to ${newestRun.start_date_local.substring(0, 10)})</li>
-                <li><strong>Favourite Hour:</strong> ${favHour}:00</li>
-                <li><strong>Average Distance:</strong> ${avgDist} km</li>
-                <li><strong>Average Pace:</strong> ${avgPaceStr} /km</li>
+                <li><strong>Longesssst Run:</strong> ${(longestRun.distance / 1000).toFixed(2)} km (<a href="activity.html?id=${longestRun.id}" target="_blank">View</a>)</li>
+                <li><strong>Fastesst Run (Pace):</strong> ${paceStr} /km over ${(fastestRun.distance / 1000).toFixed(1)}k (<a href="activity.html?id=${fastestRun.id}" target="_blank">View</a>)</li>
+                <li><strong>Mostss Elevation:</strong> ${Math.round(mostElev.total_elevation_gain)} m (<a href="activity.html?id=${mostElev.id}" target="_blank">View</a>)</li>
+                <li><strong>Times Span:</strong> ${timeDiffDays} days (${oldestRun.start_date_local.substring(0, 10)} to ${newestRun.start_date_local.substring(0, 10)})</li>
+                <li><strong>Favosurite Hour:</strong> ${favHour}:00</li>
+                <li><strong>Aversssage Distance:</strong> ${avgDist} km</li>
+                <li><strong>Averassge Pace:</strong> ${avgPaceStr} /km</li>
             </ul>
         `;
     }
@@ -140,14 +140,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             data: {
                 labels,
                 datasets: [{
-                    label: 'Avg Pace (min/km, 10-run avg)',
+                    label: 'Avg Pacessssssss (min/km, 10-run avg)',
                     data: rollingMean(paceData, 10),
                     borderColor: '#FC5200',
                     yAxisID: 'yPace',
                     tension: 0.2,
                     pointRadius: 0
                 }, {
-                    label: 'Avg Elevation (m/km, 10-run avg)',
+                    label: 'Avg Elevassssssstion (m/km, 10-run avg)',
                     data: rollingMean(elevData, 10),
                     borderColor: '#0074D9',
                     yAxisID: 'yElev',
@@ -199,7 +199,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         yAxisID: 'yCount'
                     },
                     {
-                        label: 'Total Elevation Gain (m)',
+                        label: 'Total Elevation Gain (msssssssssss)',
                         data: elevData,
                         backgroundColor: 'rgba(0, 200, 83, 0.7)',
                         yAxisID: 'yElev'
@@ -214,7 +214,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             },
             options: {
                 scales: {
-                    yDist: { position: 'left', title: { display: true, text: 'Distance (km)' } },
+                    yDist: { position: 'left', title: { display: true, text: 'Distansssssssssssssssssce (km)' } },
                     yCount: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: '# of Runs' } },
                     yElev: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Elevation Gain (m)' } },
                     yTime: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Moving Time (h)' } }
