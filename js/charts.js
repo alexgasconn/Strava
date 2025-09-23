@@ -101,42 +101,55 @@ function createChart(canvasId, config) {
 //     });
 // }
 
-// export function renderActivityTypeChart(runs) {
-//     const p90Distance = runs.length > 0 ? [...runs].map(a => a.distance).sort((a, b) => a - b)[Math.floor(0.8 * runs.length)] : 0;
-//     runs.forEach(a => {
-//         if (a.sport_type === 'TrailRun') {
-//             a.workout_type_classified = 3; // Trail Run
-//         } else if (a.average_heartrate && a.average_heartrate < 144) {
-//             a.workout_type_classified = 4; // Easy Run
-//         } else if (a.workout_type !== 1 && a.distance >= p90Distance) {
-//             a.workout_type_classified = 2; // Long run
-//         } else {
-//             a.workout_type_classified = a.workout_type || 0;
-//         }
-//     });
+export function renderActivityTypeChart(runs) {
+    if (!runs || runs.length === 0) return;
 
-//     const workoutTypeLabels = ['Standard training', 'Race', 'Long Run', 'Trail Run', 'Easy Run'];
-//     const workoutTypeCounts = [0, 0, 0, 0, 0];
-//     runs.forEach(act => {
-//         const wt = act.workout_type_classified;
-//         if (workoutTypeCounts[wt] !== undefined) {
-//             workoutTypeCounts[wt]++;
-//         }
-//     });
+    // Percentil 80 de distancia para considerar Long Run
+    const p80Distance = [...runs].map(a => a.distance)
+        .sort((a, b) => a - b)[Math.floor(0.8 * runs.length)];
 
-//     createChart('activity-type-barchart', {
-//         type: 'bar',
-//         data: {
-//             labels: workoutTypeLabels,
-//             datasets: [{
-//                 label: '# Activities',
-//                 data: workoutTypeCounts,
-//                 backgroundColor: 'rgba(252, 82, 0, 0.7)'
-//             }]
-//         },
-//         options: { indexAxis: 'y', plugins: { legend: { display: false } } }
-//     });
-// }
+    // Clasificación de cada actividad
+    runs.forEach(a => {
+        if (a.sport_type === 'TrailRun') {
+            a.workout_type_classified = 'Trail Run';
+        } else if (a.average_heartrate && a.average_heartrate < 145) {
+            a.workout_type_classified = 'Easy Run';
+        } else if (a.workout_type !== 1 && a.distance >= p80Distance) {
+            a.workout_type_classified = 'Long Run';
+        } else if (a.workout_type === 1) {
+            a.workout_type_classified = 'Race';
+        } else {
+            a.workout_type_classified = 'Standard training';
+        }
+    });
+
+    // Contar por categoría
+    const workoutTypeCounts = {};
+    runs.forEach(a => {
+        const key = a.workout_type_classified;
+        workoutTypeCounts[key] = (workoutTypeCounts[key] || 0) + 1;
+    });
+
+    const workoutTypeLabels = Object.keys(workoutTypeCounts);
+    const workoutTypeData = workoutTypeLabels.map(label => workoutTypeCounts[label]);
+
+    createChart('activity-type-barchart', {
+        type: 'bar',
+        data: {
+            labels: workoutTypeLabels,
+            datasets: [{
+                label: '# Activities',
+                data: workoutTypeData,
+                backgroundColor: 'rgba(252, 82, 0, 0.7)'
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            plugins: { legend: { display: false } }
+        }
+    });
+}
+
 
 export function renderMonthlyDistanceChart(runs) {
     if (!runs || runs.length === 0) return;
@@ -267,7 +280,7 @@ export function renderVo2maxChart(runs) {
         // ISO week calculation
         const dayNum = d.getUTCDay() || 7;
         d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-        const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+        const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
         const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
         const weekKey = `${d.getUTCFullYear()}-W${weekNo.toString().padStart(2, '0')}`;
         if (!weekMap[weekKey]) weekMap[weekKey] = [];
@@ -285,7 +298,7 @@ export function renderVo2maxChart(runs) {
         // ISO week calculation
         const dayNum = d.getUTCDay() || 7;
         d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-        const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+        const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
         const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
         const weekKey = `${d.getUTCFullYear()}-W${weekNo.toString().padStart(2, '0')}`;
         if (!weeks.includes(weekKey)) weeks.push(weekKey);
@@ -380,7 +393,7 @@ export function renderFitnessChart(runs) {
             datasets: [
                 { label: 'ATL (Fatigue)', data: atl, borderColor: '#FC5200', fill: false, tension: 0.2, pointRadius: 0 },
                 { label: 'CTL (Fitness)', data: ctl, borderColor: '#0074D9', fill: true, backgroundColor: 'rgba(0,116,217,0.1)', tension: 0.2, pointRadius: 0 },
-                { label: 'TSB (Form)', data: tsb, borderColor: '#2ECC40', fill: false, tension: 0.2, pointRadius: 0 , hidden: true}
+                { label: 'TSB (Form)', data: tsb, borderColor: '#2ECC40', fill: false, tension: 0.2, pointRadius: 0, hidden: true }
             ]
         },
         options: { scales: { y: { title: { display: true, text: 'Load' } } } }
@@ -630,18 +643,18 @@ export function renderRunsHeatmap(runs) {
     heatmapDiv.style.height = '400px';
 
     const points = [];
-    
+
     runs.forEach(run => {
-        if (run.start_latlng && Array.isArray(run.start_latlng) && 
+        if (run.start_latlng && Array.isArray(run.start_latlng) &&
             run.start_latlng.length === 2 && run.start_latlng[0] && run.start_latlng[1]) {
             points.push([run.start_latlng[0], run.start_latlng[1], 1.0]);
         }
-        
-        if (run.end_latlng && Array.isArray(run.end_latlng) && 
+
+        if (run.end_latlng && Array.isArray(run.end_latlng) &&
             run.end_latlng.length === 2 && run.end_latlng[0] && run.end_latlng[1]) {
             points.push([run.end_latlng[0], run.end_latlng[1], 0.8]);
         }
-        
+
         if (run.map && run.map.polyline) {
             try {
                 const decodedPath = decodePolyline(run.map.polyline);
@@ -652,7 +665,7 @@ export function renderRunsHeatmap(runs) {
                 // Silenciar error
             }
         }
-        
+
         if (run.coordinates && Array.isArray(run.coordinates)) {
             run.coordinates.forEach(coord => {
                 if (Array.isArray(coord) && coord.length >= 2) {
@@ -666,7 +679,7 @@ export function renderRunsHeatmap(runs) {
         const noDataMsg = document.createElement('p');
         noDataMsg.textContent = `No valid coordinates found. Total runs: ${runs.length}`;
         heatmapDiv.appendChild(noDataMsg);
-        
+
         if (window.runsHeatmapMap) {
             window.runsHeatmapMap.remove();
             window.runsHeatmapMap = null;
@@ -683,7 +696,7 @@ export function renderRunsHeatmap(runs) {
 
     const firstPoint = points[0];
     window.runsHeatmapMap = L.map('runs-heatmap').setView([firstPoint[0], firstPoint[1]], 12);
-    
+
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors',
         maxZoom: 18
@@ -706,7 +719,7 @@ export function renderRunsHeatmap(runs) {
         valueField: 'count',
         gradient: {
             0.1: 'blue',
-            0.3: 'cyan', 
+            0.3: 'cyan',
             0.5: 'lime',
             0.7: 'yellow',
             0.9: 'orange',
@@ -718,16 +731,16 @@ export function renderRunsHeatmap(runs) {
         const heatmapLayer = new HeatmapOverlay(cfg);
         heatmapLayer.addTo(window.runsHeatmapMap);
         heatmapLayer.setData(heatmapData);
-        
+
         setTimeout(() => {
             if (points.length > 0) {
                 window.runsHeatmapMap.setView([points[0][0], points[0][1]], 13);
             }
         }, 500);
-        
+
     } catch (error) {
         console.error("Error creando heatmap:", error);
-        
+
         // Fallback mejorado: círculos más grandes para simular heat
         points.forEach(point => {
             L.circle([point[0], point[1]], {
