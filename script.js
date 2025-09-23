@@ -116,7 +116,7 @@ function renderDashboard(activities) {
 
     // --- Bar Chart: Running Types (workout_type) ---
     // workout_type: 0=Workout, 1=Race, 2=Long run, 3=Workout
-    const workoutTypeLabels = ['Workout', 'Race', 'Long Run', 'Workout'];
+    const workoutTypeLabels = ['Workout', 'Race', 'Long Runn', 'Workout'];
     const workoutTypeCounts = [0, 0, 0, 0];
     runs.forEach(act => {
         const wt = typeof act.workout_type === 'number' ? act.workout_type : 0;
