@@ -113,29 +113,29 @@ function renderDashboard(activities) {
         });
     }
 
-    // --- Bar Chart: Running Types (workout_type) ---
-    // workout_type: 0=Workout, 1=Race, 2=Long run, 3=Workout
-    const workoutTypeLabels = ['Standard training', 'Race', 'Long Run', 'Workout!'];
-    const workoutTypeCounts = [0, 0, 0, 0];
-    runs.forEach(act => {
-        const wt = typeof act.workout_type === 'number' ? act.workout_type : 0;
-        workoutTypeCounts[wt] = (workoutTypeCounts[wt] || 0) + 1;
-    });
-    const workoutTypeCanvas = document.getElementById('activity-type-barchart');
-    if (workoutTypeCanvas && !charts['activity-type-barchart']) {
-        charts['activity-type-barchart'] = new Chart(workoutTypeCanvas, {
-            type: 'bar',
-            data: {
-                labels: workoutTypeLabels,
-                datasets: [{
-                    label: '# Activities',
-                    data: workoutTypeCounts,
-                    backgroundColor: 'rgba(252, 82, 0, 0.7)'
-                }]
-            },
-            options: { indexAxis: 'y', plugins: { legend: { display: false } } }
-        });
-    }
+    // // --- Bar Chart: Running Types (workout_type) ---
+    // // workout_type: 0=Workout, 1=Race, 2=Long run, 3=Workout
+    // const workoutTypeLabels = ['Standard training', 'Race', 'Long Run', 'Workout!'];
+    // const workoutTypeCounts = [0, 0, 0, 0];
+    // runs.forEach(act => {
+    //     const wt = typeof act.workout_type === 'number' ? act.workout_type : 0;
+    //     workoutTypeCounts[wt] = (workoutTypeCounts[wt] || 0) + 1;
+    // });
+    // const workoutTypeCanvas = document.getElementById('activity-type-barchart');
+    // if (workoutTypeCanvas && !charts['activity-type-barchart']) {
+    //     charts['activity-type-barchart'] = new Chart(workoutTypeCanvas, {
+    //         type: 'bar',
+    //         data: {
+    //             labels: workoutTypeLabels,
+    //             datasets: [{
+    //                 label: '# Activities',
+    //                 data: workoutTypeCounts,
+    //                 backgroundColor: 'rgba(252, 82, 0, 0.7)'
+    //             }]
+    //         },
+    //         options: { indexAxis: 'y', plugins: { legend: { display: false } } }
+    //     });
+    // }
 
     // --- Line & Bar Chart: Monthly Distance + Number of Runs ---
     // Group and sum distance and count activities per month
