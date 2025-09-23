@@ -102,7 +102,7 @@ function createChart(canvasId, config) {
 // }
 
 export function renderActivityTypeChart(runs) {
-    const p90Distance = runs.length > 0 ? [...runs].map(a => a.distance).sort((a, b) => a - b)[Math.floor(0.9 * runs.length)] : 0;
+    const p90Distance = runs.length > 0 ? [...runs].map(a => a.distance).sort((a, b) => a - b)[Math.floor(0.8 * runs.length)] : 0;
     runs.forEach(a => {
         if (a.sport_type === 'TrailRun') {
             a.workout_type_classified = 3; // Trail Run
