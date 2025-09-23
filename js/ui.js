@@ -72,7 +72,8 @@ export function renderDashboard(allActivities, dateFilterFrom, dateFilterTo) {
     renderRaceList(runs);
     renderAllRunsTable(runs);
     renderStreaks(runs);
-    renderPersonalBests(runs)
+    renderPersonalBests(runs);
+    renderRunsHeatmap(runs);
 }
 
 
@@ -89,7 +90,6 @@ function renderSummaryCards(runs) {
 }
 
 function renderAllCharts(runs) {
-    // charts.renderConsistencyChart(runs);
     charts.renderActivityTypeChart(runs);
     charts.renderMonthlyDistanceChart(runs);
     charts.renderPaceVsDistanceChart(runs);
@@ -128,7 +128,6 @@ export function renderAthleteTab(allActivities) {
     renderGearSection(runs);
     // renderPersonalBests(runs);
     renderWeeklyMixChart(runs);
-    // renderHourHeatmap(runs);
     renderHourMatrix(runs);
 }
 
@@ -985,33 +984,6 @@ async function renderGearSection(runs) {
 
 
 
-
-function renderConsistencyStats(runs) {
-    const container = document.getElementById('consistency-stats');
-    if (!container || runs.length === 0) {
-        container.innerHTML = "<p>No run data available.</p>";
-        return;
-    }
-
-    const avgDist = (runs.reduce((sum, act) => sum + act.distance, 0) / runs.length / 1000).toFixed(1);
-    const avgTime = (runs.reduce((sum, act) => sum + act.moving_time, 0) / runs.length);
-
-    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const dayCounts = new Array(7).fill(0);
-    runs.forEach(act => {
-        const dayIndex = new Date(act.start_date_local).getDay();
-        dayCounts[dayIndex]++;
-    });
-    const mostActiveDayIndex = dayCounts.indexOf(Math.max(...dayCounts));
-
-    container.innerHTML = `
-        <ul style="list-style: none; padding-left: 0; line-height: 1.8;">
-            <li><strong>Average Distance:</strong> ${avgDist} km / run</li>
-            <li><strong>Average Time:</strong> ${new Date(avgTime * 1000).toISOString().substr(14, 5)} / run</li>
-            <li><strong>Most Active Day:</strong> ${daysOfWeek[mostActiveDayIndex]}</li>
-        </ul>
-    `;
-}
 
 
 
