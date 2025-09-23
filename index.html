@@ -17,7 +17,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://www.patrick-wied.at/static/heatmapjs/heatmap.js"></script>
     <script src="https://www.patrick-wied.at/static/heatmapjs/plugin-leaflet-layer.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix"></script>
 
 
 
@@ -31,7 +31,8 @@
             <p>Connect your Strava account to visualize your progress and discover new insights.</p>
             <button id="login-button">Connect with Strava</button>
             <div class="privacy-policy" style="margin-top:1em; font-size:0.95em; color:#555;">
-            <strong>Privacy Notice:</strong> Your Strava data is processed locally in your browser and is <b>never stored</b> or sent to any server. No personal information is collected or retained.
+                <strong>Privacy Notice:</strong> Your Strava data is processed locally in your browser and is <b>never
+                    stored</b> or sent to any server. No personal information is collected or retained.
             </div>
         </div>
 
@@ -39,7 +40,6 @@
         <div id="app-section" class="hidden">
             <header>
                 <h1 id="athlete-name"></h1>
-                <!-- Navegación simplificada -->
                 <nav>
                     <button id="refresh-button">Refresh Activities</button>
                     <button id="logout-button">Log Out</button>
@@ -66,9 +66,7 @@
                             <button id="reset-date-filter">Reset</button>
                         </div>
 
-                        <!-- Grupo de atajos por año -->
                         <div id="year-filter-buttons" class="filter-group year-buttons">
-                            <!-- Los botones de año se generarán aquí con JS -->
                         </div>
                     </div>
 
@@ -158,7 +156,7 @@
                             <canvas id="elevation-histogram"></canvas>
                         </div>
 
-                        
+
                         <div class="chart-container">
                             <h3>Personal Bests</h3>
                             <div id="personal-bests"></div>

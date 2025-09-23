@@ -605,10 +605,13 @@ function renderStreaks(runs) {
 
     // Mejor racha histórica de días
     let maxDayStreak = 0, currentDayStreak = 0, prevDay = null;
+    let maxDayStreakStart = null, maxDayStreakEnd = null;
+    let tempStreakStart = null;
     for (let i = 0; i < allDays.length; i++) {
         const day = allDays[i];
         if (!prevDay) {
             currentDayStreak = 1;
+            tempStreakStart = day;
         } else {
             const prev = new Date(prevDay);
             const curr = new Date(day);
@@ -617,19 +620,28 @@ function renderStreaks(runs) {
                 currentDayStreak++;
             } else {
                 currentDayStreak = 1;
+                tempStreakStart = day;
             }
         }
-        if (currentDayStreak > maxDayStreak) maxDayStreak = currentDayStreak;
+        if (currentDayStreak > maxDayStreak) {
+            maxDayStreak = currentDayStreak;
+            maxDayStreakStart = tempStreakStart;
+            maxDayStreakEnd = day;
+        }
         prevDay = day;
     }
     // Racha actual de días (hasta hoy, hacia atrás)
     let today = new Date().toISOString().slice(0, 10);
     let idx = allDays.length - 1;
     let currentDayStreakValue = 0;
+    let currentDayStreakStart = null, currentDayStreakEnd = null;
+    let tempToday = today;
     while (idx >= 0) {
-        if (allDays[idx] === today) {
+        if (allDays[idx] === tempToday) {
+            if (currentDayStreakValue === 0) currentDayStreakEnd = tempToday;
             currentDayStreakValue++;
-            today = new Date(new Date(today).getTime() - 86400000).toISOString().slice(0, 10);
+            currentDayStreakStart = tempToday;
+            tempToday = new Date(new Date(tempToday).getTime() - 86400000).toISOString().slice(0, 10);
             idx--;
         } else {
             break;
@@ -646,12 +658,15 @@ function renderStreaks(runs) {
     const allWeeks = Array.from(weekSet).sort();
 
     let maxWeekStreak = 0, currentWeekStreak = 0, prevWeek = null;
+    let maxWeekStreakStart = null, maxWeekStreakEnd = null;
+    let tempWeekStreakStart = null;
     for (let i = 0; i < allWeeks.length; i++) {
         const [year, weekStr] = allWeeks[i].split('-W');
         const week = parseInt(weekStr, 10);
         const prev = prevWeek ? prevWeek.split('-W').map(Number) : null;
         if (!prevWeek) {
             currentWeekStreak = 1;
+            tempWeekStreakStart = allWeeks[i];
         } else {
             if (
                 (parseInt(year) === prev[0] && week === prev[1] + 1) ||
@@ -660,9 +675,14 @@ function renderStreaks(runs) {
                 currentWeekStreak++;
             } else {
                 currentWeekStreak = 1;
+                tempWeekStreakStart = allWeeks[i];
             }
         }
-        if (currentWeekStreak > maxWeekStreak) maxWeekStreak = currentWeekStreak;
+        if (currentWeekStreak > maxWeekStreak) {
+            maxWeekStreak = currentWeekStreak;
+            maxWeekStreakStart = tempWeekStreakStart;
+            maxWeekStreakEnd = allWeeks[i];
+        }
         prevWeek = allWeeks[i];
     }
     // Racha actual de semanas (hasta esta semana, hacia atrás)
@@ -671,16 +691,20 @@ function renderStreaks(runs) {
     let thisWeekNum = utils.getISOWeek(now);
     let currentWeekStreakValue = 0;
     let weekIdx = allWeeks.length - 1;
+    let currentWeekStreakStart = null, currentWeekStreakEnd = null;
+    let tempWeekYear = thisWeekYear, tempWeekNum = thisWeekNum;
     while (weekIdx >= 0) {
         const [wYear, wNum] = allWeeks[weekIdx].split('-W').map(Number);
-        if (wYear === thisWeekYear && wNum === thisWeekNum) {
+        if (wYear === tempWeekYear && wNum === tempWeekNum) {
+            if (currentWeekStreakValue === 0) currentWeekStreakEnd = `${tempWeekYear}-W${tempWeekNum}`;
             currentWeekStreakValue++;
+            currentWeekStreakStart = `${tempWeekYear}-W${tempWeekNum}`;
             // Retrocede una semana
-            if (thisWeekNum === 1) {
-                thisWeekYear -= 1;
-                thisWeekNum = 52;
+            if (tempWeekNum === 1) {
+                tempWeekYear -= 1;
+                tempWeekNum = 52;
             } else {
-                thisWeekNum -= 1;
+                tempWeekNum -= 1;
             }
             weekIdx--;
         } else {
@@ -693,11 +717,14 @@ function renderStreaks(runs) {
     const allMonths = Array.from(monthSet).sort();
 
     let maxMonthStreak = 0, currentMonthStreak = 0, prevMonth = null;
+    let maxMonthStreakStart = null, maxMonthStreakEnd = null;
+    let tempMonthStreakStart = null;
     for (let i = 0; i < allMonths.length; i++) {
         const [year, month] = allMonths[i].split('-').map(Number);
         const prev = prevMonth ? prevMonth.split('-').map(Number) : null;
         if (!prevMonth) {
             currentMonthStreak = 1;
+            tempMonthStreakStart = allMonths[i];
         } else {
             if (
                 (year === prev[0] && month === prev[1] + 1) ||
@@ -706,9 +733,14 @@ function renderStreaks(runs) {
                 currentMonthStreak++;
             } else {
                 currentMonthStreak = 1;
+                tempMonthStreakStart = allMonths[i];
             }
         }
-        if (currentMonthStreak > maxMonthStreak) maxMonthStreak = currentMonthStreak;
+        if (currentMonthStreak > maxMonthStreak) {
+            maxMonthStreak = currentMonthStreak;
+            maxMonthStreakStart = tempMonthStreakStart;
+            maxMonthStreakEnd = allMonths[i];
+        }
         prevMonth = allMonths[i];
     }
     // Racha actual de meses (hasta este mes, hacia atrás)
@@ -716,16 +748,20 @@ function renderStreaks(runs) {
     let [curYear, curMonth] = thisMonthStr.split('-').map(Number);
     let currentMonthStreakValue = 0;
     let monthIdx = allMonths.length - 1;
+    let currentMonthStreakStart = null, currentMonthStreakEnd = null;
+    let tempCurYear = curYear, tempCurMonth = curMonth;
     while (monthIdx >= 0) {
         const [mYear, mMonth] = allMonths[monthIdx].split('-').map(Number);
-        if (mYear === curYear && mMonth === curMonth) {
+        if (mYear === tempCurYear && mMonth === tempCurMonth) {
+            if (currentMonthStreakValue === 0) currentMonthStreakEnd = `${tempCurYear}-${String(tempCurMonth).padStart(2, '0')}`;
             currentMonthStreakValue++;
+            currentMonthStreakStart = `${tempCurYear}-${String(tempCurMonth).padStart(2, '0')}`;
             // Retrocede un mes
-            if (curMonth === 1) {
-                curYear -= 1;
-                curMonth = 12;
+            if (tempCurMonth === 1) {
+                tempCurYear -= 1;
+                tempCurMonth = 12;
             } else {
-                curMonth -= 1;
+                tempCurMonth -= 1;
             }
             monthIdx--;
         } else {
@@ -733,19 +769,45 @@ function renderStreaks(runs) {
         }
     }
 
+    // --- FORMAT HELPERS ---
+    function formatDate(dateStr) {
+        if (!dateStr) return '-';
+        const [y, m, d] = dateStr.split('-');
+        if (d) return `${d}/${m}/${y}`;
+        if (m) return `${m}/${y}`;
+        return dateStr;
+    }
+    function formatWeek(weekStr) {
+        if (!weekStr) return '-';
+        const [y, w] = weekStr.split('-W');
+        return `W${w}/${y}`;
+    }
+
     streaksInfo.innerHTML = `
       <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
         <div>
           <h4>🏆 Best Historical Streak</h4>
-          <div><b>Consecutive Days:</b> ${maxDayStreak}</div>
-          <div><b>Consecutive Weeks:</b> ${maxWeekStreak}</div>
-          <div><b>Consecutive Months:</b> ${maxMonthStreak}</div>
+          <div><b>Consecutive Days:</b> ${maxDayStreak} <br>
+            <small>${formatDate(maxDayStreakStart)} - ${formatDate(maxDayStreakEnd)}</small>
+          </div>
+          <div><b>Consecutive Weeks:</b> ${maxWeekStreak} <br>
+            <small>${formatWeek(maxWeekStreakStart)} - ${formatWeek(maxWeekStreakEnd)}</small>
+          </div>
+          <div><b>Consecutive Months:</b> ${maxMonthStreak} <br>
+            <small>${formatDate(maxMonthStreakStart)} - ${formatDate(maxMonthStreakEnd)}</small>
+          </div>
         </div>
         <div>
           <h4>🔥 Current Streak</h4>
-          <div><b>Consecutive Days:</b> ${currentDayStreakValue}</div>
-          <div><b>Consecutive Weeks:</b> ${currentWeekStreakValue}</div>
-          <div><b>Consecutive Months:</b> ${currentMonthStreakValue}</div>
+          <div><b>Consecutive Days:</b> ${currentDayStreakValue} <br>
+            <small>${formatDate(currentDayStreakStart)} - ${formatDate(currentDayStreakEnd)}</small>
+          </div>
+          <div><b>Consecutive Weeks:</b> ${currentWeekStreakValue} <br>
+            <small>${formatWeek(currentWeekStreakStart)} - ${formatWeek(currentWeekStreakEnd)}</small>
+          </div>
+          <div><b>Consecutive Months:</b> ${currentMonthStreakValue} <br>
+            <small>${formatDate(currentMonthStreakStart)} - ${formatDate(currentMonthStreakEnd)}</small>
+          </div>
         </div>
       </div>
     `;
