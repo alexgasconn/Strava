@@ -101,42 +101,42 @@ function createChart(canvasId, config) {
 //     });
 // }
 
-export function renderActivityTypeChart(runs) {
-    const p90Distance = runs.length > 0 ? [...runs].map(a => a.distance).sort((a, b) => a - b)[Math.floor(0.8 * runs.length)] : 0;
-    runs.forEach(a => {
-        if (a.sport_type === 'TrailRun') {
-            a.workout_type_classified = 3; // Trail Run
-        } else if (a.average_heartrate && a.average_heartrate < 144) {
-            a.workout_type_classified = 4; // Easy Run
-        } else if (a.workout_type !== 1 && a.distance >= p90Distance) {
-            a.workout_type_classified = 2; // Long run
-        } else {
-            a.workout_type_classified = a.workout_type || 0;
-        }
-    });
+// export function renderActivityTypeChart(runs) {
+//     const p90Distance = runs.length > 0 ? [...runs].map(a => a.distance).sort((a, b) => a - b)[Math.floor(0.8 * runs.length)] : 0;
+//     runs.forEach(a => {
+//         if (a.sport_type === 'TrailRun') {
+//             a.workout_type_classified = 3; // Trail Run
+//         } else if (a.average_heartrate && a.average_heartrate < 144) {
+//             a.workout_type_classified = 4; // Easy Run
+//         } else if (a.workout_type !== 1 && a.distance >= p90Distance) {
+//             a.workout_type_classified = 2; // Long run
+//         } else {
+//             a.workout_type_classified = a.workout_type || 0;
+//         }
+//     });
 
-    const workoutTypeLabels = ['Standard training', 'Race', 'Long Run', 'Trail Run', 'Easy Run'];
-    const workoutTypeCounts = [0, 0, 0, 0, 0];
-    runs.forEach(act => {
-        const wt = act.workout_type_classified;
-        if (workoutTypeCounts[wt] !== undefined) {
-            workoutTypeCounts[wt]++;
-        }
-    });
+//     const workoutTypeLabels = ['Standard training', 'Race', 'Long Run', 'Trail Run', 'Easy Run'];
+//     const workoutTypeCounts = [0, 0, 0, 0, 0];
+//     runs.forEach(act => {
+//         const wt = act.workout_type_classified;
+//         if (workoutTypeCounts[wt] !== undefined) {
+//             workoutTypeCounts[wt]++;
+//         }
+//     });
 
-    createChart('activity-type-barchart', {
-        type: 'bar',
-        data: {
-            labels: workoutTypeLabels,
-            datasets: [{
-                label: '# Activities',
-                data: workoutTypeCounts,
-                backgroundColor: 'rgba(252, 82, 0, 0.7)'
-            }]
-        },
-        options: { indexAxis: 'y', plugins: { legend: { display: false } } }
-    });
-}
+//     createChart('activity-type-barchart', {
+//         type: 'bar',
+//         data: {
+//             labels: workoutTypeLabels,
+//             datasets: [{
+//                 label: '# Activities',
+//                 data: workoutTypeCounts,
+//                 backgroundColor: 'rgba(252, 82, 0, 0.7)'
+//             }]
+//         },
+//         options: { indexAxis: 'y', plugins: { legend: { display: false } } }
+//     });
+// }
 
 export function renderMonthlyDistanceChart(runs) {
     if (!runs || runs.length === 0) return;
