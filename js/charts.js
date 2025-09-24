@@ -684,9 +684,9 @@ export function renderRunsHeatmap(runs) {
     L.tileLayer(tileUrl, { attribution: '© OpenStreetMap contributors', maxZoom: 18 }).addTo(window.runsHeatmapMap);
 
     const cfg = {
-        radius: 10,             // más pequeño
-        maxOpacity: 0.7,
-        scaleRadius: true,       // escala con zoom
+        radius: 3,             // mucho más pequeño
+        maxOpacity: 0.5,
+        scaleRadius: true,    // no escalar con zoom
         useLocalExtrema: true,
         latField: 'lat',
         lngField: 'lng',
@@ -710,7 +710,7 @@ export function renderRunsHeatmap(runs) {
         console.error("HeatmapOverlay failed, fallback to circles:", err);
         dataHMJS.forEach(p => {
             L.circle([p.lat, p.lng], {
-                radius: 200,
+                radius: 30, // mucho más pequeño
                 color: 'red',
                 fillColor: 'red',
                 fillOpacity: 0.3,
