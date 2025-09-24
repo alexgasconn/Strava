@@ -632,112 +632,123 @@ export function renderRollingMeanDistanceChart(runs) {
 
 export function renderRunsHeatmap(runs) {
     if (!window.L) {
-        console.error("Leaflet.js no está cargado.");
+        console.error("Leaflet.js not loaded.");
         return;
     }
 
     const heatmapDiv = document.getElementById('runs-heatmap');
     if (!heatmapDiv) return;
-
     heatmapDiv.style.width = '100%';
     heatmapDiv.style.height = '400px';
 
-    const points = [];
+    // Build two formats: heatmap.js plugin (objects) and leaflet.heat (arrays)
+    const dataHMJS = [];   // {lat,lng,count}
+    const dataLHeat = [];  // [lat, lng, intensity]
 
     runs.forEach(run => {
-        // start point
-        if (run.start_latlng && Array.isArray(run.start_latlng) &&
-            run.start_latlng.length === 2 && run.start_latlng[0] && run.start_latlng[1]) {
-            points.push({ lat: run.start_latlng[0], lng: run.start_latlng[1], count: 1.0 });
-        }
+        const pushPoint = (lat, lng, w) => {
+            if (!isFinite(lat) || !isFinite(lng)) return;
+            dataHMJS.push({ lat, lng, count: w });
+            dataLHeat.push([lat, lng, w]);
+        };
 
-        // end point
-        if (run.end_latlng && Array.isArray(run.end_latlng) &&
-            run.end_latlng.length === 2 && run.end_latlng[0] && run.end_latlng[1]) {
-            points.push({ lat: run.end_latlng[0], lng: run.end_latlng[1], count: 0.8 });
+        if (run.start_latlng && Array.isArray(run.start_latlng) && run.start_latlng.length >= 2) {
+            pushPoint(run.start_latlng[0], run.start_latlng[1], 1.0);
         }
-
-        // polyline
+        if (run.end_latlng && Array.isArray(run.end_latlng) && run.end_latlng.length >= 2) {
+            pushPoint(run.end_latlng[0], run.end_latlng[1], 0.8);
+        }
         if (run.map && run.map.polyline) {
             try {
                 const decodedPath = decodePolyline(run.map.polyline);
-                decodedPath.forEach(point => {
-                    points.push({ lat: point[0], lng: point[1], count: 0.3 });
-                });
-            } catch (error) {
-                // ignore decoding errors
-            }
+                decodedPath.forEach(p => pushPoint(p[0], p[1], 0.3));
+            } catch (e) { /* ignore */ }
         }
-
-        // extra coords
         if (run.coordinates && Array.isArray(run.coordinates)) {
             run.coordinates.forEach(coord => {
-                if (Array.isArray(coord) && coord.length >= 2) {
-                    points.push({ lat: coord[0], lng: coord[1], count: 0.5 });
-                }
+                if (Array.isArray(coord) && coord.length >= 2) pushPoint(coord[0], coord[1], 0.5);
             });
         }
     });
 
-    if (points.length === 0) {
-        const noDataMsg = document.createElement('p');
-        noDataMsg.textContent = `No valid coordinates found. Total runs: ${runs.length}`;
-        heatmapDiv.appendChild(noDataMsg);
-
-        if (window.runsHeatmapMap) {
-            window.runsHeatmapMap.remove();
-            window.runsHeatmapMap = null;
-        }
+    if (dataHMJS.length === 0 && dataLHeat.length === 0) {
+        heatmapDiv.innerHTML = `<p>No valid coordinates found. Total runs: ${runs.length}</p>`;
+        if (window.runsHeatmapMap) { window.runsHeatmapMap.remove(); window.runsHeatmapMap = null; }
         return;
     }
 
-    // reset map if exists
-    if (window.runsHeatmapMap) {
-        window.runsHeatmapMap.remove();
-        window.runsHeatmapMap = null;
-    }
-
+    // remove old map if exists
+    if (window.runsHeatmapMap) { window.runsHeatmapMap.remove(); window.runsHeatmapMap = null; }
     heatmapDiv.innerHTML = '';
 
-    // init map centered at first point
-    const firstPoint = points[0];
-    window.runsHeatmapMap = L.map('runs-heatmap').setView([firstPoint.lat, firstPoint.lng], 12);
+    const first = (dataHMJS[0] || dataLHeat[0]);
+    const center = Array.isArray(first) ? [first[0], first[1]] : [first.lat, first.lng];
 
+    window.runsHeatmapMap = L.map('runs-heatmap').setView(center, 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 18
+        attribution: '© OpenStreetMap contributors', maxZoom: 18
     }).addTo(window.runsHeatmapMap);
 
-    // heatmap config
-    const cfg = {
-        radius: 25,
-        maxOpacity: 0.8,
-        scaleRadius: true,
-        useLocalExtrema: true,
-        latField: 'lat',
-        lngField: 'lng',
-        valueField: 'count',
-        gradient: {
-            0.1: 'blue',
-            0.3: 'cyan',
-            0.5: 'lime',
-            0.7: 'yellow',
-            0.9: 'orange',
-            1.0: 'red'
-        }
+    // common visual config
+    const gradient = {
+        0.1: 'blue',
+        0.3: 'cyan',
+        0.5: 'lime',
+        0.7: 'yellow',
+        0.9: 'orange',
+        1.0: 'red'
     };
 
-    const heatmapLayer = new HeatmapOverlay(cfg);
-    window.runsHeatmapMap.addLayer(heatmapLayer);
+    // If HeatmapOverlay (heatmap.js plugin) is available, use it:
+    if (typeof window.HeatmapOverlay === 'function') {
+        try {
+            const cfg = {
+                radius: 25,
+                maxOpacity: 0.85,
+                scaleRadius: true,
+                useLocalExtrema: true,
+                latField: 'lat', lngField: 'lng', valueField: 'count',
+                gradient
+            };
+            const heatmapLayer = new HeatmapOverlay(cfg);
+            heatmapLayer.addTo(window.runsHeatmapMap);
+            heatmapLayer.setData({ max: 1.0, data: dataHMJS });
+        } catch (err) {
+            console.error('HeatmapOverlay failed, falling back:', err);
+        }
+    }
 
-    heatmapLayer.setData({
-        max: 1.0,
-        data: points
-    });
+    // If HeatmapOverlay not present or failed, try leaflet.heat (simple and reliable)
+    if (!window.runsHeatmapMap._layers || !Object.values(window.runsHeatmapMap._layers).some(l => l instanceof L.Layer && l.options && (l.options.radius || l._heat))) {
+        // leaflet.heat expects [lat, lng, intensity]
+        if (typeof L.heatLayer === 'function') {
+            try {
+                const heat = L.heatLayer(dataLHeat, {
+                    radius: 25,
+                    blur: 20,
+                    maxZoom: 17,
+                    gradient
+                }).addTo(window.runsHeatmapMap);
+            } catch (err) {
+                console.error('leaflet.heat fallback failed:', err);
+            }
+        } else {
+            // final fallback: draw circles
+            dataLHeat.forEach(p => {
+                L.circle([p[0], p[1]], {
+                    radius: 400,
+                    color: 'red',
+                    fillColor: 'red',
+                    fillOpacity: 0.18,
+                    weight: 0.5
+                }).addTo(window.runsHeatmapMap);
+            });
+        }
+    }
 
-    // auto-fit bounds
-    if (points.length > 1) {
-        const bounds = L.latLngBounds(points.map(p => [p.lat, p.lng]));
-        window.runsHeatmapMap.fitBounds(bounds, { padding: [50, 50] });
+    // fit bounds
+    if (dataLHeat.length > 1) {
+        const bounds = L.latLngBounds(dataLHeat.map(p => [p[0], p[1]]));
+        window.runsHeatmapMap.fitBounds(bounds, { padding: [40, 40] });
     }
 }
