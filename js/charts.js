@@ -645,31 +645,35 @@ export function renderRunsHeatmap(runs) {
     const points = [];
 
     runs.forEach(run => {
+        // start point
         if (run.start_latlng && Array.isArray(run.start_latlng) &&
             run.start_latlng.length === 2 && run.start_latlng[0] && run.start_latlng[1]) {
-            points.push([run.start_latlng[0], run.start_latlng[1], 1.0]);
+            points.push({ lat: run.start_latlng[0], lng: run.start_latlng[1], count: 1.0 });
         }
 
+        // end point
         if (run.end_latlng && Array.isArray(run.end_latlng) &&
             run.end_latlng.length === 2 && run.end_latlng[0] && run.end_latlng[1]) {
-            points.push([run.end_latlng[0], run.end_latlng[1], 0.8]);
+            points.push({ lat: run.end_latlng[0], lng: run.end_latlng[1], count: 0.8 });
         }
 
+        // polyline
         if (run.map && run.map.polyline) {
             try {
                 const decodedPath = decodePolyline(run.map.polyline);
                 decodedPath.forEach(point => {
-                    points.push([point[0], point[1], 0.3]);
+                    points.push({ lat: point[0], lng: point[1], count: 0.3 });
                 });
             } catch (error) {
-                // Silenciar error
+                // ignore decoding errors
             }
         }
 
+        // extra coords
         if (run.coordinates && Array.isArray(run.coordinates)) {
             run.coordinates.forEach(coord => {
                 if (Array.isArray(coord) && coord.length >= 2) {
-                    points.push([coord[0], coord[1], 0.5]);
+                    points.push({ lat: coord[0], lng: coord[1], count: 0.5 });
                 }
             });
         }
@@ -687,6 +691,7 @@ export function renderRunsHeatmap(runs) {
         return;
     }
 
+    // reset map if exists
     if (window.runsHeatmapMap) {
         window.runsHeatmapMap.remove();
         window.runsHeatmapMap = null;
@@ -694,26 +699,21 @@ export function renderRunsHeatmap(runs) {
 
     heatmapDiv.innerHTML = '';
 
+    // init map centered at first point
     const firstPoint = points[0];
-    window.runsHeatmapMap = L.map('runs-heatmap').setView([firstPoint[0], firstPoint[1]], 12);
+    window.runsHeatmapMap = L.map('runs-heatmap').setView([firstPoint.lat, firstPoint.lng], 12);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors',
         maxZoom: 18
     }).addTo(window.runsHeatmapMap);
 
-    const heatmapData = {
-        max: 1.0,
-        data: points.map(p => ({ lat: p[0], lng: p[1], count: p[2] }))
-    };
-
+    // heatmap config
     const cfg = {
-        radius: 50,           // Aumentado para más "heat" visible
-        blur: 20,             // Ajustado para difusión
-        maxOpacity: 0.9,      // Opacidad máxima alta
-        minOpacity: 0.2,      // Opacidad mínima baja para gradiente
-        scaleRadius: true,    // Escala con zoom para mejor heatmap
-        useLocalExtrema: true,// Extremos locales para mejor visibilidad en áreas dispersas
+        radius: 25,
+        maxOpacity: 0.8,
+        scaleRadius: true,
+        useLocalExtrema: true,
         latField: 'lat',
         lngField: 'lng',
         valueField: 'count',
@@ -727,73 +727,17 @@ export function renderRunsHeatmap(runs) {
         }
     };
 
-    try {
-        const heatmapLayer = new HeatmapOverlay(cfg);
-        heatmapLayer.addTo(window.runsHeatmapMap);
-        heatmapLayer.setData(heatmapData);
+    const heatmapLayer = new HeatmapOverlay(cfg);
+    window.runsHeatmapMap.addLayer(heatmapLayer);
 
-        setTimeout(() => {
-            if (points.length > 0) {
-                window.runsHeatmapMap.setView([points[0][0], points[0][1]], 13);
-            }
-        }, 500);
+    heatmapLayer.setData({
+        max: 1.0,
+        data: points
+    });
 
-    } catch (error) {
-        console.error("Error creando heatmap:", error);
-
-        // Fallback mejorado: círculos más grandes para simular heat
-        points.forEach(point => {
-            L.circle([point[0], point[1]], {
-                radius: 500,  // Radio en metros para más visibilidad
-                color: 'red',
-                fillColor: 'red',
-                fillOpacity: 0.3,
-                weight: 1
-            }).addTo(window.runsHeatmapMap);
-        });
-    }
-
+    // auto-fit bounds
     if (points.length > 1) {
-        const bounds = L.latLngBounds(points.map(p => [p[0], p[1]]));
+        const bounds = L.latLngBounds(points.map(p => [p.lat, p.lng]));
         window.runsHeatmapMap.fitBounds(bounds, { padding: [50, 50] });
     }
-}
-
-export function decodePolyline(str, precision = 5) {
-    let index = 0;
-    let lat = 0;
-    let lng = 0;
-    const coordinates = [];
-    const factor = Math.pow(10, precision);
-
-    while (index < str.length) {
-        let byte = null;
-        let shift = 0;
-        let result = 0;
-
-        do {
-            byte = str.charCodeAt(index++) - 63;
-            result |= (byte & 0x1f) << shift;
-            shift += 5;
-        } while (byte >= 0x20);
-
-        const deltaLat = ((result & 1) !== 0 ? ~(result >> 1) : (result >> 1));
-        lat += deltaLat;
-
-        shift = 0;
-        result = 0;
-
-        do {
-            byte = str.charCodeAt(index++) - 63;
-            result |= (byte & 0x1f) << shift;
-            shift += 5;
-        } while (byte >= 0x20);
-
-        const deltaLng = ((result & 1) !== 0 ? ~(result >> 1) : (result >> 1));
-        lng += deltaLng;
-
-        coordinates.push([lat / factor, lng / factor]);
-    }
-
-    return coordinates;
 }
