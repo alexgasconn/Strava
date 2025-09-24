@@ -627,8 +627,6 @@ export function renderRollingMeanDistanceChart(runs) {
 
 
 
-
-
 export function renderRunsHeatmap(runs) {
     if (!window.L) {
         console.error("Leaflet.js not loaded.");
@@ -638,8 +636,11 @@ export function renderRunsHeatmap(runs) {
     const heatmapDiv = document.getElementById('runs-heatmap');
     if (!heatmapDiv) return;
 
+    // Forzar tamaño y reflow
     heatmapDiv.style.width = '100%';
     heatmapDiv.style.height = '400px';
+    heatmapDiv.offsetWidth; 
+    heatmapDiv.offsetHeight;
 
     const points = []; // formato: [lat, lng, intensidad]
 
@@ -688,53 +689,54 @@ export function renderRunsHeatmap(runs) {
     heatmapDiv.innerHTML = '';
 
     const [lat, lng] = [points[0][0], points[0][1]];
-    window.runsHeatmapMap = L.map('runs-heatmap').setView([lat, lng], 12);
 
-    const tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-    console.log("Loading tile layer:", tileUrl);
+    // Espera un tick para asegurar que el div tenga tamaño válido
+    setTimeout(() => {
+        window.runsHeatmapMap = L.map('runs-heatmap').setView([lat, lng], 12);
 
-    L.tileLayer(tileUrl, {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 18
-    }).addTo(window.runsHeatmapMap);
+        const tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+        console.log("Loading tile layer:", tileUrl);
 
-    const gradient = {
-        0.1: 'blue',
-        0.3: 'cyan',
-        0.5: 'lime',
-        0.7: 'yellow',
-        0.9: 'orange',
-        1.0: 'red'
-    };
-
-    // Heatmap con leaflet.heat (más estable)
-    try {
-        const heat = L.heatLayer(points, {
-            radius: 15,    // 👈 radio pequeño = menos mancha
-            blur: 10,      // 👈 difuminado más controlado
-            maxZoom: 15,
-            gradient
+        L.tileLayer(tileUrl, {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 18
         }).addTo(window.runsHeatmapMap);
 
-        console.log("Heatmap rendered with leaflet.heat. Points:", points.length);
-    } catch (err) {
-        console.error("leaflet.heat failed:", err);
+        const gradient = {
+            0.1: 'blue',
+            0.3: 'cyan',
+            0.5: 'lime',
+            0.7: 'yellow',
+            0.9: 'orange',
+            1.0: 'red'
+        };
 
-        // fallback: círculos rojos
-        points.forEach(p => {
-            L.circle([p[0], p[1]], {
-                radius: 200,
-                color: 'red',
-                fillColor: 'red',
-                fillOpacity: 0.2,
-                weight: 0.5
+        try {
+            const heat = L.heatLayer(points, {
+                radius: 15,   // radio ajustado
+                blur: 10,     // difuminado controlado
+                maxZoom: 15,
+                gradient
             }).addTo(window.runsHeatmapMap);
-        });
-    }
 
-    // Ajustar bounds al conjunto de puntos
-    if (points.length > 1) {
-        const bounds = L.latLngBounds(points.map(p => [p[0], p[1]]));
-        window.runsHeatmapMap.fitBounds(bounds, { padding: [40, 40] });
-    }
+            console.log("Heatmap rendered with leaflet.heat. Points:", points.length);
+        } catch (err) {
+            console.error("leaflet.heat failed, fallback to circles:", err);
+            points.forEach(p => {
+                L.circle([p[0], p[1]], {
+                    radius: 200,
+                    color: 'red',
+                    fillColor: 'red',
+                    fillOpacity: 0.2,
+                    weight: 0.5
+                }).addTo(window.runsHeatmapMap);
+            });
+        }
+
+        // Ajustar bounds al conjunto de puntos
+        if (points.length > 1) {
+            const bounds = L.latLngBounds(points.map(p => [p[0], p[1]]));
+            window.runsHeatmapMap.fitBounds(bounds, { padding: [40, 40] });
+        }
+    }, 50); // 50ms es suficiente para que el div esté renderizado
 }
