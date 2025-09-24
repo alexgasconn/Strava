@@ -952,7 +952,7 @@ async function renderGearSection(runs) {
     runs.forEach(run => {
         if (run.gear_id) {
             if (!gearUsage.has(run.gear_id)) {
-                gearUsage.set(run.gear_id, { numUses: 0, firstUse: run.start_date_local });
+                gearUsage.set(run.gear_id, { numUses: 0, lastUse: run.start_date_local });
             }
             gearUsage.get(run.gear_id).numUses++;
         }
@@ -992,7 +992,7 @@ function renderGearCards(apiResults, usageData, allRuns) {
     let isEditMode = localStorage.getItem('gearEditMode') === 'true';
     const cardsHtml = apiResults.map(result => {
         const gear = result.gear;
-        const usage = usageData.get(gear.id) || { numUses: 0, firstUse: 'N/A' };
+        const usage = usageData.get(gear.id) || { numUses: 0, lastUse: 'N/A' };
         const customData = JSON.parse(localStorage.getItem(`gear-custom-${gear.id}`) || '{}');
         const price = customData.price ?? 120;
         const durationKm = customData.durationKm ?? 700;
@@ -1020,7 +1020,7 @@ function renderGearCards(apiResults, usageData, allRuns) {
             <div class="gear-stats">
                 <span><strong>Uses:</strong> ${usage.numUses}</span>
                 <span><strong>€/km:</strong> ${euroPerKm}</span>
-                <span><strong>First Use:</strong> ${new Date(usage.firstUse).toLocaleDateString()}</span>
+                <span><strong>Last Use:</strong> ${new Date(usage.lastUse).toLocaleDateString()}</span>
             </div>
             ${needsReplacement && !gear.retired ? '<div class="alert-danger">Replacement Needed!</div>' : ''}
             ${isEditMode ? editInputs : ''}
