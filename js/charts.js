@@ -703,8 +703,8 @@ export function renderRunsHeatmap(runs) {
     if (typeof window.HeatmapOverlay === 'function') {
         try {
             const cfg = {
-                radius: 25,
-                maxOpacity: 0.85,
+                radius: 10,
+                maxOpacity: 0.6,
                 scaleRadius: true,
                 useLocalExtrema: true,
                 latField: 'lat', lngField: 'lng', valueField: 'count',
@@ -724,8 +724,8 @@ export function renderRunsHeatmap(runs) {
         if (typeof L.heatLayer === 'function') {
             try {
                 const heat = L.heatLayer(dataLHeat, {
-                    radius: 25,
-                    blur: 20,
+                    radius: 15,
+                    blur: 10,
                     maxZoom: 17,
                     gradient
                 }).addTo(window.runsHeatmapMap);
