@@ -641,7 +641,6 @@ export function renderRunsHeatmap(runs) {
     heatmapDiv.style.width = '100%';
     heatmapDiv.style.height = '400px';
 
-    // Build two formats: heatmap.js plugin (objects) and leaflet.heat (arrays)
     const dataHMJS = [];   // {lat,lng,count}
     const dataLHeat = [];  // [lat, lng, intensity]
 
@@ -677,7 +676,6 @@ export function renderRunsHeatmap(runs) {
         return;
     }
 
-    // remove old map if exists
     if (window.runsHeatmapMap) { window.runsHeatmapMap.remove(); window.runsHeatmapMap = null; }
     heatmapDiv.innerHTML = '';
 
@@ -689,7 +687,6 @@ export function renderRunsHeatmap(runs) {
         attribution: '© OpenStreetMap contributors', maxZoom: 18
     }).addTo(window.runsHeatmapMap);
 
-    // common visual config
     const gradient = {
         0.1: 'blue',
         0.3: 'cyan',
@@ -699,54 +696,61 @@ export function renderRunsHeatmap(runs) {
         1.0: 'red'
     };
 
-    // If HeatmapOverlay (heatmap.js plugin) is available, use it:
+    let rendered = false;
+
+    // Try HeatmapOverlay (heatmap.js plugin)
     if (typeof window.HeatmapOverlay === 'function') {
         try {
             const cfg = {
-                radius: 1,
+                radius: 10,
                 maxOpacity: 0.5,
-                scaleRadius: true,
+                scaleRadius: false,
                 useLocalExtrema: true,
-                latField: 'lat', lngField: 'lng', valueField: 'count',
+                latField: 'lat',
+                lngField: 'lng',
+                valueField: 'count',
                 gradient
             };
             const heatmapLayer = new HeatmapOverlay(cfg);
             heatmapLayer.addTo(window.runsHeatmapMap);
             heatmapLayer.setData({ max: 1.0, data: dataHMJS });
+            console.log("Heatmap rendered with HeatmapOverlay (heatmap.js).");
+            rendered = true;
         } catch (err) {
             console.error('HeatmapOverlay failed, falling back:', err);
         }
     }
 
-    // If HeatmapOverlay not present or failed, try leaflet.heat (simple and reliable)
-    if (!window.runsHeatmapMap._layers || !Object.values(window.runsHeatmapMap._layers).some(l => l instanceof L.Layer && l.options && (l.options.radius || l._heat))) {
-        // leaflet.heat expects [lat, lng, intensity]
-        if (typeof L.heatLayer === 'function') {
-            try {
-                const heat = L.heatLayer(dataLHeat, {
-                    radius: 1,
-                    blur: 1,
-                    maxZoom: 15,
-                    gradient
-                }).addTo(window.runsHeatmapMap);
-            } catch (err) {
-                console.error('leaflet.heat fallback failed:', err);
-            }
-        } else {
-            // final fallback: draw circles
-            dataLHeat.forEach(p => {
-                L.circle([p[0], p[1]], {
-                    radius: 400,
-                    color: 'red',
-                    fillColor: 'red',
-                    fillOpacity: 0.18,
-                    weight: 0.5
-                }).addTo(window.runsHeatmapMap);
-            });
+    // Fallback to leaflet.heat
+    if (!rendered && typeof L.heatLayer === 'function') {
+        try {
+            L.heatLayer(dataLHeat, {
+                radius: 10,
+                blur: 8,
+                maxZoom: 15,
+                gradient
+            }).addTo(window.runsHeatmapMap);
+            console.log("Heatmap rendered with leaflet.heat.");
+            rendered = true;
+        } catch (err) {
+            console.error('leaflet.heat failed, falling back:', err);
         }
     }
 
-    // fit bounds
+    // Final fallback: circles
+    if (!rendered) {
+        dataLHeat.forEach(p => {
+            L.circle([p[0], p[1]], {
+                radius: 200,
+                color: 'red',
+                fillColor: 'red',
+                fillOpacity: 0.18,
+                weight: 0.5
+            }).addTo(window.runsHeatmapMap);
+        });
+        console.log("Heatmap fallback: simple circles.");
+    }
+
     if (dataLHeat.length > 1) {
         const bounds = L.latLngBounds(dataLHeat.map(p => [p[0], p[1]]));
         window.runsHeatmapMap.fitBounds(bounds, { padding: [40, 40] });
