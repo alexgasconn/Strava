@@ -73,6 +73,7 @@ export function renderDashboard(allActivities, dateFilterFrom, dateFilterTo) {
     renderAllRunsTable(runs);
     renderStreaks(runs);
     renderPersonalBests(runs);
+    renderConsistencyChart(runs);
 }
 
 
@@ -95,7 +96,6 @@ function renderAllCharts(runs) {
     charts.renderDistanceHistogram(runs);
     charts.renderVo2maxChart(runs);
     charts.renderFitnessChart(runs);
-    // charts.renderStackedAreaGearChart(runs);
     charts.renderGearGanttChart(runs);
     charts.renderAccumulatedDistanceChart(runs);
     charts.renderRollingMeanDistanceChart(runs);
