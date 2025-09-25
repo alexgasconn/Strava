@@ -594,12 +594,12 @@ export function renderDistanceVsElevationChart(runs) {
                 {
                     label: 'Trail Run',
                     data: trailData,
-                    backgroundColor: 'rgba(6, 6, 249, 0.31)'
+                    backgroundColor: 'rgba(174, 59, 2, 0.87)'
                 },
                 {
                     label: 'Other Runs',
                     data: roadData,
-                    backgroundColor: 'rgba(54,162,235,0.7)'
+                    backgroundColor: 'rgba(245, 131, 0, 0.78)'
                 }
             ]
         },
