@@ -674,84 +674,185 @@ export function renderRollingMeanDistanceChart(runs) {
 
 
 export function renderRunsHeatmap(runs) {
-    if (typeof simpleheat === "undefined") {
-        console.error("simpleheat not loaded.");
-        return;
+  const container = document.getElementById('runs-heatmap');
+  if (!container) return;
+
+  // tamaño fijo (puedes cambiarlo)
+  container.style.width = '100%';
+  container.style.height = '400px';
+  container.innerHTML = '';
+
+  // --- recopilar puntos (lat,lng,weight) ---
+  const raw = [];
+  const add = (lat, lng, w) => {
+    lat = Number(lat); lng = Number(lng); w = Number(w);
+    if (isFinite(lat) && isFinite(lng)) raw.push({ lat, lng, w: w || 1 });
+  };
+
+  runs.forEach(run => {
+    if (run.start_latlng?.length >= 2) add(run.start_latlng[0], run.start_latlng[1], 1.0);
+    if (run.end_latlng?.length >= 2)   add(run.end_latlng[0],   run.end_latlng[1],   0.8);
+    if (run.map?.polyline) {
+      try {
+        const decoded = decodePolyline(run.map.polyline);
+        decoded.forEach(p => add(p[0], p[1], 0.4));
+      } catch (e) {
+        console.warn('decodePolyline failed', e);
+      }
     }
-
-    const heatmapDiv = document.getElementById("runs-heatmap");
-    if (!heatmapDiv) return;
-
-    // Forzar tamaño del contenedor
-    heatmapDiv.style.width = "100%";
-    heatmapDiv.style.height = "400px";
-    heatmapDiv.innerHTML = "";
-
-    // Crear canvas dentro del div
-    const canvas = document.createElement("canvas");
-    canvas.width = heatmapDiv.offsetWidth;
-    canvas.height = heatmapDiv.offsetHeight;
-    heatmapDiv.appendChild(canvas);
-
-    const heat = simpleheat(canvas);
-
-    // --- Preparar datos ---
-    const data = [];
-    const pushPoint = (lat, lng, weight) => {
-        if (isFinite(lat) && isFinite(lng)) {
-            const x = ((lng + 180) / 360) * canvas.width;
-            const y = ((90 - lat) / 180) * canvas.height;
-            data.push([x, y, weight]);
-        }
-    };
-
-    runs.forEach(run => {
-        if (run.start_latlng?.length >= 2) pushPoint(run.start_latlng[0], run.start_latlng[1], 1.0);
-        if (run.end_latlng?.length >= 2) pushPoint(run.end_latlng[0], run.end_latlng[1], 0.8);
-
-        if (run.map?.polyline) {
-            try {
-                const decoded = decodePolyline(run.map.polyline);
-                decoded.forEach(p => pushPoint(p[0], p[1], 0.4));
-            } catch (e) {
-                console.warn("Polyline decode failed:", e);
-            }
-        }
-
-        if (Array.isArray(run.coordinates)) {
-            run.coordinates.forEach(c => {
-                if (c.length >= 2) pushPoint(c[0], c[1], 0.5);
-            });
-        }
-    });
-
-    if (data.length === 0) {
-        heatmapDiv.innerHTML = `<p>No valid coordinates found. Runs: ${runs.length}</p>`;
-        return;
+    if (Array.isArray(run.coordinates)) {
+      run.coordinates.forEach(c => { if (c.length >= 2) add(c[0], c[1], 0.5); });
     }
+  });
 
-    // --- Configuración del heatmap ---
-    heat.data(data);
-    heat.max(1.0);
-    heat.radius(6, 3); // radio + blur -> ajusta para más/menos "bola"
-    heat.gradient({
-        0.25: "blue",
-        0.45: "cyan",
-        0.65: "lime",
-        0.85: "yellow",
-        1.0: "red"
-    });
+  if (raw.length === 0) {
+    container.innerHTML = `<p>No valid coordinates found. Runs: ${runs.length}</p>`;
+    return;
+  }
 
-    // Dibujar
-    heat.draw(0.05);
+  // normalizar peso a [0,1]
+  const maxW = Math.max(...raw.map(p => p.w));
+  const heatPoints = raw.map(p => [p.lat, p.lng, maxW > 0 ? p.w / maxW : 1]);
 
-    console.log("Heatmap rendered with simpleheat. Points:", data.length);
+  // ----- 1) Preferencia: Leaflet + leaflet.heat (usa simpleheat internamente) -----
+  if (window.L && typeof L.heatLayer === 'function') {
+    try {
+      // limpiar mapa anterior
+      if (window.runsHeatmapMap) { window.runsHeatmapMap.remove(); window.runsHeatmapMap = null; }
 
-    // Redibujar al cambiar tamaño
-    window.addEventListener("resize", () => {
-        canvas.width = heatmapDiv.offsetWidth;
-        canvas.height = heatmapDiv.offsetHeight;
+      // crear mapa centrado en el primer punto o en bounds
+      const first = heatPoints[0];
+      const map = L.map('runs-heatmap', { preferCanvas: true }).setView([first[0], first[1]], 13);
+      window.runsHeatmapMap = map;
+
+      // tiles OSM
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+      }).addTo(map);
+
+      // parámetros base (ajústalos)
+      const baseRadius = 8;   // radio en px en el zoom inicial
+      const baseBlur = 12;
+      const baseZoom = map.getZoom();
+
+      // función fábrica de capa heat
+      const makeHeat = (radius) => {
+        return L.heatLayer(heatPoints, {
+          radius: radius,
+          blur: baseBlur,
+          maxZoom: 19,
+          minOpacity: 0.2
+        });
+      };
+
+      let heat = makeHeat(baseRadius).addTo(map);
+
+      // ajustar bounds si hay >1 punto
+      if (heatPoints.length > 1) {
+        const bounds = L.latLngBounds(heatPoints.map(p => [p[0], p[1]]));
+        map.fitBounds(bounds, { padding: [40, 40] });
+      }
+
+      // escala moderada al zoom: recrea capa con nuevo radius al cambiar zoom
+      map.on('zoomend', () => {
+        const z = map.getZoom();
+        // factor de escalado moderado (1.25): ajusta si quieres comportamiento más/menos agresivo
+        const scale = Math.pow(1.25, z - baseZoom);
+        const newRadius = Math.max(1, Math.round(baseRadius * scale));
+        try {
+          // si la implementación tiene setOptions/redraw, úsala; si no, recreamos la capa
+          if (typeof heat.setOptions === 'function') {
+            heat.setOptions({ radius: newRadius });
+            if (typeof heat.redraw === 'function') heat.redraw();
+          } else {
+            map.removeLayer(heat);
+            heat = makeHeat(newRadius).addTo(map);
+          }
+        } catch (e) {
+          console.warn('Error ajustando radius en zoom:', e);
+        }
+      });
+
+      // forzar reflow para que tiles aparezcan correctamente en contenedores ocultos/resize
+      map.whenReady(() => setTimeout(() => map.invalidateSize(), 120));
+      console.log('Heatmap rendered with leaflet.heat — points:', heatPoints.length);
+      return;
+    } catch (e) {
+      console.warn('leaflet.heat path failed, falling back', e);
+      // continúa a fallback
+    }
+  }
+
+  // ----- 2) Fallback: Plotly densitymap (si Plotly está cargado) -----
+  if (window.Plotly) {
+    try {
+      const lats = heatPoints.map(p => p[0]);
+      const lons = heatPoints.map(p => p[1]);
+      const z = heatPoints.map(p => p[2]);
+
+      const data = [{
+        type: 'densitymap',
+        lat: lats,
+        lon: lons,
+        z: z,
+        radius: 12,          // ajuste: prueba 6..30
+        hoverinfo: 'skip',
+        coloraxis: 'coloraxis'
+      }];
+
+      const layout = {
+        map: { style: 'outdoors', center: { lat: lats[0], lon: lons[0] }, zoom: 12 },
+        coloraxis: { colorscale: 'Hot' },
+        margin: { t: 0, b: 0, l: 0, r: 0 },
+        width: container.offsetWidth,
+        height: container.offsetHeight
+      };
+
+      Plotly.newPlot(container, data, layout, { responsive: true });
+      console.log('Heatmap rendered with Plotly densitymap — points:', heatPoints.length);
+      return;
+    } catch (e) {
+      console.warn('Plotly fallback failed', e);
+    }
+  }
+
+  // ----- 3) Último recurso: simpleheat (canvas solo) -----
+  if (window.simpleheat) {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = container.offsetWidth;
+      canvas.height = container.offsetHeight;
+      container.appendChild(canvas);
+
+      const heat = simpleheat(canvas);
+      // convertir lat/lng -> x/y relativos (simpleproyección equirectangular)
+      const pts = heatPoints.map(p => {
+        const lat = p[0], lng = p[1];
+        const x = ((lng + 180) / 360) * canvas.width;
+        const y = ((90 - lat) / 180) * canvas.height;
+        return [x, y, p[2] * 100]; // simpleheat espera valores más grandes; escala si quieres
+      });
+
+      heat.data(pts);
+      heat.max(100);
+      heat.radius(6, 4);
+      heat.gradient({ 0.25: 'blue', 0.5: 'lime', 1.0: 'red' });
+      heat.draw(0.05);
+      window.addEventListener('resize', () => {
+        canvas.width = container.offsetWidth;
+        canvas.height = container.offsetHeight;
         heat.resize();
         heat.draw(0.05);
-    });
+      });
+
+      console.log('Heatmap rendered with simpleheat (canvas) — points:', pts.length);
+      return;
+    } catch (e) {
+      console.warn('simpleheat fallback failed', e);
+    }
+  }
+
+  // si llegamos aquí, no hay ninguna librería cargada
+  container.innerHTML = '<p>Please load Leaflet + leaflet.heat, or Plotly, or simpleheat to show the heatmap.</p>';
 }
