@@ -671,26 +671,23 @@ export function renderRollingMeanDistanceChart(runs) {
 
 
 export function renderRunsHeatmap(runs) {
-    if (typeof h337 === "undefined") {
-        console.error("heatmap.js (h337) not loaded.");
-        return;
-    }
-
     const heatmapDiv = document.getElementById("runs-heatmap");
     if (!heatmapDiv) return;
 
-    // Forzar tamaño del contenedor
+    // Forzar tamaño
     heatmapDiv.style.width = "100%";
     heatmapDiv.style.height = "400px";
 
     // --- Preparar datos ---
-    const points = [];
+    const lats = [];
+    const lons = [];
+    const weights = [];
+
     const pushPoint = (lat, lng, weight) => {
         if (isFinite(lat) && isFinite(lng)) {
-            // Convertir lat/lng a coordenadas relativas dentro del contenedor
-            const x = ((lng + 180) / 360) * heatmapDiv.offsetWidth;
-            const y = ((90 - lat) / 180) * heatmapDiv.offsetHeight;
-            points.push({ x, y, value: weight });
+            lats.push(lat);
+            lons.push(lng);
+            weights.push(weight);
         }
     };
 
@@ -714,35 +711,32 @@ export function renderRunsHeatmap(runs) {
         }
     });
 
-    if (points.length === 0) {
+    if (lats.length === 0) {
         heatmapDiv.innerHTML = `<p>No valid coordinates found. Runs: ${runs.length}</p>`;
         return;
     }
 
-    // --- Crear instancia heatmap.js ---
-    const config = {
-        container: heatmapDiv,
-        radius: 5,        // radio más pequeño y preciso
-        blur: 0.6,        // bordes nítidos
-        maxOpacity: 0.6,
-        minOpacity: 0.1,
-        gradient: {
-            0.25: "blue",
-            0.45: "cyan",
-            0.65: "lime",
-            0.85: "yellow",
-            1.0: "red"
-        }
+    // --- Crear heatmap con Plotly ---
+    const data = [{
+        type: "densitymap",
+        lat: lats,
+        lon: lons,
+        z: weights,
+        radius: 12,                // controla la huella de cada punto
+        hoverinfo: "skip",
+        coloraxis: "coloraxis"
+    }];
+
+    const layout = {
+        map: {
+            style: "outdoors",     // puedes cambiar a "light", "dark", "satellite"
+            center: {lat: lats[0], lon: lons[0]}, // centra en el primer run
+            zoom: 12
+        },
+        coloraxis: {colorscale: "Hot"},
+        margin: {t:0, b:0, l:0, r:0}
     };
 
-    const heatmapInstance = h337.create(config);
-
-    // setData inicializa todo de golpe
-    heatmapInstance.setData({
-        max: 1.0,
-        min: 0,
-        data: points
-    });
-
-    console.log("Heatmap rendered with heatmap.js. Points:", points.length);
+    Plotly.newPlot(heatmapDiv, data, layout);
+    console.log("Heatmap rendered with Plotly. Points:", lats.length);
 }
