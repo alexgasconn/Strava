@@ -198,14 +198,40 @@ export function renderMonthlyDistanceChart(runs) {
         data: {
             labels: allMonths,
             datasets: [
-                { type: 'line', label: 'Distance (km)', data: monthlyDistances, borderColor: '#FC5200', yAxisID: 'y' },
-                { type: 'bar', label: '# Runs', data: monthlyCounts, backgroundColor: 'rgba(54,162,235,0.25)', yAxisID: 'y1' }
+                { 
+                    type: 'bar', 
+                    label: 'Distance (km)', 
+                    data: monthlyDistances, 
+                    backgroundColor: 'rgba(252, 82, 0, 0.7)', 
+                    borderColor: '#FC5200', 
+                    yAxisID: 'y' 
+                },
+                { 
+                    type: 'line', 
+                    label: '# Runs', 
+                    data: monthlyCounts, 
+                    borderColor: 'rgba(54,162,235,1)', 
+                    backgroundColor: 'rgba(54,162,235,0.25)', 
+                    fill: false, 
+                    yAxisID: 'y1', 
+                    tension: 0.2, 
+                    pointRadius: 3 
+                }
             ]
         },
         options: {
             scales: {
-                y: { type: 'linear', position: 'left', title: { display: true, text: 'Distance (km)' } },
-                y1: { type: 'linear', position: 'right', title: { display: true, text: '# Runs' }, grid: { drawOnChartArea: false } }
+                y: { 
+                    type: 'linear', 
+                    position: 'left', 
+                    title: { display: true, text: 'Distance (km)' } 
+                },
+                y1: { 
+                    type: 'linear', 
+                    position: 'right', 
+                    title: { display: true, text: '# Runs' }, 
+                    grid: { drawOnChartArea: false } 
+                }
             }
         }
     });
