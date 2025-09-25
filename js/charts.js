@@ -81,7 +81,7 @@ export function renderConsistencyChart(runs) {
             height: 11,
             gutter: 4
         },
-        range: 5,
+        range: 15,
         data: {
             source: Object.entries(aggregatedData).map(([date, value]) => ({ date, value })),
             x: 'date',
