@@ -458,7 +458,7 @@ export function renderFitnessChart(runs) {
     });
 }
 
-export function renderStackedAreaGearChart(runs, gearIdToName = {}) {
+export function renderStackedAreaGearChart(runs) {
     const gearIdToName = {};
         results.forEach(result => {
             const gear = result.gear;
@@ -523,7 +523,7 @@ export function renderStackedAreaGearChart(runs, gearIdToName = {}) {
     });
 }
 
-export function renderGearGanttChart(runs, gearIdToName = {}) {
+export function renderGearGanttChart(runs) {
     const gearIdToName = {};
         results.forEach(result => {
             const gear = result.gear;
