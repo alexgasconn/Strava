@@ -216,7 +216,8 @@ export function renderMonthlyDistanceChart(runs) {
                     fill: false,
                     yAxisID: 'y1',
                     tension: 0.2,
-                    pointRadius: 3
+                    pointRadius: 3,
+                    hidden: true
                 }
             ]
         },
@@ -394,25 +395,25 @@ export function renderVo2maxChart(runs) {
             labels: weeks,
             datasets: [
                 {
-                    label: 'Estimated VO₂max (weekly avg)',
-                    data: weeklyAvg,
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    backgroundColor: 'rgba(54, 162, 235, 0.3)',
-                    tension: 0.2,
-                    spanGaps: true,
-                    fill: 'origin',
-                },
-                {
                     label: 'Tendencia (rolling mean)',
                     data: trend,
-                    borderColor: 'rgba(252,82,0,0.2)',
-                    backgroundColor: 'rgba(252,82,0,0.05)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.3)',
                     borderWidth: 3,
                     pointRadius: 0,
-                    fill: false,
+                    fill: 'origin',
                     tension: 0.3,
                     spanGaps: true,
-                    hidden: false,
+                    order: 1
+                },
+                {
+                    label: 'Estimated VO₂max (weekly avg)',
+                    data: weeklyAvg,
+                    borderColor: 'rgba(252,82,0,0.2)',
+                    backgroundColor: 'rgba(252,82,0,0.05)',
+                    tension: 0.2,
+                    spanGaps: true,
+                    fill: false,
                     order: 0
                 }
             ]
