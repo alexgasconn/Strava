@@ -395,7 +395,7 @@ export function renderVo2maxChart(runs) {
             labels: weeks,
             datasets: [
                 {
-                    label: 'Tendencia (rolling mean)',
+                    label: 'Evolution',
                     data: trend,
                     borderColor: 'rgba(54, 162, 235, 1)',
                     backgroundColor: 'rgba(54, 162, 235, 0.3)',
@@ -409,8 +409,8 @@ export function renderVo2maxChart(runs) {
                 {
                     label: 'Estimated VO₂max (weekly avg)',
                     data: weeklyAvg,
-                    borderColor: 'rgba(252,82,0,0.2)',
-                    backgroundColor: 'rgba(252,82,0,0.05)',
+                    borderColor: 'rgba(6, 205, 250, 0.2)',
+                    backgroundColor: 'rgba(16, 144, 235, 0.05)',
                     tension: 0.2,
                     spanGaps: true,
                     fill: false,
@@ -725,9 +725,9 @@ export function renderRunsHeatmap(runs) {
     L.tileLayer(tileUrl, { attribution: '© OpenStreetMap contributors', maxZoom: 18 }).addTo(window.runsHeatmapMap);
 
     const cfg = {
-        radius: 3,             // mucho más pequeño
+        radius: 1,             // mucho más pequeño
         maxOpacity: 0.5,
-        scaleRadius: true,    // no escalar con zoom
+        scaleRadius: true,
         useLocalExtrema: true,
         latField: 'lat',
         lngField: 'lng',
@@ -751,7 +751,7 @@ export function renderRunsHeatmap(runs) {
         console.error("HeatmapOverlay failed, fallback to circles:", err);
         dataHMJS.forEach(p => {
             L.circle([p.lat, p.lng], {
-                radius: 30, // mucho más pequeño
+                radius: 3, // mucho más pequeño
                 color: 'red',
                 fillColor: 'red',
                 fillOpacity: 0.3,
