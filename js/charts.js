@@ -42,15 +42,13 @@ export function renderConsistencyChart(runs) {
         return acc;
     }, {});
 
-    // Find last activity date
-    const lastDateStr = runs.reduce((max, act) => act.start_date_local > max ? act.start_date_local : max, runs[0].start_date_local);
-    const lastDate = new Date(lastDateStr);
-    const startDate = new Date(lastDate);
-    startDate.setDate(startDate.getDate() - 395);
+    // Find the year to display (use latest activity year)
+    const years = runs.map(act => new Date(act.start_date_local).getFullYear());
+    const year = Math.max(...years);
 
-    // Add 30 days to lastDate for the end of the calendar
-    const endDate = new Date(lastDate);
-    endDate.setDate(endDate.getDate() + 30);
+    // Set start and end date to full calendar year
+    const startDate = new Date(`${year}-01-01`);
+    const endDate = new Date(`${year}-12-31`);
 
     // Color thresholds
     const kmValues = Object.values(aggregatedData).filter(v => v > 0).sort((a, b) => a - b);
@@ -81,7 +79,7 @@ export function renderConsistencyChart(runs) {
             height: 11,
             gutter: 4
         },
-        range: 15,
+        range: 12,
         data: {
             source: Object.entries(aggregatedData).map(([date, value]) => ({ date, value })),
             x: 'date',
