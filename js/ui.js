@@ -73,7 +73,6 @@ export function renderDashboard(allActivities, dateFilterFrom, dateFilterTo) {
     renderAllRunsTable(runs);
     renderStreaks(runs);
     renderPersonalBests(runs);
-    renderConsistencyChart(runs);
 }
 
 
@@ -102,6 +101,7 @@ function renderAllCharts(runs) {
     charts.renderDistanceVsElevationChart(runs);
     charts.renderElevationHistogram(runs);
     charts.renderRunsHeatmap(runs);
+    charts.renderConsistencyChart(runs);
 }
 
 
