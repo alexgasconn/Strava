@@ -245,7 +245,7 @@ export function renderPaceVsDistanceChart(runs) {
                 {
                     label: 'Race',
                     data: raceData,
-                    backgroundColor: 'rgba(244, 79, 29, 0.9)',
+                    backgroundColor: 'rgba(199, 164, 4, 0.9)',
                     pointStyle: 'rectRot'
                 },
                 {
