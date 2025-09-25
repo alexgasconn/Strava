@@ -59,15 +59,31 @@ export function renderConsistencyChart(runs) {
         ]
         : [2, 5, 10, 15];
 
-    // Render heatmap WITHOUT weekday or year labels inside the cells
-    const cal = new CalHeatmap();
+    // Clear previous content
     heatmapContainer.innerHTML = '';
 
+    // Ensure container has relative position for axes
+    if (!heatmapContainer.parentElement.classList.contains('cal-heatmap-wrapper')) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'cal-heatmap-wrapper';
+        wrapper.style.position = 'relative';
+        wrapper.style.display = 'inline-block';
+        wrapper.style.paddingLeft = '32px';
+        wrapper.style.paddingTop = '22px';
+        heatmapContainer.parentElement.insertBefore(wrapper, heatmapContainer);
+        wrapper.appendChild(heatmapContainer);
+    }
+    const wrapper = heatmapContainer.parentElement;
+
+    // Remove previous axes if any
+    Array.from(wrapper.querySelectorAll('.cal-heatmap-axis')).forEach(el => el.remove());
+
+    // Render heatmap
+    const cal = new CalHeatmap();
     cal.paint({
         itemSelector: heatmapContainer,
         domain: {
             type: "month",
-            label: null, // No label inside domain (no year/month in grid)
             gutter: 8
         },
         subDomain: {
@@ -75,8 +91,7 @@ export function renderConsistencyChart(runs) {
             radius: 2,
             width: 11,
             height: 11,
-            gutter: 4,
-            label: null // No weekday label inside cells
+            gutter: 4
         },
         range: 12,
         data: {
@@ -96,7 +111,7 @@ export function renderConsistencyChart(runs) {
         }
     });
 
-    // Add weekday axis (left) and year axis (top) outside the grid
+    // Add weekday axis (left) and year/month axis (top) outside the grid
     // Weekday axis
     const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     let weekdayAxis = document.createElement('div');
@@ -123,7 +138,7 @@ export function renderConsistencyChart(runs) {
         weekdayAxis.appendChild(label);
     });
 
-    // Year axis (top)
+    // Year/month axis (top)
     const months = [];
     let d = new Date(startDate);
     for (let i = 0; i < 12; i++) {
@@ -157,22 +172,6 @@ export function renderConsistencyChart(runs) {
         }
         yearAxis.appendChild(label);
     });
-
-    // Wrap heatmap in a relative container to position axes
-    if (!heatmapContainer.parentElement.classList.contains('cal-heatmap-wrapper')) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'cal-heatmap-wrapper';
-        wrapper.style.position = 'relative';
-        wrapper.style.display = 'inline-block';
-        wrapper.style.paddingLeft = '32px';
-        wrapper.style.paddingTop = '22px';
-        heatmapContainer.parentElement.insertBefore(wrapper, heatmapContainer);
-        wrapper.appendChild(heatmapContainer);
-    }
-    const wrapper = heatmapContainer.parentElement;
-
-    // Remove previous axes if any
-    Array.from(wrapper.querySelectorAll('.cal-heatmap-axis')).forEach(el => el.remove());
 
     weekdayAxis.classList.add('cal-heatmap-axis');
     yearAxis.classList.add('cal-heatmap-axis');
