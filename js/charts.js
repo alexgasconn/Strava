@@ -44,9 +44,10 @@ export function renderConsistencyChart(runs) {
 
     // Find last activity date
     const lastDateStr = runs.reduce((max, act) => act.start_date_local > max ? act.start_date_local : max, runs[0].start_date_local);
-    const lastDate = new Date(lastDateStr);
+    // Add 30 days to the last activity date
+    const lastDate = new Date(new Date(lastDateStr).getTime() + 30 * 24 * 60 * 60 * 1000);
     const startDate = new Date(lastDate);
-    startDate.setDate(startDate.getDate() - 365);
+    startDate.setDate(startDate.getDate() - 395);
 
     // Color thresholds
     const kmValues = Object.values(aggregatedData).filter(v => v > 0).sort((a, b) => a - b);
