@@ -245,14 +245,14 @@ export function renderPaceVsDistanceChart(runs) {
                 {
                     label: 'Race',
                     data: raceData,
-                    backgroundColor: 'rgba(54, 162, 235, 0.9)',
-                    pointStyle: 'cross'
+                    backgroundColor: 'rgba(244, 79, 29, 0.9)',
+                    pointStyle: 'rectRot'
                 },
                 {
                     label: 'Trail Run',
                     data: trailData,
-                    backgroundColor: 'saddlebrown',
-                    pointStyle: 'rect'
+                    backgroundColor: 'rgba(93, 22, 1, 0.98)',
+                    pointStyle: 'triangle'
                 }
             ]
         },
