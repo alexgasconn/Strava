@@ -228,7 +228,7 @@ export function renderPaceVsDistanceChart(runs) {
         },
         options: {
             scales: {
-                x: { title: { display: true, text: 'Distance (km)' } },
+                x: { title: { display: true, text: 'Diistance (km)' } },
                 y: { title: { display: true, text: 'Pace (min/km)' } }
             }
         }
