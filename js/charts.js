@@ -59,7 +59,7 @@ export function renderConsistencyChart(runs) {
         ]
         : [2, 5, 10, 15];
 
-    // Render heatmap with weekday labels and year indicator
+    // Render heatmap WITHOUT weekday or year labels inside the cells
     const cal = new CalHeatmap();
     heatmapContainer.innerHTML = '';
 
@@ -67,18 +67,7 @@ export function renderConsistencyChart(runs) {
         itemSelector: heatmapContainer,
         domain: {
             type: "month",
-            label: {
-                text: (date) => {
-                    // Show year for January, else show month
-                    const d = new Date(date);
-                    return d.getMonth() === 0
-                        ? `${d.getFullYear()}`
-                        : d.toLocaleString('en', { month: 'short' });
-                },
-                position: "bottom",
-                textAlign: "center",
-                offset: { x: 0, y: 18 }
-            },
+            label: null, // No label inside domain (no year/month in grid)
             gutter: 8
         },
         subDomain: {
@@ -87,16 +76,7 @@ export function renderConsistencyChart(runs) {
             width: 11,
             height: 11,
             gutter: 4,
-            label: (ts, idx) => {
-                // Only label first column (Monday)
-                if (idx % 7 === 0) {
-                    const d = new Date(ts);
-                    return d.toLocaleString('en', { weekday: 'short' });
-                }
-                return "";
-            },
-            labelPosition: "left",
-            labelAlign: "middle"
+            label: null // No weekday label inside cells
         },
         range: 12,
         data: {
@@ -115,6 +95,89 @@ export function renderConsistencyChart(runs) {
             start: startDate
         }
     });
+
+    // Add weekday axis (left) and year axis (top) outside the grid
+    // Weekday axis
+    const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    let weekdayAxis = document.createElement('div');
+    weekdayAxis.style.display = 'flex';
+    weekdayAxis.style.flexDirection = 'column';
+    weekdayAxis.style.justifyContent = 'center';
+    weekdayAxis.style.alignItems = 'flex-end';
+    weekdayAxis.style.position = 'absolute';
+    weekdayAxis.style.left = '0';
+    weekdayAxis.style.top = '32px';
+    weekdayAxis.style.height = 'calc(7 * 15px)';
+    weekdayAxis.style.zIndex = '2';
+    weekdayAxis.style.pointerEvents = 'none';
+    weekdayAxis.style.fontSize = '11px';
+    weekdayAxis.style.lineHeight = '15px';
+    weekdayAxis.style.fontFamily = 'sans-serif';
+    weekdayAxis.style.userSelect = 'none';
+    weekdays.forEach(wd => {
+        let label = document.createElement('div');
+        label.textContent = wd;
+        label.style.height = '15px';
+        label.style.textAlign = 'right';
+        label.style.color = '#888';
+        weekdayAxis.appendChild(label);
+    });
+
+    // Year axis (top)
+    const months = [];
+    let d = new Date(startDate);
+    for (let i = 0; i < 12; i++) {
+        months.push(new Date(d.getFullYear(), d.getMonth(), 1));
+        d.setMonth(d.getMonth() + 1);
+    }
+    let yearAxis = document.createElement('div');
+    yearAxis.style.display = 'flex';
+    yearAxis.style.flexDirection = 'row';
+    yearAxis.style.justifyContent = 'center';
+    yearAxis.style.alignItems = 'flex-end';
+    yearAxis.style.position = 'absolute';
+    yearAxis.style.left = '40px';
+    yearAxis.style.top = '0';
+    yearAxis.style.zIndex = '2';
+    yearAxis.style.pointerEvents = 'none';
+    yearAxis.style.fontSize = '12px';
+    yearAxis.style.fontFamily = 'sans-serif';
+    yearAxis.style.userSelect = 'none';
+
+    months.forEach((date, idx) => {
+        let label = document.createElement('div');
+        label.style.width = '40px';
+        label.style.textAlign = 'center';
+        label.style.color = '#444';
+        if (date.getMonth() === 0) {
+            label.textContent = date.getFullYear();
+            label.style.fontWeight = 'bold';
+        } else {
+            label.textContent = date.toLocaleString('en', { month: 'short' });
+        }
+        yearAxis.appendChild(label);
+    });
+
+    // Wrap heatmap in a relative container to position axes
+    if (!heatmapContainer.parentElement.classList.contains('cal-heatmap-wrapper')) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'cal-heatmap-wrapper';
+        wrapper.style.position = 'relative';
+        wrapper.style.display = 'inline-block';
+        wrapper.style.paddingLeft = '32px';
+        wrapper.style.paddingTop = '22px';
+        heatmapContainer.parentElement.insertBefore(wrapper, heatmapContainer);
+        wrapper.appendChild(heatmapContainer);
+    }
+    const wrapper = heatmapContainer.parentElement;
+
+    // Remove previous axes if any
+    Array.from(wrapper.querySelectorAll('.cal-heatmap-axis')).forEach(el => el.remove());
+
+    weekdayAxis.classList.add('cal-heatmap-axis');
+    yearAxis.classList.add('cal-heatmap-axis');
+    wrapper.appendChild(weekdayAxis);
+    wrapper.appendChild(yearAxis);
 }
 
 
