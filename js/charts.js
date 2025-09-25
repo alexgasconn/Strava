@@ -104,9 +104,9 @@ function createChart(canvasId, config) {
 export function renderActivityTypeChart(runs) {
     if (!runs || runs.length === 0) return;
 
-    // Percentil 80 de distancia para considerar Long Run
-    const p80Distance = [...runs].map(a => a.distance)
-        .sort((a, b) => a - b)[Math.floor(0.77 * runs.length)];
+    // Percentil 70 de distancia para considerar Long Run
+    const p70Distance = [...runs].map(a => a.distance)
+        .sort((a, b) => a - b)[Math.floor(0.7 * runs.length)];
 
     // Clasificación de cada actividad.
     runs.forEach(a => {
@@ -114,10 +114,12 @@ export function renderActivityTypeChart(runs) {
             a.workout_type_classified = 'Trail Run';
         } else if (a.average_heartrate && a.average_heartrate < 150) {
             a.workout_type_classified = 'Easy Run';
-        } else if (a.workout_type !== 1 && a.distance >= p80Distance) {
+        } else if (a.workout_type !== 1 && a.distance >= p70Distance) {
             a.workout_type_classified = 'Long Run';
         } else if (a.workout_type === 1) {
             a.workout_type_classified = 'Race';
+        } else if (a.average_heartrate && a.average_heartrate > 170) {
+            a.workout_type_classified = 'Intervals';
         } else {
             a.workout_type_classified = 'Other Workout';
         }
