@@ -198,39 +198,39 @@ export function renderMonthlyDistanceChart(runs) {
         data: {
             labels: allMonths,
             datasets: [
-                { 
-                    type: 'bar', 
-                    label: 'Distance (km)', 
-                    data: monthlyDistances, 
-                    backgroundColor: 'rgba(252, 82, 0, 0.7)', 
-                    borderColor: '#FC5200', 
-                    yAxisID: 'y' 
+                {
+                    type: 'bar',
+                    label: 'Distance (km)',
+                    data: monthlyDistances,
+                    backgroundColor: 'rgba(252, 82, 0, 0.7)',
+                    borderColor: '#FC5200',
+                    yAxisID: 'y'
                 },
-                { 
-                    type: 'line', 
-                    label: '# Runs', 
-                    data: monthlyCounts, 
-                    borderColor: 'rgba(54,162,235,1)', 
-                    backgroundColor: 'rgba(54,162,235,0.25)', 
-                    fill: false, 
-                    yAxisID: 'y1', 
-                    tension: 0.2, 
-                    pointRadius: 3 
+                {
+                    type: 'line',
+                    label: '# Runs',
+                    data: monthlyCounts,
+                    borderColor: 'rgba(54,162,235,1)',
+                    backgroundColor: 'rgba(54,162,235,0.25)',
+                    fill: false,
+                    yAxisID: 'y1',
+                    tension: 0.2,
+                    pointRadius: 3
                 }
             ]
         },
         options: {
             scales: {
-                y: { 
-                    type: 'linear', 
-                    position: 'left', 
-                    title: { display: true, text: 'Distance (km)' } 
+                y: {
+                    type: 'linear',
+                    position: 'left',
+                    title: { display: true, text: 'Distance (km)' }
                 },
-                y1: { 
-                    type: 'linear', 
-                    position: 'right', 
-                    title: { display: true, text: '# Runs' }, 
-                    grid: { drawOnChartArea: false } 
+                y1: {
+                    type: 'linear',
+                    position: 'right',
+                    title: { display: true, text: '# Runs' },
+                    grid: { drawOnChartArea: false }
                 }
             }
         }
@@ -458,79 +458,86 @@ export function renderFitnessChart(runs) {
     });
 }
 
-export function renderStackedAreaGearChart(runs) {
-    const gearIdToName = {};
+// export function renderStackedAreaGearChart(runs) {
+//     // 1. Aggregate distance per gear per month
+//     const gearMonthKm = runs.reduce((acc, a) => {
+//         if (!a.gear_id) return acc;
+//         const gearName = a.gear?.name || a.gear_id;
+//         const month = a.start_date_local.substring(0, 7);
+//         if (!acc[month]) acc[month] = {};
+//         acc[month][gearName] = (acc[month][gearName] || 0) + a.distance / 1000;
+//         return acc;
+//     }, {});
+
+//     // 2. Get all months between first and last activity
+//     const monthsSorted = runs.map(a => a.start_date_local.substring(0, 7)).sort();
+//     const firstMonth = monthsSorted[0];
+//     const lastMonth = monthsSorted[monthsSorted.length - 1];
+//     function getMonthRange(start, end) {
+//         const result = [];
+//         let [sy, sm] = start.split('-').map(Number);
+//         let [ey, em] = end.split('-').map(Number);
+//         while (sy < ey || (sy === ey && sm <= em)) {
+//             result.push(`${sy.toString().padStart(4, '0')}-${sm.toString().padStart(2, '0')}`);
+//             sm++;
+//             if (sm > 12) {
+//                 sm = 1;
+//                 sy++;
+//             }
+//         }
+//         return result;
+//     }
+//     const allMonths = getMonthRange(firstMonth, lastMonth);
+
+//     // 3. Get all gears
+//     const allGears = Array.from(new Set(runs.map(a => a.gear?.name || a.gear_id).filter(Boolean)));
+
+//     // 4. Build datasets, filling missing months with 0
+//     const datasets = allGears.map((gearId, idx) => {
+//         const label = gearIdToName[gearId] || gearId;
+//         return {
+//             label,
+//             data: allMonths.map(month => gearMonthKm[month]?.[gearId] || 0),
+//             backgroundColor: `hsl(${(idx * 60)}, 70%, 60%)`,
+//             fill: true,
+//             borderWidth: 1,
+//             tension: 0.2
+//         };
+//     });
+
+//     createChart('stacked-area-chart', {
+//         type: 'line',
+//         data: { labels: allMonths, datasets: datasets },
+//         options: {
+//             scales: {
+//                 x: { stacked: true, title: { display: true, text: 'Year-Month' } },
+//                 y: { stacked: true, title: { display: true, text: 'Distance (km)' } }
+//             }
+//         }
+//     });
+// }
+
+export async function renderGearGanttChart(runs) {
+    // 1. Obtener todos los IDs de gear usados
+    const gearIds = Array.from(new Set(runs.map(a => a.gear_id).filter(Boolean)));
+
+    // 2. Si no hay gears, no hacemos nada
+    if (gearIds.length === 0) return;
+
+    // 3. Traer info detallada de cada gear
+    let gearIdToName = {};
+    try {
+        const results = await Promise.all(gearIds.map(id => fetchGearById(id)));
         results.forEach(result => {
             const gear = result.gear;
-            // Usa el nombre más bonito disponible
             gearIdToName[gear.id] = gear.name || [gear.brand_name, gear.model_name].filter(Boolean).join(' ');
         });
-    // 1. Aggregate distance per gear per month
-    const gearMonthKm = runs.reduce((acc, a) => {
-        if (!a.gear_id) return acc;
-        const gearName = a.gear?.name || a.gear_id;
-        const month = a.start_date_local.substring(0, 7);
-        if (!acc[month]) acc[month] = {};
-        acc[month][gearName] = (acc[month][gearName] || 0) + a.distance / 1000;
-        return acc;
-    }, {});
-
-    // 2. Get all months between first and last activity
-    const monthsSorted = runs.map(a => a.start_date_local.substring(0, 7)).sort();
-    const firstMonth = monthsSorted[0];
-    const lastMonth = monthsSorted[monthsSorted.length - 1];
-    function getMonthRange(start, end) {
-        const result = [];
-        let [sy, sm] = start.split('-').map(Number);
-        let [ey, em] = end.split('-').map(Number);
-        while (sy < ey || (sy === ey && sm <= em)) {
-            result.push(`${sy.toString().padStart(4, '0')}-${sm.toString().padStart(2, '0')}`);
-            sm++;
-            if (sm > 12) {
-                sm = 1;
-                sy++;
-            }
-        }
-        return result;
+    } catch (error) {
+        console.error("Failed to fetch gear details:", error);
+        return;
     }
-    const allMonths = getMonthRange(firstMonth, lastMonth);
 
-    // 3. Get all gears
-    const allGears = Array.from(new Set(runs.map(a => a.gear?.name || a.gear_id).filter(Boolean)));
-
-    // 4. Build datasets, filling missing months with 0
-    const datasets = allGears.map((gearId, idx) => {
-        const label = gearIdToName[gearId] || gearId;
-        return {
-            label,
-            data: allMonths.map(month => gearMonthKm[month]?.[gearId] || 0),
-            backgroundColor: `hsl(${(idx * 60)}, 70%, 60%)`,
-            fill: true,
-            borderWidth: 1,
-            tension: 0.2
-        };
-    });
-
-    createChart('stacked-area-chart', {
-        type: 'line',
-        data: { labels: allMonths, datasets: datasets },
-        options: {
-            scales: {
-                x: { stacked: true, title: { display: true, text: 'Year-Month' } },
-                y: { stacked: true, title: { display: true, text: 'Distance (km)' } }
-            }
-        }
-    });
-}
-
-export function renderGearGanttChart(runs) {
-    const gearIdToName = {};
-        results.forEach(result => {
-            const gear = result.gear;
-            // Usa el nombre más bonito disponible
-            gearIdToName[gear.id] = gear.name || [gear.brand_name, gear.model_name].filter(Boolean).join(' ');
-        });
-    // 1. Aggregate distance per gear per month
+    // 4. Agregar distancia por gear por mes
     const gearMonthKm = runs.reduce((acc, a) => {
         if (!a.gear_id) return acc;
         const gearKey = a.gear_id;
@@ -540,7 +547,7 @@ export function renderGearGanttChart(runs) {
         return acc;
     }, {});
 
-    // 2. Get all months between first and last activity
+    // 5. Rango de meses
     const monthsSorted = runs.map(a => a.start_date_local.substring(0, 7)).sort();
     const firstMonth = monthsSorted[0];
     const lastMonth = monthsSorted[monthsSorted.length - 1];
@@ -560,16 +567,17 @@ export function renderGearGanttChart(runs) {
     }
     const allMonths = getMonthRange(firstMonth, lastMonth);
 
-    // 3. Get all gears
-    const allGears = Array.from(new Set(runs.map(a => a.gear_id).filter(Boolean)));
+    // 6. Todos los gears
+    const allGears = gearIds;
 
-    // 4. Build datasets, filling missing months with 0
+    // 7. Construir datasets
     const datasets = allGears.map((gearId, idx) => ({
         label: gearIdToName[gearId] || gearId,
         data: allMonths.map(month => gearMonthKm[month]?.[gearId] || 0),
-        backgroundColor: `hsl(${(idx * 60)}, 70%, 60%)`
+        backgroundColor: `hsl(${(idx * 60) % 360}, 70%, 60%)`
     }));
 
+    // 8. Crear gráfico
     createChart('gear-gantt-chart', {
         type: 'bar',
         data: { labels: allMonths, datasets },
@@ -582,6 +590,7 @@ export function renderGearGanttChart(runs) {
         }
     });
 }
+
 
 export function renderDistanceVsElevationChart(runs) {
     // Separate data for trail and non-trail runs
@@ -746,7 +755,7 @@ export function renderRunsHeatmap(runs) {
             try {
                 const decoded = decodePolyline(run.map.polyline);
                 decoded.forEach(p => pushPoint(p[0], p[1], 0.4));
-            } catch {}
+            } catch { }
         }
         if (Array.isArray(run.coordinates)) {
             run.coordinates.forEach(c => { if (c.length >= 2) pushPoint(c[0], c[1], 0.5); });

@@ -95,7 +95,7 @@ function renderAllCharts(runs) {
     charts.renderDistanceHistogram(runs);
     charts.renderVo2maxChart(runs);
     charts.renderFitnessChart(runs);
-    charts.renderStackedAreaGearChart(runs);
+    // charts.renderStackedAreaGearChart(runs);
     charts.renderGearGanttChart(runs);
     charts.renderAccumulatedDistanceChart(runs);
     charts.renderRollingMeanDistanceChart(runs);
