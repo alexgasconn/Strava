@@ -725,9 +725,10 @@ export function renderRunsHeatmap(runs) {
     L.tileLayer(tileUrl, { attribution: '© OpenStreetMap contributors', maxZoom: 18 }).addTo(window.runsHeatmapMap);
 
     const cfg = {
-        radius: 1,             // mucho más pequeño
+        radius: 1,             // área base mucho más pequeña
+        blur: 0.5,             // bordes muy concentrados
         maxOpacity: 0.5,
-        scaleRadius: true,
+        scaleRadius: true,     // que siga el zoom
         useLocalExtrema: true,
         latField: 'lat',
         lngField: 'lng',
@@ -741,6 +742,7 @@ export function renderRunsHeatmap(runs) {
             1.0: 'red'
         }
     };
+
 
     try {
         const heatmapLayer = new HeatmapOverlay(cfg);
