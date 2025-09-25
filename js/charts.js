@@ -546,18 +546,36 @@ export function renderGearGanttChart(runs, gearIdToName = {}) {
 }
 
 export function renderDistanceVsElevationChart(runs) {
-    const data = runs.map(r => ({
-        x: r.distance / 1000,
-        y: r.total_elevation_gain || 0
-    }));
+    // Separate data for trail and non-trail runs
+    const trailData = [];
+    const roadData = [];
+    runs.forEach(r => {
+        const point = {
+            x: r.distance / 1000,
+            y: r.total_elevation_gain || 0
+        };
+        if (r.sport_type === 'TrailRun') {
+            trailData.push(point);
+        } else {
+            roadData.push(point);
+        }
+    });
+
     createChart('distance-vs-elevation-chart', {
         type: 'scatter',
         data: {
-            datasets: [{
-                label: 'Runs',
-                data,
-                backgroundColor: 'rgba(54,162,235,0.7)'
-            }]
+            datasets: [
+                {
+                    label: 'Trail Run',
+                    data: trailData,
+                    backgroundColor: 'rgba(6, 6, 249, 0.31)'
+                },
+                {
+                    label: 'Other Runs',
+                    data: roadData,
+                    backgroundColor: 'rgba(54,162,235,0.7)'
+                }
+            ]
         },
         options: {
             scales: {
