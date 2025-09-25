@@ -252,7 +252,7 @@ export function renderPaceVsDistanceChart(runs) {
                     label: 'Trail Run',
                     data: trailData,
                     backgroundColor: 'rgba(93, 22, 1, 0.98)',
-                    pointStyle: 'triangle'
+                    pointStyle: 'circle'
                 }
             ]
         },
