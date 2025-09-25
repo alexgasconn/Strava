@@ -670,24 +670,38 @@ export function renderRollingMeanDistanceChart(runs) {
 
 
 
+
+
+
 export function renderRunsHeatmap(runs) {
+    if (typeof simpleheat === "undefined") {
+        console.error("simpleheat not loaded.");
+        return;
+    }
+
     const heatmapDiv = document.getElementById("runs-heatmap");
     if (!heatmapDiv) return;
 
-    // Forzar tamaño
+    // Forzar tamaño del contenedor
     heatmapDiv.style.width = "100%";
     heatmapDiv.style.height = "400px";
+    heatmapDiv.innerHTML = "";
+
+    // Crear canvas dentro del div
+    const canvas = document.createElement("canvas");
+    canvas.width = heatmapDiv.offsetWidth;
+    canvas.height = heatmapDiv.offsetHeight;
+    heatmapDiv.appendChild(canvas);
+
+    const heat = simpleheat(canvas);
 
     // --- Preparar datos ---
-    const lats = [];
-    const lons = [];
-    const weights = [];
-
+    const data = [];
     const pushPoint = (lat, lng, weight) => {
         if (isFinite(lat) && isFinite(lng)) {
-            lats.push(lat);
-            lons.push(lng);
-            weights.push(weight);
+            const x = ((lng + 180) / 360) * canvas.width;
+            const y = ((90 - lat) / 180) * canvas.height;
+            data.push([x, y, weight]);
         }
     };
 
@@ -711,32 +725,33 @@ export function renderRunsHeatmap(runs) {
         }
     });
 
-    if (lats.length === 0) {
+    if (data.length === 0) {
         heatmapDiv.innerHTML = `<p>No valid coordinates found. Runs: ${runs.length}</p>`;
         return;
     }
 
-    // --- Crear heatmap con Plotly ---
-    const data = [{
-        type: "densitymap",
-        lat: lats,
-        lon: lons,
-        z: weights,
-        radius: 12,                // controla la huella de cada punto
-        hoverinfo: "skip",
-        coloraxis: "coloraxis"
-    }];
+    // --- Configuración del heatmap ---
+    heat.data(data);
+    heat.max(1.0);
+    heat.radius(6, 3); // radio + blur -> ajusta para más/menos "bola"
+    heat.gradient({
+        0.25: "blue",
+        0.45: "cyan",
+        0.65: "lime",
+        0.85: "yellow",
+        1.0: "red"
+    });
 
-    const layout = {
-        map: {
-            style: "outdoors",     // puedes cambiar a "light", "dark", "satellite"
-            center: {lat: lats[0], lon: lons[0]}, // centra en el primer run
-            zoom: 12
-        },
-        coloraxis: {colorscale: "Hot"},
-        margin: {t:0, b:0, l:0, r:0}
-    };
+    // Dibujar
+    heat.draw(0.05);
 
-    Plotly.newPlot(heatmapDiv, data, layout);
-    console.log("Heatmap rendered with Plotly. Points:", lats.length);
+    console.log("Heatmap rendered with simpleheat. Points:", data.length);
+
+    // Redibujar al cambiar tamaño
+    window.addEventListener("resize", () => {
+        canvas.width = heatmapDiv.offsetWidth;
+        canvas.height = heatmapDiv.offsetHeight;
+        heat.resize();
+        heat.draw(0.05);
+    });
 }
