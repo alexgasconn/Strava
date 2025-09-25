@@ -671,19 +671,15 @@ export function renderRollingMeanDistanceChart(runs) {
 
 
 export function renderRunsHeatmap(runs) {
-    if (!window.L) {
-        console.error("Leaflet.js not loaded.");
-        return;
-    }
-    if (typeof HeatmapOverlay === "undefined") {
-        console.error("HeatmapOverlay (leaflet-heatmap.js) not loaded.");
+    if (typeof h337 === "undefined") {
+        console.error("heatmap.js (h337) not loaded.");
         return;
     }
 
     const heatmapDiv = document.getElementById("runs-heatmap");
     if (!heatmapDiv) return;
 
-    // Forzar tamaño
+    // Forzar tamaño del contenedor
     heatmapDiv.style.width = "100%";
     heatmapDiv.style.height = "400px";
 
@@ -691,7 +687,10 @@ export function renderRunsHeatmap(runs) {
     const points = [];
     const pushPoint = (lat, lng, weight) => {
         if (isFinite(lat) && isFinite(lng)) {
-            points.push({ lat, lng, count: weight });
+            // Convertir lat/lng a coordenadas relativas dentro del contenedor
+            const x = ((lng + 180) / 360) * heatmapDiv.offsetWidth;
+            const y = ((90 - lat) / 180) * heatmapDiv.offsetHeight;
+            points.push({ x, y, value: weight });
         }
     };
 
@@ -717,40 +716,16 @@ export function renderRunsHeatmap(runs) {
 
     if (points.length === 0) {
         heatmapDiv.innerHTML = `<p>No valid coordinates found. Runs: ${runs.length}</p>`;
-        if (window.runsHeatmapMap) {
-            window.runsHeatmapMap.remove();
-            window.runsHeatmapMap = null;
-        }
         return;
     }
 
-    // --- Limpiar mapa anterior ---
-    if (window.runsHeatmapMap) {
-        window.runsHeatmapMap.remove();
-        window.runsHeatmapMap = null;
-    }
-    heatmapDiv.innerHTML = "";
-
-    // --- Crear mapa ---
-    const first = points[0];
-    const map = L.map("runs-heatmap").setView([first.lat, first.lng], 13);
-    window.runsHeatmapMap = map;
-
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "© OpenStreetMap contributors",
-        maxZoom: 20
-    }).addTo(map);
-
-    // --- Config heatmap ---
-    const cfg = {
-        radius: 0.8,          // radio base pequeño
-        blur: 0.7,            // suavizado mínimo
-        maxOpacity: 0.5,
-        scaleRadius: true,    // ajusta con zoom
-        useLocalExtrema: false,
-        latField: "lat",
-        lngField: "lng",
-        valueField: "count",
+    // --- Crear instancia heatmap.js ---
+    const config = {
+        container: heatmapDiv,
+        radius: 5,        // radio más pequeño y preciso
+        blur: 0.6,        // bordes nítidos
+        maxOpacity: 0.6,
+        minOpacity: 0.1,
         gradient: {
             0.25: "blue",
             0.45: "cyan",
@@ -760,17 +735,14 @@ export function renderRunsHeatmap(runs) {
         }
     };
 
-    const heatmapLayer = new HeatmapOverlay(cfg);
-    heatmapLayer.addTo(map);
-    heatmapLayer.setData({ max: 1.0, data: points });
+    const heatmapInstance = h337.create(config);
 
-    console.log("Heatmap rendered. Points:", points.length);
+    // setData inicializa todo de golpe
+    heatmapInstance.setData({
+        max: 1.0,
+        min: 0,
+        data: points
+    });
 
-    // --- Ajustar bounds ---
-    if (points.length > 1) {
-        const bounds = L.latLngBounds(points.map(p => [p.lat, p.lng]));
-        map.fitBounds(bounds, { padding: [40, 40] });
-    }
+    console.log("Heatmap rendered with heatmap.js. Points:", points.length);
 }
-
-
