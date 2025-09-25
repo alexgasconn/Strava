@@ -459,6 +459,12 @@ export function renderFitnessChart(runs) {
 }
 
 export function renderStackedAreaGearChart(runs, gearIdToName = {}) {
+    const gearIdToName = {};
+        results.forEach(result => {
+            const gear = result.gear;
+            // Usa el nombre más bonito disponible
+            gearIdToName[gear.id] = gear.name || [gear.brand_name, gear.model_name].filter(Boolean).join(' ');
+        });
     // 1. Aggregate distance per gear per month
     const gearMonthKm = runs.reduce((acc, a) => {
         if (!a.gear_id) return acc;
@@ -518,6 +524,12 @@ export function renderStackedAreaGearChart(runs, gearIdToName = {}) {
 }
 
 export function renderGearGanttChart(runs, gearIdToName = {}) {
+    const gearIdToName = {};
+        results.forEach(result => {
+            const gear = result.gear;
+            // Usa el nombre más bonito disponible
+            gearIdToName[gear.id] = gear.name || [gear.brand_name, gear.model_name].filter(Boolean).join(' ');
+        });
     // 1. Aggregate distance per gear per month
     const gearMonthKm = runs.reduce((acc, a) => {
         if (!a.gear_id) return acc;
