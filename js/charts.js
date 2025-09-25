@@ -30,34 +30,26 @@ export function renderConsistencyChart(runs) {
         return;
     }
 
-    // 1. Manejo del caso sin datos: Si no hay carreras, muestra un mensaje y termina.
     if (!runs || runs.length === 0) {
         heatmapContainer.innerHTML = '<p style="text-align: center; color: #8c8c8c;">No activity data for this period.</p>';
         return;
     }
 
-    // 2. Agregación de datos: Sumamos la distancia total (en km) por día.
+    // Aggregate distance per day (km)
     const aggregatedData = runs.reduce((acc, act) => {
         const date = act.start_date_local.substring(0, 10);
         acc[date] = (acc[date] || 0) + (act.distance ? act.distance / 1000 : 0);
         return acc;
     }, {});
 
-    // 3. Configuración del calendario (CalHeatmap)
-    const cal = new CalHeatmap();
-    heatmapContainer.innerHTML = ''; // Limpiamos el contenedor antes de dibujar
-
-    // 4. Determinamos el rango de fechas dinámicamente
+    // Find last activity date
     const lastDateStr = runs.reduce((max, act) => act.start_date_local > max ? act.start_date_local : max, runs[0].start_date_local);
     const lastDate = new Date(lastDateStr);
-
-    // La fecha de inicio del calendario será 365 días ANTES de la última actividad
     const startDate = new Date(lastDate);
     startDate.setDate(startDate.getDate() - 365);
 
-    // 5. Calculamos los umbrales de color en función de los datos (percentiles)
+    // Color thresholds
     const kmValues = Object.values(aggregatedData).filter(v => v > 0).sort((a, b) => a - b);
-    // Si hay pocos datos, usamos valores fijos razonables
     const thresholds = kmValues.length >= 5
         ? [
             kmValues[Math.floor(0.2 * kmValues.length)],
@@ -67,22 +59,46 @@ export function renderConsistencyChart(runs) {
         ]
         : [2, 5, 10, 15];
 
-    // 6. Renderizado del heatmap
+    // Render heatmap with weekday labels and year indicator
+    const cal = new CalHeatmap();
+    heatmapContainer.innerHTML = '';
+
     cal.paint({
         itemSelector: heatmapContainer,
         domain: {
             type: "month",
-            label: { text: "MMM", position: "bottom" },
-            paddding: 5
+            label: {
+                text: (date) => {
+                    // Show year for January, else show month
+                    const d = new Date(date);
+                    return d.getMonth() === 0
+                        ? `${d.getFullYear()}`
+                        : d.toLocaleString('en', { month: 'short' });
+                },
+                position: "bottom",
+                textAlign: "center",
+                offset: { x: 0, y: 18 }
+            },
+            gutter: 8
         },
         subDomain: {
             type: "ghDay",
             radius: 2,
             width: 11,
             height: 11,
-            gutter: 4
+            gutter: 4,
+            label: (ts, idx) => {
+                // Only label first column (Monday)
+                if (idx % 7 === 0) {
+                    const d = new Date(ts);
+                    return d.toLocaleString('en', { weekday: 'short' });
+                }
+                return "";
+            },
+            labelPosition: "left",
+            labelAlign: "middle"
         },
-        range: 12, // Muestra 12 meses
+        range: 12,
         data: {
             source: Object.entries(aggregatedData).map(([date, value]) => ({ date, value })),
             x: 'date',
@@ -96,9 +112,8 @@ export function renderConsistencyChart(runs) {
             }
         },
         date: {
-            start: startDate // Usamos la fecha de inicio calculada
-        },
-        itemSelector: "#cal-heatmap",
+            start: startDate
+        }
     });
 }
 
