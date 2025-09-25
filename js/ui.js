@@ -972,8 +972,8 @@ async function renderGearSection(runs) {
             // Usa el nombre más bonito disponible
             gearIdToName[gear.id] = gear.name || [gear.brand_name, gear.model_name].filter(Boolean).join(' ');
         });
-        charts.renderStackedAreaGearChart(runs, gearIdToName);
-        charts.renderGearGanttChart(runs, gearIdToName);
+        // charts.renderStackedAreaGearChart(runs, gearIdToName);
+        // charts.renderGearGanttChart(runs, gearIdToName);
         renderGearCards(results, gearUsage, runs);
     } catch (error) {
         console.error("Failed to fetch gear details:", error);
