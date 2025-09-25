@@ -212,23 +212,53 @@ export function renderMonthlyDistanceChart(runs) {
 }
 
 export function renderPaceVsDistanceChart(runs) {
-    const data = runs.filter(r => r.distance > 0).map(r => ({
-        x: r.distance / 1000,
-        y: (r.moving_time / 60) / (r.distance / 1000) // Pace in min/km
-    }));
+    // Prepare datasets for each category
+    const generalData = [];
+    const raceData = [];
+    const trailData = [];
+
+    runs.forEach(r => {
+        if (!r.distance || !r.moving_time) return;
+        const point = {
+            x: r.distance / 1000,
+            y: (r.moving_time / 60) / (r.distance / 1000) // Pace in min/km
+        };
+        if (r.workout_type === 1) {
+            raceData.push(point);
+        } else if (r.sport_type === 'TrailRun') {
+            trailData.push(point);
+        } else {
+            generalData.push(point);
+        }
+    });
 
     createChart('pace-vs-distance-chart', {
         type: 'scatter',
         data: {
-            datasets: [{
-                label: 'Runs',
-                data: data,
-                backgroundColor: 'rgba(252, 82, 0, 0.7)'
-            }]
+            datasets: [
+                {
+                    label: 'General Training',
+                    data: generalData,
+                    backgroundColor: 'rgba(252, 82, 0, 0.7)',
+                    pointStyle: 'circle'
+                },
+                {
+                    label: 'Race',
+                    data: raceData,
+                    backgroundColor: 'rgba(54, 162, 235, 0.9)',
+                    pointStyle: 'cross'
+                },
+                {
+                    label: 'Trail Run',
+                    data: trailData,
+                    backgroundColor: 'saddlebrown',
+                    pointStyle: 'rect'
+                }
+            ]
         },
         options: {
             scales: {
-                x: { title: { display: true, text: 'Diistance (km)' } },
+                x: { title: { display: true, text: 'Distance (km)' } },
                 y: { title: { display: true, text: 'Pace (min/km)' } }
             }
         }
