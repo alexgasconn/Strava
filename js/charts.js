@@ -1,5 +1,6 @@
 // js/charts.js
 import { calculateFitness, rollingMean as calculateRollingMean } from './utils.js';
+import { fetchGearById } from './api.js'; // o donde esté definida
 
 let charts = {}; // Almacén global para las instancias de Chart.js
 let runsHeatmapMap = null; // Almacén para el mapa de Leaflet
