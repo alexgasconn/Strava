@@ -454,9 +454,9 @@ function renderHourMatrix(runs) {
             datasets: [{
                 label: 'Runs',
                 data: data,
-                backgroundColor: data.map(d => getColor(d.v)),
-                width: 20,
-                height: 20
+                backgroundColor: data.map(d => getColor(d.v))
+                // width: 20,
+                // height: 20
             }]
         },
         options: {
