@@ -965,15 +965,11 @@ async function renderGearSection(runs) {
     gearListContainer.innerHTML = '<p>Loading detailed gear info...</p>';
     try {
         const results = await Promise.all(gearIds.map(id => fetchGearById(id)));
-        // NUEVO CÓDIGO AQUI
         const gearIdToName = {};
         results.forEach(result => {
             const gear = result.gear;
-            // Usa el nombre más bonito disponible
             gearIdToName[gear.id] = gear.name || [gear.brand_name, gear.model_name].filter(Boolean).join(' ');
         });
-        // charts.renderStackedAreaGearChart(runs, gearIdToName);
-        // charts.renderGearGanttChart(runs, gearIdToName);
         renderGearCards(results, gearUsage, runs);
     } catch (error) {
         console.error("Failed to fetch gear details:", error);
