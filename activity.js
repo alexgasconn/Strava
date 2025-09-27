@@ -23,13 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${h > 0 ? h + ':' : ''}${m.toString().padStart(h > 0 ? 2 : 1, '0')}:${s.toString().padStart(2, '0')}`;
     }
 
-    // function formatPace(speedInMps) {
-    //     if (!speedInMps || speedInMps === 0) return '-';
-    //     const paceInSecPerKm = 1000 / speedInMps;
-    //     const min = Math.floor(paceInSecPerKm / 60);
-    //     const sec = Math.round(paceInSecPerKm % 60);
-    //     return `${min}:${sec.toString().padStart(2, '0')}`;
-    // }
 
     function decodePolyline(str) {
         let index = 0, lat = 0, lng = 0, coordinates = [];
@@ -311,11 +304,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             new Chart(document.getElementById('chart-pace'), {
                 type: 'line',
-                data: { labels: kmLabels, datasets: [{ label: 'Ritmo (s/km)', data: paceData, borderColor: '#FC5200' }] }
+                data: { labels: kmLabels, datasets: [{ label: 'Pace (s/km)', data: paceData, borderColor: '#FC5200' }] }
             });
             new Chart(document.getElementById('chart-heartrate'), {
                 type: 'line',
-                data: { labels: kmLabels, datasets: [{ label: 'FC Media (bpm)', data: hrData, borderColor: 'red' }] }
+                data: { labels: kmLabels, datasets: [{ label: 'HR Avg (bpm)', data: hrData, borderColor: 'red' }] }
             });
         }
 
@@ -377,19 +370,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         legend: { display: false }
                     },
                     scales: {
-                        x: { title: { display: true, text: 'Distancia (km)' } },
+                        x: { title: { display: true, text: 'Distance (km)' } },
                         y: { reverse: yAxisReverse, title: { display: true, text: label } }
                     }
                 }
             });
         }
 
-        // 1. Altitud vs Distancia
+        // 1. Altitud vs Distance
         if (altitude && altitude.data) {
             createStreamChart('chart-altitude', 'Altitud (m)', altitude.data, '#888');
         }
 
-        // 2. Ritmo vs Distancia (Cálculo corregido)
+        // 2. Ritmo vs Distance (Cálculo corregido)
         if (time && time.data) {
             const paceStreamData = [];
             for (let i = 1; i < distance.data.length; i++) {
@@ -427,19 +420,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 options: {
                     plugins: { legend: { display: false } },
                     scales: {
-                        x: { title: { display: true, text: 'Distancia (km)' } },
+                        x: { title: { display: true, text: 'Distance (km)' } },
                         y: { reverse: true, title: { display: true, text: 'Ritmo (min/km)' } }
                     }
                 }
             });
         }
 
-        // 3. Frecuencia Cardíaca vs Distancia
+        // 3. Frecuencia Cardíaca vs Distance
         if (heartrate && heartrate.data) {
             createStreamChart('chart-heart-distance', 'FC (bpm)', heartrate.data, 'red');
         }
 
-        // 4. Cadencia vs Distancia
+        // 4. Cadencia vs Distance
         if (cadence && cadence.data) {
             // La cadencia de carrera se multiplica por 2 (es por pierna)
             const cadenceData = act.type === 'Run' ? cadence.data.map(c => c * 2) : cadence.data;
@@ -473,7 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (allActivities.length > 0 && activityData.type && activityData.type.includes('Run')) {
                 // Filtramos solo las carreras de la lista completa
                 const runs = allActivities.filter(a => a.type && a.type.includes('Run'));
-                // Ordenamos por distancia para obtener el ranking
+                // Ordenamos por Distance para obtener el ranking
                 const sortedByDistance = [...runs].sort((a, b) => b.distance - a.distance);
                 // Buscamos la posición (índice) de la actividad actual en la lista ordenada
                 const rankIndex = sortedByDistance.findIndex(a => a.id === activityData.id);
