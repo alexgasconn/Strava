@@ -286,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (act.map?.summary_polyline && window.L) {
             const coords = decodePolyline(act.map.summary_polyline);
             if (coords.length > 0) {
-                mapDiv.innerHTML = ""; // Añade esto antes de L.map(...)
+                mapDiv.innerHTML = "";
                 const map = L.map('activity-map').setView(coords[0], 13);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
                 L.polyline(coords, { color: '#FC5200', weight: 4 }).addTo(map);
@@ -542,6 +542,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const classificationResults = classifyRun(activityData, streamData);
             renderClassifierResults(classificationResults);
+            renderHrMinMaxAreaChart(streamData);
 
             renderHrZoneDistributionChart(streamData);
 
@@ -1073,6 +1074,121 @@ function renderHrZoneDistributionChart(streams) {
                 y: {
                     title: { display: true, text: 'Time (min)' },
                     beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+
+
+/**
+ * Render an area chart of heart rate with min/max fill and average line.
+ * Uses Chart.js. The X axis is distance (km), Y is HR (bpm).
+ * The area between min and max HR in each segment is filled, and the average HR is a line.
+ * @param {object} streams - The activity streams (must include heartrate, distance).
+ */
+function renderHrMinMaxAreaChart(streams) {
+    const canvas = document.getElementById('hr-minmax-area-chart');
+    if (!canvas || !streams.heartrate || !streams.distance) return;
+
+    // Decide number of segments (e.g. 40 for a typical run)
+    const N_SEGMENTS = 40;
+    const hr = streams.heartrate.data;
+    const dist = streams.distance.data;
+    if (!Array.isArray(hr) || !Array.isArray(dist) || hr.length !== dist.length || hr.length < 2) return;
+
+    // Find total distance
+    const totalDist = dist[dist.length - 1];
+    const segmentLength = totalDist / N_SEGMENTS;
+
+    // Prepare arrays for min, max, avg HR per segment, and X labels (distance in km)
+    const minArr = [], maxArr = [], avgArr = [], labels = [];
+
+    let segStart = 0, segEnd = segmentLength, i = 0;
+    for (let s = 0; s < N_SEGMENTS; s++) {
+        // Collect HR values in this segment
+        const hrVals = [];
+        while (i < dist.length && dist[i] < segEnd) {
+            if (hr[i] !== null && hr[i] !== undefined) hrVals.push(hr[i]);
+            i++;
+        }
+        if (hrVals.length === 0) {
+            // If no data, repeat last or use null
+            minArr.push(minArr.length ? minArr[minArr.length - 1] : null);
+            maxArr.push(maxArr.length ? maxArr[maxArr.length - 1] : null);
+            avgArr.push(avgArr.length ? avgArr[avgArr.length - 1] : null);
+        } else {
+            minArr.push(Math.min(...hrVals));
+            maxArr.push(Math.max(...hrVals));
+            avgArr.push(hrVals.reduce((a, b) => a + b, 0) / hrVals.length);
+        }
+        labels.push((segEnd / 1000).toFixed(2));
+        segStart = segEnd;
+        segEnd += segmentLength;
+    }
+
+    // Remove previous chart if exists
+    if (canvas.chartInstance) {
+        canvas.chartInstance.destroy();
+        canvas.chartInstance = null;
+    }
+
+    // Chart.js area between min/max, and average line
+    canvas.chartInstance = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'HR Min',
+                    data: minArr,
+                    fill: '+1',
+                    backgroundColor: 'rgba(252,82,0,0.08)',
+                    borderColor: 'rgba(0,0,0,0)',
+                    pointRadius: 0,
+                    order: 1
+                },
+                {
+                    label: 'HR Max',
+                    data: maxArr,
+                    fill: false,
+                    backgroundColor: 'rgba(0,0,0,0)',
+                    borderColor: 'rgba(0,0,0,0)',
+                    pointRadius: 0,
+                    order: 1
+                },
+                {
+                    label: 'HR Avg',
+                    data: avgArr,
+                    fill: false,
+                    borderColor: '#FC5200',
+                    backgroundColor: 'rgba(0,0,0,0)',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    order: 2
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: true },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: ${Math.round(context.parsed.y)} bpm`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    title: { display: true, text: 'Distance (km)' }
+                },
+                y: {
+                    title: { display: true, text: 'Heart Rate (bpm)' },
+                    beginAtZero: false
                 }
             }
         }

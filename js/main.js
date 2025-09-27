@@ -108,8 +108,6 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('strava_training_zones', JSON.stringify(zones));
 
             allActivities = activities;
-            // renderAthleteProfile(athlete);
-            // renderTrainingZones(zones);
 
             setupDashboard(allActivities);
             renderDashboard(allActivities, dateFilterFrom, dateFilterTo);
