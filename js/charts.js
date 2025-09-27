@@ -265,7 +265,7 @@ export function renderPaceVsDistanceChart(runs) {
         data: {
             datasets: [
                 {
-                    label: 'General Training',
+                    label: 'Run',
                     data: generalData,
                     backgroundColor: 'rgba(252, 82, 0, 0.7)',
                     pointStyle: 'circle'
