@@ -122,7 +122,7 @@ export function renderActivityTypeChart(runs) {
         } else if (a.average_heartrate && a.average_heartrate > 165) {
             a.workout_type_classified = 'Intervals/Intense Run';
         } else {
-            a.workout_type_classified = 'Other Workout/Unclassified';
+            a.workout_type_classified = 'Other/Unclassified';
         }
     });
 
@@ -562,7 +562,7 @@ export function renderDistanceVsElevationChart(runs) {
                     backgroundColor: 'rgba(174, 59, 2, 0.87)'
                 },
                 {
-                    label: 'Other Runs',
+                    label: 'Run',
                     data: roadData,
                     backgroundColor: 'rgba(245, 131, 0, 0.78)'
                 }
