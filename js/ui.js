@@ -419,6 +419,9 @@ function renderWeeklyMixChart(runs) {
     });
 }
 
+
+
+
 function renderHourMatrix(runs) {
     const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const hourLabels = Array.from({ length: 24 }, (_, i) => i);
@@ -454,9 +457,7 @@ function renderHourMatrix(runs) {
             datasets: [{
                 label: 'Runs',
                 data: data,
-                backgroundColor: data.map(d => getColor(d.v)),
-                width: ({ chart }) => (chart.width - 80) / 24,
-                height: ({ chart }) => (chart.height - 80) / 7
+                backgroundColor: data.map(d => getColor(d.v))
             }]
         },
         options: {
@@ -472,18 +473,11 @@ function renderHourMatrix(runs) {
                         label: item => `Runs: ${item.raw.v}`
                     }
                 },
-                legend: { display: false },
-                title: {
-                    display: true,
-                    text: 'Activity Heatmap by Day and Hour',
-                    font: { size: 16, weight: 'bold' },
-                    padding: { bottom: 20 }
-                }
+                legend: { display: false }
             },
             scales: {
                 x: {
                     type: 'linear',
-                    position: 'bottom',
                     min: -0.5,
                     max: 23.5,
                     ticks: {
@@ -493,26 +487,13 @@ function renderHourMatrix(runs) {
                             return '';
                         },
                         color: '#333',
-                        font: { size: 11, weight: '600' },
-                        autoSkip: false,
-                        maxRotation: 0,
-                        minRotation: 0
+                        font: { weight: 'bold' }
                     },
-                    grid: { 
-                        display: true,
-                        color: '#e0e0e0',
-                        lineWidth: 1
-                    },
-                    title: { 
-                        display: true, 
-                        text: 'Hour of Day', 
-                        font: { size: 14, weight: 'bold' },
-                        padding: { top: 10 }
-                    }
+                    grid: { color: '#eee' },
+                    title: { display: true, text: 'Hour of Day', font: { weight: 'bold' } }
                 },
                 y: {
                     type: 'linear',
-                    position: 'left',
                     min: -0.5,
                     max: 6.5,
                     ticks: {
@@ -522,28 +503,10 @@ function renderHourMatrix(runs) {
                             return '';
                         },
                         color: '#333',
-                        font: { size: 12, weight: '600' },
-                        autoSkip: false
+                        font: { weight: 'bold' }
                     },
-                    grid: { 
-                        display: true,
-                        color: '#e0e0e0',
-                        lineWidth: 1
-                    },
-                    title: { 
-                        display: true, 
-                        text: 'Day of Week', 
-                        font: { size: 14, weight: 'bold' },
-                        padding: { right: 10 }
-                    }
-                }
-            },
-            layout: {
-                padding: {
-                    left: 10,
-                    right: 10,
-                    top: 10,
-                    bottom: 10
+                    grid: { color: '#eee' },
+                    title: { display: true, text: 'Day of Week', font: { weight: 'bold' } }
                 }
             }
         }
@@ -597,9 +560,7 @@ function renderYearMonthMatrix(runs) {
             datasets: [{
                 label: 'Distance (km)',
                 data,
-                backgroundColor: data.map(d => getColor(d.km)),
-                width: ({ chart }) => (chart.width - 80) / 12,
-                height: ({ chart }) => (chart.height - 80) / years.length
+                backgroundColor: data.map(d => getColor(d.km))
             }]
         },
         options: {
@@ -621,18 +582,11 @@ function renderYearMonthMatrix(runs) {
                         }
                     }
                 },
-                legend: { display: false },
-                title: {
-                    display: true,
-                    text: 'Monthly Distance Heatmap by Year',
-                    font: { size: 16, weight: 'bold' },
-                    padding: { bottom: 20 }
-                }
+                legend: { display: false }
             },
             scales: {
                 x: {
                     type: 'linear',
-                    position: 'bottom',
                     min: -0.5,
                     max: 11.5,
                     ticks: {
@@ -642,26 +596,17 @@ function renderYearMonthMatrix(runs) {
                             return '';
                         },
                         color: '#333',
-                        font: { size: 11, weight: '600' },
-                        autoSkip: false,
-                        maxRotation: 45,
-                        minRotation: 0
+                        font: { weight: 'bold' }
                     },
-                    grid: { 
-                        display: true,
-                        color: '#e0e0e0',
-                        lineWidth: 1
-                    },
+                    grid: { color: '#eee' },
                     title: {
                         display: true,
                         text: 'Month',
-                        font: { size: 14, weight: 'bold' },
-                        padding: { top: 10 }
+                        font: { weight: 'bold' }
                     }
                 },
                 y: {
                     type: 'linear',
-                    position: 'left',
                     min: -0.5,
                     max: years.length - 0.5,
                     ticks: {
@@ -671,34 +616,22 @@ function renderYearMonthMatrix(runs) {
                             return '';
                         },
                         color: '#333',
-                        font: { size: 12, weight: '600' },
-                        autoSkip: false
+                        font: { weight: 'bold' }
                     },
-                    grid: { 
-                        display: true,
-                        color: '#e0e0e0',
-                        lineWidth: 1
-                    },
+                    grid: { color: '#eee' },
                     title: {
                         display: true,
                         text: 'Year',
-                        font: { size: 14, weight: 'bold' },
-                        padding: { right: 10 }
+                        font: { weight: 'bold' }
                     }
                 }
             },
             layout: {
-                padding: {
-                    left: 10,
-                    right: 10,
-                    top: 10,
-                    bottom: 10
-                }
+                padding: 10
             }
         }
     });
 }
-
 
 
 
