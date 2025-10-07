@@ -454,9 +454,9 @@ function renderHourMatrix(runs) {
             datasets: [{
                 label: 'Runs',
                 data: data,
-                backgroundColor: data.map(d => getColor(d.v))
-                // width: 20,
-                // height: 20
+                backgroundColor: data.map(d => getColor(d.v)),
+                width: ({ chart }) => (chart.width - 80) / 24,
+                height: ({ chart }) => (chart.height - 80) / 7
             }]
         },
         options: {
@@ -472,41 +472,83 @@ function renderHourMatrix(runs) {
                         label: item => `Runs: ${item.raw.v}`
                     }
                 },
-                legend: { display: false }
+                legend: { display: false },
+                title: {
+                    display: true,
+                    text: 'Activity Heatmap by Day and Hour',
+                    font: { size: 16, weight: 'bold' },
+                    padding: { bottom: 20 }
+                }
             },
             scales: {
                 x: {
                     type: 'linear',
-                    min: 0,
-                    max: 24,
+                    position: 'bottom',
+                    min: -0.5,
+                    max: 23.5,
                     ticks: {
                         stepSize: 1,
-                        callback: val => `${val}:00`,
+                        callback: val => {
+                            if (val >= 0 && val < 24) return `${val}h`;
+                            return '';
+                        },
                         color: '#333',
-                        font: { weight: 'bold' }
+                        font: { size: 11, weight: '600' },
+                        autoSkip: false,
+                        maxRotation: 0,
+                        minRotation: 0
                     },
-                    grid: { color: '#eee' },
-                    title: { display: true, text: 'Hour of Day', font: { weight: 'bold' } }
+                    grid: { 
+                        display: true,
+                        color: '#e0e0e0',
+                        lineWidth: 1
+                    },
+                    title: { 
+                        display: true, 
+                        text: 'Hour of Day', 
+                        font: { size: 14, weight: 'bold' },
+                        padding: { top: 10 }
+                    }
                 },
                 y: {
                     type: 'linear',
+                    position: 'left',
                     min: -0.5,
                     max: 6.5,
                     ticks: {
                         stepSize: 1,
-                        callback: val => dayLabels[val] || '',
+                        callback: val => {
+                            if (val >= 0 && val < 7) return dayLabels[val];
+                            return '';
+                        },
                         color: '#333',
-                        font: { weight: 'bold' }
+                        font: { size: 12, weight: '600' },
+                        autoSkip: false
                     },
-                    grid: { color: '#eee' },
-                    title: { display: true, text: 'Weekday', font: { weight: 'bold' } }
+                    grid: { 
+                        display: true,
+                        color: '#e0e0e0',
+                        lineWidth: 1
+                    },
+                    title: { 
+                        display: true, 
+                        text: 'Day of Week', 
+                        font: { size: 14, weight: 'bold' },
+                        padding: { right: 10 }
+                    }
+                }
+            },
+            layout: {
+                padding: {
+                    left: 10,
+                    right: 10,
+                    top: 10,
+                    bottom: 10
                 }
             }
         }
     });
 }
-
-
 
 
 function renderYearMonthMatrix(runs) {
@@ -555,7 +597,9 @@ function renderYearMonthMatrix(runs) {
             datasets: [{
                 label: 'Distance (km)',
                 data,
-                backgroundColor: data.map(d => getColor(d.km))
+                backgroundColor: data.map(d => getColor(d.km)),
+                width: ({ chart }) => (chart.width - 80) / 12,
+                height: ({ chart }) => (chart.height - 80) / years.length
             }]
         },
         options: {
@@ -577,46 +621,79 @@ function renderYearMonthMatrix(runs) {
                         }
                     }
                 },
-                legend: { display: false }
+                legend: { display: false },
+                title: {
+                    display: true,
+                    text: 'Monthly Distance Heatmap by Year',
+                    font: { size: 16, weight: 'bold' },
+                    padding: { bottom: 20 }
+                }
             },
             scales: {
                 x: {
                     type: 'linear',
+                    position: 'bottom',
                     min: -0.5,
                     max: 11.5,
                     ticks: {
                         stepSize: 1,
-                        callback: val => monthLabels[val] || '',
+                        callback: val => {
+                            if (val >= 0 && val < 12) return monthLabels[val];
+                            return '';
+                        },
                         color: '#333',
-                        font: { weight: 'bold' }
+                        font: { size: 11, weight: '600' },
+                        autoSkip: false,
+                        maxRotation: 45,
+                        minRotation: 0
                     },
-                    grid: { color: '#eee' },
+                    grid: { 
+                        display: true,
+                        color: '#e0e0e0',
+                        lineWidth: 1
+                    },
                     title: {
                         display: true,
                         text: 'Month',
-                        font: { weight: 'bold' }
+                        font: { size: 14, weight: 'bold' },
+                        padding: { top: 10 }
                     }
                 },
                 y: {
                     type: 'linear',
+                    position: 'left',
                     min: -0.5,
                     max: years.length - 0.5,
                     ticks: {
                         stepSize: 1,
-                        callback: val => years[val] || '',
+                        callback: val => {
+                            if (val >= 0 && val < years.length) return years[val];
+                            return '';
+                        },
                         color: '#333',
-                        font: { weight: 'bold' }
+                        font: { size: 12, weight: '600' },
+                        autoSkip: false
                     },
-                    grid: { color: '#eee' },
+                    grid: { 
+                        display: true,
+                        color: '#e0e0e0',
+                        lineWidth: 1
+                    },
                     title: {
                         display: true,
                         text: 'Year',
-                        font: { weight: 'bold' }
+                        font: { size: 14, weight: 'bold' },
+                        padding: { right: 10 }
                     }
                 }
             },
             layout: {
-                padding: 10
+                padding: {
+                    left: 10,
+                    right: 10,
+                    top: 10,
+                    bottom: 10
+                }
             }
         }
     });
