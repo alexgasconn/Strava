@@ -130,6 +130,7 @@ export function renderActivityTypeChart(runs) {
         }
         else {
             a.workout_type_classified = 'Other';
+        }
     });
 
     // Contar por categoría
