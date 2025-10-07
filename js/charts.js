@@ -121,8 +121,6 @@ export function renderActivityTypeChart(runs) {
             a.workout_type_classified = 'Race';
         } else if (a.average_heartrate && a.average_heartrate > 165) {
             a.workout_type_classified = 'Intervals/Intense Run';
-        } else {
-            a.workout_type_classified = 'Other/Unclassified';
         }
     });
 
