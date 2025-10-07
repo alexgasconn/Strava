@@ -421,6 +421,8 @@ function renderWeeklyMixChart(runs) {
 
 
 
+
+
 function renderHourMatrix(runs) {
     const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const hourLabels = Array.from({ length: 24 }, (_, i) => i);
@@ -476,27 +478,37 @@ function renderHourMatrix(runs) {
             },
             scales: {
                 x: {
-                    type: 'category',
-                    labels: hourLabels,
-                    grid: { color: '#eee' },
+                    type: 'linear',
+                    min: 0,
+                    max: 24,
                     ticks: {
+                        stepSize: 1,
+                        callback: val => `${val}:00`,
                         color: '#333',
                         font: { weight: 'bold' }
-                    }
+                    },
+                    grid: { color: '#eee' },
+                    title: { display: true, text: 'Hour of Day', font: { weight: 'bold' } }
                 },
                 y: {
-                    type: 'category',
-                    labels: dayLabels,
-                    grid: { color: '#eee' },
+                    type: 'linear',
+                    min: -0.5,
+                    max: 6.5,
                     ticks: {
+                        stepSize: 1,
+                        callback: val => dayLabels[val] || '',
                         color: '#333',
                         font: { weight: 'bold' }
-                    }
+                    },
+                    grid: { color: '#eee' },
+                    title: { display: true, text: 'Weekday', font: { weight: 'bold' } }
                 }
             }
         }
     });
 }
+
+
 
 
 function renderYearMonthMatrix(runs) {
@@ -571,20 +583,36 @@ function renderYearMonthMatrix(runs) {
             },
             scales: {
                 x: {
-                    type: 'category',
-                    labels: monthLabels,
-                    grid: { color: '#eee' },
+                    type: 'linear',
+                    min: -0.5,
+                    max: 11.5,
                     ticks: {
+                        stepSize: 1,
+                        callback: val => monthLabels[val] || '',
                         color: '#333',
+                        font: { weight: 'bold' }
+                    },
+                    grid: { color: '#eee' },
+                    title: {
+                        display: true,
+                        text: 'Month',
                         font: { weight: 'bold' }
                     }
                 },
                 y: {
-                    type: 'category',
-                    labels: years,
-                    grid: { color: '#eee' },
+                    type: 'linear',
+                    min: -0.5,
+                    max: years.length - 0.5,
                     ticks: {
+                        stepSize: 1,
+                        callback: val => years[val] || '',
                         color: '#333',
+                        font: { weight: 'bold' }
+                    },
+                    grid: { color: '#eee' },
+                    title: {
+                        display: true,
+                        text: 'Year',
                         font: { weight: 'bold' }
                     }
                 }
@@ -595,8 +623,6 @@ function renderYearMonthMatrix(runs) {
         }
     });
 }
-
-
 
 
 
