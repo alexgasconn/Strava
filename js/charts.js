@@ -670,12 +670,6 @@ export function renderRollingMeanDistanceChart(runs) {
 
 
 
-
-
-
-
-
-
 export function renderRunsHeatmap(runs) {
     const mapDiv = document.getElementById("runs-heatmap");
     if (!mapDiv) return;

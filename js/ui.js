@@ -125,9 +125,9 @@ export function renderAthleteTab(allActivities) {
     renderStartTimeHistogram(runs);
     renderYearlyComparison(runs);
     renderGearSection(runs);
-    // renderPersonalBests(runs);
     renderWeeklyMixChart(runs);
     renderHourMatrix(runs);
+    renderYearMonthMatrix(runs);
 }
 
 function renderAllTimeStats(runs) {
@@ -505,6 +505,118 @@ function renderHourMatrix(runs) {
         }
     });
 }
+
+
+function renderYearMonthMatrix(runs) {
+    // Obtener año y mes de cada run
+    const stats = {}; // { [year]: { [month]: { count, distance } } }
+
+    runs.forEach(run => {
+        const date = new Date(run.start_date_local);
+        if (isNaN(date)) return;
+
+        const year = date.getFullYear();
+        const month = date.getMonth(); // 0–11
+
+        if (!stats[year]) stats[year] = {};
+        if (!stats[year][month]) stats[year][month] = { count: 0, distance: 0 };
+
+        stats[year][month].count++;
+        stats[year][month].distance += run.distance / 1000; // asumiendo distancia en metros
+    });
+
+    // Ejes
+    const years = Object.keys(stats).map(y => parseInt(y)).sort((a, b) => a - b);
+    const months = Array.from({ length: 12 }, (_, i) => i);
+
+    // Preparar datos para matriz
+    const data = [];
+    let maxKm = 0;
+    let maxRuns = 0;
+
+    years.forEach((year, yIdx) => {
+        months.forEach(month => {
+            const entry = stats[year]?.[month];
+            const km = entry ? entry.distance : 0;
+            const count = entry ? entry.count : 0;
+
+            maxKm = Math.max(maxKm, km);
+            maxRuns = Math.max(maxRuns, count);
+
+            data.push({ x: month, y: yIdx, km, count });
+        });
+    });
+
+    function getColor(km) {
+        if (km === 0) return 'rgba(255,255,255,0)';
+        const alpha = 0.15 + 0.85 * (km / maxKm);
+        return `rgba(0,128,255,${alpha.toFixed(2)})`;
+    }
+
+    const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    createUiChart('year-month-matrix', {
+        type: 'matrix',
+        data: {
+            datasets: [{
+                label: 'Distance (km)',
+                data: data,
+                backgroundColor: data.map(d => getColor(d.km))
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        title: items => {
+                            const d = items[0].raw;
+                            return `${years[d.y]} - ${monthLabels[d.x]}`;
+                        },
+                        label: item => {
+                            const d = item.raw;
+                            return [
+                                `Runs: ${d.count}`,
+                                `Distance: ${d.km.toFixed(1)} km`
+                            ];
+                        }
+                    }
+                },
+                legend: { display: false }
+            },
+            scales: {
+                x: {
+                    type: 'linear',
+                    min: -0.5,
+                    max: 11.5,
+                    ticks: {
+                        stepSize: 1,
+                        callback: val => monthLabels[val] || '',
+                        color: '#333',
+                        font: { weight: 'bold' }
+                    },
+                    grid: { color: '#eee' },
+                    title: { display: true, text: 'Month', font: { weight: 'bold' } }
+                },
+                y: {
+                    type: 'linear',
+                    min: -0.5,
+                    max: years.length - 0.5,
+                    ticks: {
+                        stepSize: 1,
+                        callback: val => years[val] || '',
+                        color: '#333',
+                        font: { weight: 'bold' }
+                    },
+                    grid: { color: '#eee' },
+                    title: { display: true, text: 'Year', font: { weight: 'bold' } }
+                }
+            }
+        }
+    });
+}
+
 
 
 
