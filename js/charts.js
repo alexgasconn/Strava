@@ -122,6 +122,14 @@ export function renderActivityTypeChart(runs) {
         } else if (a.average_heartrate && a.average_heartrate > 160) {
             a.workout_type_classified = 'High intensity Run';
         }
+        else if (a.suffer_score && a.suffer_score >= 50) {
+            a.workout_type_classified = 'Intervals/Intense Run';
+        }
+        else if (a.suffer_score && a.suffer_score < 50) {
+            a.workout_type_classified = 'Easy/Recovery Run';
+        }
+        else {
+            a.workout_type_classified = 'Other';
     });
 
     // Contar por categoría
