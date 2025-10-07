@@ -113,20 +113,16 @@ export function renderActivityTypeChart(runs) {
     runs.forEach(a => {
         if (a.sport_type === 'TrailRun') {
             a.workout_type_classified = 'Trail Run';
-        } else if (a.average_heartrate && a.average_heartrate < 140) {
-            a.workout_type_classified = 'Low intensity Run';
         } else if (a.workout_type !== 1 && a.distance >= p70Distance) {
             a.workout_type_classified = 'Long Run';
         } else if (a.workout_type === 1) {
             a.workout_type_classified = 'Race';
-        } else if (a.average_heartrate && a.average_heartrate > 160) {
-            a.workout_type_classified = 'High intensity Run';
         }
         else if (a.suffer_score && a.suffer_score >= 50) {
-            a.workout_type_classified = 'Intervals/Intense Run';
+            a.workout_type_classified = 'High intensity Run';
         }
         else if (a.suffer_score && a.suffer_score < 50) {
-            a.workout_type_classified = 'Easy/Recovery Run';
+            a.workout_type_classified = 'Low intensity Run';
         }
         else {
             a.workout_type_classified = 'Other';
