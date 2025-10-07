@@ -507,8 +507,9 @@ function renderHourMatrix(runs) {
 }
 
 
+
+
 function renderYearMonthMatrix(runs) {
-    // Obtener año y mes de cada run
     const stats = {}; // { [year]: { [month]: { count, distance } } }
 
     runs.forEach(run => {
@@ -522,27 +523,22 @@ function renderYearMonthMatrix(runs) {
         if (!stats[year][month]) stats[year][month] = { count: 0, distance: 0 };
 
         stats[year][month].count++;
-        stats[year][month].distance += run.distance / 1000; // asumiendo distancia en metros
+        stats[year][month].distance += run.distance / 1000; // asumiendo metros → km
     });
 
-    // Ejes
-    const years = Object.keys(stats).map(y => parseInt(y)).sort((a, b) => a - b);
+    const years = Object.keys(stats).map(Number).sort((a, b) => a - b);
     const months = Array.from({ length: 12 }, (_, i) => i);
+    const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-    // Preparar datos para matriz
     const data = [];
     let maxKm = 0;
-    let maxRuns = 0;
-
     years.forEach((year, yIdx) => {
         months.forEach(month => {
             const entry = stats[year]?.[month];
             const km = entry ? entry.distance : 0;
             const count = entry ? entry.count : 0;
-
             maxKm = Math.max(maxKm, km);
-            maxRuns = Math.max(maxRuns, count);
-
             data.push({ x: month, y: yIdx, km, count });
         });
     });
@@ -553,14 +549,12 @@ function renderYearMonthMatrix(runs) {
         return `rgba(0,128,255,${alpha.toFixed(2)})`;
     }
 
-    const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
     createUiChart('year-month-matrix', {
         type: 'matrix',
         data: {
             datasets: [{
                 label: 'Distance (km)',
-                data: data,
+                data,
                 backgroundColor: data.map(d => getColor(d.km))
             }]
         },
@@ -597,7 +591,11 @@ function renderYearMonthMatrix(runs) {
                         font: { weight: 'bold' }
                     },
                     grid: { color: '#eee' },
-                    title: { display: true, text: 'Month', font: { weight: 'bold' } }
+                    title: {
+                        display: true,
+                        text: 'Month',
+                        font: { weight: 'bold' }
+                    }
                 },
                 y: {
                     type: 'linear',
@@ -610,12 +608,20 @@ function renderYearMonthMatrix(runs) {
                         font: { weight: 'bold' }
                     },
                     grid: { color: '#eee' },
-                    title: { display: true, text: 'Year', font: { weight: 'bold' } }
+                    title: {
+                        display: true,
+                        text: 'Year',
+                        font: { weight: 'bold' }
+                    }
                 }
+            },
+            layout: {
+                padding: 10
             }
         }
     });
 }
+
 
 
 
