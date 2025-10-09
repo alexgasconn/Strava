@@ -105,15 +105,15 @@ export function renderConsistencyChart(runs) {
 export function renderActivityTypeChart(runs) {
     if (!runs || runs.length === 0) return;
 
-    // Percentil 70 de distancia para considerar Long Run
-    const p70Distance = [...runs].map(a => a.distance)
-        .sort((a, b) => a - b)[Math.floor(0.7 * runs.length)];
+    // Percentil 80 de distancia para considerar Long Run
+    const p80Distance = [...runs].map(a => a.distance)
+        .sort((a, b) => a - b)[Math.floor(0.8 * runs.length)];
 
     // Clasificación de cada actividad.
     runs.forEach(a => {
         if (a.sport_type === 'TrailRun') {
             a.workout_type_classified = 'Trail Run';
-        } else if (a.workout_type !== 1 && a.distance >= p70Distance) {
+        } else if (a.workout_type !== 1 && a.distance >= p80Distance) {
             a.workout_type_classified = 'Long Run';
         } else if (a.workout_type === 1) {
             a.workout_type_classified = 'Race';
