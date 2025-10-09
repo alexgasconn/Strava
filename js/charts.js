@@ -118,12 +118,16 @@ export function renderActivityTypeChart(runs) {
         } else if (a.workout_type === 1) {
             a.workout_type_classified = 'Race';
         }
-        else if (a.suffer_score && a.suffer_score >= 50) {
+        if (a.suffer_score && a.suffer_score >= 50) {
             a.workout_type_classified = 'High intensity Run';
         }
-        else if (a.suffer_score && a.suffer_score < 50) {
+        else if (a.suffer_score && a.suffer_score >= 35) {
+            a.workout_type_classified = 'Moderate intensity Run';
+        }
+        else if (a.suffer_score && a.suffer_score < 35) {
             a.workout_type_classified = 'Low intensity Run';
         }
+
         else {
             a.workout_type_classified = 'Other';
         }
@@ -668,8 +672,6 @@ export function renderRollingMeanDistanceChart(runs) {
 
 
 
-
-
 export function renderRunsHeatmap(runs) {
     const mapDiv = document.getElementById("runs-heatmap");
     if (!mapDiv) return;
@@ -720,8 +722,8 @@ export function renderRunsHeatmap(runs) {
                 fillOpacity: 0.8,
                 weight: 1
             })
-            .bindPopup(`${p.type === "start" ? "Start" : "End"} Point`)
-            .addTo(window.runsPointsMap);
+                .bindPopup(`${p.type === "start" ? "Start" : "End"} Point`)
+                .addTo(window.runsPointsMap);
         });
 
         // Ajustar vista
