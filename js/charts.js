@@ -118,7 +118,7 @@ export function renderActivityTypeChart(runs) {
         } else if (a.workout_type === 1) {
             a.workout_type_classified = 'Race';
         }
-        if (a.suffer_score && a.suffer_score >= 50) {
+        else if (a.suffer_score && a.suffer_score >= 50) {
             a.workout_type_classified = 'High intensity Run';
         }
         else if (a.suffer_score && a.suffer_score >= 35) {
