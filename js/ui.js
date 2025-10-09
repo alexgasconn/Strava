@@ -743,12 +743,14 @@ function renderStreaks(runs) {
         }
         prevDay = day;
     }
-    // Racha actual de días (hasta hoy, hacia atrás)
-    let today = new Date().toISOString().slice(0, 10);
+
+    // Racha actual de días (hasta today()-1)
+    let yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    let tempToday = yesterday.toISOString().slice(0, 10);
     let idx = allDays.length - 1;
     let currentDayStreakValue = 0;
     let currentDayStreakStart = null, currentDayStreakEnd = null;
-    let tempToday = today;
     while (idx >= 0) {
         if (allDays[idx] === tempToday) {
             if (currentDayStreakValue === 0) currentDayStreakEnd = tempToday;
@@ -766,7 +768,7 @@ function renderStreaks(runs) {
         const d = new Date(a.start_date_local);
         const year = d.getFullYear();
         const week = utils.getISOWeek(d);
-        return `${year}-W${week}`;
+        return `${year}-W${String(week).padStart(2, '0')}`;
     }));
     const allWeeks = Array.from(weekSet).sort();
 
@@ -783,7 +785,7 @@ function renderStreaks(runs) {
         } else {
             if (
                 (parseInt(year) === prev[0] && week === prev[1] + 1) ||
-                (parseInt(year) === prev[0] + 1 && prev[1] === 52 && week === 1)
+                (parseInt(year) === prev[0] + 1 && prev[1] >= 52 && week === 1)
             ) {
                 currentWeekStreak++;
             } else {
@@ -798,24 +800,26 @@ function renderStreaks(runs) {
         }
         prevWeek = allWeeks[i];
     }
-    // Racha actual de semanas (hasta esta semana, hacia atrás)
-    let now = new Date();
-    let thisWeekYear = now.getFullYear();
-    let thisWeekNum = utils.getISOWeek(now);
+
+    // Racha actual de semanas (hasta semana de yesterday)
+    let yesterdayDate = new Date();
+    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+    let tempWeekYear = yesterdayDate.getFullYear();
+    let tempWeekNum = utils.getISOWeek(yesterdayDate);
     let currentWeekStreakValue = 0;
-    let weekIdx = allWeeks.length - 1;
     let currentWeekStreakStart = null, currentWeekStreakEnd = null;
-    let tempWeekYear = thisWeekYear, tempWeekNum = thisWeekNum;
+    let weekIdx = allWeeks.length - 1;
     while (weekIdx >= 0) {
         const [wYear, wNum] = allWeeks[weekIdx].split('-W').map(Number);
         if (wYear === tempWeekYear && wNum === tempWeekNum) {
-            if (currentWeekStreakValue === 0) currentWeekStreakEnd = `${tempWeekYear}-W${tempWeekNum}`;
+            if (currentWeekStreakValue === 0) currentWeekStreakEnd = `${wYear}-W${String(wNum).padStart(2,'0')}`;
             currentWeekStreakValue++;
-            currentWeekStreakStart = `${tempWeekYear}-W${tempWeekNum}`;
+            currentWeekStreakStart = `${wYear}-W${String(wNum).padStart(2,'0')}`;
             // Retrocede una semana
             if (tempWeekNum === 1) {
                 tempWeekYear -= 1;
-                tempWeekNum = 52;
+                // Ajuste a 52 o 53 semanas según utils
+                tempWeekNum = utils.getISOWeek(new Date(tempWeekYear, 11, 28)); 
             } else {
                 tempWeekNum -= 1;
             }
@@ -856,6 +860,7 @@ function renderStreaks(runs) {
         }
         prevMonth = allMonths[i];
     }
+
     // Racha actual de meses (hasta este mes, hacia atrás)
     let thisMonthStr = new Date().toISOString().slice(0, 7);
     let [curYear, curMonth] = thisMonthStr.split('-').map(Number);
@@ -925,6 +930,7 @@ function renderStreaks(runs) {
       </div>
     `;
 }
+
 
 function renderPersonalBests(runs) {
     const distances = [
