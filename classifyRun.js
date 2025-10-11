@@ -114,6 +114,19 @@ window.classifyRun = function classifyRun(act = {}, streams = {}) {
     if(pctZ.high>40) addScores(scores,{'Intervals':90});
     if(pctZ.high>60) addScores(scores,{'Race':120});
 
+    console.log(pctZ);
+
+    if(pctZ.high>20 && pctZ.tempo>20 && pctZ.low<50) addScores(scores,{'Fartlek':60});
+    if(pctZ.high>10 && pctZ.tempo>30 && pctZ.low<70) addScores(scores,{'Long Run':40});
+    if(pctZ.high<10 && pctZ.tempo<20 && pctZ.low>70) addScores(scores,{'Recovery Run':80,'Easy Run':30});
+    if(pctZ.high<5 && pctZ.tempo<10 && pctZ.low>80) addScores(scores,{'Recovery Run':120});
+    if (pctZ.high > pctZ.tempo && pctZ.high > pctZ.low) addScores(scores, {'Intervals':40});
+    if (pctZ.tempo > pctZ.high && pctZ.tempo > pctZ.low) addScores(scores, {'Tempo Run':40});
+    if (pctZ.low > pctZ.tempo && pctZ.low > pctZ.high) addScores(scores, {'Easy Run':40});
+    
+
+
+
     // Pace variability
     if(paceCV>20) addScores(scores,{'Intervals':80,'Fartlek':60});
     else if(paceCV>12) addScores(scores,{'Fartlek':40,'Progressive Run':30});
