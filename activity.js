@@ -1082,35 +1082,26 @@ function renderHrZoneDistributionChart(streams) {
 
 
 
-/**
- * Render an area chart of heart rate with min/max fill and average line.
- * Uses Chart.js. The X axis is distance (km), Y is HR (bpm).
- * The area between min and max HR in each segment is filled, and the average HR is a line.
- * @param {object} streams - The activity streams (must include heartrate, distance).
- */
+
 function renderHrMinMaxAreaChart(streams) {
     const canvas = document.getElementById('hr-minmax-area-chart');
     const section = document.getElementById('hr-min-max-area-section');
 
-    // Validaciones iniciales
     if (!canvas || !section || !streams.heartrate || !streams.distance) return;
 
     const hr = streams.heartrate.data;
     const dist = streams.distance.data;
     if (!Array.isArray(hr) || !Array.isArray(dist) || hr.length !== dist.length || hr.length < 2) return;
 
-    // Mostrar la sección si hay datos válidos
     section.classList.remove('hidden');
 
-    // Decide número de segmentos
     const N_SEGMENTS = 40;
     const totalDist = dist[dist.length - 1];
     const segmentLength = totalDist / N_SEGMENTS;
 
-    // Arrays para min, max, avg HR y etiquetas
     const minArr = [], maxArr = [], avgArr = [], labels = [];
-
     let segStart = 0, segEnd = segmentLength, i = 0;
+
     for (let s = 0; s < N_SEGMENTS; s++) {
         const hrVals = [];
         while (i < dist.length && dist[i] < segEnd) {
@@ -1133,13 +1124,11 @@ function renderHrMinMaxAreaChart(streams) {
         segEnd += segmentLength;
     }
 
-    // Eliminar gráfico anterior si existe
     if (canvas.chartInstance) {
         canvas.chartInstance.destroy();
         canvas.chartInstance = null;
     }
 
-    // Crear nuevo gráfico
     canvas.chartInstance = new Chart(canvas, {
         type: 'line',
         data: {
@@ -1148,18 +1137,18 @@ function renderHrMinMaxAreaChart(streams) {
                 {
                     label: 'HR Min',
                     data: minArr,
-                    fill: '+1',
-                    backgroundColor: 'rgba(252,82,0,0.08)',
-                    borderColor: 'rgba(0,0,0,0)',
+                    fill: '+1', // llena hacia el Max
+                    backgroundColor: 'rgba(252,82,0,0.3)', // más intenso
+                    borderColor: 'rgba(252,82,0,0.6)',
                     pointRadius: 0,
                     order: 1
                 },
                 {
                     label: 'HR Max',
                     data: maxArr,
-                    fill: false,
-                    backgroundColor: 'rgba(0,0,0,0)',
-                    borderColor: 'rgba(0,0,0,0)',
+                    fill: '-1', // rellena hacia el Min
+                    backgroundColor: 'rgba(252,82,0,0.3)',
+                    borderColor: 'rgba(252,82,0,0.6)',
                     pointRadius: 0,
                     order: 1
                 },
@@ -1168,7 +1157,6 @@ function renderHrMinMaxAreaChart(streams) {
                     data: avgArr,
                     fill: false,
                     borderColor: '#FC5200',
-                    backgroundColor: 'rgba(0,0,0,0)',
                     borderWidth: 2,
                     pointRadius: 0,
                     order: 2
