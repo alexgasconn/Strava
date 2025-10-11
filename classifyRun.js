@@ -113,16 +113,35 @@ window.classifyRun = function classifyRun(act = {}, streams = {}) {
     if (act.name && /tempo/i.test(act.name)) addScores(scores, { 'Tempo Run': 60 });
     if (act.name && /fartlek/i.test(act.name)) addScores(scores, { 'Fartlek': 80 });
 
-    // Distance (smooth influence)
-    if (distKm >= 15) addScores(scores, { 'Long Run': 100 + distKm * 2 });
-    else if (distKm >= 5) addScores(scores, { 'Easy Run': 30, 'Tempo Run': distKm > 6 ? 10 : 0 });
-    else addScores(scores, { 'Recovery Run': 50, 'Easy Run': 20 });
+    // ---------- Distance scoring (con lógica clara y suavizado) ----------
+    if (distKm >= 15) {
+        // Long Run fuerte, aumenta progresivamente según distancia
+        addScores(scores, { 'Long Run': 100 + distKm * 2 });
+    } else if (distKm >= 10) {
+        addScores(scores, { 'Long Run': 60 + (distKm - 10) * 2, 'Easy Run': 20 });
+    } else if (distKm >= 5) {
+        addScores(scores, { 'Easy Run': 30, 'Tempo Run': distKm > 6 ? 10 : 0, 'Long Run': -10 });
+    } else {
+        addScores(scores, { 'Recovery Run': 50, 'Easy Run': 20, 'Long Run': -20 });
+    }
 
-    // Elevation
-    if (elevationPerKm > 20) addScores(scores, { 'Hill Repeats': 100, 'Trail Run': 50 });
+    // ---------- Elevation scoring (con escalado gradual) ----------
+    if (elevationPerKm > 40) {
+        addScores(scores, { 'Hill Repeats': 120, 'Trail Run': 80 });
+    } else if (elevationPerKm > 20) {
+        addScores(scores, { 'Hill Repeats': 80, 'Trail Run': 40 });
+    } else if (elevationPerKm > 10) {
+        addScores(scores, { 'Trail Run': 10 }); // pequeño bonus si hay algo de elevación
+    } else {
+        addScores(scores, { 'Trail Run': -10, 'Hill Repeats': -20 }); // penaliza runs planos
+    }
 
-    // Moving ratio
-    if (moveRatio < 0.6) addScores(scores, { 'Trail Run': 30, 'Fartlek': 20, 'Intervals': 10 });
+    // ---------- Moving ratio (penaliza paradas en carreras) ----------
+    if (moveRatio < 0.5) {
+        addScores(scores, { 'Trail Run': 40, 'Fartlek': 30, 'Intervals': 20, 'Race': -30 });
+    } else if (moveRatio < 0.7) {
+        addScores(scores, { 'Trail Run': 20, 'Fartlek': 15, 'Intervals': 10 });
+    }
 
     // Effort
     if (effortNorm > 0.7) addScores(scores, { 'Race': 80, 'Intervals': 50 });
@@ -217,14 +236,25 @@ window.classifyRun = function classifyRun(act = {}, streams = {}) {
 
 
 
-    // Pace variability
-    if (paceCV > 20) addScores(scores, { 'Intervals': 80, 'Fartlek': 60 });
-    else if (paceCV > 12) addScores(scores, { 'Fartlek': 40, 'Progressive Run': 30 });
-    else if (paceCV < 6) addScores(scores, { 'Race': 20, 'Tempo Run': 10 });
+    // ---------- Pace variability ----------
+    if (distKm >= 5) {
+        if (paceCV > 25) addScores(scores, { 'Intervals': 100, 'Fartlek': 70, 'Progressive Run': -30 });
+        else if (paceCV > 15) addScores(scores, { 'Fartlek': 50, 'Progressive Run': 20 });
+        else if (paceCV < 6) addScores(scores, { 'Race': 30, 'Tempo Run': 15, 'Recovery Run': -20 });
+    } else {
+        // runs cortos: el CV es poco fiable → reduce peso
+        if (paceCV > 25) addScores(scores, { 'Intervals': 50, 'Fartlek': 30 });
+        else if (paceCV > 15) addScores(scores, { 'Fartlek': 20 });
+        else if (paceCV < 6) addScores(scores, { 'Tempo Run': 5 });
+    }
 
-    // Negative split
-    if (distKm >= 8 && negativeSplitRatio < 0.95) addScores(scores, { 'Progressive Run': 80 });
-    else if (distKm >= 8 && negativeSplitRatio < 1) addScores(scores, { 'Progressive Run': 30 });
+    // ---------- Negative split ----------
+    if (distKm >= 8) {
+        if (negativeSplitRatio < 0.95) addScores(scores, { 'Progressive Run': 100, 'Tempo Run': 20 });
+        else if (negativeSplitRatio < 1.0) addScores(scores, { 'Progressive Run': 50 });
+        else if (negativeSplitRatio > 1.05) addScores(scores, { 'Progressive Run': -40, 'Race': -20 });
+    }
+
 
     // ---------- Output ----------
     const totalScore = sum(Object.values(scores)) || 1;
