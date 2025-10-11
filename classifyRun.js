@@ -128,21 +128,55 @@ window.classifyRun = function classifyRun(act = {}, streams = {}) {
     else if (effortNorm > 0.45) addScores(scores, { 'Tempo Run': 50, 'Fartlek': 30, 'Long Run': 20 });
     else addScores(scores, { 'Recovery Run': 60, 'Easy Run': 30 });
 
-    // HR zones
-    if (pctZ.low > 90) addScores(scores, { 'Recovery Run': 120, 'Easy Run': 40 });
-    if (pctZ.tempo > 50) addScores(scores, { 'Tempo Run': 100 });
-    if (pctZ.high > 40) addScores(scores, { 'Intervals': 90 });
-    if (pctZ.high > 60) addScores(scores, { 'Race': 120 });
+    // ---------- HR zones scoring con 4 zonas y negativos ----------
+    if (pctZ.low > 70) addScores(scores, {
+        'Recovery Run': 120,
+        'Easy Run': 60,
+        'Intervals': -30,
+        'Fartlek': -20,
+        'Tempo Run': -20,
+        'Race': -50
+    });
 
-    console.log(pctZ);
+    if (pctZ.midlow > 50) addScores(scores, {
+        'Recovery Run': 40,
+        'Easy Run': 30,
+        'Long Run': 50,
+        'Tempo Run': 20,
+        'Intervals': -10,
+        'Race': -20
+    });
 
-    if (pctZ.high > 20 && pctZ.tempo > 20 && pctZ.low < 50) addScores(scores, { 'Fartlek': 60 });
-    if (pctZ.high > 10 && pctZ.tempo > 30 && pctZ.low < 70) addScores(scores, { 'Long Run': 40 });
-    if (pctZ.high < 10 && pctZ.tempo < 20 && pctZ.low > 70) addScores(scores, { 'Recovery Run': 80, 'Easy Run': 30 });
-    if (pctZ.high < 5 && pctZ.tempo < 10 && pctZ.low > 80) addScores(scores, { 'Recovery Run': 120 });
-    if (pctZ.high > pctZ.tempo && pctZ.high > pctZ.low) addScores(scores, { 'Intervals': 40 });
-    if (pctZ.tempo > pctZ.high && pctZ.tempo > pctZ.low) addScores(scores, { 'Tempo Run': 40 });
-    if (pctZ.low > pctZ.tempo && pctZ.low > pctZ.high) addScores(scores, { 'Easy Run': 40 });
+    if (pctZ.midhigh > 40) addScores(scores, {
+        'Tempo Run': 80,
+        'Fartlek': 50,
+        'Long Run': 20,
+        'Intervals': 40,
+        'Recovery Run': -30,
+        'Easy Run': -20
+    });
+
+    if (pctZ.high > 30) addScores(scores, {
+        'Intervals': 80,
+        'Race': 100,
+        'Fartlek': 40,
+        'Tempo Run': -10,
+        'Recovery Run': -50,
+        'Easy Run': -40
+    });
+
+    // combinaciones más complejas
+    if (pctZ.high > 20 && pctZ.midhigh > 20 && pctZ.midlow < 50) addScores(scores, { 'Fartlek': 60 });
+    if (pctZ.high > 10 && pctZ.midhigh > 30 && pctZ.low < 70) addScores(scores, { 'Long Run': 40 });
+    if (pctZ.high < 10 && pctZ.midhigh < 20 && pctZ.low > 70) addScores(scores, { 'Recovery Run': 80, 'Easy Run': 30 });
+    if (pctZ.high < 5 && pctZ.midhigh < 10 && pctZ.low > 80) addScores(scores, { 'Recovery Run': 120 });
+
+    // comparaciones relativas
+    if (pctZ.high > pctZ.midhigh && pctZ.high > pctZ.midlow && pctZ.high > pctZ.low) addScores(scores, { 'Intervals': 40 });
+    if (pctZ.midhigh > pctZ.high && pctZ.midhigh > pctZ.midlow && pctZ.midhigh > pctZ.low) addScores(scores, { 'Tempo Run': 40 });
+    if (pctZ.midlow > pctZ.high && pctZ.midlow > pctZ.midhigh && pctZ.midlow > pctZ.low) addScores(scores, { 'Long Run': 40 });
+    if (pctZ.low > pctZ.high && pctZ.low > pctZ.midhigh && pctZ.low > pctZ.midlow) addScores(scores, { 'Easy Run': 40 });
+
 
 
 
