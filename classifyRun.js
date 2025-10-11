@@ -98,11 +98,10 @@ window.classifyRun = function classifyRun(act = {}, streams = {}) {
     else addScores(scores,{'Recovery Run':50, 'Easy Run':20});
 
     // Elevation
-    if(elevationPerKm>30) addScores(scores,{'Hill Repeats':50,'Trail Run':50});
+    if(elevationPerKm>20) addScores(scores,{'Hill Repeats':100,'Trail Run':50});
 
     // Moving ratio
-    if(moveRatio<0.95) addScores(scores,{'Trail Run':30,'Fartlek':20});
-    else addScores(scores,{'Easy Run':10});
+    if(moveRatio<0.6) addScores(scores,{'Trail Run':30,'Fartlek':20, ''});
 
     // Effort
     if(effortNorm>0.7) addScores(scores,{'Race':80,'Intervals':50});
@@ -110,7 +109,7 @@ window.classifyRun = function classifyRun(act = {}, streams = {}) {
     else addScores(scores,{'Recovery Run':60,'Easy Run':30});
 
     // HR zones
-    if(pctZ.low>80) addScores(scores,{'Recovery Run':120,'Easy Run':40});
+    if(pctZ.low>90) addScores(scores,{'Recovery Run':120,'Easy Run':40});
     if(pctZ.tempo>50) addScores(scores,{'Tempo Run':100});
     if(pctZ.high>40) addScores(scores,{'Intervals':90});
     if(pctZ.high>60) addScores(scores,{'Race':120});
