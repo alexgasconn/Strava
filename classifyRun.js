@@ -101,7 +101,7 @@ window.classifyRun = function classifyRun(act = {}, streams = {}) {
     if(elevationPerKm>20) addScores(scores,{'Hill Repeats':100,'Trail Run':50});
 
     // Moving ratio
-    if(moveRatio<0.6) addScores(scores,{'Trail Run':30,'Fartlek':20, ''});
+    if(moveRatio<0.6) addScores(scores,{'Trail Run':30,'Fartlek':20, 'Intervals':10});
 
     // Effort
     if(effortNorm>0.7) addScores(scores,{'Race':80,'Intervals':50});
