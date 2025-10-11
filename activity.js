@@ -1,5 +1,5 @@
 // js/activity.js
-import { classifyRun } from './classifyRun.js';
+// import { classifyRun } from './classifyRun.js';
 
 document.addEventListener('DOMContentLoaded', () => {
 
