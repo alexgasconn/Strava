@@ -3,7 +3,7 @@
 // =================================================================
 
 // classifyRun.js
-export function classifyRun(act = {}, streams = {}) {
+window.classifyRun = function classifyRun(act = {}, streams = {}) {
     // ---------- Helpers ----------
     const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
     const sum = arr => arr.reduce((s, x) => s + (x || 0), 0);

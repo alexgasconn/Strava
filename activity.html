@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>Strava Activity Details</title>
@@ -17,6 +18,7 @@
 
 
 </head>
+
 <body>
   <div class="container">
     <h1>Detalles de la Actividad</h1>
@@ -28,38 +30,38 @@
     </div>
 
     <div class="side-by-side-container">
-        <!-- Columna Izquierda: Clasificador -->
-        <div id="run-classifier-section" class="data-section">
-            <h3>Run Type Analysis</h3>
-            <div id="run-classifier-results">
-                <p>Analyzing run data...</p>
-            </div>
+      <!-- Columna Izquierda: Clasificador -->
+      <div id="run-classifier-section" class="data-section">
+        <h3>Run Type Analysis</h3>
+        <div id="run-classifier-results">
+          <p>Analyzing run data...</p>
         </div>
+      </div>
 
-        <!-- Columna Derecha: Gráfico de Zonas de FC -->
-        <div id="hr-zones-section" class="data-section">
-            <h3>Time in Heart Rate Zones</h3>
-            <div class="chart-container-inner">
-                <canvas id="hr-zones-chart"></canvas>
-            </div>
+      <!-- Columna Derecha: Gráfico de Zonas de FC -->
+      <div id="hr-zones-section" class="data-section">
+        <h3>Time in Heart Rate Zones</h3>
+        <div class="chart-container-inner">
+          <canvas id="hr-zones-chart"></canvas>
         </div>
+      </div>
     </div>
 
     <!-- FILA 2: Mapa (Full Width) -->
     <div id="activity-map-container" class="data-section">
-        <h3>Route Map</h3>
-        <div id="activity-map"></div>
+      <h3>Route Map</h3>
+      <div id="activity-map"></div>
     </div>
 
     <div id="splits-section" class="data-section hidden">
       <h3>📈 Splits per Kilometer</h3>
       <div class="side-by-side-container">
-          <div class="chart-container">
-            <canvas id="chart-pace"></canvas>
-          </div>
-          <div class="chart-container">
-            <canvas id="chart-heartrate"></canvas>
-          </div>
+        <div class="chart-container">
+          <canvas id="chart-pace"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="chart-heartrate"></canvas>
+        </div>
       </div>
     </div>
 
@@ -77,7 +79,7 @@
         <canvas id="chart-cadence-distance"></canvas>
       </div>
     </div>
-    
+
     <div id="hr-min-max-area-section" class="data-section hidden">
       <h3>❤️ Heart Rate Min/Max Area Chart</h3>
       <div class="chart-container">
@@ -100,7 +102,7 @@
         <table id="laps-table" class="df-table"></table>
       </div>
     </div>
-    
+
     <div id="segments-section" class="data-section hidden">
       <h3>⛰️ Segment Efforts</h3>
       <p>Your performance on Strava segments during this activity.</p>
@@ -114,6 +116,9 @@
     <button onclick="window.close()">Cerrar</button>
   </div>
 
+  <script src="classifyRun.js"></script>
   <script src="activity.js"></script>
+
 </body>
+
 </html>
