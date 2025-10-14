@@ -128,6 +128,7 @@ export function renderAthleteTab(allActivities) {
     renderWeeklyMixChart(runs);
     renderHourMatrix(runs);
     renderYearMonthMatrix(runs);
+    renderMonthWeekdayMatrix(runs);
 }
 
 function renderAllTimeStats(runs) {
@@ -623,6 +624,125 @@ function renderYearMonthMatrix(runs) {
         }
     });
 }
+
+
+
+function renderMonthWeekdayMatrix(runs) {
+    const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+    // stats[month][weekday] = { count, distance }
+    const stats = Array.from({ length: 12 }, () =>
+        Array.from({ length: 7 }, () => ({ count: 0, distance: 0 }))
+    );
+
+    runs.forEach(run => {
+        const date = new Date(run.start_date_local);
+        if (isNaN(date)) return;
+
+        const month = date.getMonth();           // 0–11
+        const dayIdx = (date.getDay() + 6) % 7;  // Monday = 0
+        const distKm = run.distance / 1000;
+
+        stats[month][dayIdx].count++;
+        stats[month][dayIdx].distance += distKm;
+    });
+
+    const data = [];
+    let maxKm = 0;
+    for (let m = 0; m < 12; m++) {
+        for (let d = 0; d < 7; d++) {
+            const entry = stats[m][d];
+            maxKm = Math.max(maxKm, entry.distance);
+            data.push({
+                x: m,
+                y: d,
+                km: entry.distance,
+                count: entry.count
+            });
+        }
+    }
+
+    function getColor(km) {
+        if (km === 0) return 'rgba(255,255,255,0)';
+        const alpha = 0.15 + 0.85 * (km / maxKm);
+        return `rgba(0,200,120,${alpha.toFixed(2)})`;
+    }
+
+    createUiChart('month-weekday-matrix', {
+        type: 'matrix',
+        data: {
+            datasets: [{
+                label: 'Distance (km)',
+                data,
+                backgroundColor: data.map(d => getColor(d.km))
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        title: items => {
+                            const d = items[0].raw;
+                            return `${dayLabels[d.y]} - ${monthLabels[d.x]}`;
+                        },
+                        label: item => {
+                            const d = item.raw;
+                            return [
+                                `Runs: ${d.count}`,
+                                `Distance: ${d.km.toFixed(1)} km`
+                            ];
+                        }
+                    }
+                },
+                legend: { display: false }
+            },
+            scales: {
+                x: {
+                    type: 'linear',
+                    min: -0.5,
+                    max: 11.5,
+                    ticks: {
+                        stepSize: 1,
+                        callback: val => monthLabels[val] || '',
+                        color: '#333',
+                        font: { weight: 'bold' }
+                    },
+                    grid: { color: '#eee' },
+                    title: {
+                        display: true,
+                        text: 'Month',
+                        font: { weight: 'bold' }
+                    }
+                },
+                y: {
+                    type: 'linear',
+                    min: -0.5,
+                    max: 6.5,
+                    ticks: {
+                        stepSize: 1,
+                        callback: val => dayLabels[val] || '',
+                        color: '#333',
+                        font: { weight: 'bold' }
+                    },
+                    grid: { color: '#eee' },
+                    title: {
+                        display: true,
+                        text: 'Weekday',
+                        font: { weight: 'bold' }
+                    }
+                }
+            },
+            layout: { padding: 10 }
+        }
+    });
+}
+
+
+
 
 
 
