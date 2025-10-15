@@ -924,69 +924,113 @@ function renderMonthDayMatrix(runs) {
 function renderMonthHourMatrix(runs) {
     const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const hourLabels = Array.from({ length: 24 }, (_, i) => i);
+    const hourLabels = Array.from({ length: 24 }, (_, i) => i); // 0..23
 
-    // Matrix [12 months x 24 hours]
-    const counts = Array.from({ length: 12 }, () => Array(24).fill(0));
+    // stats[month][hour] = { count, distance }
+    const stats = Array.from({ length: 12 }, () =>
+        Array.from({ length: 24 }, () => ({ count: 0, distance: 0 }))
+    );
 
+    // Aggregate
     runs.forEach(run => {
         const date = new Date(run.start_date_local);
-        const month = date.getMonth();  // 0-11
-        const hour = date.getHours();   // 0-23
-        counts[month][hour]++;
+        if (isNaN(date)) return;
+
+        const month = date.getMonth(); // 0-11
+        const hour = date.getHours();  // 0-23
+        const km = (run.distance || 0) / 1000;
+
+        stats[month][hour].count++;
+        stats[month][hour].distance += km;
     });
 
-    // Flatten data for Chart.js heatmap plugin
-    const dataPoints = [];
-    monthLabels.forEach((month, mIdx) => {
-        hourLabels.forEach((hour, hIdx) => {
-            dataPoints.push({ x: hour, y: month, v: counts[mIdx][hIdx] });
-        });
-    });
+    // Flatten into dataset compatible with your matrix charts
+    const data = [];
+    let maxCount = 0;
+    for (let m = 0; m < 12; m++) {
+        for (let h = 0; h < 24; h++) {
+            const entry = stats[m][h];
+            maxCount = Math.max(maxCount, entry.count);
+            data.push({
+                x: m,         // month index
+                y: h,         // hour index
+                count: entry.count,
+                km: entry.distance
+            });
+        }
+    }
+
+    function getColor(count) {
+        if (!count) return 'rgba(255,255,255,0)';
+        // avoid division by zero
+        const alpha = maxCount ? (0.15 + 0.85 * (count / maxCount)) : 0.95;
+        return `rgba(252,82,0,${alpha.toFixed(2)})`;
+    }
 
     createUiChart('month-hour-matrix', {
         type: 'matrix',
         data: {
             datasets: [{
-                label: 'Trainings by Month and Hour',
-                data: dataPoints,
-                backgroundColor(ctx) {
-                    const value = ctx.dataset.data[ctx.dataIndex].v;
-                    return value > 0 ? `rgba(252, 82, 0, ${0.2 + value / 10})` : 'rgba(0,0,0,0)';
-                },
-                borderColor: 'rgba(255,255,255,0.1)',
-                width: ({ chart }) => (chart.chartArea.width / 24) - 2,
-                height: ({ chart }) => (chart.chartArea.height / 12) - 2
+                label: 'Trainings by Month & Hour',
+                data,
+                backgroundColor: data.map(d => getColor(d.count))
             }]
         },
         options: {
-            aspectRatio: 2,
-            scales: {
-                x: {
-                    type: 'category',
-                    labels: hourLabels,
-                    title: { display: true, text: 'Hour of Day' },
-                    grid: { display: false }
-                },
-                y: {
-                    type: 'category',
-                    labels: monthLabels,
-                    title: { display: true, text: 'Month' },
-                    grid: { display: false }
-                }
-            },
+            responsive: true,
+            maintainAspectRatio: false,
             plugins: {
                 tooltip: {
                     callbacks: {
-                        title: ctx => `${monthLabels[ctx[0].raw.y]}, ${ctx[0].raw.x}:00`,
-                        label: ctx => `Trainings: ${ctx.raw.v}`
+                        title: items => {
+                            const d = items[0].raw;
+                            // month label + hour
+                            return `${monthLabels[d.x]} - ${d.y}:00`;
+                        },
+                        label: item => {
+                            const d = item.raw;
+                            return [
+                                `Runs: ${d.count}`,
+                                `Distance: ${d.km.toFixed(1)} km`
+                            ];
+                        }
                     }
                 },
                 legend: { display: false }
-            }
+            },
+            scales: {
+                x: {
+                    type: 'linear',
+                    min: -0.5,
+                    max: 11.5,
+                    ticks: {
+                        stepSize: 1,
+                        callback: val => monthLabels[val] || '',
+                        color: '#333',
+                        font: { weight: 'bold' }
+                    },
+                    grid: { color: '#eee' },
+                    title: { display: true, text: 'Month', font: { weight: 'bold' } }
+                },
+                y: {
+                    type: 'linear',
+                    min: -0.5,
+                    max: 23.5,
+                    ticks: {
+                        stepSize: 3,
+                        callback: val => (val % 1 === 0 ? `${val}:00` : ''),
+                        color: '#333',
+                        font: { weight: 'bold' }
+                    },
+                    grid: { color: '#eee' },
+                    title: { display: true, text: 'Hour of Day', font: { weight: 'bold' } }
+                }
+            },
+            layout: { padding: 10 }
         }
     });
 }
+
 
 
 
