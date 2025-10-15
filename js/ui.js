@@ -131,6 +131,7 @@ export function renderAthleteTab(allActivities) {
     renderYearMonthMatrix(runs);
     renderMonthWeekdayMatrix(runs);
     renderMonthDayMatrix(runs);
+    renderMonthHourMatrix(runs);
 }
 
 function renderAllTimeStats(runs) {
@@ -918,6 +919,75 @@ function renderMonthDayMatrix(runs) {
         }
     });
 }
+
+
+function renderMonthHourMatrix(runs) {
+    const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const hourLabels = Array.from({ length: 24 }, (_, i) => i);
+
+    // Matrix [12 months x 24 hours]
+    const counts = Array.from({ length: 12 }, () => Array(24).fill(0));
+
+    runs.forEach(run => {
+        const date = new Date(run.start_date_local);
+        const month = date.getMonth();  // 0-11
+        const hour = date.getHours();   // 0-23
+        counts[month][hour]++;
+    });
+
+    // Flatten data for Chart.js heatmap plugin
+    const dataPoints = [];
+    monthLabels.forEach((month, mIdx) => {
+        hourLabels.forEach((hour, hIdx) => {
+            dataPoints.push({ x: hour, y: month, v: counts[mIdx][hIdx] });
+        });
+    });
+
+    createUiChart('month-hour-matrix', {
+        type: 'matrix',
+        data: {
+            datasets: [{
+                label: 'Trainings by Month and Hour',
+                data: dataPoints,
+                backgroundColor(ctx) {
+                    const value = ctx.dataset.data[ctx.dataIndex].v;
+                    return value > 0 ? `rgba(252, 82, 0, ${0.2 + value / 10})` : 'rgba(0,0,0,0)';
+                },
+                borderColor: 'rgba(255,255,255,0.1)',
+                width: ({ chart }) => (chart.chartArea.width / 24) - 2,
+                height: ({ chart }) => (chart.chartArea.height / 12) - 2
+            }]
+        },
+        options: {
+            aspectRatio: 2,
+            scales: {
+                x: {
+                    type: 'category',
+                    labels: hourLabels,
+                    title: { display: true, text: 'Hour of Day' },
+                    grid: { display: false }
+                },
+                y: {
+                    type: 'category',
+                    labels: monthLabels,
+                    title: { display: true, text: 'Month' },
+                    grid: { display: false }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        title: ctx => `${monthLabels[ctx[0].raw.y]}, ${ctx[0].raw.x}:00`,
+                        label: ctx => `Trainings: ${ctx.raw.v}`
+                    }
+                },
+                legend: { display: false }
+            }
+        }
+    });
+}
+
 
 
 
