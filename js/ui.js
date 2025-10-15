@@ -833,7 +833,7 @@ function renderMonthDayMatrix(runs) {
                 },
                 y: {
                     type: 'linear',
-                    min: 0 - 1.5,
+                    min: 1 - 0.5,
                     max: 12,
                     ticks: {
                         stepSize: 1,
