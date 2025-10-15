@@ -833,10 +833,10 @@ function renderMonthDayMatrix(runs) {
                 },
                 y: {
                     type: 'linear',
-                    min: 1,
+                    min: 0,
                     max: 31,
                     ticks: {
-                        stepSize: 3,
+                        stepSize: 2,
                         callback: val => dayLabels[val] || '',
                         color: '#333',
                         font: { weight: 'bold' }
