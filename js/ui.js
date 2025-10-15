@@ -999,10 +999,10 @@ function renderMonthHourMatrix(runs) {
                 legend: { display: false }
             },
             scales: {
-                x: {
+                y: {
                     type: 'linear',
                     min: -0.5,
-                    max: 11.5,
+                    max: 12,
                     ticks: {
                         stepSize: 1,
                         callback: val => monthLabels[val] || '',
@@ -1012,12 +1012,12 @@ function renderMonthHourMatrix(runs) {
                     grid: { color: '#eee' },
                     title: { display: true, text: 'Month', font: { weight: 'bold' } }
                 },
-                y: {
+                x: {
                     type: 'linear',
                     min: -0.5,
-                    max: 23.5,
+                    max: 24,
                     ticks: {
-                        stepSize: 3,
+                        stepSize: 1,
                         callback: val => (val % 1 === 0 ? `${val}:00` : ''),
                         color: '#333',
                         font: { weight: 'bold' }
