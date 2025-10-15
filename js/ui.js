@@ -820,7 +820,7 @@ function renderMonthDayMatrix(runs) {
             scales: {
                 x: {
                     type: 'linear',
-                    min: 1,
+                    min: 0,
                     max: 31,
                     ticks: {
                         stepSize: 1,
