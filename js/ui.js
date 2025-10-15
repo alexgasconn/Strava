@@ -494,8 +494,8 @@ function renderHourMatrix(runs) {
                 },
                 y: {
                     type: 'linear',
-                    min: -0.5,
-                    max: 6.5,
+                    min: 1,
+                    max: 7,
                     ticks: {
                         stepSize: 1,
                         callback: val => dayLabels[val] || '',
@@ -586,8 +586,8 @@ function renderYearMonthMatrix(runs) {
             scales: {
                 x: {
                     type: 'linear',
-                    min: -0.5,
-                    max: 11.5,
+                    min: 1,
+                    max: 12,
                     ticks: {
                         stepSize: 1,
                         callback: val => monthLabels[val] || '',
@@ -603,8 +603,8 @@ function renderYearMonthMatrix(runs) {
                 },
                 y: {
                     type: 'linear',
-                    min: -0.5,
-                    max: years.length - 0.5,
+                    min: 0,
+                    max: years.length,
                     ticks: {
                         stepSize: 1,
                         callback: val => years[val] || '',
