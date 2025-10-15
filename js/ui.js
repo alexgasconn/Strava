@@ -924,11 +924,11 @@ function renderMonthDayMatrix(runs) {
 function renderMonthHourMatrix(runs) {
     const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const hourLabels = Array.from({ length: 24 }, (_, i) => i); // 0..23
+    const hourLabels = Array.from({ length: 24 }, (_, i) => i); // 0–23
 
-    // stats[month][hour] = { count, distance }
-    const stats = Array.from({ length: 12 }, () =>
-        Array.from({ length: 24 }, () => ({ count: 0, distance: 0 }))
+    // stats[hour][month] = { count, distance }
+    const stats = Array.from({ length: 24 }, () =>
+        Array.from({ length: 12 }, () => ({ count: 0, distance: 0 }))
     );
 
     // Aggregate
@@ -936,24 +936,24 @@ function renderMonthHourMatrix(runs) {
         const date = new Date(run.start_date_local);
         if (isNaN(date)) return;
 
-        const month = date.getMonth(); // 0-11
-        const hour = date.getHours();  // 0-23
+        const month = date.getMonth(); // 0–11
+        const hour = date.getHours();  // 0–23
         const km = (run.distance || 0) / 1000;
 
-        stats[month][hour].count++;
-        stats[month][hour].distance += km;
+        stats[hour][month].count++;
+        stats[hour][month].distance += km;
     });
 
-    // Flatten into dataset compatible with your matrix charts
+    // Flatten into dataset compatible with matrix chart
     const data = [];
     let maxCount = 0;
-    for (let m = 0; m < 12; m++) {
-        for (let h = 0; h < 24; h++) {
-            const entry = stats[m][h];
+    for (let h = 0; h < 24; h++) {
+        for (let m = 0; m < 12; m++) {
+            const entry = stats[h][m];
             maxCount = Math.max(maxCount, entry.count);
             data.push({
-                x: m,         // month index
-                y: h,         // hour index
+                x: h,         // hour index (x-axis)
+                y: m,         // month index (y-axis)
                 count: entry.count,
                 km: entry.distance
             });
@@ -962,7 +962,6 @@ function renderMonthHourMatrix(runs) {
 
     function getColor(count) {
         if (!count) return 'rgba(255,255,255,0)';
-        // avoid division by zero
         const alpha = maxCount ? (0.15 + 0.85 * (count / maxCount)) : 0.95;
         return `rgba(252,82,0,${alpha.toFixed(2)})`;
     }
@@ -971,7 +970,7 @@ function renderMonthHourMatrix(runs) {
         type: 'matrix',
         data: {
             datasets: [{
-                label: 'Trainings by Month & Hour',
+                label: 'Trainings by Hour & Month',
                 data,
                 backgroundColor: data.map(d => getColor(d.count))
             }]
@@ -984,8 +983,7 @@ function renderMonthHourMatrix(runs) {
                     callbacks: {
                         title: items => {
                             const d = items[0].raw;
-                            // month label + hour
-                            return `${monthLabels[d.x]} - ${d.y}:00`;
+                            return `${monthLabels[d.y]} - ${d.x}:00`;
                         },
                         label: item => {
                             const d = item.raw;
@@ -999,6 +997,19 @@ function renderMonthHourMatrix(runs) {
                 legend: { display: false }
             },
             scales: {
+                x: {
+                    type: 'linear',
+                    min: -0.5,
+                    max: 24,
+                    ticks: {
+                        stepSize: 2,
+                        callback: val => (val % 1 === 0 ? `${val}:00` : ''),
+                        color: '#333',
+                        font: { weight: 'bold' }
+                    },
+                    grid: { color: '#eee' },
+                    title: { display: true, text: 'Hour of Day', font: { weight: 'bold' } }
+                },
                 y: {
                     type: 'linear',
                     min: -0.5,
@@ -1011,19 +1022,6 @@ function renderMonthHourMatrix(runs) {
                     },
                     grid: { color: '#eee' },
                     title: { display: true, text: 'Month', font: { weight: 'bold' } }
-                },
-                x: {
-                    type: 'linear',
-                    min: -0.5,
-                    max: 24,
-                    ticks: {
-                        stepSize: 1,
-                        callback: val => (val % 1 === 0 ? `${val}:00` : ''),
-                        color: '#333',
-                        font: { weight: 'bold' }
-                    },
-                    grid: { color: '#eee' },
-                    title: { display: true, text: 'Hour of Day', font: { weight: 'bold' } }
                 }
             },
             layout: { padding: 10 }
