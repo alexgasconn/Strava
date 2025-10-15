@@ -494,7 +494,7 @@ function renderHourMatrix(runs) {
                 },
                 y: {
                     type: 'linear',
-                    min: 0,
+                    min: 0 - 0.5,
                     max: 7,
                     ticks: {
                         stepSize: 1,
@@ -721,7 +721,7 @@ function renderMonthWeekdayMatrix(runs) {
                 },
                 y: {
                     type: 'linear',
-                    min: 0,
+                    min: 0 - 0.5,
                     max: 7,
                     ticks: {
                         stepSize: 1,
