@@ -749,32 +749,32 @@ function renderMonthDayMatrix(runs) {
                          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const dayLabels = Array.from({ length: 31 }, (_, i) => i + 1);
 
-    // stats[month][day] = { count, distance }
-    const stats = Array.from({ length: 12 }, () =>
-        Array.from({ length: 31 }, () => ({ count: 0, distance: 0 }))
+    // stats[day][month] = { count, distance }
+    const stats = Array.from({ length: 31 }, () =>
+        Array.from({ length: 12 }, () => ({ count: 0, distance: 0 }))
     );
 
     runs.forEach(run => {
         const date = new Date(run.start_date_local);
         if (isNaN(date)) return;
 
-        const month = date.getMonth();       // 0–11
-        const day = date.getDate() - 1;      // 0–30
-        const distKm = run.distance / 1000;  // meters → km
+        const month = date.getMonth();      // 0–11
+        const day = date.getDate() - 1;     // 0–30
+        const distKm = run.distance / 1000; // meters → km
 
-        stats[month][day].count++;
-        stats[month][day].distance += distKm;
+        stats[day][month].count++;
+        stats[day][month].distance += distKm;
     });
 
     const data = [];
     let maxKm = 0;
-    for (let m = 0; m < 12; m++) {
-        for (let d = 0; d < 31; d++) {
-            const entry = stats[m][d];
+    for (let d = 0; d < 31; d++) {
+        for (let m = 0; m < 12; m++) {
+            const entry = stats[d][m];
             if (entry.distance > 0) maxKm = Math.max(maxKm, entry.distance);
             data.push({
-                x: m,
-                y: d,
+                x: d,   // day
+                y: m,   // month
                 km: entry.distance,
                 count: entry.count
             });
@@ -804,7 +804,7 @@ function renderMonthDayMatrix(runs) {
                     callbacks: {
                         title: items => {
                             const d = items[0].raw;
-                            return `${monthLabels[d.x]} ${d.y + 1}`;
+                            return `${monthLabels[d.y]} ${d.x + 1}`;
                         },
                         label: item => {
                             const d = item.raw;
@@ -821,6 +821,19 @@ function renderMonthDayMatrix(runs) {
                 x: {
                     type: 'linear',
                     min: -0.5,
+                    max: 30.5,
+                    ticks: {
+                        stepSize: 2,
+                        callback: val => dayLabels[val] || '',
+                        color: '#333',
+                        font: { weight: 'bold' }
+                    },
+                    grid: { color: '#eee' },
+                    title: { display: true, text: 'Day of Month', font: { weight: 'bold' } }
+                },
+                y: {
+                    type: 'linear',
+                    min: -0.5,
                     max: 11.5,
                     ticks: {
                         stepSize: 1,
@@ -830,25 +843,13 @@ function renderMonthDayMatrix(runs) {
                     },
                     grid: { color: '#eee' },
                     title: { display: true, text: 'Month', font: { weight: 'bold' } }
-                },
-                y: {
-                    type: 'linear',
-                    min: 0,
-                    max: 31,
-                    ticks: {
-                        stepSize: 2,
-                        callback: val => dayLabels[val] || '',
-                        color: '#333',
-                        font: { weight: 'bold' }
-                    },
-                    grid: { color: '#eee' },
-                    title: { display: true, text: 'Day of Month', font: { weight: 'bold' } }
                 }
             },
             layout: { padding: 10 }
         }
     });
 }
+
 
 
 
