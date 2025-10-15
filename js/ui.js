@@ -126,6 +126,7 @@ export function renderAthleteTab(allActivities) {
     renderYearlyComparison(runs);
     renderGearSection(runs);
     renderWeeklyMixChart(runs);
+    renderMonthlyMixChart(runs);
     renderHourMatrix(runs);
     renderYearMonthMatrix(runs);
     renderMonthWeekdayMatrix(runs);
@@ -420,6 +421,74 @@ function renderWeeklyMixChart(runs) {
         }
     });
 }
+
+
+function renderMonthlyMixChart(runs) {
+    const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthCounts = Array(12).fill(0);
+    const monthKms = Array(12).fill(0);
+
+    runs.forEach(run => {
+        const date = new Date(run.start_date_local);
+        if (isNaN(date)) return;
+
+        const monthIdx = date.getMonth(); // 0–11
+        monthCounts[monthIdx]++;
+        monthKms[monthIdx] += run.distance / 1000; // m → km
+    });
+
+    createUiChart('monthly-mix-chart', {
+        type: 'bar',
+        data: {
+            labels: monthLabels,
+            datasets: [
+                {
+                    type: 'bar',
+                    label: 'Total Trainings',
+                    data: monthCounts,
+                    backgroundColor: 'rgba(252, 82, 0, 0.7)',
+                    yAxisID: 'y',
+                    order: 1
+                },
+                {
+                    type: 'line',
+                    label: 'Total Distance (km)',
+                    data: monthKms,
+                    fill: true,
+                    backgroundColor: 'rgba(0, 116, 217, 0.2)',
+                    borderColor: 'rgba(0, 116, 217, 1)',
+                    pointBackgroundColor: 'rgba(0, 116, 217, 1)',
+                    tension: 0.3,
+                    yAxisID: 'y1',
+                    order: 2
+                }
+            ]
+        },
+        options: {
+            plugins: {
+                legend: { display: true }
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    position: 'left',
+                    title: { display: true, text: 'Trainings' },
+                    beginAtZero: true,
+                    ticks: { stepSize: 1 }
+                },
+                y1: {
+                    type: 'linear',
+                    position: 'right',
+                    title: { display: true, text: 'Distance (km)' },
+                    beginAtZero: true,
+                    grid: { drawOnChartArea: false }
+                }
+            }
+        }
+    });
+}
+
 
 
 
