@@ -952,7 +952,7 @@ function renderMonthHourMatrix(runs) {
             const entry = stats[h][m];
             maxCount = Math.max(maxCount, entry.count);
             data.push({
-                x: h,         // hour index (x-axis)
+                x: h-2,         // hour index (x-axis)
                 y: m,         // month index (y-axis)
                 count: entry.count,
                 km: entry.distance
