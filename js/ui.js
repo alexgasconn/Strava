@@ -938,6 +938,8 @@ function renderMonthHourMatrix(runs) {
 
         const month = date.getMonth(); // 0–11
         const hour = date.getHours();  // 0–23
+
+        hour = (hour - 2 + 24) % 24;
         const km = (run.distance || 0) / 1000;
 
         stats[hour][month].count++;
@@ -1003,7 +1005,7 @@ function renderMonthHourMatrix(runs) {
                     max: 24,
                     ticks: {
                         stepSize: 2,
-                        callback: val => (val - 2 % 1 === 0 ? `${val}:00` : ''),
+                        callback: val => (val % 1 === 0 ? `${val}:00` : ''),
                         color: '#333',
                         font: { weight: 'bold' }
                     },
