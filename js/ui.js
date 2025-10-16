@@ -937,9 +937,8 @@ function renderMonthHourMatrix(runs) {
         if (isNaN(date)) return;
 
         const month = date.getMonth(); // 0–11
-        const hour = date.getHours();  // 0–23
+        const hour = date.getHours() - 2;  // 0–23
 
-        hour = (hour - 2 + 24) % 24;
         const km = (run.distance || 0) / 1000;
 
         stats[hour][month].count++;
