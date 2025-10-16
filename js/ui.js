@@ -322,14 +322,14 @@ function renderYearlyComparison(runs) {
                 },
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             const dataset = context.dataset;
                             const yearIdx = context.dataIndex;
                             let label = dataset.label.replace(' (scaled)', '');
                             let value = dataset.realData ? dataset.realData[yearIdx] : context.parsed.y;
                             // Format value depending on dataset
                             if (label === 'Total Distance') {
-                                return `${label}: ${value.toLocaleString(undefined, {maximumFractionDigits: 1})} km`;
+                                return `${label}: ${value.toLocaleString(undefined, { maximumFractionDigits: 1 })} km`;
                             }
                             if (label === 'Number of Runs') {
                                 return `${label}: ${value}`;
@@ -338,7 +338,7 @@ function renderYearlyComparison(runs) {
                                 return `${label}: ${value.toLocaleString()} m`;
                             }
                             if (label === 'Total Moving Time') {
-                                return `${label}: ${value.toLocaleString(undefined, {maximumFractionDigits: 1})} h`;
+                                return `${label}: ${value.toLocaleString(undefined, { maximumFractionDigits: 1 })} h`;
                             }
                             return `${label}: ${value}`;
                         }
@@ -426,7 +426,7 @@ function renderWeeklyMixChart(runs) {
 
 function renderMonthlyMixChart(runs) {
     const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const monthCounts = Array(12).fill(0);
     const monthKms = Array(12).fill(0);
 
@@ -603,7 +603,7 @@ function renderYearMonthMatrix(runs) {
     const years = Object.keys(stats).map(Number).sort((a, b) => a - b);
     const months = Array.from({ length: 12 }, (_, i) => i);
     const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
     const data = [];
     let maxKm = 0;
@@ -700,7 +700,7 @@ function renderYearMonthMatrix(runs) {
 
 function renderMonthWeekdayMatrix(runs) {
     const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
     // stats[month][weekday] = { count, distance }
@@ -816,7 +816,7 @@ function renderMonthWeekdayMatrix(runs) {
 
 function renderMonthDayMatrix(runs) {
     const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const dayLabels = Array.from({ length: 31 }, (_, i) => i + 1);
 
     // stats[day][month] = { count, distance }
@@ -923,7 +923,7 @@ function renderMonthDayMatrix(runs) {
 
 function renderMonthHourMatrix(runs) {
     const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const hourLabels = Array.from({ length: 24 }, (_, i) => i); // 0–23
 
     // stats[hour][month] = { count, distance }
@@ -937,7 +937,10 @@ function renderMonthHourMatrix(runs) {
         if (isNaN(date)) return;
 
         const month = date.getMonth(); // 0–11
-        const hour = date.getHours() - 2;  // 0–23
+        let hour = date.getHours();    // 0–23
+
+        // Subtract 2 hours and wrap around 0–23
+        hour = (hour - 2 + 24) % 24;
 
         const km = (run.distance || 0) / 1000;
 
@@ -1204,7 +1207,7 @@ function renderStreaks(runs) {
         let idx = sorted.length - 1;
         let temp;
         if (type === 'day') temp = yesterday.toISOString().slice(0, 10);
-        else if (type === 'week') temp = `${yesterday.getFullYear()}-W${String(getISOWeek(yesterday)).padStart(2,'0')}`;
+        else if (type === 'week') temp = `${yesterday.getFullYear()}-W${String(getISOWeek(yesterday)).padStart(2, '0')}`;
         else if (type === 'month') {
             temp = yesterday.toISOString().slice(0, 7);
         }
@@ -1230,14 +1233,14 @@ function renderStreaks(runs) {
                         y -= 1;
                         w = getISOWeek(new Date(y, 11, 28)); // última semana del año anterior
                     } else w -= 1;
-                    temp = `${y}-W${String(w).padStart(2,'0')}`;
+                    temp = `${y}-W${String(w).padStart(2, '0')}`;
                 } else if (type === 'month') {
                     let [y, m] = temp.split('-').map(Number);
                     if (m === 1) {
                         y -= 1;
                         m = 12;
                     } else m -= 1;
-                    temp = `${y}-${String(m).padStart(2,'0')}`;
+                    temp = `${y}-${String(m).padStart(2, '0')}`;
                 }
 
                 idx--;
@@ -1258,7 +1261,7 @@ function renderStreaks(runs) {
         const d = new Date(r.start_date_local);
         const year = d.getFullYear();
         const week = getISOWeek(d);
-        return `${year}-W${String(week).padStart(2,'0')}`;
+        return `${year}-W${String(week).padStart(2, '0')}`;
     });
     const weekStreaks = calcStreaks(weekItems, 'week');
     const currentWeek = calcCurrentStreak(weekStreaks.sorted, 'week');
