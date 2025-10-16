@@ -999,7 +999,7 @@ function renderMonthHourMatrix(runs) {
             scales: {
                 x: {
                     type: 'linear',
-                    min: -0.5,
+                    min: -1,
                     max: 24,
                     ticks: {
                         stepSize: 2,
@@ -1012,7 +1012,7 @@ function renderMonthHourMatrix(runs) {
                 },
                 y: {
                     type: 'linear',
-                    min: -0.5,
+                    min: -1.5,
                     max: 12,
                     ticks: {
                         stepSize: 1,
