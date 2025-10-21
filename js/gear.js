@@ -2,7 +2,8 @@
 
 import { formatDistance } from './utils.js';
 import { fetchGearById } from './api.js';
-import Chart from 'chart.js/auto'; // Importa Chart.js (asegúrate de que Chart esté disponible globalmente o así)
+
+import Chart from 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.esm.min.js';
 
 let gearChartInstance = null; // Para la instancia de Chart.js (gráfico de líneas)
 let gearGanttChartInstance = null; // Para la instancia del nuevo gráfico de Gantt (gráfico de barras)
