@@ -49,7 +49,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (tabId === 'athlete-tab' && !athleteTabRendered) {
                 if (allActivities.length > 0) {
-                    // Llamaremos a una nueva función que crearemos en ui.js
                     renderAthleteTab(allActivities);
                     athleteTabRendered = true;
                 } else {
@@ -63,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.warn("Activities not loaded yet, can't render gear tab.");
                 }
             }
-            if (tabId === 'runs-tab') {
+            if (tabId === 'runs-races-tab') {
                 if (allActivities.length > 0) {
                     renderRunsTab(allActivities);
                 } else {
