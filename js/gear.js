@@ -358,7 +358,8 @@ async function renderGearChart(runs) {
     });
 }
 
-// Función para renderizar el gráfico de "Gear Usage per Month" (Gráfico de barras/Gantt)
+
+
 export async function renderGearGanttChart(runs) {
     const ctx = document.getElementById('gear-gantt-chart');
     if (!ctx) {
@@ -372,20 +373,18 @@ export async function renderGearGanttChart(runs) {
 
     const gearIds = Array.from(new Set(runs.map(a => a.gear_id).filter(Boolean)));
 
-    if (gearIds.length === 0) {
-        // En lugar de innerHTML en canvas, podemos dejarlo vacío o poner un mensaje en el contenedor padre
-        // console.log("No gear data for Gantt chart. Canvas will be empty.");
-        // Si quieres un mensaje, el contenedor padre del canvas debería mostrarlo
-        return;
-    }
+    if (gearIds.length === 0) return;
 
-    let gearIdToName = new Map(); // Usar Map en lugar de objeto para mayor flexibilidad con IDs
+    let gearIdToName = new Map();
     try {
         const results = await Promise.all(gearIds.map(id => fetchGearById(id)));
         results.forEach(result => {
             const gear = result.gear;
             if (gear) {
-                gearIdToName.set(gear.id, gear.name || [gear.brand_name, gear.model_name].filter(Boolean).join(' '));
+                gearIdToName.set(
+                    gear.id,
+                    gear.name || [gear.brand_name, gear.model_name].filter(Boolean).join(' ')
+                );
             }
         });
     } catch (error) {
@@ -395,18 +394,15 @@ export async function renderGearGanttChart(runs) {
 
     const gearMonthKm = runs.reduce((acc, a) => {
         if (!a.gear_id || !a.start_date_local) return acc;
-        const gearKey = a.gear_id;
         const month = a.start_date_local.substring(0, 7);
         if (!acc[month]) acc[month] = {};
-        acc[month][gearKey] = (acc[month][gearKey] || 0) + a.distance / 1000;
+        acc[month][a.gear_id] = (acc[month][a.gear_id] || 0) + a.distance / 1000;
         return acc;
     }, {});
 
     const monthsWithData = Object.keys(gearMonthKm);
-    if (monthsWithData.length === 0) {
-        // console.log("No monthly gear usage data available for Gantt chart.");
-        return;
-    }
+    if (monthsWithData.length === 0) return;
+
     const firstMonth = monthsWithData.reduce((min, m) => m < min ? m : min);
     const lastMonth = monthsWithData.reduce((max, m) => m > max ? m : max);
 
@@ -417,16 +413,13 @@ export async function renderGearGanttChart(runs) {
         while (sy < ey || (sy === ey && sm <= em)) {
             result.push(`${sy.toString().padStart(4, '0')}-${sm.toString().padStart(2, '0')}`);
             sm++;
-            if (sm > 12) {
-                sm = 1;
-                sy++;
-            }
+            if (sm > 12) { sm = 1; sy++; }
         }
         return result;
     }
-    const allMonths = getMonthRange(firstMonth, lastMonth);
 
-    const allGears = Array.from(gearIdToName.keys()); // Usar las keys del Map para los gears existentes
+    const allMonths = getMonthRange(firstMonth, lastMonth);
+    const allGears = Array.from(gearIdToName.keys());
 
     const datasets = allGears.map((gearId, idx) => ({
         label: gearIdToName.get(gearId) || `Gear ID: ${gearId}`,
@@ -439,7 +432,7 @@ export async function renderGearGanttChart(runs) {
         type: 'bar',
         data: { labels: allMonths, datasets },
         options: {
-            indexAxis: 'y',
+            indexAxis: 'x', // ahora meses en horizontal, barras verticales
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
@@ -453,11 +446,9 @@ export async function renderGearGanttChart(runs) {
                     callbacks: {
                         label: function(context) {
                             let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.parsed.x !== null) {
-                                label += context.parsed.x.toFixed(2) + ' km';
+                            if (label) label += ': ';
+                            if (context.parsed.y !== null) {
+                                label += context.parsed.y.toFixed(2) + ' km';
                             }
                             return label;
                         }
@@ -467,15 +458,12 @@ export async function renderGearGanttChart(runs) {
             scales: {
                 x: {
                     stacked: true,
-                    title: { display: true, text: 'Distance (km)' },
-                    beginAtZero: true
+                    title: { display: true, text: 'Year-Month' }
                 },
                 y: {
                     stacked: true,
-                    title: { display: true, text: 'Year-Month' },
-                    grid: {
-                        offset: true
-                    }
+                    title: { display: true, text: 'Distance (km)' },
+                    beginAtZero: true
                 }
             }
         }
