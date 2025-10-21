@@ -48,3 +48,30 @@ export function getISOWeek(date) {
     const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
     return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 }
+
+
+
+export function formatTime(sec) {
+    if (!isFinite(sec) || sec <= 0) return 'N/A';
+    sec = Math.round(sec);
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    return (h > 0 ? h + ':' : '') + m.toString().padStart(h > 0 ? 2 : 1, '0') + ':' + s.toString().padStart(2, '0');
+}
+
+export function formatDistance(meters) {
+    if (!isFinite(meters) || meters < 0) return 'N/A';
+    if (meters < 1000) {
+        return `${meters.toFixed(0)} m`;
+    }
+    return `${(meters / 1000).toFixed(2)} km`;
+}
+
+export function formatPace(seconds, km) {
+    if (!isFinite(seconds) || !isFinite(km) || km <= 0) return '-';
+    const pace = seconds / km; // pace in seconds per km
+    const min = Math.floor(pace / 60);
+    const secRest = Math.round(pace % 60);
+    return `${min}:${secRest.toString().padStart(2, '0')} /km`;
+}
