@@ -1,7 +1,7 @@
 // js/runs.js
 
-export function renderPlannerTab(allActivities) {
-    console.log("Initializing Planner Tab...");
+export function renderRunsTab(allActivities) {
+    console.log("Initializing Runs Tab...");
 
     const runs = allActivities.filter(a => a.type && a.type.includes('Run'));
 
