@@ -349,3 +349,77 @@ async function renderGearChart(runs) {
         }
     });
 }
+
+export async function renderGearGanttChart(runs) {
+    // 1. Obtener todos los IDs de gear usados
+    const gearIds = Array.from(new Set(runs.map(a => a.gear_id).filter(Boolean)));
+
+    // 2. Si no hay gears, no hacemos nada
+    if (gearIds.length === 0) return;
+
+    // 3. Traer info detallada de cada gear
+    let gearIdToName = {};
+    try {
+        const results = await Promise.all(gearIds.map(id => fetchGearById(id)));
+        results.forEach(result => {
+            const gear = result.gear;
+            gearIdToName[gear.id] = gear.name || [gear.brand_name, gear.model_name].filter(Boolean).join(' ');
+        });
+    } catch (error) {
+        console.error("Failed to fetch gear details:", error);
+        return;
+    }
+
+    // 4. Agregar distancia por gear por mes
+    const gearMonthKm = runs.reduce((acc, a) => {
+        if (!a.gear_id) return acc;
+        const gearKey = a.gear_id;
+        const month = a.start_date_local.substring(0, 7);
+        if (!acc[month]) acc[month] = {};
+        acc[month][gearKey] = (acc[month][gearKey] || 0) + a.distance / 1000;
+        return acc;
+    }, {});
+
+    // 5. Rango de meses
+    const monthsSorted = runs.map(a => a.start_date_local.substring(0, 7)).sort();
+    const firstMonth = monthsSorted[0];
+    const lastMonth = monthsSorted[monthsSorted.length - 1];
+    function getMonthRange(start, end) {
+        const result = [];
+        let [sy, sm] = start.split('-').map(Number);
+        let [ey, em] = end.split('-').map(Number);
+        while (sy < ey || (sy === ey && sm <= em)) {
+            result.push(`${sy.toString().padStart(4, '0')}-${sm.toString().padStart(2, '0')}`);
+            sm++;
+            if (sm > 12) {
+                sm = 1;
+                sy++;
+            }
+        }
+        return result;
+    }
+    const allMonths = getMonthRange(firstMonth, lastMonth);
+
+    // 6. Todos los gears
+    const allGears = gearIds;
+
+    // 7. Construir datasets
+    const datasets = allGears.map((gearId, idx) => ({
+        label: gearIdToName[gearId] || gearId,
+        data: allMonths.map(month => gearMonthKm[month]?.[gearId] || 0),
+        backgroundColor: `hsl(${(idx * 60) % 360}, 70%, 60%)`
+    }));
+
+    // 8. Crear gráfico
+    createChart('gear-gantt-chart', {
+        type: 'bar',
+        data: { labels: allMonths, datasets },
+        options: {
+            indexAxis: 'y',
+            scales: {
+                x: { stacked: true, title: { display: true, text: 'Distance (km)' } },
+                y: { stacked: true, title: { display: true, text: 'Year-Month' } }
+            }
+        }
+    });
+}
