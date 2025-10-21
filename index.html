@@ -86,7 +86,7 @@
             <button class="tab-link" data-tab="gear-tab">👟 Gear</button>
             <button class="tab-link" data-tab="runs-races-tab">🏃‍♂️ Runs & Races</button>
 
-            
+
 
 
             <main>
@@ -272,7 +272,7 @@
                             <h3>Month vs Hour Heatmap</h3>
                             <canvas id="month-hour-matrix"></canvas>
                         </div>
-                        <div class="chart-container full-width" >
+                        <div class="chart-container full-width">
                             <h3>Month vs Day Heatmap</h3>
                             <canvas id="month-day-matrix"></canvas>
                         </div>
@@ -347,12 +347,29 @@
 
                 <div id="gear-tab" class="tab-content">
                     <h3>Gear Overview</h3>
-                        <p>TBD</p>
+                    <p>TBD</p>
                 </div>
 
                 <div id="runs-races-tab" class="tab-content">
                     <h3>Runs & Races</h3>
-                        <p>TBD</p>
+                    <p>TBD</p>
+                    <div class="chart-container">
+                        <h3>Personal Bests</h3>
+                        <div id="personal-bests"></div>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Races</h3>
+                        <div style="overflow-x:auto;">
+                            <table id="race-list" class="df-table"></table>
+                        </div>
+                    </div>
+
+                    <div class="chart-container full-width">
+                        <h3>All Runs</h3>
+                        <div style="overflow-x:auto;">
+                            <table id="all-runs-table" class="df-table"></table>
+                        </div>
+                    </div>
                 </div>
 
 
