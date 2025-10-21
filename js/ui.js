@@ -69,10 +69,7 @@ export function renderDashboard(allActivities, dateFilterFrom, dateFilterTo) {
 
     renderSummaryCards(runs);
     renderAllCharts(runs);
-    // renderRaceList(runs);
-    // renderAllRunsTable(runs);
     renderStreaks(runs);
-    // renderPersonalBests(runs);
 }
 
 
