@@ -2,7 +2,9 @@
 import { redirectToStrava, logout, handleAuth } from './auth.js';
 import { setupDashboard, renderDashboard, showLoading, hideLoading, handleError, renderAthleteProfile, renderTrainingZones, renderAthleteTab } from './ui.js';
 import { renderPlannerTab } from './planner.js';
-import { fetchAllActivities, fetchAthleteData, fetchTrainingZones } from './api.js'; // <-- Añade los nuevos imports
+import { renderGearTab } from './gear.js';
+import { renderRunsTab } from './runs.js';
+import { fetchAllActivities, fetchAthleteData, fetchTrainingZones } from './api.js';
 
 // Espera a que el DOM esté completamente cargado
 document.addEventListener('DOMContentLoaded', () => {
@@ -54,6 +56,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.warn("Activities not loaded yet, can't render athlete tab.");
                 }
             }
+            if (tabId === 'gear-tab') {
+                if (allActivities.length > 0) {
+                    renderGearTab(allActivities);
+                } else {
+                    console.warn("Activities not loaded yet, can't render gear tab.");
+                }
+            }
+            if (tabId === 'runs-tab') {
+                if (allActivities.length > 0) {
+                    renderRunsTab(allActivities);
+                } else {
+                    console.warn("Activities not loaded yet, can't render runs tab.");
+                }
+            }
+
         });
     });
 
