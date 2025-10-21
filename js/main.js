@@ -3,6 +3,7 @@ import { redirectToStrava, logout, handleAuth } from './auth.js';
 import { setupDashboard, renderDashboard, showLoading, hideLoading, handleError, renderAthleteProfile, renderTrainingZones, renderAthleteTab } from './ui.js';
 import { renderPlannerTab } from './planner.js';
 import { renderGearTab } from './gear.js';
+
 import { renderRunsTab } from './runs.js';
 import { fetchAllActivities, fetchAthleteData, fetchTrainingZones } from './api.js';
 
