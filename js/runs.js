@@ -28,21 +28,15 @@ export function renderRunsTab(allActivities) {
 
     // --- Lógica principal del Runs Tab ---
 
-    // --- Personal Bests ---
-    const pbs = calculatePersonalBests(runs);
+    const pbs = runs;
     renderPersonalBests(personalBestsContainer, pbs);
 
-    // --- Races ---
-    renderRaceList(runs); // Usando tu función específica
+    renderRaceList(runs);
 
-    // --- All Runs ---
-    renderAllRunsTable(runs); // Usando tu función específica
+    renderAllRunsTable(runs);
 
-    // --- Funciones auxiliares (dentro de renderRunsTab o como funciones privadas) ---
-
-    // Calcula los mejores tiempos personales para distancias estándar
-    function calculatePersonalBests(runs) {
-        // --- Helpers de formato para esta sección (si fueran necesarios y diferentes a los globales) ---
+    function renderPersonalBests(container, runs) {
+        // --- Helpers de formato ---
         function formatTime(sec) {
             if (!isFinite(sec) || sec <= 0) return 'N/A';
             sec = Math.round(sec);
@@ -52,24 +46,15 @@ export function renderRunsTab(allActivities) {
             return (h > 0 ? h + ':' : '') + m.toString().padStart(h > 0 ? 2 : 1, '0') + ':' + s.toString().padStart(2, '0');
         }
 
-        function formatDistance(meters) {
-            if (!isFinite(meters) || meters < 0) return 'N/A';
-            if (meters < 1000) {
-                return `${meters.toFixed(0)} m`;
-            }
-            return `${(meters / 1000).toFixed(2)} km`;
-        }
-
         function formatPace(seconds, km) {
             if (!isFinite(seconds) || !isFinite(km) || km <= 0) return '-';
-            const pace = seconds / km; // pace in seconds per km
+            const pace = seconds / km;
             const min = Math.floor(pace / 60);
             const secRest = Math.round(pace % 60);
             return `${min}:${secRest.toString().padStart(2, '0')} /km`;
         }
-        // --- Fin de Helpers de formato específicos de esta sección ---
 
-
+        // --- Distancias objetivo ---
         const targetDistances = [
             { name: '1 Mile', km: 1.609 },
             { name: '5K', km: 5 },
@@ -78,74 +63,63 @@ export function renderRunsTab(allActivities) {
             { name: 'Marathon', km: 42.195 }
         ];
 
-        const personalBests = {};
+        const margin = 0.05; // ±5%
+        const medalEmojis = ['🥇', '🥈', '🥉'];
+
+        // --- Calcular top 3 por distancia ---
+        const results = {};
 
         targetDistances.forEach(target => {
-            let bestTime = Infinity;
-            let bestRun = null;
-
-            const margin = 0.05; // 5% de margen para considerar una actividad como la distancia objetivo
             const minKm = target.km * (1 - margin);
             const maxKm = target.km * (1 + margin);
 
-            runs.forEach(run => {
-                const runKm = run.distance / 1000; // Asumiendo distance en metros
-                if (runKm >= minKm && runKm <= maxKm && run.moving_time > 0) {
-                    const timeAtTargetPace = run.moving_time * (target.km / runKm);
+            const candidates = runs
+                .filter(run => {
+                    const km = run.distance / 1000;
+                    return km >= minKm && km <= maxKm && run.moving_time > 0;
+                })
+                .map(run => ({
+                    ...run,
+                    time_at_target: run.moving_time * (target.km / (run.distance / 1000)),
+                    actual_run_km: run.distance / 1000
+                }))
+                .sort((a, b) => a.time_at_target - b.time_at_target)
+                .slice(0, 3); // top 3
 
-                    if (timeAtTargetPace < bestTime) {
-                        bestTime = timeAtTargetPace;
-                        bestRun = { ...run, time_at_target: timeAtTargetPace, actual_run_km: runKm };
-                    }
-                }
-            });
-
-            if (bestRun) {
-                personalBests[target.name] = bestRun;
+            if (candidates.length > 0) {
+                results[target.name] = candidates;
             }
         });
-        return personalBests;
-    }
 
-    function renderPersonalBests(container, pbs) {
-        // --- Helpers de formato para esta sección (si fueran necesarios y diferentes a los globales) ---
-        function formatTime(sec) {
-            if (!isFinite(sec) || sec <= 0) return 'N/A';
-            sec = Math.round(sec);
-            const h = Math.floor(sec / 3600);
-            const m = Math.floor((sec % 3600) / 60);
-            const s = sec % 60;
-            return (h > 0 ? h + ':' : '') + m.toString().padStart(h > 0 ? 2 : 1, '0') + ':' + s.toString().padStart(2, '0');
-        }
-
-        function formatPace(seconds, km) {
-            if (!isFinite(seconds) || !isFinite(km) || km <= 0) return '-';
-            const pace = seconds / km; // pace in seconds per km
-            const min = Math.floor(pace / 60);
-            const secRest = Math.round(pace % 60);
-            return `${min}:${secRest.toString().padStart(2, '0')} /km`;
-        }
-        // --- Fin de Helpers de formato específicos de esta sección ---
-
-        if (Object.keys(pbs).length === 0) {
+        if (Object.keys(results).length === 0) {
             container.innerHTML = '<p>No personal bests recorded yet.</p>';
             return;
         }
 
-        // Usaremos un layout de rejilla simple para los PBs
+        // --- Renderizado ---
         container.innerHTML = `
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
-                ${Object.entries(pbs).map(([distanceName, run]) => `
-                    <div class="pb-card" style="border: 1px solid #ddd; padding: 1rem; border-radius: 8px; text-align: center;">
-                        <h4>${distanceName}</h4>
-                        <p style="font-size: 1.4em; font-weight: bold;">${formatTime(run.time_at_target)}</p>
-                        <p style="font-size: 0.9em; color: #555;">Pace: ${formatPace(run.time_at_target, run.actual_run_km || (run.distance / 1000))}</p>
-                        <p style="font-size: 0.8em; color: #777;">(${new Date(run.start_date).toLocaleDateString()})</p>
-                    </div>
-                `).join('')}
-            </div>
-        `;
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+            ${Object.entries(results).map(([distName, topRuns]) => `
+                <div class="pb-card" style="border: 1px solid #ddd; padding: 1rem; border-radius: 8px;">
+                    <h4 style="text-align:center; margin-bottom:0.5em;">${distName}</h4>
+                    ${topRuns.map((run, idx) => `
+                        <div style="text-align:center; margin-bottom:0.5em; border-top: ${idx > 0 ? '1px dashed #ccc' : 'none'}; padding-top: ${idx > 0 ? '0.5em' : '0'};">
+                            <p style="font-size:1.3em; font-weight:bold; margin:0;">
+                                ${medalEmojis[idx] || ''} ${formatTime(run.time_at_target)}
+                            </p>
+                            <p style="font-size:0.9em; color:#555; margin:0;">Pace: ${formatPace(run.time_at_target, run.actual_run_km)}</p>
+                            <p style="font-size:0.8em; color:#777; margin:0.2em 0;">${new Date(run.start_date).toLocaleDateString()}</p>
+                            <a href="activity.html?id=${run.id}" target="_blank">
+                                <button class="df-button" style="margin-top:0.3em;">View</button>
+                            </a>
+                        </div>
+                    `).join('')}
+                </div>
+            `).join('')}
+        </div>
+    `;
     }
+
 
     // Tu función original para renderizar la lista de carreras
     function renderRaceList(allRuns) {
