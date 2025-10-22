@@ -36,14 +36,14 @@ export function renderRunsTab(allActivities) {
     renderAllRunsTable(runs);
 
     function renderPersonalBests(container, runs) {
-        // --- Helpers de formato ---
+        // --- Helpers ---
         function formatTime(sec) {
             if (!isFinite(sec) || sec <= 0) return 'N/A';
             sec = Math.round(sec);
             const h = Math.floor(sec / 3600);
             const m = Math.floor((sec % 3600) / 60);
             const s = sec % 60;
-            return (h > 0 ? h + ':' : '') + m.toString().padStart(h > 0 ? 2 : 1, '0') + ':' + s.toString().padStart(2, '0');
+            return (h > 0 ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}` : `${m}:${s.toString().padStart(2, '0')}`);
         }
 
         function formatPace(seconds, km) {
@@ -54,19 +54,20 @@ export function renderRunsTab(allActivities) {
             return `${min}:${secRest.toString().padStart(2, '0')} /km`;
         }
 
-        // --- Distancias objetivo ---
         const targetDistances = [
             { name: '1 Mile', km: 1.609 },
             { name: '5K', km: 5 },
             { name: '10K', km: 10 },
+            { name: '15K', km: 15 },
             { name: 'Half Marathon', km: 21.097 },
+            { name: '30K', km: 30 },
             { name: 'Marathon', km: 42.195 }
         ];
 
-        const margin = 0.05; // ±5%
+        const margin = 0.03; // ±3%
         const medalEmojis = ['🥇', '🥈', '🥉'];
 
-        // --- Calcular top 3 por distancia ---
+        // --- Calcular top 3 reales por distancia ---
         const results = {};
 
         targetDistances.forEach(target => {
@@ -80,11 +81,11 @@ export function renderRunsTab(allActivities) {
                 })
                 .map(run => ({
                     ...run,
-                    time_at_target: run.moving_time * (target.km / (run.distance / 1000)),
+                    time_at_target: run.moving_time, // tiempo real
                     actual_run_km: run.distance / 1000
                 }))
                 .sort((a, b) => a.time_at_target - b.time_at_target)
-                .slice(0, 3); // top 3
+                .slice(0, 3);
 
             if (candidates.length > 0) {
                 results[target.name] = candidates;
@@ -101,16 +102,16 @@ export function renderRunsTab(allActivities) {
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
             ${Object.entries(results).map(([distName, topRuns]) => `
                 <div class="pb-card" style="border: 1px solid #ddd; padding: 1rem; border-radius: 8px;">
-                    <h4 style="text-align:center; margin-bottom:0.5em;">${distName}</h4>
+                    <h4 style="text-align:center; margin-bottom:0.6em;">${distName}</h4>
                     ${topRuns.map((run, idx) => `
-                        <div style="text-align:center; margin-bottom:0.5em; border-top: ${idx > 0 ? '1px dashed #ccc' : 'none'}; padding-top: ${idx > 0 ? '0.5em' : '0'};">
-                            <p style="font-size:1.3em; font-weight:bold; margin:0;">
+                        <div style="text-align:center; margin-bottom:0.6em; border-top: ${idx > 0 ? '1px dashed #ccc' : 'none'}; padding-top: ${idx > 0 ? '0.6em' : '0'};">
+                            <p style="font-size:1.2em; font-weight:bold; margin:0;">
                                 ${medalEmojis[idx] || ''} ${formatTime(run.time_at_target)}
                             </p>
                             <p style="font-size:0.9em; color:#555; margin:0;">Pace: ${formatPace(run.time_at_target, run.actual_run_km)}</p>
                             <p style="font-size:0.8em; color:#777; margin:0.2em 0;">${new Date(run.start_date).toLocaleDateString()}</p>
-                            <a href="activity.html?id=${run.id}" target="_blank">
-                                <button class="df-button" style="margin-top:0.3em;">View</button>
+                            <a href="activity.html?id=${run.id}" target="_blank" style="font-size:0.8em; color:#0077cc; text-decoration:none;">
+                                View activity →
                             </a>
                         </div>
                     `).join('')}
@@ -119,6 +120,7 @@ export function renderRunsTab(allActivities) {
         </div>
     `;
     }
+
 
 
     // Tu función original para renderizar la lista de carreras
