@@ -64,7 +64,7 @@ export function renderRunsTab(allActivities) {
             { name: 'Marathon', km: 42.195 }
         ];
 
-        const margin = 0.03; // ±3%
+        const margin = 0.07; // ±7%
         const medalEmojis = ['🥇', '🥈', '🥉'];
 
         // --- Calcular top 3 reales por distancia ---
