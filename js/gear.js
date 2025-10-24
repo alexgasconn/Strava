@@ -214,7 +214,7 @@ function renderGearCards(combinedGearData) {
             ${gear.retired ? '<span class="badge retired-badge">RETIRED</span>' : ''}
             ${gear.primary ? '<span class="badge primary-badge">PRIMARY</span>' : ''}
             <h4>${gear.name || `${gear.brand_name} ${gear.model_name}`}</h4>
-            <p class="gear-distance"><strong>Total:</strong> ${totalKm.toFixed(0)} km</p>
+            <p class="gear-distance">${totalKm.toFixed(0)} km</p>
             <div class="durability-bar" title="${durabilityPercent.toFixed(0)}% of ${durationKm} km">
                 <div class="durability-progress" style="width: ${durabilityPercent}%; background-color: ${durabilityColor};"></div>
             </div>
@@ -262,135 +262,158 @@ function renderGearCards(combinedGearData) {
 }
 
 
-// Función para renderizar el gráfico de uso de equipo (Gráfico de líneas)
+// Función mejorada para renderizar el gráfico de uso de equipo (Gráfico de líneas)
 async function renderGearChart(runs) {
-    const ctx = document.getElementById('gearChart');
-    if (!ctx) {
+    const canvas = document.getElementById('gearChart');
+    const container = document.getElementById('gear-chart-container');
+    if (!canvas) {
         console.error("Canvas element 'gearChart' not found for renderGearChart.");
+        if (container) container.style.display = 'none';
         return;
     }
 
-    if (gearChartInstance) {
-        gearChartInstance.destroy();
+    // Si no hay runs, esconder y destruir gráfico previo
+    if (!runs || runs.length === 0) {
+        if (gearChartInstance) { gearChartInstance.destroy(); gearChartInstance = null; }
+        if (container) container.style.display = 'none';
+        return;
+    } else if (container) {
+        container.style.display = ''; // mostrar
     }
 
+    // destruye gráfico previo
+    if (gearChartInstance) {
+        gearChartInstance.destroy();
+        gearChartInstance = null;
+    }
+
+    // Helper: hex -> rgba
+    const hexToRgba = (hex, alpha = 1) => {
+        const h = hex.replace('#', '');
+        const bigint = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
+        const r = (bigint >> 16) & 255;
+        const g = (bigint >> 8) & 255;
+        const b = bigint & 255;
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    };
+
+    // Agrupar por fecha (YYYY-MM-DD) y gear
     const gearUsageByDate = new Map();
-
     for (const run of runs) {
-        if (run.gear_id && run.start_date_local) {
-            const date = new Date(run.start_date_local);
-            const dateString = date.toISOString().split('T')[0];
-
-            if (!gearUsageByDate.has(dateString)) {
-                gearUsageByDate.set(dateString, new Map());
-            }
-            const dailyGear = gearUsageByDate.get(dateString);
-            const currentDistance = dailyGear.get(run.gear_id) || 0;
-            dailyGear.set(run.gear_id, currentDistance + (run.distance || 0));
-        }
+        if (!run || !run.start_date_local || !run.gear_id) continue;
+        const date = new Date(run.start_date_local);
+        if (isNaN(date.getTime())) continue;
+        const dateString = date.toISOString().split('T')[0];
+        if (!gearUsageByDate.has(dateString)) gearUsageByDate.set(dateString, new Map());
+        const daily = gearUsageByDate.get(dateString);
+        const current = daily.get(run.gear_id) || 0;
+        daily.set(run.gear_id, current + (run.distance || 0)); // meters
     }
 
     const allDates = Array.from(gearUsageByDate.keys()).sort();
+    if (allDates.length === 0) {
+        console.warn('No valid dated runs to render in gear chart.');
+        if (gearChartInstance) { gearChartInstance.destroy(); gearChartInstance = null; }
+        if (container) container.style.display = 'none';
+        return;
+    }
 
-    const uniqueGearIds = new Set();
-    runs.forEach(run => {
-        if (run.gear_id) uniqueGearIds.add(run.gear_id);
-    });
-
+    // Gear ids únicos
+    const uniqueGearIds = Array.from(new Set(runs.map(r => r.gear_id).filter(Boolean)));
+    // Fetch names (silencioso en error)
     const gearIdToName = new Map();
-    if (uniqueGearIds.size > 0) {
+    if (uniqueGearIds.length > 0) {
         try {
-            const results = await Promise.all(Array.from(uniqueGearIds).map(id => fetchGearById(id)));
-            results.forEach(result => {
-                const gear = result.gear;
-                if (gear) {
-                    gearIdToName.set(gear.id, gear.name || [gear.brand_name, gear.model_name].filter(Boolean).join(' '));
-                }
+            const results = await Promise.all(uniqueGearIds.map(id => fetchGearById(id)));
+            results.forEach(res => {
+                const g = res?.gear;
+                if (g) gearIdToName.set(g.id, g.name || [g.brand_name, g.model_name].filter(Boolean).join(' '));
             });
-        } catch (error) {
-            console.error("Error fetching gear names for GearChart:", error);
+        } catch (err) {
+            console.error('Error fetching gear names for GearChart:', err);
         }
     }
 
-
-    const datasets = [];
+    // Construir datasets (km por fecha)
     const colors = ['#007bff', '#28a745', '#ffc107', '#dc3545', '#6c757d', '#17a2b8', '#fd7e14', '#e83e8c'];
-    let colorIndex = 0;
-
-    uniqueGearIds.forEach(gearId => {
-        const data = allDates.map(dateString => {
-            const dailyGear = gearUsageByDate.get(dateString);
-            return dailyGear && dailyGear.has(gearId) ? dailyGear.get(gearId) / 1000 : 0;
+    const datasets = [];
+    uniqueGearIds.forEach((gearId, idx) => {
+        const color = colors[idx % colors.length];
+        const data = allDates.map(dateStr => {
+            const daily = gearUsageByDate.get(dateStr);
+            const meters = daily && daily.has(gearId) ? daily.get(gearId) : 0;
+            return +(meters / 1000).toFixed(3); // km, número
         });
+
+        // Evita series completamente nulas (opcionales: las puedes mostrar igualmente)
+        const hasNonZero = data.some(v => v > 0);
+        if (!hasNonZero) {
+            // Si quieres mostrar igualmente series vacías, deja pasar; ahora las salto para claridad
+            return;
+        }
 
         datasets.push({
             label: gearIdToName.get(gearId) || `Gear ID: ${gearId}`,
-            data: data,
-            borderColor: colors[colorIndex % colors.length],
-            backgroundColor: colors[colorIndex % colors.length] + '40',
+            data,
+            borderColor: color,
+            backgroundColor: hexToRgba(color, 0.18),
             fill: true,
-            tension: 0.3
+            tension: 0.3,
+            borderWidth: 2,
+            pointRadius: 0
         });
-        colorIndex++;
     });
 
-    gearChartInstance = new Chart(ctx, {
+    if (datasets.length === 0) {
+        console.warn('No datasets to render in gear chart (all series empty).');
+        if (container) container.style.display = 'none';
+        return;
+    }
+
+    // Usamos category en X para evitar necesidad de adapters de fechas
+    gearChartInstance = new Chart(canvas.getContext('2d'), {
         type: 'line',
         data: {
-            labels: allDates,
-            datasets: datasets
+            labels: allDates, // 'YYYY-MM-DD'
+            datasets
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                title: {
-                    display: true,
-                    text: 'Distance per Gear Over Time'
-                },
+                title: { display: true, text: 'Distance per Gear Over Time' },
                 tooltip: {
                     mode: 'index',
                     intersect: false,
                     callbacks: {
-                        label: function(context) {
-                            let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.parsed.y !== null) {
-                                label += context.parsed.y.toFixed(2) + ' km';
-                            }
-                            return label;
+                        label: (ctx) => {
+                            const label = ctx.dataset.label ? `${ctx.dataset.label}: ` : '';
+                            const y = ctx.parsed.y;
+                            return y !== null && y !== undefined ? `${label}${Number(y).toFixed(2)} km` : label;
                         }
                     }
-                },
+                }
             },
+            interaction: { mode: 'nearest', intersect: false },
             scales: {
                 x: {
-                    type: 'time',
-                    time: {
-                        unit: 'month',
-                        tooltipFormat: 'MMM DD, YYYY',
-                        displayFormats: {
-                            month: 'MMM YYYY'
-                        }
-                    },
-                    title: {
-                        display: true,
-                        text: 'Date'
+                    type: 'category',
+                    title: { display: true, text: 'Date' },
+                    ticks: {
+                        maxRotation: 0,
+                        autoSkip: true,
+                        maxTicksLimit: 12
                     }
                 },
                 y: {
-                    stacked: true,
-                    title: {
-                        display: true,
-                        text: 'Distance (km)'
-                    }
+                    title: { display: true, text: 'Distance (km)' },
+                    beginAtZero: true
                 }
             }
         }
     });
 }
+
 
 
 
