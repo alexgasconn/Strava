@@ -1308,7 +1308,7 @@ async function renderInteractiveMatrix(runs, xAxisType, yAxisType) {
 
     if (interactiveMatrixChart) interactiveMatrixChart.destroy();
 
-    interactiveMatrixChart = createUiChart(canvasId, {
+    interactiveMatrixChart = createUiChart('interactiveMatrix', {
         type: 'matrix',
         data: {
             datasets: [{
