@@ -1241,136 +1241,135 @@ let interactiveMatrixChart;
 
 async function renderInteractiveMatrix(runs, xAxisType, yAxisType) {
     const timeLabels = {
-        month: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-        weekday: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-        season: ['Winter', 'Spring', 'Summer', 'Autumn'],
-        quarterOfDay: ['Night', 'Morning', 'Afternoon', 'Evening']
+        month: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+        weekday: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+        season: ['Winter','Spring','Summer','Autumn'],
+        quarterOfDay: ['Night','Morning','Afternoon','Evening']
     };
 
     function getTimeValue(run, type) {
         const date = new Date(run.start_date_local);
         if (isNaN(date)) return null;
-        switch (type) {
+        switch(type) {
             case 'year': return date.getFullYear();
             case 'month': return date.getMonth();
-            case 'weekday': return (date.getDay() + 6) % 7; // lunes=0
+            case 'weekday': return (date.getDay()+6)%7; // lunes=0
             case 'hour': return date.getHours();
-            case 'season':
-                const m = date.getMonth();
-                return Math.floor(((m + 1) % 12) / 3); // 0:Winter,1:Spring,2:Summer,3:Autumn
-            case 'quarterOfDay':
-                const h = date.getHours();
-                return Math.floor(h / 6); // 0–3
+            case 'season': return Math.floor(((date.getMonth()+1)%12)/3); // 0–3
+            case 'quarterOfDay': return Math.floor(date.getHours()/6); // 0–3
         }
         return null;
     }
 
-    // Extraer todos los valores únicos para cada eje
-    const xValuesSet = new Set();
-    const yValuesSet = new Set();
-    runs.forEach(run => {
-        const x = getTimeValue(run, xAxisType);
-        const y = getTimeValue(run, yAxisType);
-        if (x !== null) xValuesSet.add(x);
-        if (y !== null) yValuesSet.add(y);
-    });
+    // Valores únicos ordenados
+    const xValues = Array.from(new Set(runs.map(r => getTimeValue(r,xAxisType)).filter(v=>v!=null))).sort((a,b)=>a-b);
+    const yValues = Array.from(new Set(runs.map(r => getTimeValue(r,yAxisType)).filter(v=>v!=null))).sort((a,b)=>a-b);
 
-    const xValues = Array.from(xValuesSet).sort((a, b) => a - b);
-    const yValues = Array.from(yValuesSet).sort((a, b) => a - b);
+    // Mapa valor -> índice
+    const xIndexMap = Object.fromEntries(xValues.map((v,i)=>[v,i]));
+    const yIndexMap = Object.fromEntries(yValues.map((v,i)=>[v,i]));
 
-    // stats[y][x] = { count, distance }
+    // Stats
     const stats = {};
     runs.forEach(run => {
-        const x = getTimeValue(run, xAxisType);
-        const y = getTimeValue(run, yAxisType);
-        if (x === null || y === null) return;
-        const key = `${y}_${x}`;
-        if (!stats[key]) stats[key] = { count: 0, distance: 0 };
+        const xVal = getTimeValue(run,xAxisType);
+        const yVal = getTimeValue(run,yAxisType);
+        if(xVal==null || yVal==null) return;
+        const key = `${yVal}_${xVal}`;
+        if(!stats[key]) stats[key] = { count:0, distance:0 };
         stats[key].count++;
-        stats[key].distance += (run.distance || 0) / 1000;
+        stats[key].distance += (run.distance||0)/1000;
     });
 
-    const data = [];
+    // Data
     let maxValue = 0;
-    yValues.forEach((y, i) => {
-        xValues.forEach((x, j) => {
-            const entry = stats[`${y}_${x}`] || { count: 0, distance: 0 };
+    const data = [];
+    yValues.forEach(yVal=>{
+        xValues.forEach(xVal=>{
+            const entry = stats[`${yVal}_${xVal}`] || { count:0, distance:0 };
             maxValue = Math.max(maxValue, entry.distance);
-            data.push({ x: j, y: i, count: entry.count, km: entry.distance });
+            data.push({ x: xIndexMap[xVal], y: yIndexMap[yVal], count: entry.count, km: entry.distance, xVal, yVal });
         });
     });
 
     function getColor(km) {
-        if (km === 0) return 'rgba(255,255,255,0)';
-        const alpha = 0.15 + 0.85 * (km / maxValue);
+        if(km===0) return 'rgba(255,255,255,0)';
+        const alpha = 0.15 + 0.85*(km/maxValue);
         return `rgba(0,150,200,${alpha.toFixed(2)})`;
     }
 
-    if (interactiveMatrixChart) interactiveMatrixChart.destroy();
+    if(interactiveMatrixChart) interactiveMatrixChart.destroy();
 
     interactiveMatrixChart = createUiChart('interactiveMatrix', {
-        type: 'matrix',
+        type:'matrix',
         data: {
-            datasets: [{
-                label: 'Distance (km)',
+            datasets:[{
+                label:'Distance (km)',
                 data,
-                backgroundColor: data.map(d => getColor(d.km))
+                backgroundColor: data.map(d=>getColor(d.km))
             }]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        title: items => {
+        options:{
+            responsive:true,
+            maintainAspectRatio:false,
+            plugins:{
+                tooltip:{
+                    callbacks:{
+                        title: items=>{
                             const d = items[0].raw;
                             const xArr = timeLabels[xAxisType] || xValues;
                             const yArr = timeLabels[yAxisType] || yValues;
-                            const xLabel = xArr[d.x] ?? d.x;
-                            const yLabel = yArr[d.y] ?? d.y;
+                            const xLabel = xArr[d.xVal] ?? d.xVal ?? d.x;
+                            const yLabel = yArr[d.yVal] ?? d.yVal ?? d.y;
                             return `${yLabel} - ${xLabel}`;
                         },
-                        label: item => {
+                        label: item=>{
                             const d = item.raw;
                             return [`Runs: ${d.count}`, `Distance: ${d.km.toFixed(1)} km`];
                         }
                     }
                 },
-                legend: { display: false }
+                legend:{ display:false }
             },
-            scales: {
-                x: {
-                    type: 'linear',
-                    min: -0.5,
-                    max: xValues.length - 0.5,
-                    ticks: {
-                        stepSize: 1,
-                        callback: val => (timeLabels[xAxisType] || xValues)[val] ?? val,
-                        color: '#333',
-                        font: { weight: 'bold' }
+            scales:{
+                x:{
+                    type:'linear',
+                    min:-0.5,
+                    max:xValues.length-0.5,
+                    ticks:{
+                        stepSize:1,
+                        callback: val => {
+                            const arr = timeLabels[xAxisType] || xValues;
+                            return arr[val] ?? val;
+                        },
+                        color:'#333',
+                        font:{ weight:'bold' }
                     },
-                    grid: { color: '#eee' },
-                    title: { display: true, text: xAxisType, font: { weight: 'bold' } }
+                    grid:{ color:'#eee' },
+                    title:{ display:true, text:xAxisType, font:{ weight:'bold' } }
                 },
-                y: {
-                    type: 'linear',
-                    min: -0.5,
-                    max: yValues.length - 0.5,
-                    ticks: {
-                        stepSize: 1,
-                        callback: val => (timeLabels[yAxisType] || yValues)[val] ?? val,
-                        color: '#333',
-                        font: { weight: 'bold' }
+                y:{
+                    type:'linear',
+                    min:-0.5,
+                    max:yValues.length-0.5,
+                    ticks:{
+                        stepSize:1,
+                        callback: val => {
+                            const arr = timeLabels[yAxisType] || yValues;
+                            return arr[val] ?? val;
+                        },
+                        color:'#333',
+                        font:{ weight:'bold' }
                     },
-                    grid: { color: '#eee' },
-                    title: { display: true, text: yAxisType, font: { weight: 'bold' } }
+                    grid:{ color:'#eee' },
+                    title:{ display:true, text:yAxisType, font:{ weight:'bold' } }
                 }
             },
-            layout: { padding: 10 }
+            layout:{ padding:10 }
         }
     });
 }
+
 
 
 
