@@ -1306,7 +1306,7 @@ async function renderInteractiveMatrix(runs, xAxisType, yAxisType) {
         return `rgba(0,150,200,${alpha.toFixed(2)})`;
     }
 
-    const canvasId = 'interactive-matrix';
+    const canvasId = 'interactiveMatrix';
     createUiChart(canvasId, {
         type: 'matrix',
         data: {
