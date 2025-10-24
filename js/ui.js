@@ -1253,19 +1253,23 @@ async function renderInteractiveMatrix(runs, xAxisType, yAxisType) {
         switch(type) {
             case 'year': return date.getFullYear();
             case 'month': return date.getMonth();
-            case 'weekday': return (date.getDay()+6)%7; // lunes=0
+            case 'weekday': return (date.getDay() + 6) % 7; // lunes=0
             case 'hour': return date.getHours();
-            case 'season': return Math.floor(((date.getMonth()+1)%12)/3); // 0–3
-            case 'quarterOfDay': return Math.floor(date.getHours()/6); // 0–3
+            case 'season': return Math.floor(((date.getMonth()+1)%12)/3);
+            case 'quarterOfDay': return Math.floor(date.getHours()/6);
         }
         return null;
     }
 
-    // Valores únicos ordenados
-    const xValues = Array.from(new Set(runs.map(r => getTimeValue(r,xAxisType)).filter(v=>v!=null))).sort((a,b)=>a-b);
-    const yValues = Array.from(new Set(runs.map(r => getTimeValue(r,yAxisType)).filter(v=>v!=null))).sort((a,b)=>a-b);
+    // Todos los valores posibles del eje
+    let xValues = Array.from(new Set(runs.map(r => getTimeValue(r,xAxisType)).filter(v=>v!=null))).sort((a,b)=>a-b);
+    let yValues = Array.from(new Set(runs.map(r => getTimeValue(r,yAxisType)).filter(v=>v!=null))).sort((a,b)=>a-b);
 
-    // Mapa valor -> índice
+    // Para que siempre muestre todos los labels aunque no haya datos
+    if (timeLabels[xAxisType]) xValues = [...Array(timeLabels[xAxisType].length).keys()];
+    if (timeLabels[yAxisType]) yValues = [...Array(timeLabels[yAxisType].length).keys()];
+
+    // Mapear valor -> índice
     const xIndexMap = Object.fromEntries(xValues.map((v,i)=>[v,i]));
     const yIndexMap = Object.fromEntries(yValues.map((v,i)=>[v,i]));
 
@@ -1281,14 +1285,21 @@ async function renderInteractiveMatrix(runs, xAxisType, yAxisType) {
         stats[key].distance += (run.distance||0)/1000;
     });
 
-    // Data
+    // Data para la matrix
     let maxValue = 0;
     const data = [];
     yValues.forEach(yVal=>{
         xValues.forEach(xVal=>{
             const entry = stats[`${yVal}_${xVal}`] || { count:0, distance:0 };
             maxValue = Math.max(maxValue, entry.distance);
-            data.push({ x: xIndexMap[xVal], y: yIndexMap[yVal], count: entry.count, km: entry.distance, xVal, yVal });
+            data.push({
+                x: xIndexMap[xVal],
+                y: yIndexMap[yVal],
+                count: entry.count,
+                km: entry.distance,
+                rawX: xVal,
+                rawY: yVal
+            });
         });
     });
 
@@ -1305,32 +1316,15 @@ async function renderInteractiveMatrix(runs, xAxisType, yAxisType) {
         data: {
             datasets:[{
                 label:'Distance (km)',
-                data,
-                backgroundColor: data.map(d=>getColor(d.km))
+                data: data,
+                backgroundColor: data.map(d=>getColor(d.km)),
+                width: ({chart})=> chart.chartArea.width / xValues.length * 0.9,
+                height: ({chart})=> chart.chartArea.height / yValues.length * 0.9
             }]
         },
         options:{
             responsive:true,
             maintainAspectRatio:false,
-            plugins:{
-                tooltip:{
-                    callbacks:{
-                        title: items=>{
-                            const d = items[0].raw;
-                            const xArr = timeLabels[xAxisType] || xValues;
-                            const yArr = timeLabels[yAxisType] || yValues;
-                            const xLabel = xArr[d.xVal] ?? d.xVal ?? d.x;
-                            const yLabel = yArr[d.yVal] ?? d.yVal ?? d.y;
-                            return `${yLabel} - ${xLabel}`;
-                        },
-                        label: item=>{
-                            const d = item.raw;
-                            return [`Runs: ${d.count}`, `Distance: ${d.km.toFixed(1)} km`];
-                        }
-                    }
-                },
-                legend:{ display:false }
-            },
             scales:{
                 x:{
                     type:'linear',
@@ -1338,10 +1332,7 @@ async function renderInteractiveMatrix(runs, xAxisType, yAxisType) {
                     max:xValues.length-0.5,
                     ticks:{
                         stepSize:1,
-                        callback: val => {
-                            const arr = timeLabels[xAxisType] || xValues;
-                            return arr[val] ?? val;
-                        },
+                        callback: i => (timeLabels[xAxisType] || xValues)[i] ?? i,
                         color:'#333',
                         font:{ weight:'bold' }
                     },
@@ -1354,10 +1345,7 @@ async function renderInteractiveMatrix(runs, xAxisType, yAxisType) {
                     max:yValues.length-0.5,
                     ticks:{
                         stepSize:1,
-                        callback: val => {
-                            const arr = timeLabels[yAxisType] || yValues;
-                            return arr[val] ?? val;
-                        },
+                        callback: i => (timeLabels[yAxisType] || yValues)[i] ?? i,
                         color:'#333',
                         font:{ weight:'bold' }
                     },
@@ -1365,13 +1353,27 @@ async function renderInteractiveMatrix(runs, xAxisType, yAxisType) {
                     title:{ display:true, text:yAxisType, font:{ weight:'bold' } }
                 }
             },
+            plugins:{
+                tooltip:{
+                    callbacks:{
+                        title: items=>{
+                            const d = items[0].raw;
+                            const xLabel = (timeLabels[xAxisType] || xValues)[d.x] ?? d.rawX;
+                            const yLabel = (timeLabels[yAxisType] || yValues)[d.y] ?? d.rawY;
+                            return `${yLabel} - ${xLabel}`;
+                        },
+                        label: item=>{
+                            const d = item.raw;
+                            return [`Runs: ${d.count}`, `Distance: ${d.km.toFixed(1)} km`];
+                        }
+                    }
+                },
+                legend:{ display:false }
+            },
             layout:{ padding:10 }
         }
     });
 }
-
-
-
 
 
 
