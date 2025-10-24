@@ -1318,8 +1318,8 @@ async function renderInteractiveMatrix(runs, xAxisType, yAxisType) {
                 label:'Distance (km)',
                 data: data,
                 backgroundColor: data.map(d=>getColor(d.km)),
-                width: ({chart})=> chart.chartArea.width / xValues.length * 0.9,
-                height: ({chart})=> chart.chartArea.height / yValues.length * 0.9
+                width: 20,
+                height: 20
             }]
         },
         options:{
