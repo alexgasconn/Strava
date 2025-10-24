@@ -1370,6 +1370,7 @@ async function renderInteractiveMatrix(runs, xAxisType, yAxisType) {
             layout: { padding: 10 }
         }
     });
+}
 
 
 
