@@ -131,6 +131,9 @@ export function renderAthleteTab(allActivities) {
     renderMonthWeekdayMatrix(runs);
     renderMonthDayMatrix(runs);
     renderMonthHourMatrix(runs);
+    renderYearHourMatrix(runs);
+    renderYearWeekdayMatrix(runs);
+
 }
 
 function renderAllTimeStats(runs) {
@@ -1031,6 +1034,209 @@ function renderMonthHourMatrix(runs) {
         }
     });
 }
+
+
+
+function renderYearWeekdayMatrix(runs) {
+    const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const stats = {}; // { [year]: { [weekday]: { count, distance } } }
+
+    runs.forEach(run => {
+        const date = new Date(run.start_date_local);
+        if (isNaN(date)) return;
+        const year = date.getFullYear();
+        const weekday = (date.getDay() + 6) % 7; // Monday = 0
+        const distKm = run.distance / 1000;
+
+        if (!stats[year]) stats[year] = {};
+        if (!stats[year][weekday]) stats[year][weekday] = { count: 0, distance: 0 };
+
+        stats[year][weekday].count++;
+        stats[year][weekday].distance += distKm;
+    });
+
+    const years = Object.keys(stats).map(Number).sort((a, b) => a - b);
+    const data = [];
+    let maxKm = 0;
+
+    years.forEach((year, yIdx) => {
+        for (let d = 0; d < 7; d++) {
+            const entry = stats[year]?.[d] || { count: 0, distance: 0 };
+            maxKm = Math.max(maxKm, entry.distance);
+            data.push({ x: d, y: yIdx, km: entry.distance, count: entry.count });
+        }
+    });
+
+    function getColor(km) {
+        if (!km) return 'rgba(255,255,255,0)';
+        const alpha = 0.15 + 0.85 * (km / maxKm);
+        return `rgba(0,180,200,${alpha.toFixed(2)})`;
+    }
+
+    createUiChart('year-weekday-matrix', {
+        type: 'matrix',
+        data: {
+            datasets: [{
+                label: 'Distance (km)',
+                data,
+                backgroundColor: data.map(d => getColor(d.km))
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        title: items => {
+                            const d = items[0].raw;
+                            return `${years[d.y]} - ${dayLabels[d.x]}`;
+                        },
+                        label: item => {
+                            const d = item.raw;
+                            return [
+                                `Runs: ${d.count}`,
+                                `Distance: ${d.km.toFixed(1)} km`
+                            ];
+                        }
+                    }
+                },
+                legend: { display: false }
+            },
+            scales: {
+                x: {
+                    type: 'linear',
+                    min: -0.5,
+                    max: 7,
+                    ticks: {
+                        stepSize: 1,
+                        callback: val => dayLabels[val] || '',
+                        color: '#333',
+                        font: { weight: 'bold' }
+                    },
+                    grid: { color: '#eee' },
+                    title: { display: true, text: 'Weekday', font: { weight: 'bold' } }
+                },
+                y: {
+                    type: 'linear',
+                    min: -0.5,
+                    max: years.length,
+                    ticks: {
+                        stepSize: 1,
+                        callback: val => years[val] || '',
+                        color: '#333',
+                        font: { weight: 'bold' }
+                    },
+                    grid: { color: '#eee' },
+                    title: { display: true, text: 'Year', font: { weight: 'bold' } }
+                }
+            },
+            layout: { padding: 10 }
+        }
+    });
+}
+
+
+function renderYearHourMatrix(runs) {
+    const stats = {}; // { [year]: { [hour]: { count, distance } } }
+
+    runs.forEach(run => {
+        const date = new Date(run.start_date_local);
+        if (isNaN(date)) return;
+        const year = date.getFullYear();
+        let hour = (date.getHours() - 2 + 24) % 24;
+        const distKm = run.distance / 1000;
+
+        if (!stats[year]) stats[year] = {};
+        if (!stats[year][hour]) stats[year][hour] = { count: 0, distance: 0 };
+
+        stats[year][hour].count++;
+        stats[year][hour].distance += distKm;
+    });
+
+    const years = Object.keys(stats).map(Number).sort((a, b) => a - b);
+    const data = [];
+    let maxCount = 0;
+
+    years.forEach((year, yIdx) => {
+        for (let h = 0; h < 24; h++) {
+            const entry = stats[year]?.[h] || { count: 0, distance: 0 };
+            maxCount = Math.max(maxCount, entry.count);
+            data.push({ x: h, y: yIdx, count: entry.count, km: entry.distance });
+        }
+    });
+
+    function getColor(count) {
+        if (!count) return 'rgba(255,255,255,0)';
+        const alpha = 0.15 + 0.85 * (count / maxCount);
+        return `rgba(255,100,0,${alpha.toFixed(2)})`;
+    }
+
+    createUiChart('year-hour-matrix', {
+        type: 'matrix',
+        data: {
+            datasets: [{
+                label: 'Trainings by Hour & Year',
+                data,
+                backgroundColor: data.map(d => getColor(d.count))
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        title: items => {
+                            const d = items[0].raw;
+                            return `${years[d.y]} - ${d.x}:00`;
+                        },
+                        label: item => {
+                            const d = item.raw;
+                            return [
+                                `Runs: ${d.count}`,
+                                `Distance: ${d.km.toFixed(1)} km`
+                            ];
+                        }
+                    }
+                },
+                legend: { display: false }
+            },
+            scales: {
+                x: {
+                    type: 'linear',
+                    min: -0.5,
+                    max: 24,
+                    ticks: {
+                        stepSize: 2,
+                        callback: val => (val % 1 === 0 ? `${val}:00` : ''),
+                        color: '#333',
+                        font: { weight: 'bold' }
+                    },
+                    grid: { color: '#eee' },
+                    title: { display: true, text: 'Hour of Day', font: { weight: 'bold' } }
+                },
+                y: {
+                    type: 'linear',
+                    min: -0.5,
+                    max: years.length,
+                    ticks: {
+                        stepSize: 1,
+                        callback: val => years[val] || '',
+                        color: '#333',
+                        font: { weight: 'bold' }
+                    },
+                    grid: { color: '#eee' },
+                    title: { display: true, text: 'Year', font: { weight: 'bold' } }
+                }
+            },
+            layout: { padding: 10 }
+        }
+    });
+}
+
+
+
 
 
 
