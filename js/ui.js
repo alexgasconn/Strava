@@ -1240,90 +1240,92 @@ function renderYearHourMatrix(runs) {
 let interactiveMatrixChart;
 
 function renderInteractiveMatrix(runs) {
-  const ctx = document.getElementById("interactiveMatrix");
+    const ctx = document.getElementById("interactiveMatrix");
 
-  function getValue(run, key) {
-    const date = new Date(run.start_date_local);
-    switch(key) {
-      case "year": return date.getFullYear();
-      case "month": return date.getMonth(); // 0-11
-      case "weekday": return (date.getDay() + 6) % 7; // Monday=0
-      case "hour": return (date.getHours() - 2 + 24) % 24;
-      case "season":
-        const m = date.getMonth();
-        return [11,0,1].includes(m) ? 0 : [2,3,4].includes(m) ? 1 : [5,6,7].includes(m) ? 2 : 3;
-      default: return 0;
-    }
-  }
-
-  function updateMatrix() {
-    const xKey = document.getElementById("matrix-x-axis").value;
-    const yKey = document.getElementById("matrix-y-axis").value;
-
-    const matrix = {};
-    runs.forEach(run => {
-      const xVal = getValue(run, xKey);
-      const yVal = getValue(run, yKey);
-      matrix[yVal] ??= {};
-      matrix[yVal][xVal] ??= 0;
-      matrix[yVal][xVal] += 1; // O usar distancia: run.distance/1000
-    });
-
-    const xLabels = [...new Set(runs.map(r => getValue(r, xKey)))].sort((a,b)=>a-b);
-    const yLabels = [...new Set(runs.map(r => getValue(r, yKey)))].sort((a,b)=>a-b);
-
-    const points = [];
-    let maxVal = 0;
-    yLabels.forEach((y, yi) => {
-      xLabels.forEach((x, xi) => {
-        const v = matrix[y]?.[x] ?? 0;
-        maxVal = Math.max(maxVal, v);
-        points.push({ x, y, v });
-      });
-    });
-
-    function getColor(v) {
-      if(v===0) return 'rgba(255,255,255,0)';
-      return `rgba(0,128,255,${0.15 + 0.85 * (v/maxVal)})`;
-    }
-
-    if(interactiveMatrixChart) interactiveMatrixChart.destroy();
-
-    interactiveMatrixChart = new Chart(ctx, {
-      type: 'matrix',
-      data: {
-        datasets: [{
-          label: 'Activity Matrix',
-          data: points,
-          backgroundColor: points.map(d=>getColor(d.v)),
-          width: ({chart}) => chart.chartArea.width / xLabels.length - 2,
-          height: ({chart}) => chart.chartArea.height / yLabels.length - 2,
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          tooltip: {
-            callbacks: {
-              title: items => `X: ${items[0].raw.x}, Y: ${items[0].raw.y}`,
-              label: items => `Count: ${items[0].raw.v}`
-            }
-          },
-          legend: { display: false }
-        },
-        scales: {
-          x: { type: 'category', labels: xLabels, title: { display: true, text: xKey } },
-          y: { type: 'category', labels: yLabels, title: { display: true, text: yKey } }
+    function getValue(run, key) {
+        const date = new Date(run.start_date_local);
+        switch (key) {
+            case "year": return date.getFullYear();
+            case "month": return date.getMonth(); // 0-11
+            case "weekday": return (date.getDay() + 6) % 7; // Monday=0
+            case "hour": return (date.getHours() - 2 + 24) % 24;
+            case "season":
+                const m = date.getMonth();
+                return [11, 0, 1].includes(m) ? 0 : [2, 3, 4].includes(m) ? 1 : [5, 6, 7].includes(m) ? 2 : 3;
+            default: return 0;
         }
-      }
-    });
-  }
+    }
 
-  document.getElementById("matrix-x-axis").addEventListener("change", updateMatrix);
-  document.getElementById("matrix-y-axis").addEventListener("change", updateMatrix);
+    function updateMatrix() {
+        const xKey = document.getElementById("matrix-x-axis").value;
+        const yKey = document.getElementById("matrix-y-axis").value;
 
-  updateMatrix(); // Inicial
+        const matrix = {};
+        runs.forEach(run => {
+            const xVal = getValue(run, xKey);
+            const yVal = getValue(run, yKey);
+            matrix[yVal] ??= {};
+            matrix[yVal][xVal] ??= 0;
+            matrix[yVal][xVal] += 1; // O usar distancia: run.distance/1000
+        });
+
+        const xLabels = [...new Set(runs.map(r => getValue(r, xKey)))].sort((a, b) => a - b);
+        const yLabels = [...new Set(runs.map(r => getValue(r, yKey)))].sort((a, b) => a - b);
+
+        const points = [];
+        let maxVal = 0;
+        yLabels.forEach((y, yi) => {
+            xLabels.forEach((x, xi) => {
+                const v = matrix[y]?.[x] ?? 0;
+                maxVal = Math.max(maxVal, v);
+                points.push({ x, y, v });
+            });
+        });
+
+        function getColor(v) {
+            if (v === 0) return 'rgba(255,255,255,0)';
+            return `rgba(0,128,255,${0.15 + 0.85 * (v / maxVal)})`;
+        }
+
+        if (interactiveMatrixChart) interactiveMatrixChart.destroy();
+
+        interactiveMatrixChart = new Chart(ctx, {
+            type: 'matrix',
+            data: {
+                datasets: [{
+                    label: 'Activity Matrix',
+                    data: points,
+                    backgroundColor: points.map(d => getColor(d.v)),
+                    width: 20,   // tamaño fijo por celda
+                    height: 20,  // tamaño fijo por celda
+                }]
+
+
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            title: items => `X: ${items[0].raw.x}, Y: ${items[0].raw.y}`,
+                            label: items => `Count: ${items[0].raw.v}`
+                        }
+                    },
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { type: 'category', labels: xLabels, title: { display: true, text: xKey } },
+                    y: { type: 'category', labels: yLabels, title: { display: true, text: yKey } }
+                }
+            }
+        });
+    }
+
+    document.getElementById("matrix-x-axis").addEventListener("change", updateMatrix);
+    document.getElementById("matrix-y-axis").addEventListener("change", updateMatrix);
+
+    updateMatrix(); // Inicial
 }
 
 
