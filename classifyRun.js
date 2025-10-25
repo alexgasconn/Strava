@@ -122,16 +122,16 @@ window.classifyRun = function classifyRun(act = {}, streams = {}) {
     } else if (distKm >= 5) {
         addScores(scores, { 'Easy Run': 30, 'Tempo Run': distKm > 6 ? 10 : 0, 'Long Run': -10 });
     } else {
-        addScores(scores, { 'Recovery Run': 50, 'Easy Run': 20, 'Long Run': -20 });
+        addScores(scores, { 'Recovery Run': 50, 'Easy Run': 20, 'Long Run': -50 });
     }
 
     // ---------- Elevation scoring (con escalado gradual) ----------
     if (elevationPerKm > 40) {
-        addScores(scores, { 'Hill Repeats': 120, 'Trail Run': 80 });
+        addScores(scores, { 'Hill Repeats': 150, 'Trail Run': 100 });
     } else if (elevationPerKm > 20) {
-        addScores(scores, { 'Hill Repeats': 80, 'Trail Run': 40 });
+        addScores(scores, { 'Hill Repeats': 100, 'Trail Run': 50 });
     } else if (elevationPerKm > 10) {
-        addScores(scores, { 'Trail Run': 10 }); // pequeño bonus si hay algo de elevación
+        addScores(scores, { 'Trail Run': 30 }); // pequeño bonus si hay algo de elevación
     } else {
         addScores(scores, { 'Trail Run': -10, 'Hill Repeats': -20 }); // penaliza runs planos
     }

@@ -295,110 +295,111 @@
 
                         </div>
                     </div>
+                </div>
 
-                    <!-- ============================================= -->
-                    <!-- PESTAÑA 3: PLANNER & TOOLS                    -->
-                    <!-- ============================================= -->
-                    <div id="planner-tab" class="tab-content">
-                        <div id="prediction-controls" class="prediction-controls">
-                            <fieldset>
-                                <legend>Prediction Mood</legend>
-                                <div class="control-group">
-                                    <label><input type="radio" name="prediction-mood" value="optimistic">
-                                        Optimistic</label>
-                                    <label><input type="radio" name="prediction-mood" value="realistic" checked>
-                                        Realistic</label>
-                                    <label><input type="radio" name="prediction-mood" value="conservative">
-                                        Conservative</label>
+                <!-- ============================================= -->
+                <!-- PESTAÑA 3: PLANNER & TOOLS                    -->
+                <!-- ============================================= -->
+                <div id="planner-tab" class="tab-content">
+                    <div id="prediction-controls" class="prediction-controls">
+                        <fieldset>
+                            <legend>Prediction Mood</legend>
+                            <div class="control-group">
+                                <label><input type="radio" name="prediction-mood" value="optimistic">
+                                    Optimistic</label>
+                                <label><input type="radio" name="prediction-mood" value="realistic" checked>
+                                    Realistic</label>
+                                <label><input type="radio" name="prediction-mood" value="conservative">
+                                    Conservative</label>
+                            </div>
+                        </fieldset>
+                        <fieldset>
+                            <legend>Model Weights</legend>
+                            <div class="control-group sliders">
+                                <div>
+                                    <label for="riegel-weight">Riegel Formula: <span
+                                            id="riegel-weight-val">50%</span></label>
+                                    <input type="range" id="riegel-weight" min="0" max="100" value="50">
                                 </div>
-                            </fieldset>
-                            <fieldset>
-                                <legend>Model Weights</legend>
-                                <div class="control-group sliders">
-                                    <div>
-                                        <label for="riegel-weight">Riegel Formula: <span
-                                                id="riegel-weight-val">50%</span></label>
-                                        <input type="range" id="riegel-weight" min="0" max="100" value="50">
-                                    </div>
-                                    <div>
-                                        <label for="ml-weight">Personal Curve (ML): <span
-                                                id="ml-weight-val">25%</span></label>
-                                        <input type="range" id="ml-weight" min="0" max="100" value="25">
-                                    </div>
-                                    <div>
-                                        <label for="pb-weight">Personal Bests (PBs): <span
-                                                id="pb-weight-val">40%</span></label>
-                                        <input type="range" id="pb-weight" min="0" max="100" value="40">
-                                    </div>
+                                <div>
+                                    <label for="ml-weight">Personal Curve (ML): <span
+                                            id="ml-weight-val">25%</span></label>
+                                    <input type="range" id="ml-weight" min="0" max="100" value="25">
                                 </div>
-                            </fieldset>
-                            <button id="update-predictions-btn">Update Predictions</button>
-                        </div>
-
-                        <!-- SECCIÓN DE PREDICCIÓN -->
-                        <div class="chart-container">
-                            <h3>Race Time Predictions</h3>
-                            <div id="riegel-predictions">
-                                <p>Select a mood and weights, then click "Update" to see your predicted race times.</p>
+                                <div>
+                                    <label for="pb-weight">Personal Bests (PBs): <span
+                                            id="pb-weight-val">40%</span></label>
+                                    <input type="range" id="pb-weight" min="0" max="100" value="40">
+                                </div>
                             </div>
-                        </div>
-
-                        <!-- CALCULADORA VDOT -->
-                        <div class="chart-container" id="calculator-container">
-                            <h3>VDOT Race Time Calculator</h3>
-                            <p>Powered by <a href="https://vdoto2.com/" target="_blank">VDOT O2</a>.</p>
-                            <div class="iframe-responsive-container">
-                                <iframe src='https://vdoto2.com/calculator/embed' frameborder='0'></iframe>
-                            </div>
-                        </div>
-
+                        </fieldset>
+                        <button id="update-predictions-btn">Update Predictions</button>
                     </div>
 
-                    <div id="gear-tab" class="tab-content">
-                        <h3>Gear Overview</h3>
-
-                        <!-- Listado de zapatillas -->
-                        <section id="gear-info-section" class="gear-section">
-                            <h4>Your Current Gear</h4>
-                            <div id="gear-info-list"></div>
-                        </section>
-
-                        <!-- Uso acumulado -->
-                        <section id="gear-chart-container" class="chart-container">
-                            <h4>Distance per Shoe</h4>
-                            <canvas id="gearChart"></canvas>
-                        </section>
-
-                        <!-- Línea temporal -->
-                        <section id="gear-gantt-chart-container" class="chart-container">
-                            <h4>Gear Timeline</h4>
-                            <canvas id="gear-gantt-chart"></canvas>
-                        </section>
-                    </div>
-
-
-
-                    <div id="runs-races-tab" class="tab-content">
-                        <h3>Runs & Races</h3>
-                        <p>TBD</p>
-                        <div class="chart-container">
-                            <h3>Personal Bests</h3>
-                            <div id="personal-bests"></div>
-                        </div>
-                        <div class="chart-container">
-                            <h3>Races</h3>
-                            <div style="overflow-x:auto;">
-                                <table id="race-list" class="df-table"></table>
-                            </div>
-                        </div>
-
-                        <div class="chart-container full-width">
-                            <h3>All Runs</h3>
-                            <div style="overflow-x:auto;">
-                                <table id="all-runs-table" class="df-table"></table>
-                            </div>
+                    <!-- SECCIÓN DE PREDICCIÓN -->
+                    <div class="chart-container">
+                        <h3>Race Time Predictions</h3>
+                        <div id="riegel-predictions">
+                            <p>Select a mood and weights, then click "Update" to see your predicted race times.</p>
                         </div>
                     </div>
+
+                    <!-- CALCULADORA VDOT -->
+                    <div class="chart-container" id="calculator-container">
+                        <h3>VDOT Race Time Calculator</h3>
+                        <p>Powered by <a href="https://vdoto2.com/" target="_blank">VDOT O2</a>.</p>
+                        <div class="iframe-responsive-container">
+                            <iframe src='https://vdoto2.com/calculator/embed' frameborder='0'></iframe>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div id="gear-tab" class="tab-content">
+                    <h3>Gear Overview</h3>
+
+                    <!-- Listado de zapatillas -->
+                    <section id="gear-info-section" class="gear-section">
+                        <h4>Your Current Gear</h4>
+                        <div id="gear-info-list"></div>
+                    </section>
+
+                    <!-- Uso acumulado -->
+                    <section id="gear-chart-container" class="chart-container">
+                        <h4>Distance per Shoe</h4>
+                        <canvas id="gearChart"></canvas>
+                    </section>
+
+                    <!-- Línea temporal -->
+                    <section id="gear-gantt-chart-container" class="chart-container">
+                        <h4>Gear Timeline</h4>
+                        <canvas id="gear-gantt-chart"></canvas>
+                    </section>
+                </div>
+
+
+
+                <div id="runs-races-tab" class="tab-content">
+                    <h3>Runs & Races</h3>
+                    <p>TBD</p>
+                    <div class="chart-container">
+                        <h3>Personal Bests</h3>
+                        <div id="personal-bests"></div>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Races</h3>
+                        <div style="overflow-x:auto;">
+                            <table id="race-list" class="df-table"></table>
+                        </div>
+                    </div>
+
+                    <div class="chart-container full-width">
+                        <h3>All Runs</h3>
+                        <div style="overflow-x:auto;">
+                            <table id="all-runs-table" class="df-table"></table>
+                        </div>
+                    </div>
+                </div>
 
 
 
