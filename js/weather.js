@@ -12,6 +12,8 @@ export async function renderWeatherTab(allActivities) {
     }
 
     const runs = allActivities.filter(a => a.type && a.type.includes("Run") && a.start_latlng);
+    console.log(`Found ${runs.length} runs with location data.`);
+
     if (runs.length === 0) {
         container.innerHTML = "<p>No running activities found to analyze weather.</p>";
         return;
@@ -19,12 +21,18 @@ export async function renderWeatherTab(allActivities) {
 
     container.innerHTML = "<p>Fetching weather data... this may take a moment ⏳</p>";
 
-    // --- Pedir datos climáticos por cada carrera ---
     const weatherResults = [];
     for (const run of runs) {
+        console.groupCollapsed(`🌤 Fetching weather for run: ${run.name || "Unnamed"} (${run.start_date_local})`);
         const weather = await getWeatherForRun(run);
-        if (weather) weatherResults.push(weather);
-        await sleep(300); // pequeño delay para evitar demasiadas llamadas seguidas
+        console.groupEnd();
+        if (weather) {
+            console.log("✅ Weather received:", weather);
+            weatherResults.push(weather);
+        } else {
+            console.warn("⚠️ No weather data retrieved for this run.");
+        }
+        await sleep(300);
     }
 
     if (weatherResults.length === 0) {
@@ -32,11 +40,18 @@ export async function renderWeatherTab(allActivities) {
         return;
     }
 
-    // --- Estadísticas generales ---
     const avgTemp = mean(weatherResults.map(w => w.temperature));
     const avgWind = mean(weatherResults.map(w => w.wind_speed));
     const avgRain = mean(weatherResults.map(w => w.precipitation));
     const commonCondition = mode(weatherResults.map(w => w.weather_text));
+
+    console.log("🌡️ Average Weather Summary:", {
+        avgTemp,
+        avgWind,
+        avgRain,
+        commonCondition,
+        count: weatherResults.length
+    });
 
     container.innerHTML = `
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1em;">
@@ -75,26 +90,45 @@ async function getWeatherForRun(run) {
         hourly: "temperature_2m,precipitation,weathercode,wind_speed_10m",
         timezone: "auto"
     });
+    const url = `${baseUrl}?${params.toString()}`;
+
+    console.log("📡 Fetching weather from:", url);
 
     try {
-        const res = await fetch(`${baseUrl}?${params.toString()}`);
-        if (!res.ok) throw new Error(res.status);
+        const res = await fetch(url);
+        console.log("🔍 Response status:", res.status, res.statusText);
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        if (!data.hourly || !data.hourly.time) return null;
+        console.log("📦 Raw data received:", data);
+
+        if (!data.hourly || !data.hourly.time) {
+            console.warn("❌ Missing 'hourly' data in response.");
+            return null;
+        }
 
         const hour = new Date(run.start_date_local).getHours();
         const idx = data.hourly.time.findIndex(t => new Date(t).getHours() === hour);
-        if (idx === -1) return null;
+        console.log("🕒 Matching hour:", hour, "→ Index found:", idx);
 
-        return {
+        if (idx === -1) {
+            console.warn("⚠️ No matching hour found for this run.");
+            return null;
+        }
+
+        const result = {
             temperature: data.hourly.temperature_2m[idx],
             precipitation: data.hourly.precipitation[idx],
             wind_speed: data.hourly.wind_speed_10m[idx],
             weather_code: data.hourly.weathercode[idx],
             weather_text: weatherDescription(data.hourly.weathercode[idx])
         };
+
+        console.log("🌤 Extracted weather data:", result);
+        return result;
+
     } catch (err) {
-        console.warn("Weather fetch error:", err);
+        console.error("🚨 Weather fetch error:", err);
         return null;
     }
 }
