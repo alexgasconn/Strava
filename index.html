@@ -403,29 +403,41 @@
                 </div>
 
                 <div id="weather-tab" class="tab-content">
-                    <h3>Weather Data</h3>
+                    <h2>🌦 Weather Analytics</h2>
+                    <div id="weather-summary"></div>
 
-                    <!-- Resumen principal generado por weather.js -->
-                    <div id="weather-summary" class="chart-container">
-                        <p>Weather analysis will appear here once data is loaded...</p>
-                    </div>
-
-                    <!-- Gráficos opcionales (puedes llenarlos más tarde) -->
-                    <div class="chart-container">
-                        <h3>Weather Overview</h3>
-                        <div id="weather-overview"></div>
-                    </div>
-
-                    <div class="chart-container">
-                        <h3>Temperature vs Performance</h3>
-                        <canvas id="temp-vs-performance-chart"></canvas>
-                    </div>
-
-                    <div class="chart-container">
-                        <h3>Humidity vs Performance</h3>
-                        <canvas id="humidity-vs-performance-chart"></canvas>
+                    <div class="chart-grid">
+                        <div class="chart-container">
+                            <h3>Temperature Histogram</h3>
+                            <canvas id="temp-hist"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3>Rainfall Histogram</h3>
+                            <canvas id="rain-hist"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3>Wind Speed Histogram</h3>
+                            <canvas id="wind-hist"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3>Weather Type Distribution</h3>
+                            <canvas id="condition-pie"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3>Temperature vs Distance</h3>
+                            <canvas id="temp-vs-dist"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3>Temperature vs Pace</h3>
+                            <canvas id="temp-vs-pace"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3>Monthly Avg Temperature</h3>
+                            <canvas id="monthly-avg"></canvas>
+                        </div>
                     </div>
                 </div>
+
 
 
 
