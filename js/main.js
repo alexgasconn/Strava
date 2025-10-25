@@ -3,7 +3,7 @@ import { redirectToStrava, logout, handleAuth } from './auth.js';
 import { setupDashboard, renderDashboard, showLoading, hideLoading, handleError, renderAthleteProfile, renderTrainingZones, renderAthleteTab } from './ui.js';
 import { renderPlannerTab } from './planner.js';
 import { renderGearTab } from './gear.js';
-
+import { renderWeatherTab } from './js/weather.js';
 import { renderRunsTab } from './runs.js';
 import { fetchAllActivities, fetchAthleteData, fetchTrainingZones } from './api.js';
 
@@ -68,6 +68,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderRunsTab(allActivities);
                 } else {
                     console.warn("Activities not loaded yet, can't render runs tab.");
+                }
+            }
+            if (tabId === 'weather-tab') {
+                if (allActivities.length > 0) {
+                    renderWeatherTab(allActivities);
+                } else {
+                    console.warn("Activities not loaded yet, can't render weather tab.");
                 }
             }
 

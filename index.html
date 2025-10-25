@@ -85,6 +85,7 @@
             <button class="tab-link" data-tab="planner-tab">📅 Planner & Tools</button>
             <button class="tab-link" data-tab="gear-tab">👟 Gear</button>
             <button class="tab-link" data-tab="runs-races-tab">🏃‍♂️ Runs & Races</button>
+            <button class="tab-link" data-tab="weather-tab">🌤 Weather</button>
 
 
 
@@ -398,6 +399,23 @@
                         <div style="overflow-x:auto;">
                             <table id="all-runs-table" class="df-table"></table>
                         </div>
+                    </div>
+                </div>
+
+                <div id="weather-tab" class="tab-content">
+                    <h3>Weather Data</h3>
+                    <p>TBD</p>
+                    <div class="chart-container">
+                        <h3>Weather Overview</h3>
+                        <div id="weather-overview"></div>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Temperature vs Performance</h3>
+                        <canvas id="temp-vs-performance-chart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Humidity vs Performance</h3>
+                        <canvas id="humidity-vs-performance-chart"></canvas>
                     </div>
                 </div>
 
