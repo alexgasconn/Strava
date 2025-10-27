@@ -302,9 +302,13 @@ function correlation(x, y) {
   return den === 0 ? 0 : num / den;
 }
 function corrColor(corr) {
-  const r = Math.floor(255 * (1 - corr));
-  const g = Math.floor(255 * (1 + corr));
-  return `rgb(${r},${g},150)`;
+    // Escala de -1 (rojo) a 1 (azul), pasando por blanco/gris en 0
+    const red = Math.floor(255 * (1 - corr)); // Más rojo para corr baja
+    const blue = Math.floor(255 * (1 + corr)); // Más azul para corr alta
+    const green = 255 - Math.abs(corr) * 100; // Mantener un poco de verde para neutral
+
+    // Asegurarse de que los valores estén en el rango 0-255
+    return `rgb(${Math.max(0, Math.min(255, red))}, ${Math.max(0, Math.min(255, green))}, ${Math.max(0, Math.min(255, blue))})`;
 }
 function monthName(i) {
   return ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][i];
@@ -317,19 +321,3 @@ function runPaceMinPerKm(run) {
 function numericSafe(v) {
   return v === null || v === undefined ? 0 : Number(v);
 }
-
-
-// ---------------- CSS ----------------
-export const WEATHER_CSS = `
-.wa-stats-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px}
-.wa-card{background:#fff;border-radius:8px;padding:8px 10px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
-.wa-val{font-size:1.1rem;font-weight:600}
-.wa-selector{margin:10px 0}
-.wa-charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
-.wa-chart{background:#fff;border-radius:8px;padding:10px}
-.wa-table,.wa-corr{width:100%;border-collapse:collapse;font-size:0.9rem}
-.wa-table th,.wa-table td,.wa-corr th,.wa-corr td{border:1px solid #ddd;padding:6px;text-align:center}
-.wa-topruns-grid{display:flex;gap:12px;flex-wrap:wrap}
-.wa-run-row{display:flex;justify-content:space-between;padding:6px;border-bottom:1px solid #eee;font-size:0.9rem}
-.wa-run-row:nth-child(even){background:#fafafa}
-`;

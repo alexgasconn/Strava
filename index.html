@@ -405,9 +405,13 @@
                 <div id="weather-tab" class="tab-content">
                     <h2>🌦 Weather Analytics</h2>
 
-                    <div id="weather-summary" class="weather-summary"></div>
+                    <!-- Contenedor principal para el resumen y otros elementos generados dinámicamente -->
+                    <div id="weather-summary-content">
+                        <!-- Aquí se llenará el resumen de tarjetas (Avg Temp, Avg Wind, etc.) -->
+                        <div id="wa-stats-row" class="wa-stats-row">Cargando resumen...</div>
+                    </div>
 
-                    <!-- Selector de histograma -->
+                    <!-- Selector de histograma (¡Este ya existe y JS lo usará directamente!) -->
                     <div class="histogram-selector">
                         <label for="histogram-select">Select histogram:</label>
                         <select id="histogram-select">
@@ -421,39 +425,40 @@
                     <div class="chart-grid">
                         <div class="chart-container wide">
                             <h3 id="histogram-title">Temperature Histogram</h3>
-                            <canvas id="weather-histogram"></canvas>
+                            <canvas id="weather-histogram"></canvas> <!-- JS dibujará aquí -->
                         </div>
 
                         <div class="chart-container wide">
                             <h3>Monthly Weather Overview</h3>
-                            <canvas id="monthly-weather"></canvas>
+                            <canvas id="monthly-weather"></canvas> <!-- JS dibujará aquí -->
                         </div>
 
                         <div class="chart-container">
                             <h3>Weather Type Distribution</h3>
-                            <canvas id="condition-pie"></canvas>
+                            <canvas id="condition-pie"></canvas> <!-- JS dibujará aquí -->
                         </div>
 
                         <div class="chart-container">
                             <h3>Temperature vs Distance</h3>
                             <canvas id="temp-vs-dist"></canvas>
+                            <!-- Puedes mantener este o reemplazarlo por el de pace si no necesitas ambos -->
                         </div>
 
                         <div class="chart-container">
                             <h3>Temperature vs Pace</h3>
-                            <canvas id="temp-vs-pace"></canvas>
+                            <canvas id="temp-vs-pace"></canvas> <!-- JS dibujará aquí -->
                         </div>
 
                         <div class="chart-container wide">
                             <h3>Correlation Matrix</h3>
-                            <div id="corr-matrix"></div>
+                            <div id="corr-matrix"></div> <!-- JS rellenará este div -->
                         </div>
                     </div>
 
                     <!-- Estadísticas mensuales -->
                     <div id="monthly-stats" class="monthly-stats">
                         <h3>📆 Monthly Statistics</h3>
-                        <table id="monthly-table">
+                        <table id="monthly-table"> <!-- JS rellenará el tbody de esta tabla -->
                             <thead>
                                 <tr>
                                     <th>Month</th>
@@ -463,7 +468,7 @@
                                     <th>Avg Humidity (%)</th>
                                 </tr>
                             </thead>
-                            <tbody></tbody>
+                            <tbody></tbody> <!-- Contenido a ser llenado por JS -->
                         </table>
                     </div>
 
@@ -471,6 +476,7 @@
                     <div id="top-runs" class="top-runs">
                         <h3>🏆 Top Runs</h3>
                         <div class="top-list">
+                            <!-- JS rellenará estas secciones con listas de carreras -->
                             <div class="top-section" id="top-hot"></div>
                             <div class="top-section" id="top-cold"></div>
                             <div class="top-section" id="top-windy"></div>
@@ -483,7 +489,7 @@
                         <h3>📋 All Runs (click to expand)</h3>
                         <button id="toggle-runs">Show/Hide Runs</button>
                         <div id="runs-table-container" class="hidden">
-                            <table id="runs-table">
+                            <table id="runs-table"> <!-- JS rellenará el tbody de esta tabla -->
                                 <thead>
                                     <tr>
                                         <th>Date</th>
@@ -496,7 +502,6 @@
                                         <th>Condition</th>
                                     </tr>
                                 </thead>
-                                <tbody></tbody>
                             </table>
                         </div>
                     </div>
