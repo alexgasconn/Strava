@@ -42,28 +42,25 @@ export async function renderWeatherTab(allActivities) {
     const CONCURRENCY = 10;
 
     async function fetchWeatherForRuns(runs) {
-        const weatherResults = [];
-        let i = 0;
-
-        async function worker() {
-            while (i < runs.length) {
-                const run = runs[i++];
+        const results = [];
+        const batches = 10;
+        for (let i = 0; i < runs.length; i += batches) {
+            const batch = runs.slice(i, i + batches);
+            const batchResults = await Promise.all(batch.map(async run => {
                 try {
                     const w = await getWeatherForRun(run);
-                    if (w) weatherResults.push({ run, ...w });
-                    console.log(`Processed ${i}/${runs.length} — ${w ? 'fetched' : 'no data'}`);
-                } catch (err) {
-                    console.error(`Error fetching weather for run ${run.name}:`, err);
+                    return w ? { run, ...w } : null;
+                } catch (e) {
+                    console.error(e);
+                    return null;
                 }
-            }
+            }));
+            results.push(...batchResults.filter(Boolean));
+            console.log(`Processed ${results.length}/${runs.length}`);
         }
-
-        // Lanzar varios workers en paralelo
-        const workers = Array.from({ length: CONCURRENCY }, () => worker());
-        await Promise.all(workers);
-
-        return weatherResults;
+        return results;
     }
+
 
     // Uso:
     const weatherResults = await fetchWeatherForRuns(runs);
