@@ -405,88 +405,104 @@
                 <div id="weather-tab" class="tab-content">
                     <h2>🌦 Weather Analytics</h2>
 
-                    <!-- === SUMMARY === -->
-                    <div id="weather-summary" class="section"></div>
+                    <div id="weather-summary" class="weather-summary"></div>
 
-                    <!-- === CHARTS GRID === -->
+                    <!-- Selector de histograma -->
+                    <div class="histogram-selector">
+                        <label for="histogram-select">Select histogram:</label>
+                        <select id="histogram-select">
+                            <option value="temp">Temperature</option>
+                            <option value="rain">Rainfall</option>
+                            <option value="wind">Wind Speed</option>
+                            <option value="humidity">Humidity</option>
+                        </select>
+                    </div>
+
                     <div class="chart-grid">
-                        <div class="chart-container">
-                            <h3>Temperature Histogram</h3>
-                            <canvas id="temp-hist"></canvas>
+                        <div class="chart-container wide">
+                            <h3 id="histogram-title">Temperature Histogram</h3>
+                            <canvas id="weather-histogram"></canvas>
                         </div>
-                        <div class="chart-container">
-                            <h3>Rainfall Histogram</h3>
-                            <canvas id="rain-hist"></canvas>
+
+                        <div class="chart-container wide">
+                            <h3>Monthly Weather Overview</h3>
+                            <canvas id="monthly-weather"></canvas>
                         </div>
-                        <div class="chart-container">
-                            <h3>Wind Speed Histogram</h3>
-                            <canvas id="wind-hist"></canvas>
-                        </div>
+
                         <div class="chart-container">
                             <h3>Weather Type Distribution</h3>
                             <canvas id="condition-pie"></canvas>
                         </div>
+
                         <div class="chart-container">
                             <h3>Temperature vs Distance</h3>
                             <canvas id="temp-vs-dist"></canvas>
                         </div>
+
                         <div class="chart-container">
                             <h3>Temperature vs Pace</h3>
                             <canvas id="temp-vs-pace"></canvas>
                         </div>
-                        <div class="chart-container">
-                            <h3>Monthly Avg Temperature</h3>
-                            <canvas id="monthly-avg"></canvas>
+
+                        <div class="chart-container wide">
+                            <h3>Correlation Matrix</h3>
+                            <div id="corr-matrix"></div>
                         </div>
                     </div>
 
-                    <!-- === ADVANCED ANALYTICS === -->
-                    <div class="advanced-weather">
-                        <h3>📊 Correlation Matrix</h3>
-                        <div id="correlation-matrix"></div>
-
-                        <h3>📅 Monthly Weather Statistics</h3>
-                        <div id="monthly-stats-table"></div>
-
-                        <h3>🏆 Top 5 Runs</h3>
-                        <div class="top-runs-grid">
-                            <div>
-                                <h4>🔥 Hottest</h4>
-                                <ul id="top-hot"></ul>
-                            </div>
-                            <div>
-                                <h4>❄️ Coldest</h4>
-                                <ul id="top-cold"></ul>
-                            </div>
-                            <div>
-                                <h4>💨 Windiest</h4>
-                                <ul id="top-windy"></ul>
-                            </div>
-                            <div>
-                                <h4>🌧 Rainiest</h4>
-                                <ul id="top-rainy"></ul>
-                            </div>
-                        </div>
-
-                        <h3>📋 All Runs Overview</h3>
-                        <button id="toggle-runs-btn">Show/Hide Run List</button>
-                        <table id="runs-table" class="hidden">
+                    <!-- Estadísticas mensuales -->
+                    <div id="monthly-stats" class="monthly-stats">
+                        <h3>📆 Monthly Statistics</h3>
+                        <table id="monthly-table">
                             <thead>
                                 <tr>
-                                    <th>Date</th>
-                                    <th>Run</th>
-                                    <th>Distance (km)</th>
-                                    <th>Pace</th>
-                                    <th>Temp (°C)</th>
-                                    <th>Wind (km/h)</th>
-                                    <th>Rain (mm)</th>
-                                    <th>Condition</th>
+                                    <th>Month</th>
+                                    <th>Avg Temp (°C)</th>
+                                    <th>Avg Wind (km/h)</th>
+                                    <th>Avg Rain (mm)</th>
+                                    <th>Avg Humidity (%)</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
                         </table>
                     </div>
+
+                    <!-- Top runs -->
+                    <div id="top-runs" class="top-runs">
+                        <h3>🏆 Top Runs</h3>
+                        <div class="top-list">
+                            <div class="top-section" id="top-hot"></div>
+                            <div class="top-section" id="top-cold"></div>
+                            <div class="top-section" id="top-windy"></div>
+                            <div class="top-section" id="top-rainy"></div>
+                        </div>
+                    </div>
+
+                    <!-- Listado completo de runs -->
+                    <div id="runs-list" class="runs-list">
+                        <h3>📋 All Runs (click to expand)</h3>
+                        <button id="toggle-runs">Show/Hide Runs</button>
+                        <div id="runs-table-container" class="hidden">
+                            <table id="runs-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Distance (km)</th>
+                                        <th>Time</th>
+                                        <th>Pace (min/km)</th>
+                                        <th>Temp (°C)</th>
+                                        <th>Wind (km/h)</th>
+                                        <th>Rain (mm)</th>
+                                        <th>Condition</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
+
+
 
 
 
