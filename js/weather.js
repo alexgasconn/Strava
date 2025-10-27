@@ -38,15 +38,36 @@ export async function renderWeatherTab(allActivities) {
         summaryCardsContainer.innerHTML = `<div class="wa-card"><h4>Cargando...</h4><div class="wa-val">Analizando datos meteorológicos...</div></div>`;
     }
 
-    // Fetch weather data
-    const weatherResults = [];
-    for (let i = 0; i < runs.length; i++) {
-        const run = runs[i];
-        const w = await getWeatherForRun(run);
-        if (w) weatherResults.push({ run, ...w });
-        // Pequeña pausa para no sobrecargar la API
-        await sleep(100);
+    // // Fetch weather data
+    const CONCURRENCY = 10;
+
+    async function fetchWeatherForRuns(runs) {
+        const weatherResults = [];
+        let i = 0;
+
+        async function worker() {
+            while (i < runs.length) {
+                const run = runs[i++];
+                try {
+                    const w = await getWeatherForRun(run);
+                    if (w) weatherResults.push({ run, ...w });
+                    console.log(`Processed ${i}/${runs.length} — ${w ? 'fetched' : 'no data'}`);
+                } catch (err) {
+                    console.error(`Error fetching weather for run ${run.name}:`, err);
+                }
+            }
+        }
+
+        // Lanzar varios workers en paralelo
+        const workers = Array.from({ length: CONCURRENCY }, () => worker());
+        await Promise.all(workers);
+
+        return weatherResults;
     }
+
+    // Uso:
+    const weatherResults = await fetchWeatherForRuns(runs);
+
 
     if (!weatherResults.length) {
         if (summaryCardsContainer) {
@@ -473,7 +494,7 @@ function renderTopRuns(containers, data) {
     const hottest = [...data].sort((a, b) => b.temperature - a.temperature).slice(0, 5);
     const coldest = [...data].sort((a, b) => a.temperature - b.temperature).slice(0, 5);
     const windiest = [...data].sort((a, b) => b.wind_speed - a.wind_speed).slice(0, 5);
-    const rainy = [...data].sort((a,b) => b.precipitation - a.precipitation).slice(0, 5);
+    const rainy = [...data].sort((a, b) => b.precipitation - a.precipitation).slice(0, 5);
 
     if (containers.hot) containers.hot.innerHTML = `<h4>Top 5 Hottest</h4>${listRuns(hottest, 'temperature', '°C')}`;
     if (containers.cold) containers.cold.innerHTML = `<h4>Top 5 Coldest</h4>${listRuns(coldest, 'temperature', '°C')}`;
@@ -558,7 +579,7 @@ function corrColor(corr) {
 }
 
 function monthName(i) {
-    return ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][i];
+    return ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][i];
 }
 function runPaceMinPerKm(run) {
     if (!run.distance || run.distance === 0 || !run.moving_time || run.moving_time === 0) return 0;
