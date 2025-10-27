@@ -314,6 +314,11 @@ function runPaceMinPerKm(run) {
   return pace;
 }
 
+function numericSafe(v) {
+  return v === null || v === undefined ? 0 : Number(v);
+}
+
+
 // ---------------- CSS ----------------
 export const WEATHER_CSS = `
 .wa-stats-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px}
