@@ -404,8 +404,11 @@
 
                 <div id="weather-tab" class="tab-content">
                     <h2>🌦 Weather Analytics</h2>
-                    <div id="weather-summary"></div>
 
+                    <!-- === SUMMARY === -->
+                    <div id="weather-summary" class="section"></div>
+
+                    <!-- === CHARTS GRID === -->
                     <div class="chart-grid">
                         <div class="chart-container">
                             <h3>Temperature Histogram</h3>
@@ -436,7 +439,55 @@
                             <canvas id="monthly-avg"></canvas>
                         </div>
                     </div>
+
+                    <!-- === ADVANCED ANALYTICS === -->
+                    <div class="advanced-weather">
+                        <h3>📊 Correlation Matrix</h3>
+                        <div id="correlation-matrix"></div>
+
+                        <h3>📅 Monthly Weather Statistics</h3>
+                        <div id="monthly-stats-table"></div>
+
+                        <h3>🏆 Top 5 Runs</h3>
+                        <div class="top-runs-grid">
+                            <div>
+                                <h4>🔥 Hottest</h4>
+                                <ul id="top-hot"></ul>
+                            </div>
+                            <div>
+                                <h4>❄️ Coldest</h4>
+                                <ul id="top-cold"></ul>
+                            </div>
+                            <div>
+                                <h4>💨 Windiest</h4>
+                                <ul id="top-windy"></ul>
+                            </div>
+                            <div>
+                                <h4>🌧 Rainiest</h4>
+                                <ul id="top-rainy"></ul>
+                            </div>
+                        </div>
+
+                        <h3>📋 All Runs Overview</h3>
+                        <button id="toggle-runs-btn">Show/Hide Run List</button>
+                        <table id="runs-table" class="hidden">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Run</th>
+                                    <th>Distance (km)</th>
+                                    <th>Pace</th>
+                                    <th>Temp (°C)</th>
+                                    <th>Wind (km/h)</th>
+                                    <th>Rain (mm)</th>
+                                    <th>Condition</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
                 </div>
+
 
 
 

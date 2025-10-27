@@ -1150,3 +1150,42 @@ main {
         padding: 1.5em;
         margin-bottom: 1.5em;
     }
+
+    .chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.chart-container, .top-runs-grid > div {
+  background: #fafafa;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+#correlation-matrix table {
+  border-collapse: collapse;
+  width: 100%;
+}
+#correlation-matrix td, #correlation-matrix th {
+  padding: 6px 8px;
+  text-align: center;
+}
+#runs-table {
+  width: 100%;
+  margin-top: 1rem;
+  border-collapse: collapse;
+}
+#runs-table th, #runs-table td {
+  border-bottom: 1px solid #ddd;
+  padding: 6px;
+  text-align: center;
+}
+.hidden { display: none; }
+.top-runs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
