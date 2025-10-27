@@ -1,8 +1,6 @@
 // weather-analytics.js
 // Versión ajustada para usar la estructura HTML existente
 
-import Chart from 'chart.js/auto'; // Asegúrate de tener Chart.js instalado y accesible
-
 export async function renderWeatherTab(allActivities) {
     console.log("Initializing Weather Analytics — received", allActivities.length, "activities");
 
