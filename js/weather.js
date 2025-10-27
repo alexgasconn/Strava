@@ -100,22 +100,35 @@ async function getWeatherForRun(run) {
   const [lat, lon] = run.start_latlng;
   const start = new Date(run.start_date_local);
   const dateStr = start.toISOString().split("T")[0];
+
+  const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m,weathercode&start_date=${dateStr}&end_date=${dateStr}&timezone=auto`;
+
   try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m,weathercode&start_date=${dateStr}&end_date=${dateStr}`;
     const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
+
+    if (!data.hourly || !data.hourly.time || !data.hourly.time.length) {
+      console.warn("No weather data for run", run.name, dateStr);
+      return null;
+    }
+
     const idx = Math.min(start.getHours(), data.hourly.time.length - 1);
+
     return {
-      temperature: data.hourly.temperature_2m[idx],
-      precipitation: data.hourly.precipitation[idx],
-      wind_speed: data.hourly.wind_speed_10m[idx],
-      weather_text: weatherCodeToText(data.hourly.weathercode[idx]),
+      temperature: numericSafe(data.hourly.temperature_2m[idx]),
+      precipitation: numericSafe(data.hourly.precipitation[idx]),
+      wind_speed: numericSafe(data.hourly.wind_speed_10m[idx]),
+      weather_code: data.hourly.weathercode ? data.hourly.weathercode[idx] : null,
+      weather_text: weatherCodeToText(data.hourly.weathercode ? data.hourly.weathercode[idx] : null),
     };
+
   } catch (err) {
     console.error("Weather fetch failed:", err);
     return null;
   }
 }
+
 
 function weatherCodeToText(code) {
   const map = {
