@@ -4,11 +4,9 @@
 export async function renderWeatherTab(allActivities) {
     console.log("Initializing Weather Analytics — received", allActivities.length, "activities");
 
-    // Reemplaza 'weather-summary' por el contenedor principal que desees usar
-    // En el HTML que me pasaste, el div que envuelve el contenido es <div id="weather-tab">
-    // Los "summary cards" están en <div id="weather-summary-content"> dentro de weather-tab
-    const weatherTabContainer = document.getElementById("weather-tab"); // Contenedor principal de la pestaña
-    const summaryCardsContainer = document.getElementById("wa-stats-row"); // Contenedor para las tarjetas de resumen
+
+    const weatherTabContainer = document.getElementById("weather-tab");
+    const summaryCardsContainer = document.getElementById("wa-stats-row");
 
     if (!weatherTabContainer) {
         return console.error("weather-tab container not found. Ensure the main container has this ID.");
@@ -88,13 +86,14 @@ export async function renderWeatherTab(allActivities) {
     // 1. Summary cards (rellenar el div #wa-stats-row existente)
     if (summaryCardsContainer) {
         summaryCardsContainer.innerHTML = `
-            <div class="wa-card"><h4>Avg Temp</h4><div class="wa-val">${mean(temps).toFixed(1)}°C</div></div>
-            <div class="wa-card"><h4>Avg Wind</h4><div class="wa-val">${mean(winds).toFixed(1)} km/h</div></div>
-            <div class="wa-card"><h4>Avg Humidity</h4><div class="wa-val">${mean(humidities).toFixed(1)}%</div></div>
-            <div class="wa-card"><h4>Total Rain</h4><div class="wa-val">${sum(rains).toFixed(1)} mm</div></div>
-            <div class="wa-card"><h4>Common</h4><div class="wa-val">${mode(conditions)}</div></div>
-        `;
+        <div class="wa-card"><h4>🌡️ Avg Temp</h4><div class="wa-val">${mean(temps).toFixed(1)}°C</div></div>
+        <div class="wa-card"><h4>💨 Avg Wind</h4><div class="wa-val">${mean(winds).toFixed(1)} km/h</div></div>
+        <div class="wa-card"><h4>💧 Avg Humidity</h4><div class="wa-val">${mean(humidities).toFixed(1)}%</div></div>
+        <div class="wa-card"><h4>🌧️ Total Rain</h4><div class="wa-val">${sum(rains).toFixed(1)} mm</div></div>
+        <div class="wa-card"><h4>☁️ Common</h4><div class="wa-val">${mode(conditions)}</div></div>
+    `;
     }
+
 
     // 2. Selector de Histograma (¡Ya existe en HTML, solo adjuntamos el evento!)
     const histogramSelect = document.getElementById("histogram-select");
