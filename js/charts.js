@@ -118,13 +118,13 @@ export function renderActivityTypeChart(runs) {
         } else if (a.workout_type === 1) {
             a.workout_type_classified = 'Race';
         }
-        else if (a.suffer_score && a.suffer_score >= 75) {
+        else if (a.suffer_score && a.suffer_score >= 50) {
             a.workout_type_classified = 'High intensity Run';
         }
-        else if (a.suffer_score && a.suffer_score >= 50) {
+        else if (a.suffer_score && a.suffer_score >= 30) {
             a.workout_type_classified = 'Moderate intensity Run';
         }
-        else if (a.suffer_score && a.suffer_score < 50) {
+        else if (a.suffer_score && a.suffer_score < 15) {
             a.workout_type_classified = 'Low intensity Run';
         }
         else {
