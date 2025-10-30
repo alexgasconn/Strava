@@ -8,6 +8,15 @@ export function renderWrappedTab(allActivities) {
         return;
     }
 
+    // --- Year Selection ---
+    const years = [...new Set(allActivities.map(a => new Date(a.start_date).getFullYear()))].sort((a, b) => b - a);
+    const currentYear = new Date().getFullYear();
+    let selectedYear = years.includes(currentYear) ? currentYear : years[0];
+
+    function filterByYear(year) {
+        return allActivities.filter(a => new Date(a.start_date).getFullYear() === year);
+    }
+
     // --- Utilities ---
     const utils = {
         formatTime(sec) {
@@ -176,7 +185,18 @@ export function renderWrappedTab(allActivities) {
 
     // --- Renderers ---
     const render = {
-        summary(data) {
+        yearSelector(years, selected) {
+            return `
+                <div style="display: flex; justify-content: center; align-items: center; gap: 1rem; margin-bottom: 2rem; padding: 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px;">
+                    <label style="color: white; font-size: 1.2rem; font-weight: bold;">Year in Sport:</label>
+                    <select id="year-selector" style="padding: 0.5rem 1rem; font-size: 1.1rem; border-radius: 8px; border: none; background: white; cursor: pointer; min-width: 120px;">
+                        ${years.map(y => `<option value="${y}" ${y === selected ? 'selected' : ''}>${y}</option>`).join('')}
+                    </select>
+                </div>
+            `;
+        },
+
+        summary(data, year) {
             return `
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
                     <div style="text-align: center; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
@@ -264,7 +284,7 @@ export function renderWrappedTab(allActivities) {
                     ${monthly.map(m => {
                         const percentage = (m.distance / maxDist * 100).toFixed(0);
                         const date = new Date(m.month + '-01');
-                        const monthName = date.toLocaleDateString('default', { month: 'long', year: 'numeric' });
+                        const monthName = date.toLocaleDateString('default', { month: 'long' });
                         return `
                             <div style="background: #f8f9fa; padding: 0.8rem; border-radius: 6px;">
                                 <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
@@ -373,21 +393,48 @@ export function renderWrappedTab(allActivities) {
         }
     };
 
-    // --- Main Rendering ---
-    const summary = analyze.getSummary(allActivities);
-    const sports = analyze.getBySport(allActivities);
-    const personalBests = analyze.getPersonalBests(allActivities);
-    const monthly = analyze.getMonthlyProgress(allActivities);
-    const streaks = analyze.getStreaks(allActivities);
-    const hourDist = analyze.getHourDistribution(allActivities);
+    // --- Render Function ---
+    function renderYear(year) {
+        const yearActivities = filterByYear(year);
+        
+        if (yearActivities.length === 0) {
+            document.getElementById('wrapped-summary').innerHTML = `<p style="text-align: center; padding: 2rem; color: #666;">No activities found for ${year}</p>`;
+            document.getElementById('wrapped-personal-bests').innerHTML = '';
+            document.getElementById('wrapped-sport-comparison').innerHTML = '';
+            document.getElementById('wrapped-temporal-stats').innerHTML = '';
+            document.getElementById('wrapped-motivation').innerHTML = '';
+            document.getElementById('wrapped-extreme-stats').innerHTML = '';
+            document.getElementById('wrapped-all-activities').innerHTML = '';
+            return;
+        }
 
-    document.getElementById('wrapped-summary').innerHTML = render.summary(summary);
-    document.getElementById('wrapped-personal-bests').innerHTML = render.personalBests(personalBests);
-    document.getElementById('wrapped-sport-comparison').innerHTML = render.sportComparison(sports);
-    document.getElementById('wrapped-temporal-stats').innerHTML = render.monthlyProgress(monthly);
-    document.getElementById('wrapped-motivation').innerHTML = render.streaks(streaks);
-    document.getElementById('wrapped-extreme-stats').innerHTML = render.hourDistribution(hourDist);
-    document.getElementById('wrapped-all-activities').innerHTML = render.activitiesTable(allActivities);
+        const summary = analyze.getSummary(yearActivities);
+        const sports = analyze.getBySport(yearActivities);
+        const personalBests = analyze.getPersonalBests(yearActivities);
+        const monthly = analyze.getMonthlyProgress(yearActivities);
+        const streaks = analyze.getStreaks(yearActivities);
+        const hourDist = analyze.getHourDistribution(yearActivities);
+
+        document.getElementById('wrapped-summary').innerHTML = render.yearSelector(years, year) + render.summary(summary, year);
+        document.getElementById('wrapped-personal-bests').innerHTML = render.personalBests(personalBests);
+        document.getElementById('wrapped-sport-comparison').innerHTML = render.sportComparison(sports);
+        document.getElementById('wrapped-temporal-stats').innerHTML = render.monthlyProgress(monthly);
+        document.getElementById('wrapped-motivation').innerHTML = render.streaks(streaks);
+        document.getElementById('wrapped-extreme-stats').innerHTML = render.hourDistribution(hourDist);
+        document.getElementById('wrapped-all-activities').innerHTML = render.activitiesTable(yearActivities);
+
+        // Add event listener to year selector
+        const selector = document.getElementById('year-selector');
+        if (selector) {
+            selector.addEventListener('change', (e) => {
+                selectedYear = parseInt(e.target.value);
+                renderYear(selectedYear);
+            });
+        }
+    }
+
+    // --- Initial Render ---
+    renderYear(selectedYear);
 
     // Hide unused containers
     document.getElementById('wrapped-geography').style.display = 'none';
