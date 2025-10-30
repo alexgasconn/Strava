@@ -5,6 +5,7 @@ import { renderPlannerTab } from './planner.js';
 import { renderGearTab } from './gear.js';
 import { renderWeatherTab } from './weather.js';
 import { renderRunsTab } from './runs.js';
+import { renderWrappedTab } from './wrapped.js';
 import { fetchAllActivities, fetchAthleteData, fetchTrainingZones } from './api.js';
 
 // Espera a que el DOM esté completamente cargado
@@ -75,6 +76,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderWeatherTab(allActivities);
                 } else {
                     console.warn("Activities not loaded yet, can't render weather tab.");
+                }
+            }
+            if (tabId === 'wrapped-tab') {
+                if (allActivities.length > 0) {
+                    renderWrappedTab(allActivities);
+                } else {
+                    console.warn("Activities not loaded yet, can't render wrapped tab.");
                 }
             }
 
