@@ -226,8 +226,8 @@ export async function renderWrappedTab(allActivities, options = {}) {
         const map = {};
         const cache = {}; // cache por coordenadas redondeadas
 
-        // redondea coordenadas a ~10 km para agrupar zonas cercanas
-        const round = (v) => Math.round(v * 10) / 10;
+        // redondea coordenadas a ~40 km para agrupar zonas cercanas
+        const round = (v) => Math.round(v * 0.36) / 0.36;
 
         const uniqueCoords = {};
         for (const a of acts) {
@@ -668,57 +668,62 @@ export async function renderWrappedTab(allActivities, options = {}) {
     // Gear and countries
     function renderExtras(gears, countries) {
         return `
-      <div class="extras-grid">
-        ${gears.length > 0 ? `
-          <div class="extra-section fade-in-up" style="animation-delay: 0.1s">
-            <div class="section-header">
-              <h3>⚙️ Equipment</h3>
-              <p class="section-subtitle">Most used gear</p>
-            </div>
-            <div class="gear-list">
-              ${gears.map((g, idx) => {
+  <div class="extras-grid">
+    ${gears.length > 0 ? `
+      <div class="extra-section fade-in-up" style="animation-delay: 0.1s">
+        <div class="section-header">
+          <h3>⚙️ Equipment</h3>
+          <p class="section-subtitle">Most used gear</p>
+        </div>
+        <div class="gear-list">
+          ${gears.map((g, idx) => {
             const maxHours = gears[0].hours;
             const width = (g.hours / maxHours) * 100;
             return `
-                  <div class="gear-item">
-                    <div class="gear-name">${g.gear}</div>
-                    <div class="gear-bar-container">
-                      <div class="gear-bar" style="width: ${width}%"></div>
-                    </div>
-                    <div class="gear-hours">${g.hours.toFixed(1)}h</div>
-                  </div>
-                `;
+              <div class="gear-item">
+                <div class="gear-name">${g.gear}</div>
+                <div class="gear-bar-container">
+                  <div class="gear-bar" style="width: ${width}%"></div>
+                </div>
+                <div class="gear-hours">${g.hours.toFixed(1)}h</div>
+              </div>
+            `;
         }).join('')}
-            </div>
-          </div>
-        ` : ''}
-
-        ${countries.length > 0 ? `
-          <div class="extra-section fade-in-up" style="animation-delay: 0.2s">
-            <div class="section-header">
-              <h3>🌍 Locations</h3>
-              <p class="section-subtitle">Where you trained</p>
-            </div>
-            <div class="country-list">
-              ${countries.map((c, idx) => {
-            const maxCount = countries[0].count;
-            const width = (c.count / maxCount) * 100;
-            return `
-                  <div class="country-item">
-                    <div class="country-name">${c.country}</div>
-                    <div class="country-bar-container">
-                      <div class="country-bar" style="width: ${width}%"></div>
-                    </div>
-                    <div class="country-count">${c.count}</div>
-                  </div>
-                `;
-        }).join('')}
-            </div>
-          </div>
-        ` : ''}
+        </div>
       </div>
-    `;
+    ` : ''}
+
+    ${countries.length > 0 ? `
+      <div class="extra-section fade-in-up" style="animation-delay: 0.2s">
+        <div class="section-header">
+          <h3>🌍 Locations</h3>
+          <p class="section-subtitle">Where you trained</p>
+        </div>
+        <div class="country-list">
+          ${(() => {
+                    const total = countries.reduce((sum, c) => sum + c.count, 0);
+                    const maxCount = countries[0].count;
+                    return countries.map((c) => {
+                        const width = (c.count / maxCount) * 100;
+                        const percent = ((c.count / total) * 100).toFixed(1);
+                        return `
+                <div class="country-item">
+                  <div class="country-name">${c.country}</div>
+                  <div class="country-bar-container">
+                    <div class="country-bar" style="width: ${width}%"></div>
+                  </div>
+                  <div class="country-count">${percent}%</div>
+                </div>
+              `;
+                    }).join('');
+                })()}
+        </div>
+      </div>
+    ` : ''}
+  </div>
+  `;
     }
+
 
     // Activities table
     function renderActivitiesTable(activities) {
