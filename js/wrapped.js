@@ -17,6 +17,8 @@ export async function renderWrappedTab(allActivities, options = {}) {
         reverseGeocoder: options.reverseGeocoder || null
     };
 
+
+
     if (!allActivities || allActivities.length === 0) {
         document.getElementById(cfg.containerIds.summary).innerHTML = `
       <div style="text-align:center;padding:3rem;color:#666;">
@@ -54,14 +56,32 @@ export async function renderWrappedTab(allActivities, options = {}) {
     };
 
     // === DATA PROCESSING ===
+
+    // Extract years from activities
     const getYear = dateStr => new Date(dateStr).getFullYear();
     const years = Array.from(new Set(allActivities.map(a => getYear(a.start_date)))).sort((a, b) => b - a);
-    const currentYear = years[0];
-    const prevYear = years[1] || null;
 
-    const activitiesByYear = y => allActivities.filter(a => getYear(a.start_date) === y);
-    const currentActs = activitiesByYear(currentYear);
+    // Determine which year to display
+    const displayYear = options.selectedYear || years[0];
+    const prevYear = years[years.indexOf(displayYear) + 1] || null;
+
+    // Populate year dropdown
+    const yearSelect = document.getElementById('wrapped-year');
+    if (yearSelect) {
+        yearSelect.innerHTML = years
+            .map(y => `<option value="${y}" ${y === displayYear ? 'selected' : ''}>${y}</option>`)
+            .join('');
+        yearSelect.onchange = () => {
+            const selectedYear = parseInt(yearSelect.value);
+            renderWrappedTab(allActivities, { ...options, selectedYear });
+        };
+    }
+
+    // Get activities for current and previous year
+    const currentActs = activitiesByYear(displayYear);
     const prevActs = prevYear ? activitiesByYear(prevYear) : [];
+
+
 
     // Sport aggregation
     function compileSports(acts) {
@@ -307,7 +327,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
 
     const summaryHtml = `
     <div class="stats-year-header">
-      <h2>${currentYear} Wrapped</h2>
+      <h2>${displayYear} Wrapped</h2>
       <p>Your year in fitness</p>
     </div>
     
@@ -802,7 +822,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
         return `
       <div class="section-header">
         <h3>📋 All Activities</h3>
-        <p class="section-subtitle">${activities.length} workouts in ${currentYear}</p>
+        <p class="section-subtitle">${activities.length} workouts in ${displayYear}</p>
       </div>
       
       <div class="activities-table-container">
