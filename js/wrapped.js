@@ -3,6 +3,8 @@
 // Usage: renderWrappedTab(allActivities, {containerIds, reverseGeocoder})
 
 export async function renderWrappedTab(allActivities, options = {}) {
+    const fullActivities = options.fullActivities || allActivities; // lista completa
+
     const cfg = {
         containerIds: {
             summary: 'wrapped-summary',
@@ -73,9 +75,9 @@ export async function renderWrappedTab(allActivities, options = {}) {
             .join('');
         yearSelect.onchange = () => {
             const selectedYear = parseInt(yearSelect.value);
-            const yearActivities = activitiesByYear(selectedYear, allActivities);
-            renderWrappedTab(yearActivities, { selectedYear });
+            renderWrappedTab(fullActivities, { selectedYear, fullActivities });
         };
+
     }
 
     // Get activities for current and previous year
@@ -158,8 +160,9 @@ export async function renderWrappedTab(allActivities, options = {}) {
     const topEfforts = topByEffort(currentActs, 5);
 
     function activitiesByYear(year) {
-        return allActivities.filter(a => new Date(a.start_date).getFullYear() === year);
+        return fullActivities.filter(a => new Date(a.start_date).getFullYear() === year);
     }
+
 
 
     // Personal bests
@@ -764,7 +767,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
 
 
     // === BEST-POSSIBLE HEATMAP CONFIG (copy-paste ready) ===
-    let map; // add at top of your script, outside the function
+    let map;
 
     function renderHeatmap(activities, options = {}) {
         const containerId = 'wrapped-map';
