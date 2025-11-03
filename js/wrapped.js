@@ -156,6 +156,11 @@ export async function renderWrappedTab(allActivities, options = {}) {
 
     const topEfforts = topByEffort(currentActs, 5);
 
+    function activitiesByYear(year) {
+        return allActivities.filter(a => new Date(a.start_date).getFullYear() === year);
+    }
+
+
     // Personal bests
     function findPBs(acts) {
         const runningTargets = { "Mile": 1609, "5K": 5000, "10K": 10000, "Half": 21097, "Marathon": 42195 };
