@@ -229,7 +229,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
         const cache = {}; // cache por coordenadas redondeadas
 
         // redondea coordenadas a ~40 km para agrupar zonas cercanas
-        const round = (v) => Math.round(v / 0.36) * 0.36;
+        const round = (v) => Math.round(v / 5) * 0.5;
 
         const uniqueCoords = {};
         const coordCounts = {}; // cuántas actividades hay por coordenada redondeada
@@ -769,10 +769,10 @@ export async function renderWrappedTab(allActivities, options = {}) {
         // Crear heatmap layer
         const heatPoints = coords.map(c => [...c, 1]); // intensidad base 1
         const heat = L.heatLayer(heatPoints, {
-            radius: 35,   // más amplio para que se vea el calor
-            blur: 25,
+            radius: 50,   // más amplio para que se vea el calor
+            blur: 15,
             maxZoom: 18,
-            max: 1        // intensidad máxima
+            // max: 1        // intensidad máxima
         }).addTo(map);
 
         // Refuerzo del calor al hacer zoom
