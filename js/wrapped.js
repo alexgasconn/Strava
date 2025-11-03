@@ -345,6 +345,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
   `;
 
     // Sport comparison
+    // Sport comparison with minimum 5h filter
     function renderSportComparison(sportsCurr, sportsPrev) {
         const prevMap = new Map(sportsPrev.map(s => [s.sport, s]));
         const totalTime = utils.sum(sportsCurr, 'time');
@@ -363,14 +364,17 @@ export async function renderWrappedTab(allActivities, options = {}) {
             'Yoga': '🧘'
         };
 
+        // Filtrar solo deportes con al menos 5h
+        const sportsToShow = sportsCurr.filter(s => s.time >= 5 * 3600);
+
         return `
-      <div class="section-header">
-        <h3>📊 Sport Breakdown</h3>
-        <p class="section-subtitle">Ranked by total time</p>
-      </div>
-      
-      <div class="sport-breakdown">
-        ${sportsCurr.map((s, idx) => {
+  <div class="section-header">
+    <h3>📊 Sport Breakdown</h3>
+    <p class="section-subtitle">Ranked by total time</p>
+  </div>
+  
+  <div class="sport-breakdown">
+    ${sportsToShow.map((s, idx) => {
             const prev = prevMap.get(s.sport) || { time: 0, distance: 0, elevation: 0, count: 0 };
             const timeH = (s.time / 3600).toFixed(1);
             const distanceKm = (s.distance / 1000).toFixed(1);
@@ -383,47 +387,48 @@ export async function renderWrappedTab(allActivities, options = {}) {
             const trendSymbol = timePct === null ? '' : (timePct > 0 ? '↑' : '↓');
 
             return `
-            <div class="sport-card fade-in-up" style="animation-delay: ${0.1 * (idx + 1)}s">
-              <div class="sport-card-header">
-                <div class="sport-icon">${icon}</div>
-                <div class="sport-title">
-                  <h4>${s.sport}</h4>
-                  <span class="sport-count">${s.count} activities</span>
-                </div>
-                <div class="sport-share">${share}%</div>
-              </div>
-              
-              <div class="sport-metrics">
-                <div class="metric">
-                  <div class="metric-label">Time</div>
-                  <div class="metric-value">${timeH}h</div>
-                  ${timePct !== null ? `
-                    <div class="metric-change" style="color: ${trendColor}">
-                      ${trendSymbol} ${Math.abs(timePct).toFixed(1)}%
-                    </div>
-                  ` : ''}
-                </div>
-                
-                <div class="metric">
-                  <div class="metric-label">Distance</div>
-                  <div class="metric-value">${distanceKm} km</div>
-                </div>
-                
-                <div class="metric">
-                  <div class="metric-label">Elevation</div>
-                  <div class="metric-value">${elevation} m</div>
-                </div>
-              </div>
-              
-              <div class="sport-progress">
-                <div class="sport-progress-bar" style="width: ${share}%"></div>
-              </div>
+        <div class="sport-card fade-in-up" style="animation-delay: ${0.1 * (idx + 1)}s">
+          <div class="sport-card-header">
+            <div class="sport-icon">${icon}</div>
+            <div class="sport-title">
+              <h4>${s.sport}</h4>
+              <span class="sport-count">${s.count} activities</span>
             </div>
-          `;
+            <div class="sport-share">${share}%</div>
+          </div>
+          
+          <div class="sport-metrics">
+            <div class="metric">
+              <div class="metric-label">Time</div>
+              <div class="metric-value">${timeH}h</div>
+              ${timePct !== null ? `
+                <div class="metric-change" style="color: ${trendColor}">
+                  ${trendSymbol} ${Math.abs(timePct).toFixed(1)}%
+                </div>
+              ` : ''}
+            </div>
+            
+            <div class="metric">
+              <div class="metric-label">Distance</div>
+              <div class="metric-value">${distanceKm} km</div>
+            </div>
+            
+            <div class="metric">
+              <div class="metric-label">Elevation</div>
+              <div class="metric-value">${elevation} m</div>
+            </div>
+          </div>
+          
+          <div class="sport-progress">
+            <div class="sport-progress-bar" style="width: ${share}%"></div>
+          </div>
+        </div>
+      `;
         }).join('')}
-      </div>
-    `;
+  </div>
+  `;
     }
+
 
     // Temporal stats
     function renderHistograms(monthlyHours, weekdayHours, hourCounts) {
