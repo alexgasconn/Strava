@@ -287,6 +287,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
 
 
 
+
     // === RENDER COMPONENTS ===
 
     // Summary cards
