@@ -221,28 +221,33 @@ export async function renderWrappedTab(allActivities, options = {}) {
     }
     const topGears = gearUsage(currentActs).slice(0, 6);
 
+
+
     // Countries
     async function resolveCountries(acts) {
         const map = {};
         const cache = {}; // cache por coordenadas redondeadas
 
         // redondea coordenadas a ~40 km para agrupar zonas cercanas
-        const round = (v) => Math.round(v * 0.36) / 0.36;
+        const round = (v) => Math.round(v / 0.36) * 0.36;
 
         const uniqueCoords = {};
+        const coordCounts = {}; // cuántas actividades hay por coordenada redondeada
+
         for (const a of acts) {
             const coords = (a.start_latlng && a.start_latlng.length === 2)
                 ? a.start_latlng
                 : ((a.end_latlng && a.end_latlng.length === 2) ? a.end_latlng : null);
             if (!coords) continue;
             const key = `${round(coords[0])},${round(coords[1])}`;
-            if (!uniqueCoords[key]) uniqueCoords[key] = coords;
+
+            uniqueCoords[key] = coords;
+            coordCounts[key] = (coordCounts[key] || 0) + 1;
         }
 
         const coordKeys = Object.keys(uniqueCoords);
         console.log(`Unique coordinate groups: ${coordKeys.length}`);
 
-        // Limitar concurrencia (5 peticiones a la vez)
         const concurrency = 5;
         const chunks = [];
         for (let i = 0; i < coordKeys.length; i += concurrency) {
@@ -272,7 +277,8 @@ export async function renderWrappedTab(allActivities, options = {}) {
                     cache[key] = country;
                 }
 
-                map[country] = (map[country] || 0) + 1;
+                // sumar la cantidad de actividades en ese grupo redondeado
+                map[country] = (map[country] || 0) + coordCounts[key];
             }));
         }
 
@@ -280,6 +286,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
             .map(([country, count]) => ({ country, count }))
             .sort((a, b) => b.count - a.count);
     }
+
 
     // Ejemplo
     const countries = await resolveCountries(currentActs);
