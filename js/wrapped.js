@@ -790,7 +790,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
     }
 
 
-    renderHeatmap(currentActs, { radius:  75, blur: 15, opacity: 0.75, intensity: 1 });
+    renderHeatmap(currentActs, { radius:  44, blur: 20, opacity: 0.75, intensity: 0.6 });
 
 
 
