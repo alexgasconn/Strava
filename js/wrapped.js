@@ -764,9 +764,9 @@ export async function renderWrappedTab(allActivities, options = {}) {
         }).addTo(map);
 
         // Cada actividad con menos peso pero más rango
-        const heatPoints = coords.map(c => [...c, 0.15]); // intensidad baja
+        const heatPoints = coords.map(c => [...c, 0.3]); // intensidad baja
         const heat = L.heatLayer(heatPoints, {
-            radius: 80,   // más amplio
+            radius: 100,   // más amplio
             blur: 15,
             maxZoom: 18,
             max: 1
