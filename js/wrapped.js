@@ -73,7 +73,8 @@ export async function renderWrappedTab(allActivities, options = {}) {
             .join('');
         yearSelect.onchange = () => {
             const selectedYear = parseInt(yearSelect.value);
-            renderWrappedTab(allActivities, { ...options, selectedYear });
+            const yearActivities = activitiesByYear(selectedYear, allActivities);
+            renderWrappedTab(yearActivities, { selectedYear });
         };
     }
 
@@ -763,6 +764,8 @@ export async function renderWrappedTab(allActivities, options = {}) {
 
 
     // === BEST-POSSIBLE HEATMAP CONFIG (copy-paste ready) ===
+    let map; // add at top of your script, outside the function
+
     function renderHeatmap(activities, options = {}) {
         const containerId = 'wrapped-map';
         const mapContainer = document.getElementById(containerId);
@@ -781,14 +784,18 @@ export async function renderWrappedTab(allActivities, options = {}) {
         const latAvg = coords.reduce((s, c) => s + c[0], 0) / coords.length;
         const lngAvg = coords.reduce((s, c) => s + c[1], 0) / coords.length;
 
-        const map = L.map(containerId).setView([latAvg, lngAvg], 4);
+        // Remove previous map if exists
+        if (map) {
+            map.remove();
+        }
+
+        map = L.map(containerId).setView([latAvg, lngAvg], 4);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap',
             maxZoom: 19
         }).addTo(map);
 
-        // BEST-POSSIBLE defaults (tuned for 50–5000 points)
         const radius = options.radius ?? 45;
         const blur = options.blur ?? 22;
         const opacity = options.opacity ?? 0.78;
@@ -802,7 +809,6 @@ export async function renderWrappedTab(allActivities, options = {}) {
             minOpacity: 0.15
         }).addTo(map);
 
-        // DYNAMIC ZOOM ADJUSTMENT (keeps density perfect)
         map.on('zoomend', () => {
             const z = map.getZoom();
             heat.setOptions({
@@ -811,10 +817,11 @@ export async function renderWrappedTab(allActivities, options = {}) {
             });
         });
 
-        // Auto-fit bounds (optional, uncomment if you want tight zoom)
+        // Optional auto-fit bounds
         // const bounds = L.latLngBounds(coords);
         // map.fitBounds(bounds, { padding: [30, 30] });
     }
+
 
     renderHeatmap(currentActs);
 
