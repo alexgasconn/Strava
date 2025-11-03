@@ -1,9 +1,6 @@
-// wrapped-updated.js
-// Enhanced renderWrappedStats module to replace/augment sport breakdown and add many features.
-// Usage: renderWrappedStats(allActivities, {containerIds, reverseGeocoder})
-// - allActivities: array of activity objects
-// - containerIds: optional map of container element IDs (defaults to existing IDs)
-// - reverseGeocoder: optional object with async getCountry(lat,lng) -> { name, code }
+// wrapped-stats-pro.js
+// Professional Wrapped Stats Dashboard with enhanced visuals and animations
+// Usage: renderWrappedTab(allActivities, {containerIds, reverseGeocoder})
 
 export async function renderWrappedTab(allActivities, options = {}) {
   const cfg = {
@@ -21,11 +18,16 @@ export async function renderWrappedTab(allActivities, options = {}) {
   };
 
   if (!allActivities || allActivities.length === 0) {
-    document.getElementById(cfg.containerIds.summary).innerHTML = '<p>No activity data available.</p>';
+    document.getElementById(cfg.containerIds.summary).innerHTML = `
+      <div style="text-align:center;padding:3rem;color:#666;">
+        <div style="font-size:3rem;margin-bottom:1rem;">📊</div>
+        <h3>No activity data available</h3>
+        <p>Start tracking your workouts to see your stats here!</p>
+      </div>`;
     return;
   }
 
-  // --- Utilities ---
+  // === UTILITIES ===
   const utils = {
     secToH(sec) { return sec / 3600; },
     formatTime(sec) {
@@ -36,26 +38,22 @@ export async function renderWrappedTab(allActivities, options = {}) {
       const s = sec % 60;
       return h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m ${s}s` : `${s}s`;
     },
-    formatDistance(m) { return m >= 1000 ? `${(m/1000).toFixed(2)} km` : `${Math.round(m)} m`; },
+    formatDistance(m) { 
+      return m >= 1000 ? `${(m/1000).toFixed(2)} km` : `${Math.round(m)} m`; 
+    },
     formatPace(seconds, km) {
       if (!isFinite(seconds) || !isFinite(km) || km <= 0) return 'N/A';
-      const pace = seconds / km; const min = Math.floor(pace/60); const sec = Math.round(pace%60);
+      const pace = seconds / km;
+      const min = Math.floor(pace/60);
+      const sec = Math.round(pace%60);
       return `${min}:${String(sec).padStart(2,'0')} /km`;
     },
-    avg(arr, key) { const vals = arr.map(a => a[key]).filter(v => Number.isFinite(v)); return vals.length? vals.reduce((s,v)=>s+v,0)/vals.length : null; },
-    sum(arr, key) { return arr.reduce((s,a)=> s + (Number(a[key])||0), 0); },
-    groupBy(arr, keyFn) {
-      const map = new Map();
-      arr.forEach(item => {
-        const k = typeof keyFn === 'function' ? keyFn(item) : item[keyFn];
-        if (!map.has(k)) map.set(k, []);
-        map.get(k).push(item);
-      });
-      return map;
+    sum(arr, key) { 
+      return arr.reduce((s,a)=> s + (Number(a[key])||0), 0); 
     }
   };
 
-  // --- Helper: year-based filtering ---
+  // === DATA PROCESSING ===
   const getYear = dateStr => new Date(dateStr).getFullYear();
   const years = Array.from(new Set(allActivities.map(a => getYear(a.start_date)))).sort((a,b)=>b-a);
   const currentYear = years[0];
@@ -65,7 +63,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
   const currentActs = activitiesByYear(currentYear);
   const prevActs = prevYear ? activitiesByYear(prevYear) : [];
 
-  // --- Sport aggregation by total TIME (descending) ---
+  // Sport aggregation
   function compileSports(acts) {
     const bySport = {};
     acts.forEach(a => {
@@ -76,7 +74,8 @@ export async function renderWrappedTab(allActivities, options = {}) {
       bySport[type].time += Number(a.moving_time) || 0;
       bySport[type].elevation += Number(a.total_elevation_gain) || 0;
     });
-    return Object.entries(bySport).map(([sport,data]) => ({ sport, ...data, count: data.activities.length }))
+    return Object.entries(bySport)
+      .map(([sport,data]) => ({ sport, ...data, count: data.activities.length }))
       .sort((a,b)=> b.time - a.time);
   }
 
@@ -84,11 +83,11 @@ export async function renderWrappedTab(allActivities, options = {}) {
   const sportsPrev = compileSports(prevActs);
 
   function pctChange(curr, prev) {
-    if (!prev || prev === 0) return '—';
-    return (((curr - prev) / prev) * 100).toFixed(1) + '%';
+    if (!prev || prev === 0) return null;
+    return ((curr - prev) / prev) * 100;
   }
 
-  // --- Monthly, weekday, hour histograms ---
+  // Temporal groupings
   function groupMonthlyHours(acts) {
     const map = {};
     acts.forEach(a => {
@@ -97,18 +96,26 @@ export async function renderWrappedTab(allActivities, options = {}) {
       if (!map[key]) map[key] = 0;
       map[key] += utils.secToH(Number(a.moving_time)||0);
     });
-    return Object.entries(map).map(([month,hours])=>({month,hours})).sort((a,b)=>a.month.localeCompare(b.month));
+    return Object.entries(map)
+      .map(([month,hours])=>({month,hours}))
+      .sort((a,b)=>a.month.localeCompare(b.month));
   }
 
   function groupWeekdayHours(acts) {
     const hours = [0,0,0,0,0,0,0];
-    acts.forEach(a=>{ const d = new Date(a.start_date); hours[d.getDay()] += utils.secToH(Number(a.moving_time)||0); });
-    return hours; // 0=Sunday..6=Saturday
+    acts.forEach(a=>{ 
+      const d = new Date(a.start_date); 
+      hours[d.getDay()] += utils.secToH(Number(a.moving_time)||0); 
+    });
+    return hours;
   }
 
   function groupHourCounts(acts) {
     const hours = Array(24).fill(0);
-    acts.forEach(a=>{ const h = new Date(a.start_date).getHours(); hours[h]++; });
+    acts.forEach(a=>{ 
+      const h = new Date(a.start_date).getHours(); 
+      hours[h]++; 
+    });
     return hours;
   }
 
@@ -116,98 +123,91 @@ export async function renderWrappedTab(allActivities, options = {}) {
   const weekdayHours = groupWeekdayHours(currentActs);
   const hourCounts = groupHourCounts(currentActs);
 
-  // --- Top 5 by effort/suffer_score ---
+  // Top efforts
   function topByEffort(acts, n=5) {
-    const withScore = acts.filter(a => a.suffer_score || a.effort || a.trainer_score || a.intensity)
-      .map(a => ({ ...a, _score: Number(a.suffer_score||a.effort||a.trainer_score||a.intensity||0) }));
+    const withScore = acts
+      .filter(a => a.suffer_score || a.effort || a.trainer_score || a.intensity)
+      .map(a => ({ 
+        ...a, 
+        _score: Number(a.suffer_score||a.effort||a.trainer_score||a.intensity||0) 
+      }));
     return withScore.sort((a,b)=> b._score - a._score).slice(0,n);
   }
 
-  const topEfforts = topByEffort(currentActs,5);
+  const topEfforts = topByEffort(currentActs, 5);
 
-  // --- Monthly progress stacked by sport (hours) ---
-  function monthlyStack(acts) {
-    // produce map: month -> sport -> hours
-    const m = {};
-    acts.forEach(a=>{
-      const d = new Date(a.start_date);
-      const month = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-      const sport = a.type || a.sport || 'Unknown';
-      if (!m[month]) m[month] = {};
-      if (!m[month][sport]) m[month][sport] = 0;
-      m[month][sport] += utils.secToH(Number(a.moving_time)||0);
-    });
-    const months = Object.keys(m).sort();
-    const sports = Array.from(new Set([].concat(...months.map(month=>Object.keys(m[month])))));
-    return { months: months.map(month=>({ month, values: sports.map(s=> m[month][s]||0) })), sports };
-  }
-  const monthlyStacked = monthlyStack(currentActs);
-
-  // --- Personal bests & special rules ---
+  // Personal bests
   function findPBs(acts) {
     const runningTargets = { "Mile":1609, "5K":5000, "10K":10000, "Half":21097, "Marathon":42195 };
     const swimTargets = { "1K":1000, "2K":2000, "3K":3000 };
     const rideTargets = { "10K":10000, "20K":20000, "30K":30000, "40K":40000, "50K":50000 };
 
-    const res = { running: [], swimming: [], riding: [], longest: null, mostElevation: null, fastest: null };
+    const res = { 
+      running: [], 
+      swimming: [], 
+      riding: [], 
+      longest: null, 
+      mostElevation: null, 
+      fastest: null 
+    };
 
     const runningActs = acts.filter(a => (a.type||a.sport||'').toLowerCase().includes('run'));
     const swimActs = acts.filter(a => (a.type||a.sport||'').toLowerCase().includes('swim'));
-    const rideActs = acts.filter(a => (a.type||a.sport||'').toLowerCase().includes('ride') || (a.type||'').toLowerCase().includes('bike') || (a.type||'').toLowerCase().includes('cycling'));
+    const rideActs = acts.filter(a => {
+      const t = (a.type||'').toLowerCase();
+      return t.includes('ride') || t.includes('bike') || t.includes('cycling');
+    });
 
-    function bestForTargets(targets, list, sortKey='moving_time', preferLower=true) {
+    function bestForTargets(targets, list) {
       const out = [];
       Object.entries(targets).forEach(([name, meters]) => {
-        // allow small margin +/- 7%
-        const min = meters * 0.93; const max = meters * 1.07;
-        const candidates = list.filter(a => { const d = Number(a.distance)||0; return d >= min && d <= max && Number(a.moving_time) > 0; });
+        const min = meters * 0.93;
+        const max = meters * 1.07;
+        const candidates = list.filter(a => {
+          const d = Number(a.distance)||0;
+          return d >= min && d <= max && Number(a.moving_time) > 0;
+        });
         if (candidates.length) {
-          candidates.sort((a,b)=> preferLower ? (Number(a[sortKey]) - Number(b[sortKey])) : (Number(b[sortKey]) - Number(a[sortKey])));
+          candidates.sort((a,b)=> Number(a.moving_time) - Number(b.moving_time));
           out.push({ name, best: candidates[0], attempts: candidates.length });
         }
       });
       return out;
     }
 
-    res.running = bestForTargets(runningTargets, runningActs, 'moving_time', true);
-    res.swimming = bestForTargets(swimTargets, swimActs, 'moving_time', true);
-    res.riding = bestForTargets(rideTargets, rideActs, 'moving_time', true);
+    res.running = bestForTargets(runningTargets, runningActs);
+    res.swimming = bestForTargets(swimTargets, swimActs);
+    res.riding = bestForTargets(rideTargets, rideActs);
 
-    // longest, most elevation, fastest (by avg speed)
     const withDist = acts.filter(a=> Number(a.distance) > 0);
     res.longest = withDist.slice().sort((a,b)=> Number(b.distance) - Number(a.distance))[0] || null;
     res.mostElevation = acts.slice().sort((a,b)=> Number(b.total_elevation_gain||0) - Number(a.total_elevation_gain||0))[0] || null;
-    res.fastest = acts.slice().filter(a => Number(a.moving_time)>0).sort((a,b)=> ((Number(b.distance)/Number(b.moving_time)) - (Number(a.distance)/Number(a.moving_time))))[0] || null;
+    res.fastest = acts.slice()
+      .filter(a => Number(a.moving_time)>0)
+      .sort((a,b)=> ((Number(b.distance)/Number(b.moving_time)) - (Number(a.distance)/Number(a.moving_time))))[0] || null;
 
     return res;
   }
 
   const pbs = findPBs(currentActs);
 
-  // --- Solo vs group ---
+  // Stats
   const soloCount = currentActs.filter(a => Number(a.athlete_count) === 1).length;
   const soloPct = ((soloCount / currentActs.length) * 100).toFixed(1);
 
-  // --- Average pace & "resistance" detection ---
   const avgPace = (()=>{
-    const runs = currentActs.filter(a => (a.type||'').toLowerCase().includes('run') && Number(a.distance)>0 && Number(a.moving_time)>0);
+    const runs = currentActs.filter(a => 
+      (a.type||'').toLowerCase().includes('run') && 
+      Number(a.distance)>0 && 
+      Number(a.moving_time)>0
+    );
     if (!runs.length) return null;
     const totalSec = utils.sum(runs, 'moving_time');
     const totalKm = utils.sum(runs, 'distance')/1000;
     return totalKm > 0 ? utils.formatPace(totalSec, totalKm) : null;
   })();
 
-  const avgResistance = (()=>{
-    // try multiple possible keys
-    const keyCandidates = ['average_resistance','avg_resistance','resistance','avg_grade','average_grade'];
-    for (const k of keyCandidates) {
-      const vals = currentActs.map(a=> a[k]).filter(v=> Number.isFinite(Number(v))).map(Number);
-      if (vals.length) return (vals.reduce((s,v)=>s+v,0)/vals.length).toFixed(1);
-    }
-    return null;
-  })();
-
-  // --- Gear / Device usage by hours ---
+  // Gear usage
   function gearUsage(acts) {
     const byGear = {};
     acts.forEach(a=>{
@@ -215,192 +215,42 @@ export async function renderWrappedTab(allActivities, options = {}) {
       if (!byGear[gear]) byGear[gear] = 0;
       byGear[gear] += utils.secToH(Number(a.moving_time)||0);
     });
-    return Object.entries(byGear).map(([gear,hours])=>({gear,hours})).sort((a,b)=> b.hours - a.hours);
+    return Object.entries(byGear)
+      .map(([gear,hours])=>({gear,hours}))
+      .sort((a,b)=> b.hours - a.hours);
   }
-  const topGears = gearUsage(currentActs).slice(0,6);
+  const topGears = gearUsage(currentActs).slice(0, 6);
 
-  // --- Countries from start_latlng / end_latlng ---
+  // Countries
   async function resolveCountries(acts) {
     const map = {};
     for (const a of acts) {
-      const coords = (a.start_latlng && a.start_latlng.length===2) ? a.start_latlng : ((a.end_latlng && a.end_latlng.length===2) ? a.end_latlng : null);
+      const coords = (a.start_latlng && a.start_latlng.length===2) ? 
+        a.start_latlng : 
+        ((a.end_latlng && a.end_latlng.length===2) ? a.end_latlng : null);
       if (!coords) continue;
+      
       let countryName = 'Unknown';
       if (cfg.reverseGeocoder && typeof cfg.reverseGeocoder.getCountry === 'function') {
         try {
           const c = await cfg.reverseGeocoder.getCountry(coords[0], coords[1]);
           countryName = (c && c.name) ? c.name : 'Unknown';
-        } catch (e) { countryName = 'Unknown'; }
-      } else {
-        // If no reverseGeocoder provided, skip heavy network calls to avoid surprises.
-        countryName = 'Unknown';
+        } catch (e) { 
+          countryName = 'Unknown'; 
+        }
       }
       map[countryName] = (map[countryName]||0) + 1;
     }
-    return Object.entries(map).map(([country,count])=>({country,count})).sort((a,b)=> b.count - a.count);
+    return Object.entries(map)
+      .map(([country,count])=>({country,count}))
+      .sort((a,b)=> b.count - a.count);
   }
 
   const countries = await resolveCountries(currentActs);
 
-  // --- Render blocks ---
-  // Sport Comparison (ordered by time) with % vs previous year
-  function renderSportComparison(sportsCurr, sportsPrev) {
-    const prevMap = new Map(sportsPrev.map(s=>[s.sport,s]));
-    const totalTime = utils.sum(sportsCurr,'time');
-    return `
-      <h3>📊 Sport Breakdown (by time)</h3>
-      <div style="display: grid; gap: 0.5rem;">
-        ${sportsCurr.map(s => {
-          const prev = prevMap.get(s.sport) || { time:0, distance:0, elevation:0, count:0 };
-          const timeH = (s.time/3600).toFixed(1);
-          const distanceKm = (s.distance/1000).toFixed(1);
-          const elevation = Math.round(s.elevation);
-          const count = s.count;
-          const timePct = prev.time? pctChange(s.time, prev.time) : '—';
-          const distPct = prev.distance? pctChange(s.distance, prev.distance) : '—';
-          const elevPct = prev.elevation? pctChange(s.elevation, prev.elevation) : '—';
-          const countPct = prev.count? pctChange(s.count, prev.count) : '—';
-
-          const share = totalTime ? ((s.time/totalTime)*100).toFixed(1) : '0.0';
-
-          return `
-            <div style="background:#f8f9fa;padding:0.9rem;border-radius:6px;border-left:4px solid #007bff;">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;">
-                <strong>${s.sport}</strong>
-                <span style="color:#666;">${count} activities</span>
-              </div>
-              <div style="display:flex;gap:1rem;font-size:0.9rem;color:#444;">
-                <div>Time: <strong>${timeH}h</strong> <small style="color:#666;">(${timePct})</small></div>
-                <div>Distance: <strong>${distanceKm} km</strong> <small style="color:#666;">(${distPct})</small></div>
-                <div>Elev: <strong>${elevation} m</strong> <small style="color:#666;">(${elevPct})</small></div>
-                <div>Count: <strong>${count}</strong> <small style="color:#666;">(${countPct})</small></div>
-                <div style="margin-left:auto;color:#999;">Share: ${share}%</div>
-              </div>
-            </div>
-          `;
-        }).join('')}
-      </div>
-    `;
-  }
-
-  // Mini storytelling for histograms
-  function renderHistograms(monthlyHours, weekdayHours, hourCounts) {
-    const peakMonth = monthlyHours.length ? monthlyHours.reduce((a,b)=> a.hours>b.hours? a:b) : null;
-    const peakDayIndex = weekdayHours.indexOf(Math.max(...weekdayHours));
-    const peakHour = hourCounts.indexOf(Math.max(...hourCounts));
-
-    // month bars simple
-    const maxMonth = monthlyHours.length ? Math.max(...monthlyHours.map(m=>m.hours)) : 0;
-    const monthBars = monthlyHours.map(m=>{
-      const pct = maxMonth? Math.round((m.hours/maxMonth)*100) : 0;
-      const label = new Date(m.month + '-01').toLocaleString(undefined,{month:'short', year:'numeric'});
-      return `<div style="display:flex;align-items:center;gap:0.6rem;"><div style="width:120px;font-size:0.9rem;color:#333;">${label}</div><div style="flex:1;background:#e9ecef;border-radius:6px;overflow:hidden;"><div style="width:${pct}%;height:14px;background:linear-gradient(90deg,#007bff,#0056b3);"></div></div><div style="width:70px;text-align:right;font-size:0.9rem;color:#666;">${m.hours.toFixed(1)}h</div></div>`;
-    }).join('');
-
-    // weekday labels
-    const wkNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    const maxW = Math.max(...weekdayHours);
-    const weekdayBars = weekdayHours.map((h,i)=>{
-      const pct = maxW? Math.round((h/maxW)*100):0; return `<div style="display:flex;align-items:center;gap:0.6rem;"><div style="width:60px;font-size:0.9rem;color:#333;">${wkNames[i]}</div><div style="flex:1;background:#e9ecef;border-radius:6px;overflow:hidden;"><div style="width:${pct}%;height:12px;background:#28a745"></div></div><div style="width:50px;text-align:right;font-size:0.9rem;color:#666;">${h.toFixed(1)}h</div></div>`; }).join('');
-
-    const hourBars = hourCounts.map((c,h)=>{
-      return `<div style="text-align:center;font-size:0.8rem;color:#666;">${h}<div style="height:40px;margin-top:6px;display:flex;align-items:flex-end;justify-content:center;"><div style="width:18px;height:${Math.max(c,1)*6}px;background:${c>0? '#007bff':'#e9ecef'};border-radius:4px 4px 0 0"></div></div><div style="font-size:0.75rem;color:#999;margin-top:4px;">${h}:00</div></div>`; }).join('');
-
-    const story = `Most active month: ${peakMonth ? (new Date(peakMonth.month+'-01').toLocaleString(undefined,{month:'long',year:'numeric'}) + ' — ' + peakMonth.hours.toFixed(1)+'h') : 'N/A'}. Most frequent day: ${wkNames[peakDayIndex] || 'N/A'}. Typical start hour: ${peakHour || 'N/A'}:00.`;
-
-    return `
-      <h3>📈 Temporal Histograms</h3>
-      <p style="color:#666;">${story}</p>
-      <div style="display:grid;grid-template-columns:1fr;gap:0.6rem;margin-bottom:0.6rem;">${monthBars}</div>
-      <div style="display:grid;grid-template-columns:1fr;gap:0.4rem;margin-top:0.6rem;">${weekdayBars}</div>
-      <div style="margin-top:1rem;padding:0.6rem;background:#f8f9fa;border-radius:6px;overflow:auto;white-space:nowrap;">${hourBars}</div>
-    `;
-  }
-
-  // Top efforts render
-  function renderTopEfforts(topEfforts) {
-    if (!topEfforts || !topEfforts.length) return '<p>No effort/suffer data available.</p>';
-    return `
-      <h3>💀 Top ${topEfforts.length} Effort Activities</h3>
-      <div style="display:grid;gap:0.6rem;">
-        ${topEfforts.map(a=>{
-          const score = a.suffer_score || a.effort || a.trainer_score || a.intensity || a._score;
-          return `<div style="background:#fff;padding:0.8rem;border-radius:6px;display:flex;justify-content:space-between;align-items:center;"><div><strong>${a.name||'Untitled'}</strong><div style="font-size:0.9rem;color:#666;">${a.type || a.sport} • ${utils.formatTime(Number(a.moving_time)||0)} • ${utils.formatDistance(Number(a.distance)||0)}</div></div><div style="text-align:right;color:#d9534f;font-weight:bold;">${score}</div></div>`;
-        }).join('')}
-      </div>
-    `;
-  }
-
-  // Monthly progress hybrid (stacked + line total)
-  function renderMonthlyHybrid(monthlyStacked) {
-    const months = monthlyStacked.months;
-    const sports = monthlyStacked.sports;
-    const totals = months.map(m=> m.values.reduce((s,v)=>s+v,0));
-    const maxTotal = Math.max(...totals,1);
-
-    return `
-      <h3>📆 Monthly Progress (stacked hours)</h3>
-      <div style="display:grid;gap:0.6rem;">
-        ${months.map((m,idx)=>{
-          const monthLabel = new Date(m.month+'-01').toLocaleString(undefined,{month:'short',year:'numeric'});
-          const parts = m.values.map(v=> Math.round((v/maxTotal)*100));
-          // small stacked bar rendering
-          let inner = '';
-          parts.forEach((p,i)=>{ if (p>0) inner += `<div title="${sports[i]}: ${((m.values[i])||0).toFixed(1)}h" style="display:inline-block;height:14px;width:${p}%;background:linear-gradient(90deg,#007bff,#28a745);"></div>`; });
-          return `<div style="display:flex;align-items:center;gap:0.6rem;"><div style="width:110px;font-size:0.9rem;">${monthLabel}</div><div style="flex:1;background:#e9ecef;border-radius:6px;overflow:hidden;">${inner}</div><div style="width:70px;text-align:right;font-size:0.9rem;color:#666;">${totals[idx].toFixed(1)}h</div></div>`;
-        }).join('')}
-      </div>
-    `;
-  }
-
-  // Personal bests render
-  function renderPersonalBests(pbs) {
-    function actSummary(a) { if (!a) return 'N/A'; return `${a.name||'Untitled'} • ${utils.formatDistance(Number(a.distance)||0)} • ${utils.formatTime(Number(a.moving_time)||0)}`; }
-    return `
-      <h3>🏆 Personal Bests & Notables</h3>
-      <div style="display:grid;gap:0.6rem;">
-        <div style="background:#fff8e1;padding:0.8rem;border-radius:6px;">
-          <strong>Running PBs</strong>
-          <div style="margin-top:0.4rem;">${pbs.running.length? pbs.running.map(r=>`<div>${r.name}: <strong>${utils.formatTime(r.best.moving_time)}</strong> • ${new Date(r.best.start_date).toLocaleDateString()} (${r.attempts} attempts)</div>`).join('') : '<div>No running PBs found</div>'}</div>
-        </div>
-        <div style="background:#e8f7ff;padding:0.8rem;border-radius:6px;">
-          <strong>Swimming Highlights</strong>
-          <div style="margin-top:0.4rem;">${pbs.swimming.length? pbs.swimming.map(r=>`<div>${r.name}: ${actSummary(r.best)}</div>`).join('') : '<div>No swims found</div>'}</div>
-        </div>
-        <div style="background:#fff0f6;padding:0.8rem;border-radius:6px;">
-          <strong>Riding Highlights</strong>
-          <div style="margin-top:0.4rem;">${pbs.riding.length? pbs.riding.map(r=>`<div>${r.name}: ${actSummary(r.best)}</div>`).join('') : '<div>No rides found</div>'}</div>
-        </div>
-        <div style="background:#f8f9fa;padding:0.8rem;border-radius:6px;">
-          <div>Longest: ${pbs.longest? actSummary(pbs.longest): 'N/A'}</div>
-          <div>Most elevation: ${pbs.mostElevation? actSummary(pbs.mostElevation): 'N/A'}</div>
-          <div>Fastest: ${pbs.fastest? actSummary(pbs.fastest): 'N/A'}</div>
-        </div>
-      </div>
-    `;
-  }
-
-  function renderGears(gears) {
-    if (!gears.length) return '<p>No gear/device data available.</p>';
-    return `
-      <h3>⚙️ Gear & Device Usage (hours)</h3>
-      <div style="display:grid;gap:0.4rem;">
-        ${gears.map(g=> `<div style="display:flex;justify-content:space-between;padding:0.6rem;background:#f8f9fa;border-radius:6px;"><div>${g.gear}</div><div style="color:#666;">${g.hours.toFixed(1)}h</div></div>`).join('')}
-      </div>
-    `;
-  }
-
-  function renderCountries(countries) {
-    if (!countries.length) return '<p>No geolocation data (or reverseGeocoder not provided).</p>';
-    return `
-      <h3>🌍 Countries</h3>
-      <div style="display:grid;gap:0.4rem;">
-        ${countries.map(c=> `<div style="display:flex;justify-content:space-between;padding:0.6rem;background:#fff;border-radius:6px;"><div>${c.country}</div><div style="color:#666">${c.count}</div></div>`).join('')}
-      </div>
-    `;
-  }
-
-  // Summary top line
+  // === RENDER COMPONENTS ===
+  
+  // Summary cards
   const summaryTotals = {
     total: currentActs.length,
     distance: utils.sum(currentActs,'distance'),
@@ -409,33 +259,493 @@ export async function renderWrappedTab(allActivities, options = {}) {
   };
 
   const summaryHtml = `
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin-bottom:1rem;">
-      <div style="text-align:center;padding:1rem;background:#f8f9fa;border-radius:8px;"><div style="font-size:1.6rem;font-weight:bold">${summaryTotals.total}</div><div style="color:#666">Activities (${currentYear})</div></div>
-      <div style="text-align:center;padding:1rem;background:#f8f9fa;border-radius:8px;"><div style="font-size:1.6rem;font-weight:bold">${utils.formatDistance(summaryTotals.distance)}</div><div style="color:#666">Total Distance</div></div>
-      <div style="text-align:center;padding:1rem;background:#f8f9fa;border-radius:8px;"><div style="font-size:1.6rem;font-weight:bold">${utils.formatTime(summaryTotals.time)}</div><div style="color:#666">Total Time</div></div>
-      <div style="text-align:center;padding:1rem;background:#f8f9fa;border-radius:8px;"><div style="font-size:1.6rem;font-weight:bold">${utils.formatDistance(summaryTotals.elevation)}</div><div style="color:#666">Elevation Gain</div></div>
+    <div class="stats-year-header">
+      <h2>${currentYear} Wrapped</h2>
+      <p>Your year in fitness</p>
     </div>
-    <div style="display:flex;gap:1rem;align-items:center;margin-bottom:1rem;"><div style="padding:0.6rem;background:#fff;border-radius:8px;">Solo: <strong>${soloPct}%</strong></div><div style="padding:0.6rem;background:#fff;border-radius:8px;">Avg pace (runs): <strong>${avgPace||'N/A'}</strong></div><div style="padding:0.6rem;background:#fff;border-radius:8px;">Avg resistance: <strong>${avgResistance||'N/A'}</strong></div></div>
+    
+    <div class="stats-grid">
+      <div class="stat-card fade-in-up" style="animation-delay: 0.1s">
+        <div class="stat-icon">🎯</div>
+        <div class="stat-value">${summaryTotals.total}</div>
+        <div class="stat-label">Activities</div>
+      </div>
+      
+      <div class="stat-card fade-in-up" style="animation-delay: 0.2s">
+        <div class="stat-icon">📍</div>
+        <div class="stat-value">${utils.formatDistance(summaryTotals.distance)}</div>
+        <div class="stat-label">Total Distance</div>
+      </div>
+      
+      <div class="stat-card fade-in-up" style="animation-delay: 0.3s">
+        <div class="stat-icon">⏱️</div>
+        <div class="stat-value">${utils.formatTime(summaryTotals.time)}</div>
+        <div class="stat-label">Total Time</div>
+      </div>
+      
+      <div class="stat-card fade-in-up" style="animation-delay: 0.4s">
+        <div class="stat-icon">⛰️</div>
+        <div class="stat-value">${utils.formatDistance(summaryTotals.elevation)}</div>
+        <div class="stat-label">Elevation Gain</div>
+      </div>
+    </div>
+
+    <div class="quick-stats fade-in-up" style="animation-delay: 0.5s">
+      <div class="quick-stat-item">
+        <span class="quick-stat-label">Solo workouts</span>
+        <span class="quick-stat-value">${soloPct}%</span>
+      </div>
+      ${avgPace ? `
+        <div class="quick-stat-item">
+          <span class="quick-stat-label">Avg pace (runs)</span>
+          <span class="quick-stat-value">${avgPace}</span>
+        </div>
+      ` : ''}
+    </div>
   `;
 
-  // Insert into DOM
-  document.getElementById(cfg.containerIds.summary).innerHTML = summaryHtml;
-  document.getElementById(cfg.containerIds.sportComparison).innerHTML = renderSportComparison(sportsCurrent, sportsPrev);
-  document.getElementById(cfg.containerIds.temporalStats).innerHTML = renderHistograms(monthlyHours, weekdayHours, hourCounts) + renderMonthlyHybrid(monthlyStacked);
-  document.getElementById(cfg.containerIds.motivation).innerHTML = renderTopEfforts(topEfforts);
-  document.getElementById(cfg.containerIds.personalBests).innerHTML = renderPersonalBests(pbs);
-  document.getElementById(cfg.containerIds.extremeStats).innerHTML = renderGears(topGears) + renderCountries(countries);
-  document.getElementById(cfg.containerIds.allActivities).innerHTML = renderActivitiesTable(currentActs);
+  // Sport comparison
+  function renderSportComparison(sportsCurr, sportsPrev) {
+    const prevMap = new Map(sportsPrev.map(s=>[s.sport,s]));
+    const totalTime = utils.sum(sportsCurr,'time');
+    
+    const sportIcons = {
+      'Run': '🏃',
+      'Running': '🏃',
+      'Ride': '🚴',
+      'Cycling': '🚴',
+      'Swim': '🏊',
+      'Swimming': '🏊',
+      'Walk': '🚶',
+      'Hike': '🥾',
+      'Workout': '💪',
+      'WeightTraining': '🏋️',
+      'Yoga': '🧘'
+    };
 
-  // Activities table (simpler)
-  function renderActivitiesTable(activities) {
-    const sorted = activities.slice().sort((a,b)=> new Date(b.start_date)-new Date(a.start_date));
-    const rows = sorted.map(a=>{
-      const pace = (Number(a.distance)>0 && Number(a.moving_time)>0 && (a.type||'').toLowerCase().includes('run')) ? utils.formatPace(Number(a.moving_time), Number(a.distance)/1000) : '-';
-      return `<tr style="background:${sorted.indexOf(a)%2===0? '#fff':'#f8f9fa'};"><td style="padding:0.6rem;border-bottom:1px solid #e9ecef">${new Date(a.start_date).toLocaleDateString()}</td><td style="padding:0.6rem;border-bottom:1px solid #e9ecef">${a.name||'Untitled'}</td><td style="padding:0.6rem;border-bottom:1px solid #e9ecef">${a.type||a.sport||'Unknown'}</td><td style="padding:0.6rem;border-bottom:1px solid #e9ecef">${utils.formatDistance(Number(a.distance)||0)}</td><td style="padding:0.6rem;border-bottom:1px solid #e9ecef">${utils.formatTime(Number(a.moving_time)||0)}</td><td style="padding:0.6rem;border-bottom:1px solid #e9ecef">${pace}</td><td style="padding:0.6rem;border-bottom:1px solid #e9ecef"><a href="activity.html?id=${a.id}" target="_blank" style="background:#007bff;color:#fff;padding:0.35rem 0.7rem;border-radius:4px;text-decoration:none;font-size:0.85rem;">View</a></td></tr>`;
-    }).join('');
-    return `<h3>📋 All Activities</h3><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;"><thead><tr style="background:#f8f9fa;text-align:left"><th style="padding:0.6rem">Date</th><th style="padding:0.6rem">Name</th><th style="padding:0.6rem">Sport</th><th style="padding:0.6rem">Distance</th><th style="padding:0.6rem">Time</th><th style="padding:0.6rem">Pace</th><th style="padding:0.6rem">Actions</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    return `
+      <div class="section-header">
+        <h3>📊 Sport Breakdown</h3>
+        <p class="section-subtitle">Ranked by total time</p>
+      </div>
+      
+      <div class="sport-breakdown">
+        ${sportsCurr.map((s, idx) => {
+          const prev = prevMap.get(s.sport) || { time:0, distance:0, elevation:0, count:0 };
+          const timeH = (s.time/3600).toFixed(1);
+          const distanceKm = (s.distance/1000).toFixed(1);
+          const elevation = Math.round(s.elevation);
+          const timePct = pctChange(s.time, prev.time);
+          const share = totalTime ? ((s.time/totalTime)*100).toFixed(1) : '0.0';
+          
+          const icon = sportIcons[s.sport] || '🎯';
+          const trendColor = timePct === null ? '#999' : (timePct > 0 ? '#10b981' : '#ef4444');
+          const trendSymbol = timePct === null ? '' : (timePct > 0 ? '↑' : '↓');
+          
+          return `
+            <div class="sport-card fade-in-up" style="animation-delay: ${0.1 * (idx + 1)}s">
+              <div class="sport-card-header">
+                <div class="sport-icon">${icon}</div>
+                <div class="sport-title">
+                  <h4>${s.sport}</h4>
+                  <span class="sport-count">${s.count} activities</span>
+                </div>
+                <div class="sport-share">${share}%</div>
+              </div>
+              
+              <div class="sport-metrics">
+                <div class="metric">
+                  <div class="metric-label">Time</div>
+                  <div class="metric-value">${timeH}h</div>
+                  ${timePct !== null ? `
+                    <div class="metric-change" style="color: ${trendColor}">
+                      ${trendSymbol} ${Math.abs(timePct).toFixed(1)}%
+                    </div>
+                  ` : ''}
+                </div>
+                
+                <div class="metric">
+                  <div class="metric-label">Distance</div>
+                  <div class="metric-value">${distanceKm} km</div>
+                </div>
+                
+                <div class="metric">
+                  <div class="metric-label">Elevation</div>
+                  <div class="metric-value">${elevation} m</div>
+                </div>
+              </div>
+              
+              <div class="sport-progress">
+                <div class="sport-progress-bar" style="width: ${share}%"></div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
   }
 
-  // Done
+  // Temporal stats
+  function renderHistograms(monthlyHours, weekdayHours, hourCounts) {
+    const peakMonth = monthlyHours.length ? 
+      monthlyHours.reduce((a,b)=> a.hours>b.hours? a:b) : null;
+    const peakDayIndex = weekdayHours.indexOf(Math.max(...weekdayHours));
+    const peakHour = hourCounts.indexOf(Math.max(...hourCounts));
+    
+    const wkNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const maxMonth = monthlyHours.length ? Math.max(...monthlyHours.map(m=>m.hours)) : 0;
+    const maxW = Math.max(...weekdayHours);
+
+    const monthBars = monthlyHours.map((m, idx) => {
+      const pct = maxMonth ? (m.hours/maxMonth)*100 : 0;
+      const label = new Date(m.month + '-01').toLocaleString(undefined, {month:'short', year:'numeric'});
+      return `
+        <div class="chart-row fade-in-up" style="animation-delay: ${0.05 * idx}s">
+          <div class="chart-label">${label}</div>
+          <div class="chart-bar-container">
+            <div class="chart-bar" style="width: ${pct}%">
+              <span class="chart-bar-value">${m.hours.toFixed(1)}h</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const weekdayBars = weekdayHours.map((h, i) => {
+      const pct = maxW ? (h/maxW)*100 : 0;
+      return `
+        <div class="chart-row">
+          <div class="chart-label chart-label-small">${wkNames[i]}</div>
+          <div class="chart-bar-container">
+            <div class="chart-bar chart-bar-secondary" style="width: ${pct}%">
+              <span class="chart-bar-value">${h.toFixed(1)}h</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const maxHour = Math.max(...hourCounts);
+    const hourBars = hourCounts.map((c, h) => {
+      const height = maxHour > 0 ? (c/maxHour)*60 : 0;
+      return `
+        <div class="hour-bar" title="${h}:00 - ${c} activities">
+          <div class="hour-bar-fill" style="height: ${height}px">
+            ${c > 0 ? `<span class="hour-bar-count">${c}</span>` : ''}
+          </div>
+          <div class="hour-label">${h}</div>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="section-header">
+        <h3>📈 Activity Patterns</h3>
+        <p class="section-subtitle">When you train best</p>
+      </div>
+      
+      <div class="insights-grid">
+        <div class="insight-card">
+          <div class="insight-icon">📅</div>
+          <div class="insight-content">
+            <div class="insight-label">Peak Month</div>
+            <div class="insight-value">
+              ${peakMonth ? new Date(peakMonth.month+'-01').toLocaleString(undefined,{month:'long',year:'numeric'}) : 'N/A'}
+            </div>
+            ${peakMonth ? `<div class="insight-detail">${peakMonth.hours.toFixed(1)} hours</div>` : ''}
+          </div>
+        </div>
+        
+        <div class="insight-card">
+          <div class="insight-icon">📆</div>
+          <div class="insight-content">
+            <div class="insight-label">Favorite Day</div>
+            <div class="insight-value">${wkNames[peakDayIndex]}</div>
+          </div>
+        </div>
+        
+        <div class="insight-card">
+          <div class="insight-icon">🕐</div>
+          <div class="insight-content">
+            <div class="insight-label">Peak Hour</div>
+            <div class="insight-value">${peakHour}:00</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-section">
+        <h4 class="chart-title">Monthly Activity (hours)</h4>
+        <div class="chart-container">${monthBars}</div>
+      </div>
+
+      <div class="chart-section">
+        <h4 class="chart-title">Weekly Pattern</h4>
+        <div class="chart-container chart-container-compact">${weekdayBars}</div>
+      </div>
+
+      <div class="chart-section">
+        <h4 class="chart-title">Time of Day Distribution</h4>
+        <div class="hour-chart">${hourBars}</div>
+      </div>
+    `;
+  }
+
+  // Top efforts
+  function renderTopEfforts(topEfforts) {
+    if (!topEfforts || !topEfforts.length) {
+      return '<div class="empty-state">No effort data available</div>';
+    }
+    
+    return `
+      <div class="section-header">
+        <h3>🔥 Hardest Workouts</h3>
+        <p class="section-subtitle">Your most intense sessions</p>
+      </div>
+      
+      <div class="efforts-list">
+        ${topEfforts.map((a, idx) => {
+          const score = a._score;
+          const maxScore = topEfforts[0]._score;
+          const scoreWidth = (score / maxScore) * 100;
+          
+          return `
+            <div class="effort-card fade-in-up" style="animation-delay: ${0.1 * idx}s">
+              <div class="effort-rank">#${idx + 1}</div>
+              <div class="effort-content">
+                <h4 class="effort-title">${a.name || 'Untitled'}</h4>
+                <div class="effort-meta">
+                  ${a.type || a.sport} • ${utils.formatTime(Number(a.moving_time)||0)} • ${utils.formatDistance(Number(a.distance)||0)}
+                </div>
+                <div class="effort-score-bar">
+                  <div class="effort-score-fill" style="width: ${scoreWidth}%"></div>
+                </div>
+              </div>
+              <div class="effort-score">${Math.round(score)}</div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  // Personal bests
+  function renderPersonalBests(pbs) {
+    function actSummary(a) {
+      if (!a) return 'N/A';
+      const date = new Date(a.start_date).toLocaleDateString();
+      return `
+        <div class="pb-activity">
+          <strong>${a.name || 'Untitled'}</strong>
+          <div class="pb-details">
+            ${utils.formatTime(Number(a.moving_time)||0)} • ${utils.formatDistance(Number(a.distance)||0)}
+          </div>
+          <div class="pb-date">${date}</div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="section-header">
+        <h3>🏆 Personal Records</h3>
+        <p class="section-subtitle">Your best performances</p>
+      </div>
+      
+      <div class="pb-grid">
+        ${pbs.running.length > 0 ? `
+          <div class="pb-category fade-in-up" style="animation-delay: 0.1s">
+            <div class="pb-category-header">
+              <span class="pb-icon">🏃</span>
+              <h4>Running</h4>
+            </div>
+            ${pbs.running.map(r => `
+              <div class="pb-item">
+                <div class="pb-distance">${r.name}</div>
+                <div class="pb-time">${utils.formatTime(r.best.moving_time)}</div>
+                <div class="pb-attempts">${r.attempts} attempt${r.attempts > 1 ? 's' : ''}</div>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+
+        ${pbs.swimming.length > 0 ? `
+          <div class="pb-category fade-in-up" style="animation-delay: 0.2s">
+            <div class="pb-category-header">
+              <span class="pb-icon">🏊</span>
+              <h4>Swimming</h4>
+            </div>
+            ${pbs.swimming.map(r => `
+              <div class="pb-item">
+                <div class="pb-distance">${r.name}</div>
+                <div class="pb-time">${utils.formatTime(r.best.moving_time)}</div>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+
+        ${pbs.riding.length > 0 ? `
+          <div class="pb-category fade-in-up" style="animation-delay: 0.3s">
+            <div class="pb-category-header">
+              <span class="pb-icon">🚴</span>
+              <h4>Cycling</h4>
+            </div>
+            ${pbs.riding.map(r => `
+              <div class="pb-item">
+                <div class="pb-distance">${r.name}</div>
+                <div class="pb-time">${utils.formatTime(r.best.moving_time)}</div>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+
+        <div class="pb-category pb-highlights fade-in-up" style="animation-delay: 0.4s">
+          <div class="pb-category-header">
+            <span class="pb-icon">⭐</span>
+            <h4>Highlights</h4>
+          </div>
+          ${pbs.longest ? `
+            <div class="pb-highlight">
+              <div class="pb-highlight-label">Longest</div>
+              ${actSummary(pbs.longest)}
+            </div>
+          ` : ''}
+          ${pbs.mostElevation ? `
+            <div class="pb-highlight">
+              <div class="pb-highlight-label">Most Elevation</div>
+              ${actSummary(pbs.mostElevation)}
+            </div>
+          ` : ''}
+          ${pbs.fastest ? `
+            <div class="pb-highlight">
+              <div class="pb-highlight-label">Fastest</div>
+              ${actSummary(pbs.fastest)}
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  // Gear and countries
+  function renderExtras(gears, countries) {
+    return `
+      <div class="extras-grid">
+        ${gears.length > 0 ? `
+          <div class="extra-section fade-in-up" style="animation-delay: 0.1s">
+            <div class="section-header">
+              <h3>⚙️ Equipment</h3>
+              <p class="section-subtitle">Most used gear</p>
+            </div>
+            <div class="gear-list">
+              ${gears.map((g, idx) => {
+                const maxHours = gears[0].hours;
+                const width = (g.hours / maxHours) * 100;
+                return `
+                  <div class="gear-item">
+                    <div class="gear-name">${g.gear}</div>
+                    <div class="gear-bar-container">
+                      <div class="gear-bar" style="width: ${width}%"></div>
+                    </div>
+                    <div class="gear-hours">${g.hours.toFixed(1)}h</div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        ${countries.length > 0 ? `
+          <div class="extra-section fade-in-up" style="animation-delay: 0.2s">
+            <div class="section-header">
+              <h3>🌍 Locations</h3>
+              <p class="section-subtitle">Where you trained</p>
+            </div>
+            <div class="country-list">
+              ${countries.map((c, idx) => {
+                const maxCount = countries[0].count;
+                const width = (c.count / maxCount) * 100;
+                return `
+                  <div class="country-item">
+                    <div class="country-name">${c.country}</div>
+                    <div class="country-bar-container">
+                      <div class="country-bar" style="width: ${width}%"></div>
+                    </div>
+                    <div class="country-count">${c.count}</div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  // Activities table
+  function renderActivitiesTable(activities) {
+    const sorted = activities.slice().sort((a,b)=> new Date(b.start_date) - new Date(a.start_date));
+    
+    return `
+      <div class="section-header">
+        <h3>📋 All Activities</h3>
+        <p class="section-subtitle">${activities.length} workouts in ${currentYear}</p>
+      </div>
+      
+      <div class="activities-table-container">
+        <table class="activities-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Distance</th>
+              <th>Time</th>
+              <th>Pace</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${sorted.map((a, idx) => {
+              const pace = (Number(a.distance)>0 && Number(a.moving_time)>0 && (a.type||'').toLowerCase().includes('run')) 
+                ? utils.formatPace(Number(a.moving_time), Number(a.distance)/1000) 
+                : '—';
+              
+              const date = new Date(a.start_date).toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+              });
+              
+              return `
+                <tr class="fade-in-up" style="animation-delay: ${Math.min(idx * 0.02, 1)}s">
+                  <td class="table-date">${date}</td>
+                  <td class="table-name">${a.name || 'Untitled'}</td>
+                  <td class="table-type">
+                    <span class="type-badge">${a.type || a.sport || 'Unknown'}</span>
+                  </td>
+                  <td class="table-distance">${utils.formatDistance(Number(a.distance)||0)}</td>
+                  <td class="table-time">${utils.formatTime(Number(a.moving_time)||0)}</td>
+                  <td class="table-pace">${pace}</td>
+                  <td class="table-action">
+                    <a href="activity.html?id=${a.id}" target="_blank" class="table-link">
+                      View →
+                    </a>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  // === INJECT INTO DOM ===
+  document.getElementById(cfg.containerIds.summary).innerHTML = summaryHtml;
+  document.getElementById(cfg.containerIds.sportComparison).innerHTML = renderSportComparison(sportsCurrent, sportsPrev);
+  document.getElementById(cfg.containerIds.temporalStats).innerHTML = renderHistograms(monthlyHours, weekdayHours, hourCounts);
+  document.getElementById(cfg.containerIds.motivation).innerHTML = renderTopEfforts(topEfforts);
+  document.getElementById(cfg.containerIds.personalBests).innerHTML = renderPersonalBests(pbs);
+  document.getElementById(cfg.containerIds.extremeStats).innerHTML = renderExtras(topGears, countries);
+  document.getElementById(cfg.containerIds.allActivities).innerHTML = renderActivitiesTable(currentActs);
 }
+
