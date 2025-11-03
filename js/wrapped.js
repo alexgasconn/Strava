@@ -737,6 +737,42 @@ export async function renderWrappedTab(allActivities, options = {}) {
     }
 
 
+    // === MAP HEATMAP ===
+    function renderHeatmap(activities) {
+        const containerId = 'wrapped-map';
+        const mapContainer = document.getElementById(containerId);
+        if (!mapContainer) return;
+
+        // Centrar mapa en coordenadas medias
+        const coords = activities
+            .map(a => (a.start_latlng && a.start_latlng.length === 2) ? a.start_latlng : null)
+            .filter(Boolean);
+
+        if (!coords.length) {
+            mapContainer.innerHTML = '<p style="text-align:center;">No GPS data available for heatmap</p>';
+            return;
+        }
+
+        const latAvg = coords.reduce((sum, c) => sum + c[0], 0) / coords.length;
+        const lngAvg = coords.reduce((sum, c) => sum + c[1], 0) / coords.length;
+
+        // Inicializar mapa
+        const map = L.map(containerId).setView([latAvg, lngAvg], 5);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Crear heatmap layer
+        const heatPoints = coords.map(c => [...c, 0.5]); // [lat, lng, intensity]
+        L.heatLayer(heatPoints, { radius: 25, blur: 15, maxZoom: 17 }).addTo(map);
+    }
+
+    // Llamar heatmap
+    renderHeatmap(currentActs);
+
+
+
     // Activities table
     function renderActivitiesTable(activities) {
         const sorted = activities.slice().sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
@@ -795,6 +831,9 @@ export async function renderWrappedTab(allActivities, options = {}) {
       </div>
     `;
     }
+
+
+
 
     // === INJECT INTO DOM ===
     document.getElementById(cfg.containerIds.summary).innerHTML = summaryHtml;
