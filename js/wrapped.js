@@ -776,13 +776,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
             blur: blur,
             maxZoom: 18,
             max: 1,
-            opacity: opacity,
-            gradient: {
-                0.0: 'blue',
-                0.3: 'lime',
-                0.6: 'orange',
-                1.0: 'red'
-            }
+            opacity: opacity
         }).addTo(map);
 
         // Adjust dynamically on zoom
@@ -796,7 +790,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
     }
 
 
-    renderHeatmap(currentActs, { radius: 90, blur: 20, opacity: 0.7, intensity: 0.5 });
+    renderHeatmap(currentActs, { radius: 90, blur: 30, opacity: 1, intensity: 1 });
 
 
 
