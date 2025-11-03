@@ -767,7 +767,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
         const heatPoints = coords.map(c => [...c, 0.5]); // intensidad baja
         const heat = L.heatLayer(heatPoints, {
             radius: 75,   // más amplio
-            blur: 100,
+            blur: 5,
             maxZoom: 18,
             max: 1
         }).addTo(map);
