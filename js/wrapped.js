@@ -743,10 +743,8 @@ export async function renderWrappedTab(allActivities, options = {}) {
         const mapContainer = document.getElementById(containerId);
         if (!mapContainer) return;
 
-        // Asegurar que el contenedor tenga altura
         if (!mapContainer.offsetHeight) mapContainer.style.height = '500px';
 
-        // Centrar mapa en coordenadas medias
         const coords = activities
             .map(a => (a.start_latlng && a.start_latlng.length === 2) ? a.start_latlng : null)
             .filter(Boolean);
@@ -759,34 +757,31 @@ export async function renderWrappedTab(allActivities, options = {}) {
         const latAvg = coords.reduce((sum, c) => sum + c[0], 0) / coords.length;
         const lngAvg = coords.reduce((sum, c) => sum + c[1], 0) / coords.length;
 
-        // Inicializar mapa
-        const map = L.map(containerId).setView([latAvg, lngAvg], 3); // empezar más alejado
+        const map = L.map(containerId).setView([latAvg, lngAvg], 3);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
 
-        // Crear heatmap layer
-        const heatPoints = coords.map(c => [...c, 1]); // intensidad base 1
+        // Cada actividad con menos peso pero más rango
+        const heatPoints = coords.map(c => [...c, 0.15]); // intensidad baja
         const heat = L.heatLayer(heatPoints, {
-            radius: 50,   // más amplio para que se vea el calor
-            blur: 15,
+            radius: 50,   // más amplio
+            blur: 35,
             maxZoom: 18,
-            // max: 1        // intensidad máxima
+            max: 1
         }).addTo(map);
 
-        // Refuerzo del calor al hacer zoom
+        // Ajuste dinámico al hacer zoom
         map.on('zoomend', () => {
             const zoom = map.getZoom();
             heat.setOptions({
-                radius: 15 + zoom * 2,   // ajusta el radio según el zoom
-                blur: 10 + zoom
+                radius: 30 + zoom * 3,
+                blur: 20 + zoom * 1.5
             });
         });
     }
 
-
-    // Llamar heatmap
     renderHeatmap(currentActs);
 
 
