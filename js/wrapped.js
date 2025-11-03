@@ -737,12 +737,11 @@ export async function renderWrappedTab(allActivities, options = {}) {
     }
 
 
-    // === MAP HEATMAP ===
+    // === BEST-POSSIBLE HEATMAP CONFIG (copy-paste ready) ===
     function renderHeatmap(activities, options = {}) {
         const containerId = 'wrapped-map';
         const mapContainer = document.getElementById(containerId);
         if (!mapContainer) return;
-
         if (!mapContainer.offsetHeight) mapContainer.style.height = '500px';
 
         const coords = activities
@@ -750,47 +749,49 @@ export async function renderWrappedTab(allActivities, options = {}) {
             .filter(Boolean);
 
         if (!coords.length) {
-            mapContainer.innerHTML = '<p style="text-align:center;">No GPS data available for heatmap</p>';
+            mapContainer.innerHTML = '<div style="text-align:center;padding:2rem;color:#666;">No GPS data available for heatmap</div>';
             return;
         }
 
-        const latAvg = coords.reduce((sum, c) => sum + c[0], 0) / coords.length;
-        const lngAvg = coords.reduce((sum, c) => sum + c[1], 0) / coords.length;
+        const latAvg = coords.reduce((s, c) => s + c[0], 0) / coords.length;
+        const lngAvg = coords.reduce((s, c) => s + c[1], 0) / coords.length;
 
-        const map = L.map(containerId).setView([latAvg, lngAvg], 3);
+        const map = L.map(containerId).setView([latAvg, lngAvg], 4);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors'
+            attribution: '© OpenStreetMap',
+            maxZoom: 19
         }).addTo(map);
 
-        // Configurable options with defaults
-        const radius = options.radius ?? 80;      // size of heat points
-        const blur = options.blur ?? 25;          // smoothness
-        const opacity = options.opacity ?? 0.7;   // transparency
-        const intensity = options.intensity ?? 0.6; // base intensity per point
+        // BEST-POSSIBLE defaults (tuned for 50–5000 points)
+        const radius = options.radius ?? 45;
+        const blur = options.blur ?? 22;
+        const opacity = options.opacity ?? 0.78;
+        const intensity = options.intensity ?? 0.68;
+        const max = options.max ?? 1.0;
 
         const heatPoints = coords.map(c => [...c, intensity]);
-
         const heat = L.heatLayer(heatPoints, {
-            radius: radius,
-            blur: blur,
-            maxZoom: 18,
-            max: 1,
-            opacity: opacity
+            radius, blur, opacity, max,
+            gradient: { 0.0: '#1a2a6c', 0.4: '#b21f1f', 0.7: '#fdbb2d', 1.0: '#f8f9fa' },
+            minOpacity: 0.15
         }).addTo(map);
 
-        // Adjust dynamically on zoom
+        // DYNAMIC ZOOM ADJUSTMENT (keeps density perfect)
         map.on('zoomend', () => {
-            const zoom = map.getZoom();
+            const z = map.getZoom();
             heat.setOptions({
-                radius: radius + zoom * 3,
-                blur: blur + zoom * 1.5
+                radius: Math.max(25, radius + (z - 4) * 5),
+                blur: Math.max(12, blur + (z - 4) * 2.5)
             });
         });
+
+        // Auto-fit bounds (optional, uncomment if you want tight zoom)
+        // const bounds = L.latLngBounds(coords);
+        // map.fitBounds(bounds, { padding: [30, 30] });
     }
 
-
-    renderHeatmap(currentActs, { radius:  44, blur: 20, opacity: 0.75, intensity: 0.6 });
+    renderHeatmap(currentActs);
 
 
 
