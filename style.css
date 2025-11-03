@@ -2215,6 +2215,9 @@ main {
     transform: scale(1.05);
 }
 
-/* .table-distance,
-.table-time, 
-.table-pace */
+
+
+#wrapped-map {
+    width: 100%;
+    height: 400px; /* o lo que quieras */
+}
