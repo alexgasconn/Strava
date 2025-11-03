@@ -5,7 +5,7 @@
 // - containerIds: optional map of container element IDs (defaults to existing IDs)
 // - reverseGeocoder: optional object with async getCountry(lat,lng) -> { name, code }
 
-export async function renderWrappedStats(allActivities, options = {}) {
+export async function renderWrappedTab(allActivities, options = {}) {
   const cfg = {
     containerIds: {
       summary: 'wrapped-summary',
