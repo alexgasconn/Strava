@@ -738,7 +738,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
 
 
     // === MAP HEATMAP ===
-    function renderHeatmap(activities) {
+    function renderHeatmap(activities, options = {}) {
         const containerId = 'wrapped-map';
         const mapContainer = document.getElementById(containerId);
         if (!mapContainer) return;
@@ -763,26 +763,40 @@ export async function renderWrappedTab(allActivities, options = {}) {
             attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
 
-        // Cada actividad con menos peso pero más rango
-        const heatPoints = coords.map(c => [...c, 0.5]); // intensidad baja
+        // Configurable options with defaults
+        const radius = options.radius ?? 80;      // size of heat points
+        const blur = options.blur ?? 25;          // smoothness
+        const opacity = options.opacity ?? 0.7;   // transparency
+        const intensity = options.intensity ?? 0.6; // base intensity per point
+
+        const heatPoints = coords.map(c => [...c, intensity]);
+
         const heat = L.heatLayer(heatPoints, {
-            radius: 75,   // más amplio
-            blur: 5,
+            radius: radius,
+            blur: blur,
             maxZoom: 18,
-            max: 1
+            max: 1,
+            opacity: opacity,
+            gradient: {
+                0.0: 'blue',
+                0.3: 'lime',
+                0.6: 'orange',
+                1.0: 'red'
+            }
         }).addTo(map);
 
-        // Ajuste dinámico al hacer zoom
+        // Adjust dynamically on zoom
         map.on('zoomend', () => {
             const zoom = map.getZoom();
             heat.setOptions({
-                radius: 30 + zoom * 3,
-                blur: 20 + zoom * 1.5
+                radius: radius + zoom * 3,
+                blur: blur + zoom * 1.5
             });
         });
     }
 
-    renderHeatmap(currentActs);
+
+    renderHeatmap(currentActs, { radius: 90, blur: 20, opacity: 0.7, intensity: 0.5 });
 
 
 
