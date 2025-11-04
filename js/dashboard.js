@@ -124,6 +124,7 @@ function renderDashboardSummary(runs) {
     `;
 }
 
+
 function renderTrainingLoadMetrics(runs) {
     const container = document.getElementById('training-load-metrics');
     if (!container) return;
@@ -135,29 +136,46 @@ function renderTrainingLoadMetrics(runs) {
         return timeHours * Math.pow(intensity, 4) * 100;
     });
 
+    // === CTL (≈ media 42 días) ===
     let ctl = 0;
-    for (let i = 0; i < tssData.length; i++) {
-        ctl = (tssData[i] + ctl * 41) / 42;
-    }
+    for (let i = 0; i < tssData.length; i++) ctl = (tssData[i] + ctl * 41) / 42;
 
+    // === ATL (≈ media 7 días) ===
     let atl = 0;
     const last7Tss = tssData.slice(-7);
-    for (let i = 0; i < last7Tss.length; i++) {
-        atl = (last7Tss[i] + atl * 6) / 7;
-    }
+    for (let i = 0; i < last7Tss.length; i++) atl = (last7Tss[i] + atl * 6) / 7;
 
     const tsb = ctl - atl;
     const tsbColor = tsb > 0 ? '#2ECC40' : '#FF4136';
     const totalLoad = tssData.reduce((sum, t) => sum + t, 0).toFixed(0);
-    const loadChange = tssData.length > 7 ? ((last7Tss.reduce((s, t) => s + t, 0) - tssData.slice(-14, -7).reduce((s, t) => s + t, 0)) / tssData.slice(-14, -7).reduce((s, t) => s + t, 0) * 100).toFixed(1) : 0;
+
+    // Cambio semanal
+    const loadChange = tssData.length > 14 ? ((last7Tss.reduce((s, t) => s + t, 0) - tssData.slice(-14, -7).reduce((s, t) => s + t, 0)) / tssData.slice(-14, -7).reduce((s, t) => s + t, 0) * 100).toFixed(1) : 0;
     const loadTrend = loadChange > 0 ? '↗' : '↘';
 
-    // === MENSAJE INTERPRETATIVO ===
+    // === MENSAJE INTERPRETATIVO COMPLETO ===
     let message = '';
-    if (tsb < -10) message = '⚠️ Overtraining, necesitas descansar';
-    else if (tsb >= -10 && tsb <= 5) message = '✅ Estás equilibrado, buen ritmo';
-    else if (tsb > 5) message = '💪 Estás descansado, puedes aumentar intensidad';
+    let color = '#333';
+    let emoji = '';
 
+    // TSB principal
+    if (tsb < -15) { emoji = '⚠️'; message = 'Overtraining, descanso necesario'; color = '#FF4136'; }
+    else if (tsb >= -15 && tsb < -5) { emoji = '⚠️'; message = 'Fatiga acumulada, cuidado con intensidad'; color = '#FF851B'; }
+    else if (tsb >= -5 && tsb <= 5) { emoji = '✅'; message = 'Entrenamiento equilibrado, buen ritmo'; color = '#0074D9'; }
+    else if (tsb > 5 && tsb <= 15) { emoji = '💪'; message = 'Descansado, puedes aumentar intensidad'; color = '#2ECC40'; }
+    else if (tsb > 15) { emoji = '💪'; message = 'Muy descansado, oportunidad de apretar entrenamiento'; color = '#2ECC40'; }
+
+    // Ajuste según tendencia semanal
+    if (loadChange > 20) message += ', incremento fuerte de carga esta semana';
+    else if (loadChange > 5) message += ', carga semanal en aumento';
+    else if (loadChange < -20) message += ', reducción fuerte de carga, cuidado';
+    else if (loadChange < -5) message += ', carga semanal en disminución';
+
+    // Ajuste según CTL vs ATL
+    if (ctl > atl * 1.2) message += ', fatiga acumulada alta';
+    else if (atl > ctl * 1.2) message += ', buena recuperación';
+    
+    // Render
     container.innerHTML = `
         <div class="load-card" style="background: #f0f9ff; border-radius: 8px; padding: 1rem; margin: 1rem 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
             <h3>📊 Carga de Entrenamiento</h3>
@@ -183,10 +201,11 @@ function renderTrainingLoadMetrics(runs) {
                     <small>Cambio Semanal</small>
                 </div>
             </div>
-            <p style="text-align:center; font-weight:bold; margin-top:0.5rem; color:#333;">${message}</p>
+            <p style="text-align:center; font-weight:bold; margin-top:0.5rem; color:${color};">${emoji} ${message}</p>
         </div>
     `;
 }
+
 
 
 // === NUEVO: DÍAS DESCANSO + ACUMULADOS (CON BARRAS PROGRESO) ===
