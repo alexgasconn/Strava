@@ -22,6 +22,21 @@ export function renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo) 
 }
 
 
+// --- UTILITY ---
+function createChart(canvasId, config) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) {
+        console.error(`Canvas with id ${canvasId} not found.`);
+        return;
+    }
+    // Si ya existe un gráfico en ese canvas, lo destruimos primero
+    if (charts[canvasId]) {
+        charts[canvasId].destroy();
+    }
+    charts[canvasId] = new Chart(canvas, config);
+}
+
+
 // --- CHART RENDERING FUNCTIONS ---
 
 export function renderConsistencyChart(runs) {
