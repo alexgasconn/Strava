@@ -772,7 +772,10 @@ function renderStreaks(runs) {
     const streaksInfo = document.getElementById('streaks-info');
     if (!streaksInfo) return;
 
-    const yesterday = new Date();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
     // --- UTILIDADES ---
@@ -790,119 +793,184 @@ function renderStreaks(runs) {
         return `W${w}/${y}`;
     }
 
-    function getISOWeek(d) {
-        const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-        const dayNum = date.getUTCDay() || 7; // lunes = 1, domingo = 7
-        date.setUTCDate(date.getUTCDate() + 4 - dayNum);
-        const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-        return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+    // Cálculo ISO Week más preciso
+    function getISOWeek(date) {
+        const d = new Date(date);
+        d.setHours(0, 0, 0, 0);
+        d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+        const yearStart = new Date(d.getFullYear(), 0, 1);
+        const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+        return { year: d.getFullYear(), week: weekNo };
     }
 
+    function getWeekString(date) {
+        const { year, week } = getISOWeek(date);
+        return `${year}-W${String(week).padStart(2, '0')}`;
+    }
+
+    // Comparación precisa de fechas
+    function daysBetween(date1Str, date2Str) {
+        const d1 = new Date(date1Str);
+        const d2 = new Date(date2Str);
+        d1.setHours(0, 0, 0, 0);
+        d2.setHours(0, 0, 0, 0);
+        return Math.round((d2 - d1) / 86400000);
+    }
+
+    function weeksBetween(week1Str, week2Str) {
+        const [y1, w1] = week1Str.split('-W').map(Number);
+        const [y2, w2] = week2Str.split('-W').map(Number);
+        
+        // Convertir a días desde época y calcular semanas
+        const date1 = getDateFromWeek(y1, w1);
+        const date2 = getDateFromWeek(y2, w2);
+        return Math.round((date2 - date1) / (7 * 86400000));
+    }
+
+    function getDateFromWeek(year, week) {
+        const jan4 = new Date(year, 0, 4);
+        const dayOffset = (week - 1) * 7;
+        const weekStart = new Date(jan4);
+        weekStart.setDate(jan4.getDate() - (jan4.getDay() || 7) + 1 + dayOffset);
+        return weekStart;
+    }
+
+    function monthsBetween(month1Str, month2Str) {
+        const [y1, m1] = month1Str.split('-').map(Number);
+        const [y2, m2] = month2Str.split('-').map(Number);
+        return (y2 - y1) * 12 + (m2 - m1);
+    }
+
+    // Cálculo mejorado de rachas
     function calcStreaks(items, type) {
-        // items = array de strings: YYYY-MM-DD, YYYY-W## o YYYY-MM
+        if (items.length === 0) return { sorted: [], maxStreak: 0, maxStart: null, maxEnd: null };
+
         const sorted = Array.from(new Set(items)).sort();
-        let maxStreak = 0, currentStreak = 0, prev = null;
+        let maxStreak = 0, currentStreak = 0;
         let maxStart = null, maxEnd = null;
         let tempStart = null;
 
         for (let i = 0; i < sorted.length; i++) {
             const item = sorted[i];
-            if (!prev) {
+            
+            if (currentStreak === 0) {
                 currentStreak = 1;
                 tempStart = item;
             } else {
                 let diff = 0;
+                const prev = sorted[i - 1];
+                
                 if (type === 'day') {
-                    diff = (new Date(item) - new Date(prev)) / 86400000;
+                    diff = daysBetween(prev, item);
                 } else if (type === 'week') {
-                    const [y1, w1] = prev.split('-W').map(Number);
-                    const [y2, w2] = item.split('-W').map(Number);
-                    diff = (y2 - y1) * 52 + (w2 - w1); // simplificación: años con 52 semanas
+                    diff = weeksBetween(prev, item);
                 } else if (type === 'month') {
-                    const [y1, m1] = prev.split('-').map(Number);
-                    const [y2, m2] = item.split('-').map(Number);
-                    diff = (y2 - y1) * 12 + (m2 - m1);
+                    diff = monthsBetween(prev, item);
                 }
 
                 if (diff === 1) {
                     currentStreak++;
                 } else {
+                    // Guardar racha anterior si es mejor
+                    if (currentStreak > maxStreak) {
+                        maxStreak = currentStreak;
+                        maxStart = tempStart;
+                        maxEnd = sorted[i - 1];
+                    }
                     currentStreak = 1;
                     tempStart = item;
                 }
             }
+        }
 
-            if (currentStreak > maxStreak) {
-                maxStreak = currentStreak;
-                maxStart = tempStart;
-                maxEnd = item;
-            }
-            prev = item;
+        // Verificar última racha
+        if (currentStreak > maxStreak) {
+            maxStreak = currentStreak;
+            maxStart = tempStart;
+            maxEnd = sorted[sorted.length - 1];
         }
 
         return { sorted, maxStreak, maxStart, maxEnd };
     }
 
+    // Cálculo mejorado de racha actual
     function calcCurrentStreak(sorted, type) {
-        let value = 0, start = null, end = null;
-        let idx = sorted.length - 1;
-        let temp;
-        if (type === 'day') temp = yesterday.toISOString().slice(0, 10);
-        else if (type === 'week') temp = `${yesterday.getFullYear()}-W${String(getISOWeek(yesterday)).padStart(2, '0')}`;
-        else if (type === 'month') {
-            temp = yesterday.toISOString().slice(0, 7);
+        if (sorted.length === 0) return { value: 0, start: null, end: null };
+
+        let currentStreak = 0, start = null, end = null;
+        
+        // Obtener la referencia temporal (ayer o periodo actual)
+        let checkDate;
+        if (type === 'day') {
+            checkDate = yesterday.toISOString().slice(0, 10);
+        } else if (type === 'week') {
+            checkDate = getWeekString(yesterday);
+        } else if (type === 'month') {
+            checkDate = yesterday.toISOString().slice(0, 7);
         }
 
-        while (idx >= 0) {
-            let item = sorted[idx];
-            let match = false;
-            if (type === 'day' && item === temp) match = true;
-            else if (type === 'week' && item === temp) match = true;
-            else if (type === 'month' && item === temp) match = true;
+        // Buscar desde el final hacia atrás
+        for (let i = sorted.length - 1; i >= 0; i--) {
+            const item = sorted[i];
+            let diff = 0;
 
-            if (match) {
-                if (value === 0) end = temp;
-                value++;
-                start = temp;
+            if (type === 'day') {
+                diff = daysBetween(item, checkDate);
+            } else if (type === 'week') {
+                diff = weeksBetween(item, checkDate);
+            } else if (type === 'month') {
+                diff = monthsBetween(item, checkDate);
+            }
 
-                // retrocede
-                if (type === 'day') {
-                    temp = new Date(new Date(temp).getTime() - 86400000).toISOString().slice(0, 10);
-                } else if (type === 'week') {
-                    let [y, w] = temp.split('-W').map(Number);
-                    if (w === 1) {
-                        y -= 1;
-                        w = getISOWeek(new Date(y, 11, 28)); // última semana del año anterior
-                    } else w -= 1;
-                    temp = `${y}-W${String(w).padStart(2, '0')}`;
-                } else if (type === 'month') {
-                    let [y, m] = temp.split('-').map(Number);
-                    if (m === 1) {
-                        y -= 1;
-                        m = 12;
-                    } else m -= 1;
-                    temp = `${y}-${String(m).padStart(2, '0')}`;
+            if (diff === 0) {
+                // Encontramos el periodo actual/ayer
+                if (currentStreak === 0) {
+                    end = item;
                 }
-
-                idx--;
-            } else break;
+                currentStreak++;
+                start = item;
+                
+                // Actualizar checkDate para buscar el periodo anterior
+                if (type === 'day') {
+                    const d = new Date(checkDate);
+                    d.setDate(d.getDate() - 1);
+                    checkDate = d.toISOString().slice(0, 10);
+                } else if (type === 'week') {
+                    const [y, w] = checkDate.split('-W').map(Number);
+                    const prevDate = getDateFromWeek(y, w);
+                    prevDate.setDate(prevDate.getDate() - 7);
+                    checkDate = getWeekString(prevDate);
+                } else if (type === 'month') {
+                    let [y, m] = checkDate.split('-').map(Number);
+                    m--;
+                    if (m === 0) { m = 12; y--; }
+                    checkDate = `${y}-${String(m).padStart(2, '0')}`;
+                }
+            } else if (diff > 0) {
+                // Hay un gap, terminamos
+                break;
+            }
+            // Si diff < 0, seguimos buscando hacia atrás
         }
 
-        return { value, start, end };
+        return { value: currentStreak, start, end };
     }
 
     // --- CALCULO DE RACHAS ---
+    if (runs.length === 0) {
+        streaksInfo.innerHTML = '<p>No hay carreras registradas aún.</p>';
+        return;
+    }
+
     // Días
     const dayItems = runs.map(r => r.start_date_local.substring(0, 10));
     const dayStreaks = calcStreaks(dayItems, 'day');
     const currentDay = calcCurrentStreak(dayStreaks.sorted, 'day');
 
-    // Semanas (lunes)
+    // Semanas (ISO)
     const weekItems = runs.map(r => {
         const d = new Date(r.start_date_local);
-        const year = d.getFullYear();
-        const week = getISOWeek(d);
-        return `${year}-W${String(week).padStart(2, '0')}`;
+        return getWeekString(d);
     });
     const weekStreaks = calcStreaks(weekItems, 'week');
     const currentWeek = calcCurrentStreak(weekStreaks.sorted, 'week');
@@ -915,28 +983,34 @@ function renderStreaks(runs) {
     // --- RENDER ---
     streaksInfo.innerHTML = `
       <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
-        <div>
-          <h4>🏆 Best Historical Streak</h4>
-          <div><b>Consecutive Days:</b> ${dayStreaks.maxStreak} <br>
-            <small>${formatDate(dayStreaks.maxStart)} - ${formatDate(dayStreaks.maxEnd)}</small>
+        <div style="flex: 1; min-width: 250px;">
+          <h4 style="margin-bottom: 1rem;">🏆 Best Historical Streak</h4>
+          <div style="margin-bottom: 0.8rem;">
+            <b>Consecutive Days:</b> ${dayStreaks.maxStreak || 0}
+            ${dayStreaks.maxStart ? `<br><small style="color: #666;">${formatDate(dayStreaks.maxStart)} - ${formatDate(dayStreaks.maxEnd)}</small>` : ''}
           </div>
-          <div><b>Consecutive Weeks:</b> ${weekStreaks.maxStreak} <br>
-            <small>${formatWeek(weekStreaks.maxStart)} - ${formatWeek(weekStreaks.maxEnd)}</small>
+          <div style="margin-bottom: 0.8rem;">
+            <b>Consecutive Weeks:</b> ${weekStreaks.maxStreak || 0}
+            ${weekStreaks.maxStart ? `<br><small style="color: #666;">${formatWeek(weekStreaks.maxStart)} - ${formatWeek(weekStreaks.maxEnd)}</small>` : ''}
           </div>
-          <div><b>Consecutive Months:</b> ${monthStreaks.maxStreak} <br>
-            <small>${formatDate(monthStreaks.maxStart)} - ${formatDate(monthStreaks.maxEnd)}</small>
+          <div style="margin-bottom: 0.8rem;">
+            <b>Consecutive Months:</b> ${monthStreaks.maxStreak || 0}
+            ${monthStreaks.maxStart ? `<br><small style="color: #666;">${formatDate(monthStreaks.maxStart)} - ${formatDate(monthStreaks.maxEnd)}</small>` : ''}
           </div>
         </div>
-        <div>
-          <h4>🔥 Current Streak</h4>
-          <div><b>Consecutive Days:</b> ${currentDay.value} <br>
-            <small>${formatDate(currentDay.start)} - ${formatDate(currentDay.end)}</small>
+        <div style="flex: 1; min-width: 250px;">
+          <h4 style="margin-bottom: 1rem;">🔥 Current Streak</h4>
+          <div style="margin-bottom: 0.8rem;">
+            <b>Consecutive Days:</b> ${currentDay.value || 0}
+            ${currentDay.start ? `<br><small style="color: #666;">${formatDate(currentDay.start)} - ${formatDate(currentDay.end)}</small>` : ''}
           </div>
-          <div><b>Consecutive Weeks:</b> ${currentWeek.value} <br>
-            <small>${formatWeek(currentWeek.start)} - ${formatWeek(currentWeek.end)}</small>
+          <div style="margin-bottom: 0.8rem;">
+            <b>Consecutive Weeks:</b> ${currentWeek.value || 0}
+            ${currentWeek.start ? `<br><small style="color: #666;">${formatWeek(currentWeek.start)} - ${formatWeek(currentWeek.end)}</small>` : ''}
           </div>
-          <div><b>Consecutive Months:</b> ${currentMonth.value} <br>
-            <small>${formatDate(currentMonth.start)} - ${formatDate(currentMonth.end)}</small>
+          <div style="margin-bottom: 0.8rem;">
+            <b>Consecutive Months:</b> ${currentMonth.value || 0}
+            ${currentMonth.start ? `<br><small style="color: #666;">${formatDate(currentMonth.start)} - ${formatDate(currentMonth.end)}</small>` : ''}
           </div>
         </div>
       </div>
