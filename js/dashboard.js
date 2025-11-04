@@ -232,11 +232,10 @@ function renderRestDaysAndAccumulated(runs) {
     `;
 }
 
-// === EVOLUCIÓN VO₂MAX (YA VISUAL, CON % CAMBIO) ===
 function renderVO2maxEvolution(runs) {
     const USER_MAX_HR = 195;
 
-    const vo2maxData = runs
+    let vo2maxData = runs
         .filter(r => r.average_heartrate && r.moving_time > 0 && r.distance > 0)
         .map((r, idx) => {
             const vel_m_min = (r.distance / r.moving_time) * 60;
@@ -254,6 +253,15 @@ function renderVO2maxEvolution(runs) {
         if (canvas) canvas.innerHTML = '<p style="text-align:center; padding:2rem;">No datos FC para VO₂max</p>';
         return;
     }
+
+    // ===== SUAVIZADO =====
+    const windowSize = 3; // pequeño para no sobre-suavizar
+    vo2maxData = vo2maxData.map((d, i, arr) => {
+        const start = Math.max(0, i - windowSize + 1);
+        const slice = arr.slice(start, i + 1);
+        const avg = slice.reduce((sum, v) => sum + v.vo2max, 0) / slice.length;
+        return { ...d, vo2max: avg };
+    });
 
     const vo2maxChange = ((vo2maxData[vo2maxData.length - 1].vo2max - vo2maxData[0].vo2max) / vo2maxData[0].vo2max * 100);
     const changeColor = trendColor(vo2maxChange);
@@ -307,6 +315,7 @@ function renderVO2maxEvolution(runs) {
         }
     });
 }
+
 
 function renderRecentMetrics(runs) {
     const container = document.getElementById('dashboard-recent-metrics');
