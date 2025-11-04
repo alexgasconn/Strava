@@ -47,33 +47,27 @@ function renderRecordStats(runs) {
     const container = document.getElementById('record-stats');
     if (!container || runs.length === 0) return;
 
-    // Longest run
     const longestRun = [...runs].sort((a, b) => b.distance - a.distance)[0];
 
-    // Fastest run (pace)
     const fastestRun = [...runs].filter(r => r.distance > 1000).sort((a, b) => a.average_speed - b.average_speed).reverse()[0];
     const paceMin = fastestRun.average_speed > 0 ? (1000 / fastestRun.average_speed) / 60 : 0;
     const paceStr = paceMin > 0 ? `${Math.floor(paceMin)}:${Math.round((paceMin % 1) * 60).toString().padStart(2, '0')}` : '-';
 
-    // Most elevation
     const mostElev = [...runs].sort((a, b) => b.total_elevation_gain - a.total_elevation_gain)[0];
 
-    // More time transcurred (oldest to newest)
     const oldestRun = [...runs].sort((a, b) => new Date(a.start_date_local) - new Date(b.start_date_local))[0];
     const newestRun = [...runs].sort((a, b) => new Date(b.start_date_local) - new Date(a.start_date_local))[0];
     const timeDiffMs = new Date(newestRun.start_date_local) - new Date(oldestRun.start_date_local);
     const timeDiffDays = Math.floor(timeDiffMs / (1000 * 60 * 60 * 24));
-
-    // Favourite hour of the day
+   
     const hourCounts = Array(24).fill(0);
     runs.forEach(run => {
         let hour = new Date(run.start_date_local).getHours();
-        hour = (hour - 2 + 24) % 24; // adjust for timezone as in histogram
+        hour = (hour - 2 + 24) % 24;
         hourCounts[hour]++;
     });
     const favHour = hourCounts.indexOf(Math.max(...hourCounts));
 
-    // Favourite day of the week
     const dayCounts = Array(7).fill(0);
     runs.forEach(run => {
         const date = new Date(run.start_date_local);
