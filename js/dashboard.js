@@ -1,6 +1,6 @@
 // js/dashboard.js
 import * as utils from './utils.js';
-// import * as charts from './charts.js';
+import { calculateFitness, rollingMean as calculateRollingMean } from './utils.js';
 
 export function renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo) {
     const filteredActivities = utils.filterActivitiesByDate(allActivities, dateFilterFrom, dateFilterTo);
