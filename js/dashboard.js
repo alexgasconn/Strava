@@ -124,26 +124,22 @@ function renderDashboardSummary(runs) {
     `;
 }
 
-// === NUEVO: MÉTRICAS DE CARGA (CTL, ATL, TSB, % CAMBIOS) ===
 function renderTrainingLoadMetrics(runs) {
     const container = document.getElementById('training-load-metrics');
     if (!container) return;
 
-    // Aproximar TSS: (Tiempo en horas * (FC media / FC max)^4 * 100) – Asumir FC max 195
     const USER_MAX_HR = 195;
     const tssData = runs.map(r => {
         const timeHours = r.moving_time / 3600;
-        const intensity = r.average_heartrate ? (r.average_heartrate / USER_MAX_HR) : 0.7; // Default si no FC
+        const intensity = r.average_heartrate ? (r.average_heartrate / USER_MAX_HR) : 0.7;
         return timeHours * Math.pow(intensity, 4) * 100;
     });
 
-    // CTL: Media exponencial 42 días ~ media últimos 30 runs approx
     let ctl = 0;
     for (let i = 0; i < tssData.length; i++) {
-        ctl = (tssData[i] + ctl * 41) / 42; // EMA approx
+        ctl = (tssData[i] + ctl * 41) / 42;
     }
 
-    // ATL: Media 7 días ~ últimos 7
     let atl = 0;
     const last7Tss = tssData.slice(-7);
     for (let i = 0; i < last7Tss.length; i++) {
@@ -155,6 +151,12 @@ function renderTrainingLoadMetrics(runs) {
     const totalLoad = tssData.reduce((sum, t) => sum + t, 0).toFixed(0);
     const loadChange = tssData.length > 7 ? ((last7Tss.reduce((s, t) => s + t, 0) - tssData.slice(-14, -7).reduce((s, t) => s + t, 0)) / tssData.slice(-14, -7).reduce((s, t) => s + t, 0) * 100).toFixed(1) : 0;
     const loadTrend = loadChange > 0 ? '↗' : '↘';
+
+    // === MENSAJE INTERPRETATIVO ===
+    let message = '';
+    if (tsb < -10) message = '⚠️ Overtraining, necesitas descansar';
+    else if (tsb >= -10 && tsb <= 5) message = '✅ Estás equilibrado, buen ritmo';
+    else if (tsb > 5) message = '💪 Estás descansado, puedes aumentar intensidad';
 
     container.innerHTML = `
         <div class="load-card" style="background: #f0f9ff; border-radius: 8px; padding: 1rem; margin: 1rem 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
@@ -181,9 +183,11 @@ function renderTrainingLoadMetrics(runs) {
                     <small>Cambio Semanal</small>
                 </div>
             </div>
+            <p style="text-align:center; font-weight:bold; margin-top:0.5rem; color:#333;">${message}</p>
         </div>
     `;
 }
+
 
 // === NUEVO: DÍAS DESCANSO + ACUMULADOS (CON BARRAS PROGRESO) ===
 function renderRestDaysAndAccumulated(runs) {
@@ -254,8 +258,7 @@ function renderVO2maxEvolution(runs) {
         return;
     }
 
-    // ===== SUAVIZADO =====
-    const windowSize = 3; // pequeño para no sobre-suavizar
+    const windowSize = 5; // pequeño para no sobre-suavizar
     vo2maxData = vo2maxData.map((d, i, arr) => {
         const start = Math.max(0, i - windowSize + 1);
         const slice = arr.slice(start, i + 1);
@@ -761,21 +764,4 @@ function decodePolyline(encoded) {
     }
 
     return poly;
-}
-
-// Optional: Load from Strava API
-export async function loadRecentFromStrava(token, limit = 10) {
-    try {
-        const response = await fetch(`https://www.strava.com/api/v3/athlete/activities?per_page=${limit}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (!response.ok) throw new Error('Failed to fetch from Strava');
-
-        const data = await response.json();
-        return data.filter(a => a.type === 'Run');
-    } catch (error) {
-        console.error('Error loading from Strava:', error);
-        throw error;
-    }
 }
