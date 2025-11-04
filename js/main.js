@@ -20,6 +20,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let dateFilterTo = null;
     let plannerTabRendered = false;
     let athleteTabRendered = false;
+    let dashboardTabRendered = false;
+    let runsTabRendered = false;
+    let weatherTabRendered = false;
+    let wrappedTabRendered = false;
 
     // --- DOM REFERENCES ---
     const loginButton = document.getElementById('login-button');
