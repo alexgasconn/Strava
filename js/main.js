@@ -1,6 +1,7 @@
 // js/main.js
 import { redirectToStrava, logout, handleAuth } from './auth.js';
 import { setupDashboard, renderDashboard, showLoading, hideLoading, handleError,  } from './ui.js';
+import { renderDashboardTab } from './dashboard.js';
 import { renderAthleteProfile, renderTrainingZones, renderAthleteTab } from './athlete.js';
 import { renderPlannerTab } from './planner.js';
 import { renderGearTab } from './gear.js';
@@ -57,6 +58,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     athleteTabRendered = true;
                 } else {
                     console.warn("Activities not loaded yet, can't render athlete tab.");
+                }
+            }
+            if (tabId === 'dashboard-tab') {
+                if (allActivities.length > 0) {
+                    renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo);
+                } else {
+                    console.warn("Activities not loaded yet, can't render dashboard tab.");
                 }
             }
             if (tabId === 'gear-tab') {
@@ -120,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('date-from').value = dateFilterFrom;
                 document.getElementById('date-to').value = dateFilterTo;
 
-                renderDashboard(allActivities, dateFilterFrom, dateFilterTo);
+                renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo);
             });
         });
     }

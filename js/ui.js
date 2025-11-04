@@ -12,7 +12,6 @@ const appSection = document.getElementById('app-section');
 
 
 
-
 // --- UI HELPERS ---
 export function showLoading(message) {
     if (loadingOverlay) {
