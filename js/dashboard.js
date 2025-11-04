@@ -6,7 +6,10 @@ export function renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo) 
     const runs = filteredActivities.filter(a => a.type && a.type.includes('Run'));
 
     // Get last 30 runs for deeper analysis (for accumulations)
-    const recentRuns = runs.slice(30);
+    const recentRuns = runs.slice(-30);
+
+    console.log('Rendering dashboard with', recentRuns.length, 'recent runs');
+    console.log('Recent runs:', recentRuns);
 
     renderDashboardSummary(recentRuns);
     renderVO2maxEvolution(recentRuns);
