@@ -99,13 +99,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+
+
     // =========================================================
     //          ORGANIZACIÓN MEJORADA: FUNCIONES PRIMERO
     // =========================================================
 
     // --- FUNCIÓN PARA LOS BOTONES DE AÑO ---
     function setupYearlySelector() {
-        const yearsToShow = 4; // Número de años a mostrar
+        const yearsToShow = 5; // Número de años a mostrar
         const container = document.getElementById('year-filter-buttons');
         if (!container || allActivities.length === 0) return;
 
