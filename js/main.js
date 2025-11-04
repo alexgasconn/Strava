@@ -1,7 +1,7 @@
 // js/main.js
 import { redirectToStrava, logout, handleAuth } from './auth.js';
 import { setupDashboard, showLoading, hideLoading, handleError,  } from './ui.js';
-import { renderDashboardTab } from './dashboard.js';
+import { renderAnalysisTab } from './analysis.js';
 import { renderAthleteProfile, renderTrainingZones, renderAthleteTab } from './athlete.js';
 import { renderPlannerTab } from './planner.js';
 import { renderGearTab } from './gear.js';
@@ -60,11 +60,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.warn("Activities not loaded yet, can't render athlete tab.");
                 }
             }
-            if (tabId === 'dashboard-tab') {
+            if (tabId === 'analysis-tab') {
                 if (allActivities.length > 0) {
-                    renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo);
+                    renderAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
                 } else {
-                    console.warn("Activities not loaded yet, can't render dashboard tab.");
+                    console.warn("Activities not loaded yet, can't render analysis tab.");
                 }
             }
             if (tabId === 'gear-tab') {
@@ -130,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('date-from').value = dateFilterFrom;
                 document.getElementById('date-to').value = dateFilterTo;
 
-                renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo);
+                renderAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
             });
         });
     }
@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
             allActivities = activities;
 
             setupDashboard(allActivities);
-            renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo);
+            renderAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
             setupYearlySelector();
         } catch (error) {
             handleError("Could not initialize the app", error);
@@ -168,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showLoading('Refreshing activities...');
         try {
             allActivities = await fetchAllActivities(); // La API se encarga de los tokens
-            renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo);
+            renderAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
             setupYearlySelector();
 
         } catch (error) {
@@ -194,7 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.year-btn').forEach(b => b.classList.remove('active'));
             dateFilterFrom = document.getElementById('date-from').value || null;
             dateFilterTo = document.getElementById('date-to').value || null;
-            renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo);
+            renderAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
         });
     }
     if (resetFilterButton) {
@@ -205,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('date-to').value = '';
             document.querySelectorAll('.year-btn').forEach(b => b.classList.remove('active'));
 
-            renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo);
+            renderAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
         });
     }
 

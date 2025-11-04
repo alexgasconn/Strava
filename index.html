@@ -55,6 +55,7 @@
 
             <!-- BARRA DE NAVEGACIÓN DE PESTAÑAS -->
             <button class="tab-link active" data-tab="dashboard-tab">📈 Dashboard</button>
+            <button class="tab-link" data-tab="analysis-tab">📊 Analysis</button>
             <button class="tab-link" data-tab="athlete-tab">👤 Athlete</button>
             <button class="tab-link" data-tab="planner-tab">📅 Planner & Tools</button>
             <button class="tab-link" data-tab="gear-tab">👟 Gear</button>
@@ -66,12 +67,8 @@
 
 
             <main>
-                <!-- ============================================= -->
-                <!-- PESTAÑA 1: DASHBOARD                          -->
-                <!-- ============================================= -->
-                <div id="dashboard-tab" class="tab-content active">
+                <div id="analysis-tab" class="tab-content active">
                     <div id="date-controls" class="date-controls-container">
-                        <!-- Grupo de filtros manuales -->
                         <div class="filter-group">
                             <label>From: <input type="date" id="date-from"></label>
                             <label>To: <input type="date" id="date-to"></label>
@@ -82,20 +79,13 @@
                         <div id="year-filter-buttons" class="filter-group year-buttons">
                         </div>
                     </div>
-
-
-
-                    <!-- Summary Cards -->
                     <div id="summary-cards" class="summary-grid"></div>
-
-                    <!-- Consistency Calendar -->
                     <div class="chart-container">
                         <h3>Consistency Grid</h3>
                         <div id="cal-heatmap"></div>
                     </div>
 
 
-                    <!-- Grid for detailed charts -->
                     <div class="charts-grid">
                         <div class="chart-container full-width">
                             <h3>Run Locations Heatmap</h3>
@@ -143,11 +133,6 @@
                                 values suggest better recovery and readiness to perform.
                             </div>
                         </div>
-
-                        <!-- <div class="chart-container">
-                            <h3>Gear Usage per Month</h3>
-                            <canvas id="gear-gantt-chart"></canvas>
-                        </div> -->
                         <div class="chart-container">
                             <h3>Accumulated Distance vs Time</h3>
                             <canvas id="accumulated-distance-chart"></canvas>
@@ -166,7 +151,6 @@
                         </div>
                     </div>
 
-                    <!-- Export Buttons -->
                     <div id="export-buttons" style="display:flex; gap:1em; margin: 1.5em 0;">
                         <button id="download-csv-btn">⬇️ Descargar CSV</button>
                         <button id="download-pdf-btn">⬇️ Descargar PDF</button>
@@ -174,9 +158,13 @@
                 </div>
 
 
-                <!-- ============================================= -->
-                <!-- PESTAÑA 2: ATHLETE (COMPLETA)                 -->
-                <!-- ============================================= -->
+                <div id="dashboard-tab" class="tab-content">
+                    <h2>📊 In-Depth Analysis</h2>
+                    <h3>TBD</h3>
+                </div>
+
+
+
                 <div id="athlete-tab" class="tab-content">
                     <div class="profile-and-zones-container">
                         <div id="athlete-profile-card" class="chart-container">
