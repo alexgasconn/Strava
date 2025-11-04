@@ -1,7 +1,7 @@
 // js/main.js
 import { redirectToStrava, logout, handleAuth } from './auth.js';
-import { setupDashboard, renderDashboard, showLoading, hideLoading, handleError, renderAthleteProfile, renderTrainingZones } from './ui.js';
-import { renderAthleteTab } from './athlete.js';
+import { setupDashboard, renderDashboard, showLoading, hideLoading, handleError,  } from './ui.js';
+import { renderAthleteProfile, renderTrainingZones, renderAthleteTab } from './athlete.js';
 import { renderPlannerTab } from './planner.js';
 import { renderGearTab } from './gear.js';
 import { renderWeatherTab } from './weather.js';

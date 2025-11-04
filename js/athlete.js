@@ -1219,3 +1219,76 @@ function renderInteractiveMatrix(runs) {
 
     updateMatrix(); // Inicial
 }
+
+
+export function renderAthleteProfile(athlete) {
+    const container = document.getElementById('athlete-profile-card');
+    if (!container) return;
+    const contentDiv = container.querySelector('.profile-content');
+    if (!contentDiv) return;
+
+    contentDiv.innerHTML = `
+        <img src="${athlete.profile_medium}" alt="Athlete profile picture">
+        <div class="profile-details">
+            <span class="name">${athlete.firstname} ${athlete.lastname}</span>
+            <span class="location">${athlete.city || ''}, ${athlete.country || ''}</span>
+            <span class="stats">Followers: ${athlete.follower_count} | Friends: ${athlete.friend_count}</span>
+        </div>
+    `;
+}
+
+export function renderTrainingZones(zones) {
+    const container = document.getElementById('training-zones-card');
+    if (!container) return;
+    const contentDiv = container.querySelector('.zones-content');
+    if (!contentDiv) return;
+
+    let html = '';
+
+    // Renderizar Zonas de Frecuencia Cardíaca (Versión Robusta)
+    if (zones.heart_rate && zones.heart_rate.zones && zones.heart_rate.custom_zones) {
+        const hrZones = zones.heart_rate.zones;
+
+        // La API a veces devuelve la primera zona con min y max 0, la filtramos.
+        // También nos aseguramos de que haya zonas válidas.
+        const validZones = hrZones.filter(z => typeof z.min !== 'undefined' && typeof z.max !== 'undefined' && z.max > 0);
+
+        if (validZones.length > 0) {
+            // Calculamos el ancho total de las zonas para la proporcionalidad
+            const totalRange = validZones[validZones.length - 1].max - validZones[0].min;
+
+            // Generamos dinámicamente cada segmento de la barra
+            const zonesHtml = validZones.map((zone, index) => {
+                const zoneWidth = ((zone.max - zone.min) / totalRange) * 100;
+                const zoneNumber = index + 1;
+                // Si es la última zona, el texto es "min+"
+                const zoneText = (index === validZones.length - 1) ? `${zone.min}+` : zone.max;
+
+                return `<div class="zone-segment hr-z${zoneNumber}" style="flex-basis: ${zoneWidth}%;" title="Z${zoneNumber}: ${zone.min}-${zone.max}">${zoneText}</div>`;
+            }).join('');
+
+            html += `
+                <div class="zone-group">
+                    <h4>Heart Rate Zones (bpm)</h4>
+                    <div class="zone-bar">
+                        ${zonesHtml}
+                    </div>
+                </div>`;
+        }
+    }
+
+    // Renderizar Zonas de Potencia (sin cambios, ya era robusto)
+    if (zones.power && zones.power.zones && zones.power.zones.length > 0) {
+        // Buscamos el FTP, que es el inicio de la Zona 4 (o la última zona si hay menos)
+        const ftpZone = zones.power.zones.find(z => z.name === 'Z4') || zones.power.zones[zones.power.zones.length - 1];
+        if (ftpZone) {
+            html += `
+                <div class="zone-group">
+                    <h4>Functional Threshold Power (FTP)</h4>
+                    <p style="font-size: 1.5rem; font-weight: bold; color: var(--text-dark); margin: 0;">${ftpZone.min} W</p>
+                </div>`;
+        }
+    }
+
+    contentDiv.innerHTML = html || '<p>No custom training zones configured in your Strava profile.</p>';
+}
