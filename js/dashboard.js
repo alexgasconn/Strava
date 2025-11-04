@@ -5,17 +5,20 @@ export function renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo) 
     const filteredActivities = utils.filterActivitiesByDate(allActivities, dateFilterFrom, dateFilterTo);
     const runs = filteredActivities.filter(a => a.type && a.type.includes('Run'));
 
-    // Get last 10 runs for recent analysis
-    const recentRuns = runs.slice(-10);
+    // Get last 30 runs for deeper analysis (for accumulations)
+    const recentRuns = runs.slice(-30);
 
     renderDashboardSummary(recentRuns);
     renderVO2maxEvolution(recentRuns);
+    renderTrainingLoadMetrics(recentRuns); // NUEVO: CTL, ATL, TSB, Carga
+    renderRestDaysAndAccumulated(recentRuns); // NUEVO: Días descanso, acumulados
     renderRecentMetrics(recentRuns);
     renderTimeDistribution(recentRuns);
-    renderWeekdayActivity(runs); // Use all runs for better pattern analysis
+    renderWeekdayActivity(runs);
     renderPaceProgression(recentRuns);
     renderHeartRateZones(recentRuns);
     renderRecentActivitiesList(recentRuns);
+    renderRecentRunsWithMapsAndVO2max(recentRuns);
 }
 
 let dashboardCharts = {};
@@ -32,11 +35,36 @@ function createDashboardChart(canvasId, config) {
     dashboardCharts[canvasId] = new Chart(canvas, config);
 }
 
+function trendColor(change) {
+    return change > 0 ? '#2ECC40' : '#FF4136';
+}
+
+function trendIcon(change) {
+    return change > 0 ? '↗' : '↘';
+}
+
+function formatPace(pace) {
+    const minutes = Math.floor(pace);
+    const seconds = Math.round((pace - minutes) * 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function formatTime(seconds) {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    if (h > 0) return `${h}h ${m}m`;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
+}
+
+// === RESUMEN GENERAL (MEJORADO: +% CAMBIOS, COLORES, ICONOS) ===
 function renderDashboardSummary(runs) {
     const container = document.getElementById('dashboard-summary');
     if (!container) return;
 
     const totalDistance = runs.reduce((sum, r) => sum + (r.distance / 1000), 0);
+    const totalTime = runs.reduce((sum, r) => sum + r.moving_time / 3600, 0); // Horas
     const totalElevation = runs.reduce((sum, r) => sum + (r.total_elevation_gain || 0), 0);
     const avgHR = runs.filter(r => r.average_heartrate).reduce((sum, r) => sum + r.average_heartrate, 0) / 
                   runs.filter(r => r.average_heartrate).length || 0;
@@ -46,41 +74,155 @@ function renderDashboardSummary(runs) {
     }, 0) / runs.length || 0;
     const avgDistance = totalDistance / runs.length || 0;
 
-    const formatPace = (pace) => {
-        const minutes = Math.floor(pace);
-        const seconds = Math.round((pace - minutes) * 60);
-        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    };
+    // Cambios % (últimos 7 vs previos)
+    const last7 = runs.slice(-7);
+    const prev7 = runs.slice(-14, -7);
+    const distChange = last7.length && prev7.length ? ((last7.reduce((s, r) => s + r.distance/1000, 0) - prev7.reduce((s, r) => s + r.distance/1000, 0)) / prev7.reduce((s, r) => s + r.distance/1000, 0) * 100).toFixed(1) : 0;
+    const elevChange = last7.length && prev7.length ? ((last7.reduce((s, r) => s + r.total_elevation_gain, 0) - prev7.reduce((s, r) => s + r.total_elevation_gain, 0)) / prev7.reduce((s, r) => s + r.total_elevation_gain, 0) * 100).toFixed(1) : 0;
 
     container.innerHTML = `
-        <div class="card">
-            <h3>🏃 Activities</h3>
+        <div class="card" style="background: linear-gradient(135deg, #fff, #f9f9f9);">
+            <h3>🏃 Actividades</h3>
             <p style="font-size: 2rem; font-weight: bold; color: #FC5200;">${runs.length}</p>
-            <small>Last 10 runs</small>
+            <small>Últimas 30</small>
         </div>
         <div class="card">
-            <h3>📏 Total Distance</h3>
-            <p style="font-size: 2rem; font-weight: bold; color: #0074D9;">${totalDistance.toFixed(1)} km</p>
-            <small>Avg: ${avgDistance.toFixed(1)} km/run</small>
+            <h3>📏 Km Total</h3>
+            <p style="font-size: 2rem; font-weight: bold; color: #0074D9;">${totalDistance.toFixed(1)}</p>
+            <small>Media: ${avgDistance.toFixed(1)} km <span style="color: ${trendColor(distChange)};">${trendIcon(distChange)} ${distChange}%</span></small>
         </div>
         <div class="card">
-            <h3>⛰️ Total Elevation</h3>
+            <h3>🕒 Horas Total</h3>
+            <p style="font-size: 2rem; font-weight: bold; color: #B10DC9;">${totalTime.toFixed(1)}</p>
+            <small>Acumulado</small>
+        </div>
+        <div class="card">
+            <h3>⛰️ Elevación Total</h3>
             <p style="font-size: 2rem; font-weight: bold; color: #2ECC40;">${totalElevation.toFixed(0)} m</p>
-            <small>Avg: ${(totalElevation / runs.length).toFixed(0)} m/run</small>
+            <small>Media: ${(totalElevation / runs.length).toFixed(0)} m <span style="color: ${trendColor(elevChange)};">${trendIcon(elevChange)} ${elevChange}%</span></small>
         </div>
         <div class="card">
-            <h3>❤️ Avg Heart Rate</h3>
+            <h3>❤️ FC Media</h3>
             <p style="font-size: 2rem; font-weight: bold; color: #FF4136;">${avgHR.toFixed(0)} bpm</p>
-            <small>Based on ${runs.filter(r => r.average_heartrate).length} runs with HR</small>
+            <small>En ${runs.filter(r => r.average_heartrate).length} carreras</small>
         </div>
         <div class="card">
-            <h3>⚡ Avg Pace</h3>
+            <h3>⚡ Ritmo Medio</h3>
             <p style="font-size: 2rem; font-weight: bold; color: #B10DC9;">${formatPace(avgPace)}</p>
             <small>min/km</small>
         </div>
     `;
 }
 
+// === NUEVO: MÉTRICAS DE CARGA (CTL, ATL, TSB, % CAMBIOS) ===
+function renderTrainingLoadMetrics(runs) {
+    const container = document.getElementById('training-load-metrics');
+    if (!container) return;
+
+    // Aproximar TSS: (Tiempo en horas * (FC media / FC max)^4 * 100) – Asumir FC max 195
+    const USER_MAX_HR = 195;
+    const tssData = runs.map(r => {
+        const timeHours = r.moving_time / 3600;
+        const intensity = r.average_heartrate ? (r.average_heartrate / USER_MAX_HR) : 0.7; // Default si no FC
+        return timeHours * Math.pow(intensity, 4) * 100;
+    });
+
+    // CTL: Media exponencial 42 días ~ media últimos 30 runs approx
+    let ctl = 0;
+    for (let i = 0; i < tssData.length; i++) {
+        ctl = (tssData[i] + ctl * 41) / 42; // EMA approx
+    }
+
+    // ATL: Media 7 días ~ últimos 7
+    let atl = 0;
+    const last7Tss = tssData.slice(-7);
+    for (let i = 0; i < last7Tss.length; i++) {
+        atl = (last7Tss[i] + atl * 6) / 7;
+    }
+
+    const tsb = ctl - atl;
+    const tsbColor = tsb > 0 ? '#2ECC40' : '#FF4136';
+    const totalLoad = tssData.reduce((sum, t) => sum + t, 0).toFixed(0);
+    const loadChange = tssData.length > 7 ? ((last7Tss.reduce((s, t) => s + t, 0) - tssData.slice(-14, -7).reduce((s, t) => s + t, 0)) / tssData.slice(-14, -7).reduce((s, t) => s + t, 0) * 100).toFixed(1) : 0;
+    const loadTrend = loadChange > 0 ? '↗' : '↘';
+
+    container.innerHTML = `
+        <div class="load-card" style="background: #f0f9ff; border-radius: 8px; padding: 1rem; margin: 1rem 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h3>📊 Carga de Entrenamiento</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem;">
+                <div>
+                    <p style="font-size: 1.5rem; font-weight: bold; color: #0074D9;">CTL: ${ctl.toFixed(1)}</p>
+                    <small>Carga Crónica</small>
+                </div>
+                <div>
+                    <p style="font-size: 1.5rem; font-weight: bold; color: #FF4136;">ATL: ${atl.toFixed(1)}</p>
+                    <small>Carga Aguda</small>
+                </div>
+                <div>
+                    <p style="font-size: 1.5rem; font-weight: bold; color: ${tsbColor};">TSB: ${tsb.toFixed(1)}</p>
+                    <small>Balance ${tsb > 0 ? '(Listo)' : '(Fatiga)'}</small>
+                </div>
+                <div>
+                    <p style="font-size: 1.5rem; font-weight: bold; color: #FC5200;">${totalLoad}</p>
+                    <small>Carga Acumulada</small>
+                </div>
+                <div>
+                    <p style="font-size: 1.5rem; font-weight: bold; color: ${trendColor(loadChange)};">${loadTrend} ${loadChange}%</p>
+                    <small>Cambio Semanal</small>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// === NUEVO: DÍAS DESCANSO + ACUMULADOS (CON BARRAS PROGRESO) ===
+function renderRestDaysAndAccumulated(runs) {
+    const container = document.getElementById('rest-accumulated');
+    if (!container) return;
+
+    // Días descanso: Contar días sin runs en últimos 30 días
+    const dates = runs.map(r => new Date(r.start_date_local).toDateString());
+    const uniqueDays = new Set(dates);
+    const totalDays = 30; // Asumir últimos 30
+    const restDays = totalDays - uniqueDays.size;
+
+    // Progreso: % de meta, asumir meta 200km/mes
+    const goalKm = 200;
+    const totalKm = runs.reduce((sum, r) => sum + r.distance / 1000, 0);
+    const kmProgress = (totalKm / goalKm * 100).toFixed(1);
+
+    // Elevación acumulada
+    const totalElev = runs.reduce((sum, r) => sum + (r.total_elevation_gain || 0), 0);
+
+    // Barra progreso
+    container.innerHTML = `
+        <div class="accum-card" style="background: #fff; border-radius: 8px; padding: 1rem; margin: 1rem 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h3>📅 Acumulados & Descanso</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem;">
+                <div>
+                    <p style="font-size: 1.5rem; font-weight: bold; color: #2ECC40;">${restDays}</p>
+                    <small>Días Descanso</small>
+                </div>
+                <div>
+                    <p style="font-size: 1.5rem; font-weight: bold; color: #0074D9;">${totalKm.toFixed(1)} km</p>
+                    <small>Acumulado</small>
+                </div>
+                <div>
+                    <p style="font-size: 1.5rem; font-weight: bold; color: #FF4136;">${totalElev.toFixed(0)} m</p>
+                    <small>Elev. Acumulada</small>
+                </div>
+            </div>
+            <div style="margin-top: 1rem;">
+                <small>Progreso Km: ${kmProgress}%</small>
+                <div style="background: #eee; border-radius: 4px; height: 8px; overflow: hidden;">
+                    <div style="width: ${Math.min(kmProgress, 100)}%; background: #2ECC40; height: 100%;"></div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// === EVOLUCIÓN VO₂MAX (YA VISUAL, CON % CAMBIO) ===
 function renderVO2maxEvolution(runs) {
     const USER_MAX_HR = 195;
 
@@ -99,13 +241,14 @@ function renderVO2maxEvolution(runs) {
 
     if (vo2maxData.length < 2) {
         const canvas = document.getElementById('dashboard-vo2max');
-        if (canvas) canvas.innerHTML = '<p style="text-align:center; padding:2rem;">Not enough data with HR for VO2max estimation</p>';
+        if (canvas) canvas.innerHTML = '<p style="text-align:center; padding:2rem;">No datos FC para VO₂max</p>';
         return;
     }
 
     const vo2maxChange = ((vo2maxData[vo2maxData.length - 1].vo2max - vo2maxData[0].vo2max) / vo2maxData[0].vo2max * 100);
-    
-    // Add trend annotation
+    const changeColor = trendColor(vo2maxChange);
+    const changeIcon = trendIcon(vo2maxChange);
+
     const container = document.getElementById('dashboard-vo2max').parentElement;
     const existingNote = container.querySelector('.vo2max-trend');
     if (existingNote) existingNote.remove();
@@ -113,8 +256,8 @@ function renderVO2maxEvolution(runs) {
     const trendDiv = document.createElement('div');
     trendDiv.className = 'vo2max-trend';
     trendDiv.innerHTML = `
-        <p style="text-align: center; margin-top: 0.5rem; font-weight: bold; color: ${vo2maxChange >= 0 ? '#2ECC40' : '#FF4136'};">
-            ${vo2maxChange >= 0 ? '↗' : '↘'} ${vo2maxChange >= 0 ? '+' : ''}${vo2maxChange.toFixed(1)}% evolution
+        <p style="text-align: center; margin-top: 0.5rem; font-weight: bold; color: ${changeColor};">
+            ${changeIcon} ${vo2maxChange >= 0 ? '+' : ''}${vo2maxChange.toFixed(1)}%
         </p>
     `;
     container.appendChild(trendDiv);
@@ -124,7 +267,7 @@ function renderVO2maxEvolution(runs) {
         data: {
             labels: vo2maxData.map(d => d.date),
             datasets: [{
-                label: 'VO₂max Evolution',
+                label: 'VO₂max',
                 data: vo2maxData.map(d => d.vo2max),
                 borderColor: '#0074D9',
                 backgroundColor: 'rgba(0, 116, 217, 0.1)',
@@ -147,7 +290,7 @@ function renderVO2maxEvolution(runs) {
             },
             scales: {
                 y: { 
-                    title: { display: true, text: 'VO₂max (ml/kg/min)' },
+                    title: { display: true, text: 'ml/kg/min' },
                     beginAtZero: false
                 }
             }
@@ -161,11 +304,6 @@ function renderRecentMetrics(runs) {
 
     const metricsHtml = runs.slice(-5).reverse().map(r => {
         const pace = (r.moving_time / 60) / (r.distance / 1000);
-        const formatPace = (p) => {
-            const minutes = Math.floor(p);
-            const seconds = Math.round((p - minutes) * 60);
-            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-        };
 
         return `
             <div class="metric-row" style="display: flex; justify-content: space-between; padding: 0.8rem; border-bottom: 1px solid #eee;">
@@ -428,6 +566,182 @@ function renderRecentActivitiesList(runs) {
     }).join('');
 
     container.innerHTML = activitiesHtml;
+}
+
+// === NUEVO: CARRERAS RECIENTES CON MAPAS Y VO2MAX ===
+function renderRecentRunsWithMapsAndVO2max(runs) {
+    const container = document.getElementById('recent-runs-maps');
+    if (!container) return;
+
+    if (runs.length === 0) {
+        container.innerHTML = '<p style="text-align:center; padding:2rem;">No recent runs with maps</p>';
+        return;
+    }
+
+    const USER_MAX_HR = 195;
+
+    const runsWithMaps = runs.slice(-10).reverse().filter(r => r.map && r.map.summary_polyline);
+
+    if (runsWithMaps.length === 0) {
+        container.innerHTML = '<p style="text-align:center; padding:2rem;">No runs with map data</p>';
+        return;
+    }
+
+    const mapsHtml = runsWithMaps.map(r => {
+        const vo2max = r.average_heartrate && r.moving_time > 0 && r.distance > 0
+            ? (() => {
+                const vel_m_min = (r.distance / r.moving_time) * 60;
+                const vo2_at_pace = (vel_m_min * 0.2) + 3.5;
+                return vo2_at_pace / (r.average_heartrate / USER_MAX_HR);
+            })()
+            : null;
+
+        return `
+            <div class="map-card" style="background: #fff; border-radius: 8px; padding: 1rem; margin: 1rem 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <div>
+                        <strong>${r.name || 'Run'}</strong>
+                        <div style="font-size: 0.9rem; color: #666;">
+                            ${new Date(r.start_date_local).toLocaleDateString()} • 
+                            ${(r.distance / 1000).toFixed(2)} km • 
+                            ${formatTime(r.moving_time)}
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        ${vo2max ? `
+                            <div style="font-size: 1.2rem; font-weight: bold; color: #0074D9;">
+                                VO₂max: ${vo2max.toFixed(1)}
+                            </div>
+                            <small style="color: #666;">ml/kg/min</small>
+                        ` : ''}
+                    </div>
+                </div>
+                <div id="map-${r.id}" style="width: 100%; height: 200px; border-radius: 4px; background: #f0f0f0;"></div>
+                <div style="margin-top: 0.5rem; text-align: right;">
+                    <a href="activity.html?id=${r.id}" target="_blank" style="font-size:0.9em; color:#0077cc; text-decoration:none;">
+                        View activity →
+                    </a>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = mapsHtml;
+
+    // Render mini maps
+    runsWithMaps.forEach(r => {
+        renderMiniMap(r.id, r.map.summary_polyline);
+    });
+}
+
+function renderMiniMap(runId, polyline) {
+    const mapDiv = document.getElementById(`map-${runId}`);
+    if (!mapDiv || !polyline) return;
+
+    // Check if Leaflet is available
+    if (typeof L === 'undefined') {
+        mapDiv.innerHTML = '<p style="text-align:center; padding:2rem; font-size:0.8rem; color:#999;">Leaflet not loaded</p>';
+        return;
+    }
+
+    try {
+        // Decode polyline
+        const coordinates = decodePolyline(polyline);
+        
+        if (coordinates.length === 0) {
+            mapDiv.innerHTML = '<p style="text-align:center; padding:2rem; font-size:0.8rem; color:#999;">No coordinates</p>';
+            return;
+        }
+
+        // Create map
+        const map = L.map(mapDiv, {
+            zoomControl: false,
+            attributionControl: false,
+            dragging: false,
+            scrollWheelZoom: false,
+            doubleClickZoom: false,
+            touchZoom: false
+        });
+
+        // Add tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19
+        }).addTo(map);
+
+        // Add polyline
+        const polylineLayer = L.polyline(coordinates, {
+            color: '#FC5200',
+            weight: 3,
+            opacity: 0.8
+        }).addTo(map);
+
+        // Fit bounds
+        map.fitBounds(polylineLayer.getBounds(), { padding: [10, 10] });
+
+        // Add start/end markers
+        if (coordinates.length > 0) {
+            L.circleMarker(coordinates[0], {
+                radius: 5,
+                color: '#2ECC40',
+                fillColor: '#2ECC40',
+                fillOpacity: 0.8,
+                weight: 2
+            }).addTo(map).bindPopup('Start');
+
+            L.circleMarker(coordinates[coordinates.length - 1], {
+                radius: 5,
+                color: '#FF4136',
+                fillColor: '#FF4136',
+                fillOpacity: 0.8,
+                weight: 2
+            }).addTo(map).bindPopup('End');
+        }
+    } catch (error) {
+        console.error('Error rendering mini map:', error);
+        mapDiv.innerHTML = '<p style="text-align:center; padding:2rem; font-size:0.8rem; color:#999;">Error loading map</p>';
+    }
+}
+
+// Polyline decoder (Google Encoded Polyline Algorithm Format)
+function decodePolyline(encoded) {
+    if (!encoded) return [];
+    
+    const poly = [];
+    let index = 0;
+    const len = encoded.length;
+    let lat = 0;
+    let lng = 0;
+
+    while (index < len) {
+        let b;
+        let shift = 0;
+        let result = 0;
+        
+        do {
+            b = encoded.charCodeAt(index++) - 63;
+            result |= (b & 0x1f) << shift;
+            shift += 5;
+        } while (b >= 0x20);
+        
+        const dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
+        lat += dlat;
+
+        shift = 0;
+        result = 0;
+        
+        do {
+            b = encoded.charCodeAt(index++) - 63;
+            result |= (b & 0x1f) << shift;
+            shift += 5;
+        } while (b >= 0x20);
+        
+        const dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
+        lng += dlng;
+
+        poly.push([lat / 1e5, lng / 1e5]);
+    }
+
+    return poly;
 }
 
 // Optional: Load from Strava API
