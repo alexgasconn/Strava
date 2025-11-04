@@ -2,6 +2,7 @@
 import { redirectToStrava, logout, handleAuth } from './auth.js';
 import { setupDashboard, showLoading, hideLoading, handleError,  } from './ui.js';
 import { renderAnalysisTab } from './analysis.js';
+import { renderDashboardTab } from './dashboard.js';
 import { renderAthleteProfile, renderTrainingZones, renderAthleteTab } from './athlete.js';
 import { renderPlannerTab } from './planner.js';
 import { renderGearTab } from './gear.js';
@@ -42,7 +43,14 @@ document.addEventListener('DOMContentLoaded', () => {
             link.classList.add('active');
             document.getElementById(tabId).classList.add('active');
 
-            // Renderiza el contenido del planner LA PRIMERA VEZ que se hace clic
+            if (tabId === 'dashboard-tab' && !dashboardTabRendered) {
+                if (allActivities.length > 0) {
+                    renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo);
+                    dashboardTabRendered = true;
+                } else {
+                    console.warn("Activities not loaded yet, can't render dashboard tab.");
+                }
+            }
             if (tabId === 'planner-tab' && !plannerTabRendered) {
                 if (allActivities.length > 0) {
                     renderPlannerTab(allActivities);
