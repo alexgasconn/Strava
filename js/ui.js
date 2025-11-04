@@ -62,17 +62,17 @@ export function renderDashboard(allActivities, dateFilterFrom, dateFilterTo) {
 
 
 
-function renderSummaryCards(runs) {
-    const summaryContainer = document.getElementById('summary-cards');
-    if (summaryContainer) {
-        summaryContainer.innerHTML = `
-            <div class="card"><h3>Activities</h3><p>${runs.length}</p></div>
-            <div class="card"><h3>Total Distance</h3><p>${(runs.reduce((s, a) => s + a.distance, 0) / 1000).toFixed(0)} km</p></div>
-            <div class="card"><h3>Total Time</h3><p>${(runs.reduce((s, a) => s + a.moving_time, 0) / 3600).toFixed(1)} h</p></div>
-            <div class="card"><h3>Total Elevation</h3><p>${runs.reduce((s, a) => s + a.total_elevation_gain, 0).toLocaleString()} m</p></div>
-        `;
-    }
-}
+// function renderSummaryCards(runs) {
+//     const summaryContainer = document.getElementById('summary-cards');
+//     if (summaryContainer) {
+//         summaryContainer.innerHTML = `
+//             <div class="card"><h3>Activities</h3><p>${runs.length}</p></div>
+//             <div class="card"><h3>Total Distance</h3><p>${(runs.reduce((s, a) => s + a.distance, 0) / 1000).toFixed(0)} km</p></div>
+//             <div class="card"><h3>Total Time</h3><p>${(runs.reduce((s, a) => s + a.moving_time, 0) / 3600).toFixed(1)} h</p></div>
+//             <div class="card"><h3>Total Elevation</h3><p>${runs.reduce((s, a) => s + a.total_elevation_gain, 0).toLocaleString()} m</p></div>
+//         `;
+//     }
+// }
 
 function renderAllCharts(runs) {
     charts.renderActivityTypeChart(runs);
@@ -123,180 +123,180 @@ function renderAllCharts(runs) {
 
 
 
-function renderStreaks(runs) {
-    const streaksInfo = document.getElementById('streaks-info');
-    if (!streaksInfo) return;
+// function renderStreaks(runs) {
+//     const streaksInfo = document.getElementById('streaks-info');
+//     if (!streaksInfo) return;
 
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
+//     const yesterday = new Date();
+//     yesterday.setDate(yesterday.getDate() - 1);
 
-    // --- UTILIDADES ---
-    function formatDate(dateStr) {
-        if (!dateStr) return '-';
-        const [y, m, d] = dateStr.split('-');
-        if (d) return `${d}/${m}/${y}`;
-        if (m) return `${m}/${y}`;
-        return dateStr;
-    }
+//     // --- UTILIDADES ---
+//     function formatDate(dateStr) {
+//         if (!dateStr) return '-';
+//         const [y, m, d] = dateStr.split('-');
+//         if (d) return `${d}/${m}/${y}`;
+//         if (m) return `${m}/${y}`;
+//         return dateStr;
+//     }
 
-    function formatWeek(weekStr) {
-        if (!weekStr) return '-';
-        const [y, w] = weekStr.split('-W');
-        return `W${w}/${y}`;
-    }
+//     function formatWeek(weekStr) {
+//         if (!weekStr) return '-';
+//         const [y, w] = weekStr.split('-W');
+//         return `W${w}/${y}`;
+//     }
 
-    function getISOWeek(d) {
-        const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-        const dayNum = date.getUTCDay() || 7; // lunes = 1, domingo = 7
-        date.setUTCDate(date.getUTCDate() + 4 - dayNum);
-        const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-        return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
-    }
+//     function getISOWeek(d) {
+//         const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+//         const dayNum = date.getUTCDay() || 7; // lunes = 1, domingo = 7
+//         date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+//         const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+//         return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+//     }
 
-    function calcStreaks(items, type) {
-        // items = array de strings: YYYY-MM-DD, YYYY-W## o YYYY-MM
-        const sorted = Array.from(new Set(items)).sort();
-        let maxStreak = 0, currentStreak = 0, prev = null;
-        let maxStart = null, maxEnd = null;
-        let tempStart = null;
+//     function calcStreaks(items, type) {
+//         // items = array de strings: YYYY-MM-DD, YYYY-W## o YYYY-MM
+//         const sorted = Array.from(new Set(items)).sort();
+//         let maxStreak = 0, currentStreak = 0, prev = null;
+//         let maxStart = null, maxEnd = null;
+//         let tempStart = null;
 
-        for (let i = 0; i < sorted.length; i++) {
-            const item = sorted[i];
-            if (!prev) {
-                currentStreak = 1;
-                tempStart = item;
-            } else {
-                let diff = 0;
-                if (type === 'day') {
-                    diff = (new Date(item) - new Date(prev)) / 86400000;
-                } else if (type === 'week') {
-                    const [y1, w1] = prev.split('-W').map(Number);
-                    const [y2, w2] = item.split('-W').map(Number);
-                    diff = (y2 - y1) * 52 + (w2 - w1); // simplificación: años con 52 semanas
-                } else if (type === 'month') {
-                    const [y1, m1] = prev.split('-').map(Number);
-                    const [y2, m2] = item.split('-').map(Number);
-                    diff = (y2 - y1) * 12 + (m2 - m1);
-                }
+//         for (let i = 0; i < sorted.length; i++) {
+//             const item = sorted[i];
+//             if (!prev) {
+//                 currentStreak = 1;
+//                 tempStart = item;
+//             } else {
+//                 let diff = 0;
+//                 if (type === 'day') {
+//                     diff = (new Date(item) - new Date(prev)) / 86400000;
+//                 } else if (type === 'week') {
+//                     const [y1, w1] = prev.split('-W').map(Number);
+//                     const [y2, w2] = item.split('-W').map(Number);
+//                     diff = (y2 - y1) * 52 + (w2 - w1); // simplificación: años con 52 semanas
+//                 } else if (type === 'month') {
+//                     const [y1, m1] = prev.split('-').map(Number);
+//                     const [y2, m2] = item.split('-').map(Number);
+//                     diff = (y2 - y1) * 12 + (m2 - m1);
+//                 }
 
-                if (diff === 1) {
-                    currentStreak++;
-                } else {
-                    currentStreak = 1;
-                    tempStart = item;
-                }
-            }
+//                 if (diff === 1) {
+//                     currentStreak++;
+//                 } else {
+//                     currentStreak = 1;
+//                     tempStart = item;
+//                 }
+//             }
 
-            if (currentStreak > maxStreak) {
-                maxStreak = currentStreak;
-                maxStart = tempStart;
-                maxEnd = item;
-            }
-            prev = item;
-        }
+//             if (currentStreak > maxStreak) {
+//                 maxStreak = currentStreak;
+//                 maxStart = tempStart;
+//                 maxEnd = item;
+//             }
+//             prev = item;
+//         }
 
-        return { sorted, maxStreak, maxStart, maxEnd };
-    }
+//         return { sorted, maxStreak, maxStart, maxEnd };
+//     }
 
-    function calcCurrentStreak(sorted, type) {
-        let value = 0, start = null, end = null;
-        let idx = sorted.length - 1;
-        let temp;
-        if (type === 'day') temp = yesterday.toISOString().slice(0, 10);
-        else if (type === 'week') temp = `${yesterday.getFullYear()}-W${String(getISOWeek(yesterday)).padStart(2, '0')}`;
-        else if (type === 'month') {
-            temp = yesterday.toISOString().slice(0, 7);
-        }
+//     function calcCurrentStreak(sorted, type) {
+//         let value = 0, start = null, end = null;
+//         let idx = sorted.length - 1;
+//         let temp;
+//         if (type === 'day') temp = yesterday.toISOString().slice(0, 10);
+//         else if (type === 'week') temp = `${yesterday.getFullYear()}-W${String(getISOWeek(yesterday)).padStart(2, '0')}`;
+//         else if (type === 'month') {
+//             temp = yesterday.toISOString().slice(0, 7);
+//         }
 
-        while (idx >= 0) {
-            let item = sorted[idx];
-            let match = false;
-            if (type === 'day' && item === temp) match = true;
-            else if (type === 'week' && item === temp) match = true;
-            else if (type === 'month' && item === temp) match = true;
+//         while (idx >= 0) {
+//             let item = sorted[idx];
+//             let match = false;
+//             if (type === 'day' && item === temp) match = true;
+//             else if (type === 'week' && item === temp) match = true;
+//             else if (type === 'month' && item === temp) match = true;
 
-            if (match) {
-                if (value === 0) end = temp;
-                value++;
-                start = temp;
+//             if (match) {
+//                 if (value === 0) end = temp;
+//                 value++;
+//                 start = temp;
 
-                // retrocede
-                if (type === 'day') {
-                    temp = new Date(new Date(temp).getTime() - 86400000).toISOString().slice(0, 10);
-                } else if (type === 'week') {
-                    let [y, w] = temp.split('-W').map(Number);
-                    if (w === 1) {
-                        y -= 1;
-                        w = getISOWeek(new Date(y, 11, 28)); // última semana del año anterior
-                    } else w -= 1;
-                    temp = `${y}-W${String(w).padStart(2, '0')}`;
-                } else if (type === 'month') {
-                    let [y, m] = temp.split('-').map(Number);
-                    if (m === 1) {
-                        y -= 1;
-                        m = 12;
-                    } else m -= 1;
-                    temp = `${y}-${String(m).padStart(2, '0')}`;
-                }
+//                 // retrocede
+//                 if (type === 'day') {
+//                     temp = new Date(new Date(temp).getTime() - 86400000).toISOString().slice(0, 10);
+//                 } else if (type === 'week') {
+//                     let [y, w] = temp.split('-W').map(Number);
+//                     if (w === 1) {
+//                         y -= 1;
+//                         w = getISOWeek(new Date(y, 11, 28)); // última semana del año anterior
+//                     } else w -= 1;
+//                     temp = `${y}-W${String(w).padStart(2, '0')}`;
+//                 } else if (type === 'month') {
+//                     let [y, m] = temp.split('-').map(Number);
+//                     if (m === 1) {
+//                         y -= 1;
+//                         m = 12;
+//                     } else m -= 1;
+//                     temp = `${y}-${String(m).padStart(2, '0')}`;
+//                 }
 
-                idx--;
-            } else break;
-        }
+//                 idx--;
+//             } else break;
+//         }
 
-        return { value, start, end };
-    }
+//         return { value, start, end };
+//     }
 
-    // --- CALCULO DE RACHAS ---
-    // Días
-    const dayItems = runs.map(r => r.start_date_local.substring(0, 10));
-    const dayStreaks = calcStreaks(dayItems, 'day');
-    const currentDay = calcCurrentStreak(dayStreaks.sorted, 'day');
+//     // --- CALCULO DE RACHAS ---
+//     // Días
+//     const dayItems = runs.map(r => r.start_date_local.substring(0, 10));
+//     const dayStreaks = calcStreaks(dayItems, 'day');
+//     const currentDay = calcCurrentStreak(dayStreaks.sorted, 'day');
 
-    // Semanas (lunes)
-    const weekItems = runs.map(r => {
-        const d = new Date(r.start_date_local);
-        const year = d.getFullYear();
-        const week = getISOWeek(d);
-        return `${year}-W${String(week).padStart(2, '0')}`;
-    });
-    const weekStreaks = calcStreaks(weekItems, 'week');
-    const currentWeek = calcCurrentStreak(weekStreaks.sorted, 'week');
+//     // Semanas (lunes)
+//     const weekItems = runs.map(r => {
+//         const d = new Date(r.start_date_local);
+//         const year = d.getFullYear();
+//         const week = getISOWeek(d);
+//         return `${year}-W${String(week).padStart(2, '0')}`;
+//     });
+//     const weekStreaks = calcStreaks(weekItems, 'week');
+//     const currentWeek = calcCurrentStreak(weekStreaks.sorted, 'week');
 
-    // Meses
-    const monthItems = runs.map(r => r.start_date_local.substring(0, 7));
-    const monthStreaks = calcStreaks(monthItems, 'month');
-    const currentMonth = calcCurrentStreak(monthStreaks.sorted, 'month');
+//     // Meses
+//     const monthItems = runs.map(r => r.start_date_local.substring(0, 7));
+//     const monthStreaks = calcStreaks(monthItems, 'month');
+//     const currentMonth = calcCurrentStreak(monthStreaks.sorted, 'month');
 
-    // --- RENDER ---
-    streaksInfo.innerHTML = `
-      <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
-        <div>
-          <h4>🏆 Best Historical Streak</h4>
-          <div><b>Consecutive Days:</b> ${dayStreaks.maxStreak} <br>
-            <small>${formatDate(dayStreaks.maxStart)} - ${formatDate(dayStreaks.maxEnd)}</small>
-          </div>
-          <div><b>Consecutive Weeks:</b> ${weekStreaks.maxStreak} <br>
-            <small>${formatWeek(weekStreaks.maxStart)} - ${formatWeek(weekStreaks.maxEnd)}</small>
-          </div>
-          <div><b>Consecutive Months:</b> ${monthStreaks.maxStreak} <br>
-            <small>${formatDate(monthStreaks.maxStart)} - ${formatDate(monthStreaks.maxEnd)}</small>
-          </div>
-        </div>
-        <div>
-          <h4>🔥 Current Streak</h4>
-          <div><b>Consecutive Days:</b> ${currentDay.value} <br>
-            <small>${formatDate(currentDay.start)} - ${formatDate(currentDay.end)}</small>
-          </div>
-          <div><b>Consecutive Weeks:</b> ${currentWeek.value} <br>
-            <small>${formatWeek(currentWeek.start)} - ${formatWeek(currentWeek.end)}</small>
-          </div>
-          <div><b>Consecutive Months:</b> ${currentMonth.value} <br>
-            <small>${formatDate(currentMonth.start)} - ${formatDate(currentMonth.end)}</small>
-          </div>
-        </div>
-      </div>
-    `;
-}
+//     // --- RENDER ---
+//     streaksInfo.innerHTML = `
+//       <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+//         <div>
+//           <h4>🏆 Best Historical Streak</h4>
+//           <div><b>Consecutive Days:</b> ${dayStreaks.maxStreak} <br>
+//             <small>${formatDate(dayStreaks.maxStart)} - ${formatDate(dayStreaks.maxEnd)}</small>
+//           </div>
+//           <div><b>Consecutive Weeks:</b> ${weekStreaks.maxStreak} <br>
+//             <small>${formatWeek(weekStreaks.maxStart)} - ${formatWeek(weekStreaks.maxEnd)}</small>
+//           </div>
+//           <div><b>Consecutive Months:</b> ${monthStreaks.maxStreak} <br>
+//             <small>${formatDate(monthStreaks.maxStart)} - ${formatDate(monthStreaks.maxEnd)}</small>
+//           </div>
+//         </div>
+//         <div>
+//           <h4>🔥 Current Streak</h4>
+//           <div><b>Consecutive Days:</b> ${currentDay.value} <br>
+//             <small>${formatDate(currentDay.start)} - ${formatDate(currentDay.end)}</small>
+//           </div>
+//           <div><b>Consecutive Weeks:</b> ${currentWeek.value} <br>
+//             <small>${formatWeek(currentWeek.start)} - ${formatWeek(currentWeek.end)}</small>
+//           </div>
+//           <div><b>Consecutive Months:</b> ${currentMonth.value} <br>
+//             <small>${formatDate(currentMonth.start)} - ${formatDate(currentMonth.end)}</small>
+//           </div>
+//         </div>
+//       </div>
+//     `;
+// }
 
 
 
