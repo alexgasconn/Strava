@@ -7,7 +7,6 @@ export function renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo) 
     const runs = filteredActivities.filter(a => a.type && a.type.includes('Run'));
 
     renderSummaryCards(runs);
-    renderAllCharts(runs);
     renderStreaks(runs);
     renderActivityTypeChart(runs);
     renderMonthlyDistanceChart(runs);
