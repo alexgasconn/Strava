@@ -22,6 +22,7 @@ export function renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo) 
     renderConsistencyChart(runs);
 }
 
+export const charts = {};
 
 // --- UTILITY ---
 function createChart(canvasId, config) {
