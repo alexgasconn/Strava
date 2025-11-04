@@ -13,7 +13,6 @@ export function renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo) 
     renderDistanceHistogram(runs);
     renderVo2maxChart(runs);
     renderFitnessChart(runs);
-    // renderGearGanttChart(runs);
     renderAccumulatedDistanceChart(runs);
     renderRollingMeanDistanceChart(runs);
     renderDistanceVsElevationChart(runs);
@@ -22,7 +21,9 @@ export function renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo) 
     renderConsistencyChart(runs);
 }
 
-export const charts = {};
+let charts = {}; // Almacén global para las instancias de Chart.js
+let runsHeatmapMap = null; // Almacén para el mapa de Leaflet
+let runsHeatmapLayer = null; // Almacén para la capa de calor
 
 // --- UTILITY ---
 function createChart(canvasId, config) {
