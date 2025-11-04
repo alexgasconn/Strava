@@ -2221,3 +2221,45 @@ main {
     width: 100%;
     height: 400px; /* o lo que quieras */
 }
+
+
+
+
+
+
+
+/* En tu archivo CSS */
+.card {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.card h3 {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 0.5rem;
+}
+
+.chart-container {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.chart-container h3 {
+    margin-bottom: 1rem;
+    color: #333;
+}
+
+.metric-row:hover {
+    background: #f9f9f9;
+}
+
+.activity-item:hover {
+    background: #f9f9f9;
+}
