@@ -5,6 +5,13 @@ export function renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo) 
     const filteredActivities = utils.filterActivitiesByDate(allActivities, dateFilterFrom, dateFilterTo);
     const runs = filteredActivities.filter(a => a.type && a.type.includes('Run'));
 
+    // Ordenar runs por fecha ascendente (start_date_local)
+    runs.sort((a, b) => {
+        const da = a.start_date_local ? new Date(a.start_date_local) : new Date(0);
+        const db = b.start_date_local ? new Date(b.start_date_local) : new Date(0);
+        return da - db;
+    });
+
     // Get last 30 runs for deeper analysis (for accumulations)
     const recentRuns = runs.slice(-30);
 
