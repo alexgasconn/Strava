@@ -15,7 +15,6 @@ export function renderAthleteTab(allActivities) {
     renderRecordStats(runs);
     renderStartTimeHistogram(runs);
     renderYearlyComparison(runs);
-    renderGearSection(runs);
     renderWeeklyMixChart(runs);
     renderMonthlyMixChart(runs);
     renderHourMatrix(runs);
