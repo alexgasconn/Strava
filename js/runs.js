@@ -1,8 +1,5 @@
 // js/runs.js
 
-// Nota: Las funciones de formato específicas de este segmento se definen
-// dentro de las funciones de renderizado correspondientes para mantener la lógica de tu ejemplo.
-// Las de utils.js se mantendrían para otros usos si fuera necesario.
 
 export function renderRunsTab(allActivities) {
     console.log("Initializing Runs Tab...");

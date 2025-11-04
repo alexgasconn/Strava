@@ -1,6 +1,7 @@
 // js/main.js
 import { redirectToStrava, logout, handleAuth } from './auth.js';
 import { setupDashboard, renderDashboard, showLoading, hideLoading, handleError, renderAthleteProfile, renderTrainingZones, renderAthleteTab } from './ui.js';
+import { renderAthleteTab } from './athlete.js';
 import { renderPlannerTab } from './planner.js';
 import { renderGearTab } from './gear.js';
 import { renderWeatherTab } from './weather.js';
@@ -52,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tabId === 'athlete-tab' && !athleteTabRendered) {
                 if (allActivities.length > 0) {
                     renderAthleteTab(allActivities);
+                    console.log("Athlete tab rendered.");
                     athleteTabRendered = true;
                 } else {
                     console.warn("Activities not loaded yet, can't render athlete tab.");
