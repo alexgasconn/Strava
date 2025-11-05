@@ -159,6 +159,7 @@
 
 
                 <div id="dashboard-tab" class="tab-content">
+
                     <!-- Summary Cards -->
                     <div id="dashboard-summary"
                         style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
@@ -176,6 +177,14 @@
                         <canvas id="dashboard-vo2max" style="height: 300px;"></canvas>
                     </div>
 
+                    <!-- Heatmap -->
+                    <div class="chart-container">
+                        <h3>🔥 Mapa de Calor de Rutas</h3>
+                        <div id="runs-heatmap"
+                            style="height: 400px; margin-top: .5rem; border-radius: 12px; overflow: hidden;">
+                        </div>
+                    </div>
+
                     <!-- Recent Metrics Table -->
                     <div class="chart-container">
                         <h3>🏃 Últimas 5 Actividades</h3>
@@ -191,12 +200,6 @@
                             <canvas id="dashboard-time-dist" style="height: 250px;"></canvas>
                         </div>
                     </div>
-
-                    <div id="runs-heatmap"
-                        style="height: 400px; margin: 1rem 0; border-radius: 12px; overflow: hidden;">
-                    </div>
-
-
 
                     <!-- Pace Progression -->
                     <div class="chart-container">
@@ -221,7 +224,9 @@
                         <h3>📋 Lista de Actividades</h3>
                         <div id="dashboard-activities-list"></div>
                     </div>
+
                 </div>
+
 
 
 
