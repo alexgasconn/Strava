@@ -340,7 +340,7 @@ function renderRestDaysAndAccumulated(runs) {
 
 
 function renderVO2maxEvolution(lastRuns, previousLastRuns) {
-    runs = lastRuns.concat(previousLastRuns);
+    const runs = lastRuns.concat(previousLastRuns);
     const USER_MAX_HR = 195;
 
     // Calcular VO₂max y añadirlo a cada run
