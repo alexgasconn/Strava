@@ -32,7 +32,9 @@
 🔴🚧TLB ACT FRM.... que conti TOTES les activitats, no nomes running
 🔴🩹versio mobil
 🔴🚧carregar zonas, profile, gear, weather api... al iniciar app
+
 🟡⚠️GEARS separate bikes and shoes
+fer servir notification a shoes
 frame_type:
 -MTB: 1
 -gravel: 5
