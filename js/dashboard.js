@@ -345,7 +345,7 @@ function renderVO2maxEvolution(runs) {
         return;
     }
 
-    const windowSize = 5; // pequeño para no sobre-suavizar
+    const windowSize = 7;
     vo2maxData = vo2maxData.map((d, i, arr) => {
         const start = Math.max(0, i - windowSize + 1);
         const slice = arr.slice(start, i + 1);
