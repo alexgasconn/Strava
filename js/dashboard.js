@@ -18,44 +18,86 @@ function renderRangeSelector(allActivities, dateFilterFrom, dateFilterTo) {
     const container = document.getElementById('range-selector');
     if (!container) return;
 
-    const ranges = [7, 15, 30, 90, 365];
-    container.innerHTML = ranges.map(days => `
+    const ranges = [
+        { label: 'This Week', type: 'week' },
+        { label: 'Last 7 Days', type: 'last7' },
+        { label: 'This Month', type: 'month' },
+        { label: 'Last 30 Days', type: 'last30' },
+        { label: 'Last 90 Days', type: 'last90' },
+        { label: 'This Year', type: 'year' }
+    ];
+
+    container.innerHTML = ranges.map(r => `
         <button 
-            class="range-btn ${days === selectedRangeDays ? 'active' : ''}" 
-            data-days="${days}">
-            Últimos ${days} días
+            class="range-btn ${r.type === selectedRangeDays ? 'active' : ''}" 
+            data-type="${r.type}">
+            ${r.label}
         </button>
     `).join('');
 
     container.querySelectorAll('.range-btn').forEach(btn => {
         btn.onclick = () => {
-            selectedRangeDays = parseInt(btn.dataset.days);
+            selectedRangeDays = btn.dataset.type;
             renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo);
-            renderRangeSelector(allActivities, dateFilterFrom, dateFilterTo); // re-render activo
+            renderRangeSelector(allActivities, dateFilterFrom, dateFilterTo);
         };
     });
 
     renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo);
 }
 
+
 function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
     const filteredActivities = utils.filterActivitiesByDate(allActivities, dateFilterFrom, dateFilterTo);
     const runs = filteredActivities.filter(a => a.type && a.type.includes('Run'));
-
     runs.sort((a, b) => new Date(a.start_date_local || 0) - new Date(b.start_date_local || 0));
 
     const now = new Date();
-    const recentRuns = runs.filter(r => {
-        const date = new Date(r.start_date_local);
-        const diffDays = (now - date) / (1000 * 3600 * 24);
-        return diffDays <= selectedRangeDays;
+    let startDate;
+
+    switch (selectedRangeDays) {
+        case 'week': {
+            const day = now.getDay(); // 0=Sunday
+            const diff = (day === 0 ? 6 : day - 1); // start Monday
+            startDate = new Date(now);
+            startDate.setDate(now.getDate() - diff);
+            break;
+        }
+        case 'month': {
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            break;
+        }
+        case 'year': {
+            startDate = new Date(now.getFullYear(), 0, 1);
+            break;
+        }
+        case 'last7': {
+            startDate = new Date(now);
+            startDate.setDate(now.getDate() - 7);
+            break;
+        }
+        case 'last30': {
+            startDate = new Date(now);
+            startDate.setDate(now.getDate() - 30);
+            break;
+        }
+        case 'last90': {
+            startDate = new Date(now);
+            startDate.setDate(now.getDate() - 90);
+            break;
+        }
+        default: {
+            startDate = new Date(now);
+            startDate.setDate(now.getDate() - 30);
+        }
+    }
+
+    const recentRuns = runs.filter(r => new Date(r.start_date_local) >= startDate);
+    const midRecentRuns = runs.filter(r => {
+        const d = new Date(r.start_date_local);
+        return d < startDate && d >= new Date(startDate.getTime() - 30 * 24 * 3600 * 1000);
     });
 
-    const midRecentRuns = runs.filter(r => {
-        const date = new Date(r.start_date_local);
-        const diffDays = (now - date) / (1000 * 3600 * 24);
-        return diffDays > selectedRangeDays && diffDays <= selectedRangeDays * 2;
-    });
 
     console.log(`Rendering dashboard (${selectedRangeDays} días) con ${recentRuns.length} runs`);
 
@@ -195,11 +237,11 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
 }
 
 // --- helpers de icono/color --- 
-function trendColor(p) { 
-    return p > 0 ? '#2ECC40' : (p < 0 ? '#FF4136' : '#888'); 
+function trendColor(p) {
+    return p > 0 ? '#2ECC40' : (p < 0 ? '#FF4136' : '#888');
 }
-function trendIcon(p) { 
-    return p > 0 ? '▲' : (p < 0 ? '▼' : '•'); 
+function trendIcon(p) {
+    return p > 0 ? '▲' : (p < 0 ? '▼' : '•');
 }
 
 function renderTrainingLoadMetrics(runs) {
