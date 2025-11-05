@@ -33,3 +33,9 @@
 🔴🩹versio mobil
 🔴🚧carregar zonas, profile, gear, weather api... al iniciar app
 🟡⚠️GEARS separate bikes and shoes
+frame_type:
+-MTB: 1
+-gravel: 5
+-TT: 4
+-ROAD: 3
+-CROSS: 2
