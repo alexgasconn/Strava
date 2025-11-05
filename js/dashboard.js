@@ -21,9 +21,11 @@ export function renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo) 
     console.log('Rendering dashboard with', thirtyRecentRuns.length, 'recent runs');
     console.log('Recent runs:', thirtyRecentRuns);
 
-    renderDashboardSummary(thirtyRecentRuns, midRecentRuns);
     renderVO2maxEvolution(thirtyRecentRuns);
     renderTrainingLoadMetrics(thirtyRecentRuns); // NUEVO: CTL, ATL, TSB, Carga
+    renderDashboardSummary(thirtyRecentRuns, midRecentRuns);
+    
+    
     renderRestDaysAndAccumulated(thirtyRecentRuns); // NUEVO: Días descanso, acumulados
     renderRecentMetrics(thirtyRecentRuns);
     renderTimeDistribution(thirtyRecentRuns);
@@ -69,7 +71,7 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
     const totalTime = sum(lastRuns, h);
     const totalElevation = sum(lastRuns, r => r.total_elevation_gain || 0);
     const avgHR = avg(lastRuns.filter(r => r.average_heartrate).map(r => r.average_heartrate));
-    const avgVO2 = avg(lastRuns.filter(r => r.vo2max_estimate).map(r => r.vo2max_estimate));
+    const avgVO2 = avg(lastRuns.filter(r => r.vo2max).map(r => r.vo2max));
     const avgPace = avg(lastRuns.map(r => (r.moving_time / 60) / (r.distance / 1000)));
     const avgDistance = totalDistance / lastRuns.length || 0;
 
@@ -78,7 +80,7 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
     const prevTime = sum(previousLastRuns, h);
     const prevElevation = sum(previousLastRuns, r => r.total_elevation_gain || 0);
     const prevHR = avg(previousLastRuns.filter(r => r.average_heartrate).map(r => r.average_heartrate));
-    const prevVO2 = avg(previousLastRuns.filter(r => r.vo2max_estimate).map(r => r.vo2max_estimate));
+    const prevVO2 = avg(previousLastRuns.filter(r => r.vo2max).map(r => r.vo2max));
     const prevPace = avg(previousLastRuns.map(r => (r.moving_time / 60) / (r.distance / 1000)));
 
     // --- Cambios porcentuales ---
@@ -340,18 +342,26 @@ function renderRestDaysAndAccumulated(runs) {
 function renderVO2maxEvolution(runs) {
     const USER_MAX_HR = 195;
 
-    let vo2maxData = runs
-        .filter(r => r.average_heartrate && r.moving_time > 0 && r.distance > 0)
-        .map((r, idx) => {
+    // Calcular VO₂max y añadirlo a cada run
+    runs.forEach(r => {
+        if (r.average_heartrate && r.moving_time > 0 && r.distance > 0) {
             const vel_m_min = (r.distance / r.moving_time) * 60;
             const vo2_at_pace = (vel_m_min * 0.2) + 3.5;
             const vo2max = vo2_at_pace / (r.average_heartrate / USER_MAX_HR);
-            return {
-                run: `R${idx + 1}`,
-                vo2max: vo2max,
-                date: r.start_date_local.substring(0, 10)
-            };
-        });
+            r.vo2max = vo2max; // ← nueva propiedad añadida
+        } else {
+            r.vo2max = null;
+        }
+    });
+
+    // Crear los datos para la gráfica
+    let vo2maxData = runs
+        .filter(r => r.vo2max !== null)
+        .map((r, idx) => ({
+            run: `R${idx + 1}`,
+            vo2max: r.vo2max,
+            date: r.start_date_local.substring(0, 10)
+        }));
 
     if (vo2maxData.length < 2) {
         const canvas = document.getElementById('dashboard-vo2max');
@@ -359,6 +369,7 @@ function renderVO2maxEvolution(runs) {
         return;
     }
 
+    // Suavizado por ventana móvil
     const windowSize = 7;
     vo2maxData = vo2maxData.map((d, i, arr) => {
         const start = Math.max(0, i - windowSize + 1);
@@ -367,10 +378,12 @@ function renderVO2maxEvolution(runs) {
         return { ...d, vo2max: avg };
     });
 
-    const vo2maxChange = ((vo2maxData[vo2maxData.length - 1].vo2max - vo2maxData[0].vo2max) / vo2maxData[0].vo2max * 100);
+    // Calcular tendencia
+    const vo2maxChange = ((vo2maxData.at(-1).vo2max - vo2maxData[0].vo2max) / vo2maxData[0].vo2max * 100);
     const changeColor = trendColor(vo2maxChange);
     const changeIcon = trendIcon(vo2maxChange);
 
+    // Mostrar tendencia
     const container = document.getElementById('dashboard-vo2max').parentElement;
     const existingNote = container.querySelector('.vo2max-trend');
     if (existingNote) existingNote.remove();
@@ -384,6 +397,7 @@ function renderVO2maxEvolution(runs) {
     `;
     container.appendChild(trendDiv);
 
+    // Crear la gráfica
     createDashboardChart('dashboard-vo2max', {
         type: 'line',
         data: {
@@ -406,7 +420,7 @@ function renderVO2maxEvolution(runs) {
                 legend: { display: false },
                 tooltip: {
                     callbacks: {
-                        label: (context) => `VO₂max: ${context.parsed.y.toFixed(1)}`
+                        label: ctx => `VO₂max: ${ctx.parsed.y.toFixed(1)}`
                     }
                 }
             },
@@ -419,6 +433,7 @@ function renderVO2maxEvolution(runs) {
         }
     });
 }
+
 
 
 function renderRecentMetrics(runs) {
