@@ -1,10 +1,10 @@
 // js/gear.js
 
-import { formatDistance, formatPace, formatTime } from './utils.js'; // Asegúrate de que formatPace y formatTime estén en utils.js
+import { formatDistance, formatPace, formatTime } from './utils.js';
 import { fetchGearById } from './api.js';
 
-let gearChartInstance = null; // Para la instancia de Chart.js (gráfico de líneas)
-let gearGanttChartInstance = null; // Para la instancia del nuevo gráfico de Gantt (gráfico de barras)
+let gearChartInstance = null;
+let gearGanttChartInstance = null;
 
 export function renderGearTab(allActivities) {
     console.log("Initializing Gear Tab...");
@@ -57,17 +57,17 @@ function calculateGearMetrics(runs) {
 
     runs.forEach(run => {
         const gearId = run.gear_id;
-        if (!gearId || gearId.trim() === '') return; // Ya filtrado, pero por seguridad
+        if (!gearId || gearId.trim() === '') return;
 
         if (!gearMetrics.has(gearId)) {
             gearMetrics.set(gearId, {
                 numUses: 0,
                 firstUse: new Date(run.start_date_local),
                 lastUse: new Date(run.start_date_local),
-                totalDistance: 0, // en metros
-                totalMovingTime: 0, // en segundos
-                totalElevationGain: 0, // en metros
-                runs: [] // Para guardar todas las carreras asociadas a este equipo
+                totalDistance: 0,
+                totalMovingTime: 0,
+                totalElevationGain: 0,
+                runs: []
             });
         }
 
@@ -84,16 +84,16 @@ function calculateGearMetrics(runs) {
         if (runDate > metrics.lastUse) {
             metrics.lastUse = runDate;
         }
-        metrics.runs.push(run); // Añadimos la carrera completa para análisis futuro si es necesario
+        metrics.runs.push(run);
     });
 
     // Calcular promedios y otras métricas finales
     gearMetrics.forEach((metrics, gearId) => {
         metrics.avgDistancePerUse = metrics.numUses > 0 ? (metrics.totalDistance / metrics.numUses) : 0;
         metrics.avgPace = metrics.totalMovingTime > 0 && metrics.totalDistance > 0 ?
-            metrics.totalMovingTime / (metrics.totalDistance / 1000) : 0; // segundos por km
+            metrics.totalMovingTime / (metrics.totalDistance / 1000) : 0;
         metrics.avgElevationGainPerUse = metrics.numUses > 0 ? (metrics.totalElevationGain / metrics.numUses) : 0;
-        metrics.numRuns = metrics.runs.length; // Es lo mismo que numUses, pero para claridad
+        metrics.numRuns = metrics.runs.length;
     });
 
     return gearMetrics;
@@ -131,7 +131,7 @@ async function renderGearSection(runs) {
                 if ('frame_type' in gear || 'weight' in gear) {
                     gear.type = 'bike';
                 } else {
-                    gear.type = 'unknown';
+                    gear.type = 'shoe';
                 }
 
                 gearDetailsMap.set(gear.id, gear);
