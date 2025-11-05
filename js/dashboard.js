@@ -3,7 +3,6 @@ import * as utils from './utils.js';
 let selectedRangeDays = 30; // rango inicial
 
 export function renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo) {
-    // --- contenedor de botones ---
     const container = document.getElementById('dashboard-tab');
     if (container && !document.getElementById('range-selector')) {
         const rangeDiv = document.createElement('div');
@@ -19,7 +18,7 @@ function renderRangeSelector(allActivities, dateFilterFrom, dateFilterTo) {
     const container = document.getElementById('range-selector');
     if (!container) return;
 
-    const ranges = [7, 30, 90];
+    const ranges = [7, 15, 30, 90, 365];
     container.innerHTML = ranges.map(days => `
         <button 
             class="range-btn ${days === selectedRangeDays ? 'active' : ''}" 
@@ -36,7 +35,6 @@ function renderRangeSelector(allActivities, dateFilterFrom, dateFilterTo) {
         };
     });
 
-    // render inicial
     renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo);
 }
 
@@ -61,11 +59,9 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
 
     console.log(`Rendering dashboard (${selectedRangeDays} días) con ${recentRuns.length} runs`);
 
-    // --- Llamadas originales adaptadas ---
     renderVO2maxEvolution(recentRuns, midRecentRuns);
     renderTrainingLoadMetrics(recentRuns, midRecentRuns);
     renderDashboardSummary(recentRuns, midRecentRuns);
-    renderRestDaysAndAccumulated(recentRuns);
     renderRecentMetrics(recentRuns);
     renderTimeDistribution(recentRuns);
     renderPaceProgression(recentRuns);
@@ -81,7 +77,6 @@ function createDashboardChart(canvasId, config) {
         console.error(`Canvas with id ${canvasId} not found.`);
         return;
     }
-    // Si ya existe un gráfico en ese canvas, lo destruimos primero
     if (dashboardCharts[canvasId]) {
         dashboardCharts[canvasId].destroy();
     }
@@ -121,6 +116,7 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
     const prevHR = avg(previousLastRuns.filter(r => r.average_heartrate).map(r => r.average_heartrate));
     const prevVO2 = avg(previousLastRuns.filter(r => r.vo2max).map(r => r.vo2max));
     const prevPace = avg(previousLastRuns.map(r => (r.moving_time / 60) / (r.distance / 1000)));
+    const prevAvgDistance = prevDistance / previousLastRuns.length || 0;
 
     // --- Cambios porcentuales ---
     const distChange = calcChange(totalDistance, prevDistance);
@@ -129,35 +125,36 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
     const paceChange = calcChange(avgPace, prevPace);
     const hrChange = calcChange(avgHR, prevHR);
     const vo2Change = calcChange(avgVO2, prevVO2);
+    const avgDistChange = calcChange(avgDistance, prevAvgDistance);
 
     // --- Renderizado ---
     container.innerHTML = `
         <div class="card">
-            <h3>📏 Distancia Total</h3>
+            <h3>📏 Total Distance</h3>
             <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${totalDistance.toFixed(1)} km</p>
             <small><span style="color:${metricColor('distance', distChange)};">${metricIcon('distance', distChange)} ${distChange}%</span></small>
         </div>
 
         <div class="card">
-            <h3>🕒 Tiempo Total</h3>
+            <h3>🕒 Total Time</h3>
             <p style="font-size:2rem;font-weight:bold;color:#B10DC9;">${totalTime.toFixed(1)} h</p>
             <small><span style="color:${metricColor('time', timeChange)};">${metricIcon('time', timeChange)} ${timeChange}%</span></small>
         </div>
 
         <div class="card">
-            <h3>⛰️ Elevación</h3>
+            <h3>⛰️ Elevationn</h3>
             <p style="font-size:2rem;font-weight:bold;color:#2ECC40;">${totalElevation.toFixed(0)} m</p>
             <small><span style="color:${metricColor('elevation', elevChange)};">${metricIcon('elevation', elevChange)} ${elevChange}%</span></small>
         </div>
 
         <div class="card">
-            <h3>⚡ Ritmo Medio</h3>
+            <h3>⚡ Average Pace</h3>
             <p style="font-size:2rem;font-weight:bold;color:#B10DC9;">${utils.formatPace(avgPace)}</p>
             <small><span style="color:${metricColor('pace', paceChange)};">${metricIcon('pace', paceChange)} ${paceChange}%</span></small>
         </div>
 
         <div class="card">
-            <h3>❤️ FC Media</h3>
+            <h3>❤️ Average HR</h3>
             <p style="font-size:2rem;font-weight:bold;color:#FF4136;">${avgHR ? avgHR.toFixed(0) : '–'} bpm</p>
             <small><span style="color:${metricColor('hr', hrChange)};">${metricIcon('hr', hrChange)} ${hrChange}%</span></small>
         </div>
@@ -166,6 +163,12 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
             <h3>🫁 VO₂max</h3>
             <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${avgVO2 ? avgVO2.toFixed(1) : '–'}</p>
             <small><span style="color:${metricColor('vo2', vo2Change)};">${metricIcon('vo2', vo2Change)} ${vo2Change}%</span></small>
+        </div>
+        <div class="card">
+
+            <h3>🏃‍♂️ Average Distance</h3>
+            <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${avgDistance.toFixed(1)} km</p>
+            <small><span style="color:${metricColor('distance', avgDistChange)};">${metricIcon('distance', avgDistChange)} ${avgDistChange}%</span></small>
         </div>
     `;
 
@@ -206,7 +209,6 @@ function renderTrainingLoadMetrics(runs) {
     const USER_MAX_HR = 195;
     const now = new Date();
 
-    // --- Calcular TSS para cada actividad ---
     const tssData = runs.map(r => {
         const timeHours = r.moving_time / 3600;
         const intensity = r.average_heartrate ? (r.average_heartrate / USER_MAX_HR) : 0.7;
@@ -214,7 +216,7 @@ function renderTrainingLoadMetrics(runs) {
         return { date: new Date(r.start_date_local), tss };
     }).sort((a, b) => a.date - b.date);
 
-    // --- Calcular CTL (42d) y ATL (7d) ---
+    // --- Calculate CTL (42d) and ATL (7d) ---
     let ctl = 0, atl = 0;
     const ctlDays = 42, atlDays = 7;
     for (let i = 0; i < tssData.length; i++) {
@@ -226,7 +228,7 @@ function renderTrainingLoadMetrics(runs) {
     const tsbColor = tsb > 0 ? '#2ECC40' : '#FF4136';
     const totalLoad = tssData.reduce((sum, t) => sum + t.tss, 0).toFixed(0);
 
-    // --- Cambio de carga semanal ---
+    // --- Weekly load change ---
     const recent = tssData.filter(t => (now - t.date) / 86400000 <= 14);
     const week1 = recent.filter(t => (now - t.date) / 86400000 <= 7);
     const week2 = recent.filter(t => (now - t.date) / 86400000 > 7);
@@ -235,51 +237,51 @@ function renderTrainingLoadMetrics(runs) {
     const loadChange = load2 > 0 ? ((load1 - load2) / load2) * 100 : 0;
     const loadTrend = loadChange > 0 ? '↗' : '↘';
 
-    // --- Días sin actividad reciente ---
+    // --- Days without recent activity ---
     const lastRunDate = tssData.length ? tssData[tssData.length - 1].date : null;
     const daysSinceLast = lastRunDate ? Math.floor((now - lastRunDate) / 86400000) : 999;
 
-    // --- Mensaje general de carga ---
+    // --- General load message ---
     let message = '';
     let color = '#333';
     let emoji = '';
 
-    if (tsb < -15) { emoji = '⚠️'; message = 'Fatiga alta, descanso necesario'; color = '#FF4136'; }
-    else if (tsb < -5) { emoji = '⚠️'; message = 'Fatiga moderada, mantener carga controlada'; color = '#FF851B'; }
-    else if (tsb <= 5) { emoji = '✅'; message = 'Equilibrio óptimo de carga y recuperación'; color = '#0074D9'; }
-    else { emoji = '💪'; message = 'Listo para carga más intensa'; color = '#2ECC40'; }
+    if (tsb < -15) { emoji = '⚠️'; message = 'High fatigue, rest needed'; color = '#FF4136'; }
+    else if (tsb < -5) { emoji = '⚠️'; message = 'Moderate fatigue, maintain controlled load'; color = '#FF851B'; }
+    else if (tsb <= 5) { emoji = '✅'; message = 'Optimal balance of load and recovery'; color = '#0074D9'; }
+    else { emoji = '💪'; message = 'Ready for more intense load'; color = '#2ECC40'; }
 
-    if (loadChange > 20) message += ', incremento fuerte semanal';
-    else if (loadChange > 5) message += ', carga en aumento';
-    else if (loadChange < -10) message += ', posible desentrenamiento';
+    if (loadChange > 20) message += ', strong weekly increase';
+    else if (loadChange > 5) message += ', load increasing';
+    else if (loadChange < -10) message += ', possible detraining';
 
-    // --- Modelo de riesgo de lesión realista ---
-    // Basado en: TSB (fatiga), cambio de carga, CTL/ATL ratio y descanso
-    const fatigueFactor = Math.max(0, -tsb) * 2;              // más fatiga → más riesgo
-    const loadFactor = Math.max(0, loadChange);               // subidas bruscas de carga
-    const ratioFactor = Math.abs(ctl - atl);                  // desequilibrio crónico-agudo
-    const restFactor = daysSinceLast > 3 ? (daysSinceLast - 3) * 3 : 0;  // inactividad excesiva también penaliza
+    // --- Realistic injury risk model ---
+    // Based on: TSB (fatigue), load change, CTL/ATL ratio, and rest
+    const fatigueFactor = Math.max(0, -tsb) * 2;              // more fatigue → more risk
+    const loadFactor = Math.max(0, loadChange);               // sharp increases in load
+    const ratioFactor = Math.abs(ctl - atl);                  // chronic-acute imbalance
+    const restFactor = daysSinceLast > 3 ? (daysSinceLast - 3) * 3 : 0;  // excessive inactivity also penalizes
 
     let injuryScore = fatigueFactor + loadFactor * 0.6 + ratioFactor * 0.8 + restFactor;
-    injuryScore = Math.min(100, Math.max(5, injuryScore / 2)); // normalizado
+    injuryScore = Math.min(100, Math.max(5, injuryScore / 2)); // normalized
 
-    let injuryRisk = 'Bajo';
-    if (injuryScore > 70) injuryRisk = 'Crítico';
-    else if (injuryScore > 50) injuryRisk = 'Alto';
-    else if (injuryScore > 30) injuryRisk = 'Moderado';
+    let injuryRisk = 'Low';
+    if (injuryScore > 70) injuryRisk = 'Critical';
+    else if (injuryScore > 50) injuryRisk = 'High';
+    else if (injuryScore > 30) injuryRisk = 'Moderate';
 
-    // --- Mostrar ---
+    // --- Display ---
     container.innerHTML = `
         <div class="load-card" style="background:#f0f9ff;border-radius:8px;padding:1rem;margin:1rem 0;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
-            <h3>📊 Carga de Entrenamiento</h3>
+            <h3>📊 Training Load</h3>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1rem;">
                 <div>
                     <p style="font-size:1.4rem;font-weight:bold;color:#0074D9;">CTL: ${ctl.toFixed(1)}</p>
-                    <small>Carga crónica</small>
+                    <small>Chronic load</small>
                 </div>
                 <div>
                     <p style="font-size:1.4rem;font-weight:bold;color:#FF4136;">ATL: ${atl.toFixed(1)}</p>
-                    <small>Carga aguda</small>
+                    <small>Acute load</small>
                 </div>
                 <div>
                     <p style="font-size:1.4rem;font-weight:bold;color:${tsbColor};">TSB: ${tsb.toFixed(1)}</p>
@@ -287,19 +289,19 @@ function renderTrainingLoadMetrics(runs) {
                 </div>
                 <div>
                     <p style="font-size:1.4rem;font-weight:bold;color:#FC5200;">${totalLoad}</p>
-                    <small>Carga total</small>
+                    <small>Total load</small>
                 </div>
                 <div>
                     <p style="font-size:1.4rem;font-weight:bold;color:${trendColor(loadChange)};">${loadTrend} ${loadChange.toFixed(1)}%</p>
-                    <small>Cambio semanal</small>
+                    <small>Weekly change</small>
                 </div>
             </div>
             <p style="text-align:center;font-weight:bold;margin-top:0.5rem;color:${color};">${emoji} ${message}</p>
             <p style="text-align:center;font-weight:bold;margin-top:0.25rem;color:#FF4136;">
-                ⚠️ Riesgo de lesión: ${injuryRisk} (~${injuryScore.toFixed(0)}%)
+                ⚠️ Injury risk: ${injuryRisk} (~${injuryScore.toFixed(0)}%)
             </p>
             <small style="display:block;text-align:center;color:#666;">
-                Última actividad: ${daysSinceLast === 0 ? 'hoy' : daysSinceLast + ' días'}
+                Last activity: ${daysSinceLast === 0 ? 'today' : daysSinceLast + ' days'}
             </small>
         </div>
     `;
@@ -307,86 +309,6 @@ function renderTrainingLoadMetrics(runs) {
 
 
 
-
-
-// === NUEVO: DÍAS DESCANSO + ACUMULADOS (MEJORADO) ===
-function renderRestDaysAndAccumulated(runs) {
-    const container = document.getElementById('rest-accumulated');
-    if (!container) return;
-
-    // Últimos 30 días
-    const today = new Date();
-    const last30 = new Date(today);
-    last30.setDate(today.getDate() - 30);
-
-    const recentRuns = runs.filter(r => new Date(r.start_date_local) >= last30);
-    const runDays = new Set(recentRuns.map(r => new Date(r.start_date_local).toDateString()));
-    const restDays = 30 - runDays.size;
-
-    // Métricas acumuladas
-    const totalKm = recentRuns.reduce((sum, r) => sum + r.distance / 1000, 0);
-    const totalElev = recentRuns.reduce((sum, r) => sum + (r.total_elevation_gain || 0), 0);
-    const totalTime = recentRuns.reduce((sum, r) => sum + (r.moving_time || 0), 0) / 3600; // h
-
-    // Objetivos mensuales (pueden adaptarse dinámicamente)
-    const goalKm = 200;
-    const goalElev = 2000;
-    const kmProgress = Math.min(totalKm / goalKm * 100, 100).toFixed(1);
-    const elevProgress = Math.min(totalElev / goalElev * 100, 100).toFixed(1);
-
-    // Promedios útiles
-    const avgKmPerRun = totalKm / recentRuns.length || 0;
-    const avgPace = (() => {
-        const totalSec = recentRuns.reduce((sum, r) => sum + r.moving_time, 0);
-        const totalDist = recentRuns.reduce((sum, r) => sum + r.distance / 1000, 0);
-        if (totalDist === 0) return '-';
-        const paceSec = totalSec / totalDist;
-        const min = Math.floor(paceSec / 60);
-        const sec = Math.round(paceSec % 60).toString().padStart(2, '0');
-        return `${min}:${sec}/km`;
-    })();
-
-    container.innerHTML = `
-        <div class="accum-card" style="background:#fff;border-radius:12px;padding:1.2rem;margin:1rem 0;box-shadow:0 2px 6px rgba(0,0,0,0.1);">
-            <h3 style="margin-bottom:.8rem;">📅 Últimos 30 días</h3>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1rem;text-align:center;">
-                <div>
-                    <p style="font-size:1.4rem;font-weight:700;color:#FF851B;">${restDays}</p>
-                    <small>Días de descanso</small>
-                </div>
-                <div>
-                    <p style="font-size:1.4rem;font-weight:700;color:#0074D9;">${totalKm.toFixed(1)} km</p>
-                    <small>Distancia acumulada</small>
-                </div>
-                <div>
-                    <p style="font-size:1.4rem;font-weight:700;color:#2ECC40;">${totalElev.toFixed(0)} m</p>
-                    <small>Elevación ganada</small>
-                </div>
-                <div>
-                    <p style="font-size:1.4rem;font-weight:700;color:#B10DC9;">${totalTime.toFixed(1)} h</p>
-                    <small>Tiempo total</small>
-                </div>
-            </div>
-
-            <div style="margin-top:1rem;">
-                <div style="margin-bottom:.4rem;"><small>Progreso mensual: ${kmProgress}%</small></div>
-                <div style="background:#eee;border-radius:4px;height:8px;overflow:hidden;">
-                    <div style="width:${kmProgress}%;background:#0074D9;height:100%;"></div>
-                </div>
-                <div style="margin-top:.6rem;margin-bottom:.4rem;"><small>Elevación: ${elevProgress}%</small></div>
-                <div style="background:#eee;border-radius:4px;height:8px;overflow:hidden;">
-                    <div style="width:${elevProgress}%;background:#2ECC40;height:100%;"></div>
-                </div>
-            </div>
-
-            <div style="margin-top:1rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:.5rem;">
-                <small>Media por salida: ${avgKmPerRun.toFixed(1)} km</small>
-                <small>Paso medio: ${avgPace}</small>
-                <small>Sesiones: ${recentRuns.length}</small>
-            </div>
-        </div>
-    `;
-}
 
 
 function renderVO2maxEvolution(lastRuns, previousLastRuns) {

@@ -160,60 +160,53 @@
 
                 <div id="dashboard-tab" class="tab-content">
                     <div id="range-selector" style="display:flex;gap:.5rem;margin-bottom:1rem;"></div>
-                    <!-- Summary Cards -->
+
                     <div id="dashboard-summary"
                         style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
                     </div>
 
-                    <!-- Training Load Metrics -->
                     <div id="training-load-metrics"></div>
 
-                    <!-- Rest & Accumulated -->
-                    <div id="rest-accumulated"></div>
-
-                    <!-- VO2max Evolution -->
                     <div class="chart-container">
-                        <h3>📈 Evolución VO₂max (Últimas 30 carreras)</h3>
+                        <h3>📈 VO₂max Evolution</h3>
                         <canvas id="dashboard-vo2max" style="height: 300px;"></canvas>
                     </div>
 
-                    <!-- Recent Metrics Table -->
                     <div class="chart-container">
-                        <h3>🏃 Últimas 5 Actividades</h3>
+                        <h3>🏃 Last 5 activities</h3>
                         <div id="dashboard-recent-metrics"></div>
                     </div>
 
-                    <!-- Two column grid for smaller charts -->
                     <div
                         style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin: 1rem 0;">
                         <!-- Time Distribution -->
                         <div class="chart-container">
-                            <h3>🕐 Distribución por Hora</h3>
+                            <h3>🕐 Time Distribution</h3>
                             <canvas id="dashboard-time-dist" style="height: 250px;"></canvas>
                         </div>
                     </div>
 
                     <!-- Pace Progression -->
                     <div class="chart-container">
-                        <h3>⚡ Progresión de Ritmo</h3>
+                        <h3>⚡ Pace Progression</h3>
                         <canvas id="dashboard-pace" style="height: 300px;"></canvas>
                     </div>
 
                     <!-- Heart Rate Zones -->
                     <div class="chart-container">
-                        <h3>❤️ Zonas de Frecuencia Cardíaca</h3>
+                        <h3>❤️ Heart Rate Zones</h3>
                         <canvas id="dashboard-hr-zones" style="height: 300px;"></canvas>
                     </div>
 
                     <!-- Recent Runs with Maps -->
                     <div class="chart-container">
-                        <h3>🗺️ Carreras Recientes con Mapas y VO₂max</h3>
+                        <h3>🗺️ Recent Runs with Maps and VO₂max</h3>
                         <div id="recent-runs-maps"></div>
                     </div>
 
                     <!-- Activities List -->
                     <div class="chart-container">
-                        <h3>📋 Lista de Actividades</h3>
+                        <h3>📋 Activities List</h3>
                         <div id="dashboard-activities-list"></div>
                     </div>
 
