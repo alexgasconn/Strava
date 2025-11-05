@@ -13,6 +13,7 @@ import { fetchAllActivities, fetchAthleteData, fetchTrainingZones } from './api.
 
 // Espera a que el DOM esté completamente cargado
 document.addEventListener('DOMContentLoaded', () => {
+    console.log("Initializing Strava Dashboard App...");
 
     // --- STATE ---
     let allActivities = [];
@@ -78,6 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (allActivities.length > 0) {
                     renderAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
                     console.log("Analysis tab rendered.");
+                    analysisTabRendered = true;
                 } else {
                     console.warn("Activities not loaded yet, can't render analysis tab.");
                 }
@@ -86,6 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (allActivities.length > 0) {
                     renderGearTab(allActivities);
                     console.log("Gear tab rendered.");
+                    gearTabRendered = true;
                 } else {
                     console.warn("Activities not loaded yet, can't render gear tab.");
                 }
@@ -94,6 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (allActivities.length > 0) {
                     renderRunsTab(allActivities);
                     console.log("Runs tab rendered.");
+                    runsTabRendered = true;
                 } else {
                     console.warn("Activities not loaded yet, can't render runs tab.");
                 }
@@ -102,6 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (allActivities.length > 0) {
                     renderWeatherTab(allActivities);
                     console.log("Weather tab rendered.");
+                    weatherTabRendered = true;
                 } else {
                     console.warn("Activities not loaded yet, can't render weather tab.");
                 }
@@ -110,6 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (allActivities.length > 0) {
                     renderWrappedTab(allActivities);
                     console.log("Wrapped tab rendered.");
+                    wrappedTabRendered = true;
                 } else {
                     console.warn("Activities not loaded yet, can't render wrapped tab.");
                 }
