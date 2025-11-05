@@ -10,7 +10,7 @@ export function renderGearTab(allActivities) {
     console.log("Initializing Gear Tab...");
 
     // const runs = allActivities.filter(a => a.type && a.type.includes('Run') && a.gear_id && a.gear_id.trim() !== '');
-    const runs = allActivities.filter(a => a.type &&  a.gear_id && a.gear_id.trim() !== '');
+    const runs = allActivities.filter(a => a.type && a.gear_id && a.gear_id.trim() !== '');
     const gearTabContainer = document.getElementById('gear-tab');
 
     const gearInfoSection = document.getElementById('gear-info-section');
@@ -124,23 +124,31 @@ async function renderGearSection(runs) {
     try {
         const results = await Promise.all(gearIds.map(id => fetchGearById(id)));
         const gearDetailsMap = new Map();
+
         results.forEach(result => {
             const gear = result.gear;
             if (gear) {
+                if ('frame_type' in gear || 'weight' in gear) {
+                    gear.type = 'bike';
+                } else {
+                    gear.type = 'unknown';
+                }
+
                 gearDetailsMap.set(gear.id, gear);
             }
         });
 
         console.log("Fetched gear details:", gearDetailsMap);
 
+
         const combinedGearData = Array.from(gearDetailsMap.values()).map(gear => {
             const metrics = gearMetrics.get(gear.id) || {};
             return {
                 gear: {
                     ...gear,
-                    distance: metrics.totalDistance || 0 // Usamos la distancia total calculada
+                    distance: metrics.totalDistance || 0
                 },
-                metrics: metrics // Pasamos todas las métricas calculadas
+                metrics: metrics
             };
         });
 
@@ -162,13 +170,26 @@ function renderGearCards(combinedGearData) {
 
     let isEditMode = localStorage.getItem('gearEditMode') === 'true';
 
+    // Valores predeterminados por tipo
+    const defaultValues = {
+        bike: { price: 1000, durationKm: 15000 },   // inventado
+        shoe: { price: 120, durationKm: 700 },      // existente
+        unknown: { price: 100, durationKm: 1000 }
+    };
+
     combinedGearData.sort((a, b) => {
         const customDataA = JSON.parse(localStorage.getItem(`gear-custom-${a.gear.id}`) || '{}');
         const customDataB = JSON.parse(localStorage.getItem(`gear-custom-${b.gear.id}`) || '{}');
-        const durationKmA = customDataA.durationKm ?? 700;
-        const durationKmB = customDataB.durationKm ?? 700;
+
+        const typeA = a.gear.type || 'unknown';
+        const typeB = b.gear.type || 'unknown';
+
+        const durationKmA = customDataA.durationKm ?? defaultValues[typeA].durationKm;
+        const durationKmB = customDataB.durationKm ?? defaultValues[typeB].durationKm;
+
         const totalKmA = a.gear.distance / 1000;
         const totalKmB = b.gear.distance / 1000;
+
         const durabilityPercentA = (totalKmA / durationKmA) * 100;
         const durabilityPercentB = (totalKmB / durationKmB) * 100;
 
@@ -177,27 +198,28 @@ function renderGearCards(combinedGearData) {
 
         if (needsReplacementA && !needsReplacementB) return -1;
         if (!needsReplacementA && needsReplacementB) return 1;
-
         if (a.gear.primary && !b.gear.primary) return -1;
         if (!a.gear.primary && b.gear.primary) return 1;
 
-        return totalKmB - totalKmA; // Mayor distancia primero por defecto
+        return totalKmB - totalKmA;
     });
 
     const cardsHtml = combinedGearData.map(data => {
         const gear = data.gear;
-        const metrics = data.metrics; // Obtenemos las métricas calculadas
+        const metrics = data.metrics;
 
+        const type = gear.type || 'unknown';
         const customData = JSON.parse(localStorage.getItem(`gear-custom-${gear.id}`) || '{}');
-        const price = customData.price ?? 120;
-        const durationKm = customData.durationKm ?? 700;
-        const totalKm = gear.distance / 1000; // gear.distance ya está en metros, convertimos a km
 
+        const price = customData.price ?? defaultValues[type].price;
+        const durationKm = customData.durationKm ?? defaultValues[type].durationKm;
+
+        const totalKm = gear.distance / 1000;
         const durabilityPercent = Math.min((totalKm / durationKm) * 100, 100);
         const euroPerKm = price > 0 && totalKm > 0 ? (price / totalKm).toFixed(2) : '-';
         const needsReplacement = durabilityPercent >= 100;
 
-        let durabilityColor = durabilityPercent > 90 ? '#dc3545' : durabilityPercent > 75 ? '#ffc107' : '#28a745';
+        const durabilityColor = durabilityPercent > 90 ? '#dc3545' : durabilityPercent > 75 ? '#ffc107' : '#28a745';
 
         const editInputs = `
             <div class="gear-edit-fields">
@@ -224,6 +246,7 @@ function renderGearCards(combinedGearData) {
                 <span><strong>Avg. Elev:</strong> ${metrics.avgElevationGainPerUse ? metrics.avgElevationGainPerUse.toFixed(0) + 'm' : '-'}</span>
                 <span><strong>First Use:</strong> ${metrics.firstUse ? metrics.firstUse.toLocaleDateString() : 'N/A'}</span>
                 <span><strong>Last Use:</strong> ${metrics.lastUse ? metrics.lastUse.toLocaleDateString() : 'N/A'}</span>
+                <span><strong>Type:</strong> ${type}</span>
             </div>
             ${needsReplacement && !gear.retired ? '<div class="alert-danger">Replacement Needed!</div>' : ''}
             ${isEditMode ? editInputs : ''}
@@ -236,7 +259,7 @@ function renderGearCards(combinedGearData) {
     document.getElementById('toggle-gear-edit').addEventListener('click', () => {
         isEditMode = !isEditMode;
         localStorage.setItem('gearEditMode', isEditMode);
-        renderGearCards(combinedGearData); // Recargamos las tarjetas con el nuevo modo
+        renderGearCards(combinedGearData);
     });
 
     if (isEditMode) {
@@ -249,7 +272,7 @@ function renderGearCards(combinedGearData) {
                 if (!isNaN(price) && !isNaN(durationKm) && price >= 0 && durationKm > 0) {
                     localStorage.setItem(`gear-custom-${gearId}`, JSON.stringify({ price, durationKm }));
                     btn.textContent = '✅';
-                    setTimeout(() => renderGearCards(combinedGearData), 500); // Recargar para ver los cambios y el botón
+                    setTimeout(() => renderGearCards(combinedGearData), 500);
                 } else {
                     alert('Please enter valid numbers for price (>=0) and lifespan (>0).');
                 }
@@ -257,6 +280,7 @@ function renderGearCards(combinedGearData) {
         });
     }
 }
+
 
 
 // Función mejorada para renderizar el gráfico de uso de equipo (Gráfico de líneas)
@@ -414,15 +438,6 @@ async function renderGearChart(runs) {
 
 
 
-
-
-
-
-
-
-
-
-
 export async function renderGearGanttChart(runs) {
     const ctx = document.getElementById('gear-gantt-chart');
     if (!ctx) {
@@ -437,9 +452,6 @@ export async function renderGearGanttChart(runs) {
     const gearIds = Array.from(new Set(runs.map(a => a.gear_id).filter(Boolean)));
 
     if (gearIds.length === 0) {
-        // En lugar de innerHTML en canvas, podemos dejarlo vacío o poner un mensaje en el contenedor padre
-        // console.log("No gear data for Gantt chart. Canvas will be empty.");
-        // Si quieres un mensaje, el contenedor padre del canvas debería mostrarlo
         return;
     }
 
@@ -515,7 +527,7 @@ export async function renderGearGanttChart(runs) {
                     mode: 'index',
                     intersect: false,
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             let label = context.dataset.label || '';
                             if (label) {
                                 label += ': ';
