@@ -50,6 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tabId === 'dashboard-tab' && !dashboardTabRendered) {
                 if (allActivities.length > 0) {
                     renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo);
+                    console.log("Dashboard tab rendered.");
                     dashboardTabRendered = true;
                 } else {
                     console.warn("Activities not loaded yet, can't render dashboard tab.");
@@ -58,6 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tabId === 'planner-tab' && !plannerTabRendered) {
                 if (allActivities.length > 0) {
                     renderPlannerTab(allActivities);
+                    console.log("Planner tab rendered.");
                     plannerTabRendered = true;
                 } else {
                     console.warn("Activities not loaded yet, can't render planner tab.");
@@ -75,6 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tabId === 'analysis-tab') {
                 if (allActivities.length > 0) {
                     renderAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
+                    console.log("Analysis tab rendered.");
                 } else {
                     console.warn("Activities not loaded yet, can't render analysis tab.");
                 }
@@ -82,6 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tabId === 'gear-tab') {
                 if (allActivities.length > 0) {
                     renderGearTab(allActivities);
+                    console.log("Gear tab rendered.");
                 } else {
                     console.warn("Activities not loaded yet, can't render gear tab.");
                 }
@@ -89,6 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tabId === 'runs-races-tab') {
                 if (allActivities.length > 0) {
                     renderRunsTab(allActivities);
+                    console.log("Runs tab rendered.");
                 } else {
                     console.warn("Activities not loaded yet, can't render runs tab.");
                 }
@@ -96,6 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tabId === 'weather-tab') {
                 if (allActivities.length > 0) {
                     renderWeatherTab(allActivities);
+                    console.log("Weather tab rendered.");
                 } else {
                     console.warn("Activities not loaded yet, can't render weather tab.");
                 }
@@ -103,6 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tabId === 'wrapped-tab') {
                 if (allActivities.length > 0) {
                     renderWrappedTab(allActivities);
+                    console.log("Wrapped tab rendered.");
                 } else {
                     console.warn("Activities not loaded yet, can't render wrapped tab.");
                 }
@@ -112,10 +119,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 
-
-    // =========================================================
-    //          ORGANIZACIÓN MEJORADA: FUNCIONES PRIMERO
-    // =========================================================
 
     // --- FUNCIÓN PARA LOS BOTONES DE AÑO ---
     function setupYearlySelector() {
@@ -190,8 +193,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- EVENT LISTENERS ---
-    // Ahora estamos 100% seguros de que loginButton no es null
     if (loginButton) {
         loginButton.addEventListener('click', redirectToStrava);
     }
