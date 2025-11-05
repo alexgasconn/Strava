@@ -31,7 +31,6 @@ export function renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo) 
     renderHeartRateZones(thirtyRecentRuns);
     renderRecentActivitiesList(thirtyRecentRuns);
     renderRecentRunsWithMapsAndVO2max(sixtyRecentRuns);
-    renderRunsHeatmap(sixtyRecentRuns);
 }
 
 let dashboardCharts = {};
@@ -800,83 +799,3 @@ function decodePolyline(encoded) {
 
     return poly;
 }
-
-
-
-
-
-
-function renderRunsHeatmap(runs) {
-    const container = document.getElementById("runs-heatmap");
-    if (!container) return;
-
-    // --- Resetear mapa si ya existe ---
-    if (window.runsMap) {
-        window.runsMap.remove();
-        window.runsMap = null;
-    }
-
-    // --- Crear mapa nuevo ---
-    window.runsMap = L.map("runs-heatmap", {
-        center: [41.3851, 2.1734], // BCN por defecto
-        zoom: 12,
-        scrollWheelZoom: false
-    });
-
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "&copy; OpenStreetMap contributors"
-    }).addTo(window.runsMap);
-
-    // --- Crear heatmap ---
-    const heatPoints = [];
-    runs.forEach(r => {
-        if (r.map && r.map.summary_polyline) {
-            const latlngs = L.Polyline.fromEncoded(r.map.summary_polyline).getLatLngs();
-            latlngs.forEach(p => heatPoints.push([p.lat, p.lng, 0.6]));
-        }
-    });
-
-    if (heatPoints.length) {
-        L.heatLayer(heatPoints, {
-            radius: 15,
-            blur: 12,
-            maxZoom: 15,
-            minOpacity: 0.3,
-        }).addTo(window.runsMap);
-        window.runsMap.fitBounds(heatPoints.map(p => [p[0], p[1]]), { padding: [30, 30] });
-    } else {
-        container.innerHTML = "<p style='text-align:center; padding:1rem;'>No hay rutas con mapa disponibles.</p>";
-    }
-}
-
-
-// === Helper: Decodificar polilínea de Strava ===
-// function decodePolyline(encoded) {
-//     let points = [];
-//     let index = 0, lat = 0, lng = 0;
-
-//     while (index < encoded.length) {
-//         let b, shift = 0, result = 0;
-//         do {
-//             b = encoded.charCodeAt(index++) - 63;
-//             result |= (b & 0x1f) << shift;
-//             shift += 5;
-//         } while (b >= 0x20);
-//         const dlat = (result & 1) ? ~(result >> 1) : (result >> 1);
-//         lat += dlat;
-
-//         shift = 0;
-//         result = 0;
-//         do {
-//             b = encoded.charCodeAt(index++) - 63;
-//             result |= (b & 0x1f) << shift;
-//             shift += 5;
-//         } while (b >= 0x20);
-//         const dlng = (result & 1) ? ~(result >> 1) : (result >> 1);
-//         lng += dlng;
-
-//         points.push([lat / 1e5, lng / 1e5]);
-//     }
-
-//     return points;
-// }
