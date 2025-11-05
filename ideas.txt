@@ -3,116 +3,23 @@
 🟢 DONE
 
 
-Running:
-    -Gears:
-        -All gears:
-            -Short description(name, km...)🟢
-            -Gantt🟡
-            -stacked area chart🟢
-
-        -Single Gear:
-            -First Use🟢
-            -price🟢
-            -duration🟢 
-            -(predeterminat a 700km, customizable)🟢
-            -% of Durability (Alerts)🟢
-            -current km🟢
-            -Num Uses🟢
-            -€ per km🟢
-
-    -Best activities:
-        -PERSONAL BESTS (mile, 5k, 10k, 21k, 42k)🟢
-        -Desplegable Top 3 times per distance (mile, 5k, 10k, 21k, 42k)🟢
-        -Predict time with riegel🟢
-        -Predict time with ML🟢
-    
-    -Overview:
-        -Totals: time, km, elevation, activities, avg Pace, avg VOmax🟡
-        -Compare with previosu SAME Period (+12%)🔴
-        -Streaks🟢
-        -Button 2024, 2025🔴
-
-    -Graphics:
-        -Scatter Pace vs Distance🟢
-        -Distance Histogram🟢
-        -Voxmax over time🟢
-        -Vomax actual🔴
-        -elevation gain histogram🟢
-        -Scatter elevaiton gain vs distance🟢
-        -Heatmap: year vs month, month vs day, day vs hour?🟡
-        -Accum km over time🟢
-        -Moving mean km over time🟡
-        -TSB, CTL, ATL 🟢
-        -km per month🟢
-        -Heatmap total🟢
-        -Histogram of pace per km! all runs!!!🔴
 
 
-    -PLANNER
-        -suggest paces for tempo, easy, bla bla
-        -suggest a ctraining calendar
-        -predictions of times (moure lo del a pagina rpincipal)
+logout no funciona (sen recorda) 🔴
+consistency map no es fiable, li falten/sobren dies?... 🔴
+Botons de filtre de Last days no es veuen 🔴
+wrapped no pot canviar de any 🔴
+No es veu Monday a una matrix de Athlete 🔴
+error a vegades al Heatmap calendar = (consistencymap) 🔴
+esborrar codi inutil 🟡
+fer servir lo de utils.js sempre, no repetir codi formatPace, formatTime...🟡
+tot english 🟡
+molts mes logs (a cada grafica?) 🟡
+avergae pace no surt a Dashboard?? 🔴
+wrapped -> exportar captura pels fans 🔴
 
 
-    -Activity:🟡
-        -info:
-            -title🟢
-            -subtitle/descriptionv🟢
-            -timestamp🟢
-            -Location (City, neighbourhood)🔴
-            -acitivty type (race/workout)🟢
-            -Gear (and total km of gear)🟡
-            -Weather: average_temp🟢
-            -comments/kudos🟢
-
-        -stats:
-            -duration🟢
-            -distance🟢
-            -pace🟢
-            -elevation gain🟢
-            -calories🟢
-            -HR avg🟢
-            -HR max🟢
-
-        -advanced stats:
-            -move ratio🟢
-            -effort🟢
-            -vomax est🟢
-            -% in each zone🔴
-            -pr_count🟢
-            -athlete_count🟢
-            -achievement_count🟢
-
-
-        -graphics:
-            -HR:
-                -histogram🔴
-                -AREA+Line (range) of HR🔴
-            -Elevation:
-                -histogram🔴
-                -Profile elevation🟢
-            -Pace:
-                -histogram🔴
-                -AREA+Line (range) of Pace🔴
-            -GPS:
-                -Track Overlay🟢
-                -GPX analyzer (buildings)🔴
-
-            -Segments🟡
-
-
-
-Swimming: TBD
-    -TBD
-    -TBD
-    -TBD
-
-
-
-Cycling: TBD
-    -TBD
-    -TBD
-    -TBD           
-        
-        
-        
+weather api fer servir per predictions
+weather data -> % de "difficultat ambiental"
+coords streams in activity -> veure cap a on va el vent -> % de vent a favor, en contra, de costat...
+pestanya de heatmap general com strava (que tardi una bona estona, pillar streams de coords de cada activitat...)

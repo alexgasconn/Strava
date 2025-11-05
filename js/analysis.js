@@ -22,9 +22,7 @@ export function renderAnalysisTab(allActivities, dateFilterFrom, dateFilterTo) {
     renderConsistencyChart(runs);
 }
 
-let charts = {}; // Almacén global para las instancias de Chart.js
-let runsHeatmapMap = null; // Almacén para el mapa de Leaflet
-let runsHeatmapLayer = null; // Almacén para la capa de calor
+let charts = {};
 
 // --- UTILITY ---
 function createChart(canvasId, config) {
