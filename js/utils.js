@@ -1,23 +1,6 @@
 // js/utils.js
 
 
-export function formatTime(sec) {
-    if (!isFinite(sec) || sec <= 0) return 'N/A';
-    sec = Math.round(sec);
-    const h = Math.floor(sec / 3600);
-    const m = Math.floor((sec % 3600) / 60);
-    const s = sec % 60;
-    return (h > 0 ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}` : `${m}:${s.toString().padStart(2, '0')}`);
-}
-
-export function formatPace(seconds, km) {
-    if (!isFinite(seconds) || !isFinite(km) || km <= 0) return '-';
-    const pace = seconds / km;
-    const min = Math.floor(pace / 60);
-    const secRest = Math.round(pace % 60);
-    return `${min}:${secRest.toString().padStart(2, '0')} /km`;
-}
-
 
 
 export function filterActivitiesByDate(activities, from, to) {
