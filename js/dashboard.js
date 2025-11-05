@@ -154,7 +154,13 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
     }
 }
 
-
+// --- helpers de icono/color --- 
+function trendColor(p) { 
+    return p > 0 ? '#2ECC40' : (p < 0 ? '#FF4136' : '#888'); 
+}
+function trendIcon(p) { 
+    return p > 0 ? '▲' : (p < 0 ? '▼' : '•'); 
+}
 
 function renderTrainingLoadMetrics(runs) {
     const container = document.getElementById('training-load-metrics');
