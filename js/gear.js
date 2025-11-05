@@ -9,8 +9,8 @@ let gearGanttChartInstance = null; // Para la instancia del nuevo gráfico de Ga
 export function renderGearTab(allActivities) {
     console.log("Initializing Gear Tab...");
 
-    // Filtramos solo las actividades de tipo 'Run' y aquellas que tienen un 'gear_id' válido.
-    const runs = allActivities.filter(a => a.type && a.type.includes('Run') && a.gear_id && a.gear_id.trim() !== '');
+    // const runs = allActivities.filter(a => a.type && a.type.includes('Run') && a.gear_id && a.gear_id.trim() !== '');
+    const runs = allActivities.filter(a => a.type &&  a.gear_id && a.gear_id.trim() !== '');
     const gearTabContainer = document.getElementById('gear-tab');
 
     const gearInfoSection = document.getElementById('gear-info-section');

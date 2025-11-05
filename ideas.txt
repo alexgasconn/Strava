@@ -30,3 +30,6 @@
 🔴🩹activity -> poder elegir el rolling mean dels streams!
 🔴🩹DASHBOARD -> objectius personalitzables (hores, # activities, km...)
 🔴🚧TLB ACT FRM.... que conti TOTES les activitats, no nomes running
+🔴🩹versio mobil
+🔴🚧carregar zonas, profile, gear, weather api... al iniciar app
+🔴⚠️GEARS include bikes
