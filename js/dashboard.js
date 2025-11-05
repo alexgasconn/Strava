@@ -35,7 +35,7 @@ export function renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo) 
 
 let dashboardCharts = {};
 
-function renderDashboardSummary(lastRuns, previousLastRuns) { 
+function renderDashboardSummary(lastRuns, previousLastRuns) {
     const container = document.getElementById('dashboard-summary');
     if (!container) return;
     if (!lastRuns.length) {
@@ -130,7 +130,13 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
 }
 
 
-
+// --- helpers de icono/color ---
+function trendColor(p) {
+    return p > 0 ? '#2ECC40' : (p < 0 ? '#FF4136' : '#888');
+}
+function trendIcon(p) {
+    return p > 0 ? '▲' : (p < 0 ? '▼' : '•');
+}
 
 
 function renderTrainingLoadMetrics(runs) {
