@@ -131,89 +131,107 @@ function renderTrainingLoadMetrics(runs) {
     if (!container) return;
 
     const USER_MAX_HR = 195;
+    const now = new Date();
+
+    // --- Calcular TSS para cada actividad ---
     const tssData = runs.map(r => {
         const timeHours = r.moving_time / 3600;
         const intensity = r.average_heartrate ? (r.average_heartrate / USER_MAX_HR) : 0.7;
-        return timeHours * Math.pow(intensity, 4) * 100;
-    });
+        const tss = timeHours * Math.pow(intensity, 4) * 100;
+        return { date: new Date(r.start_date_local), tss };
+    }).sort((a, b) => a.date - b.date);
 
-    // CTL (≈ 42 días)
-    let ctl = 0;
-    for (let i = 0; i < tssData.length; i++) ctl = (tssData[i] + ctl * 41) / 42;
-
-    // ATL (≈ 7 días)
-    let atl = 0;
-    const last7Tss = tssData.slice(-7);
-    for (let i = 0; i < last7Tss.length; i++) atl = (last7Tss[i] + atl * 6) / 7;
+    // --- Calcular CTL (42d) y ATL (7d) ---
+    let ctl = 0, atl = 0;
+    const ctlDays = 42, atlDays = 7;
+    for (let i = 0; i < tssData.length; i++) {
+        ctl = (tssData[i].tss + ctl * (ctlDays - 1)) / ctlDays;
+        atl = (tssData[i].tss + atl * (atlDays - 1)) / atlDays;
+    }
 
     const tsb = ctl - atl;
     const tsbColor = tsb > 0 ? '#2ECC40' : '#FF4136';
-    const totalLoad = tssData.reduce((sum, t) => sum + t, 0).toFixed(0);
+    const totalLoad = tssData.reduce((sum, t) => sum + t.tss, 0).toFixed(0);
 
-    // Cambio semanal
-    const loadChange = tssData.length > 14 ? ((last7Tss.reduce((s, t) => s + t, 0) - tssData.slice(-14, -7).reduce((s, t) => s + t, 0)) / tssData.slice(-14, -7).reduce((s, t) => s + t, 0) * 100).toFixed(1) : 0;
+    // --- Cambio de carga semanal ---
+    const recent = tssData.filter(t => (now - t.date) / 86400000 <= 14);
+    const week1 = recent.filter(t => (now - t.date) / 86400000 <= 7);
+    const week2 = recent.filter(t => (now - t.date) / 86400000 > 7);
+    const load1 = week1.reduce((a, b) => a + b.tss, 0);
+    const load2 = week2.reduce((a, b) => a + b.tss, 0);
+    const loadChange = load2 > 0 ? ((load1 - load2) / load2) * 100 : 0;
     const loadTrend = loadChange > 0 ? '↗' : '↘';
 
-    // === MENSAJE PROFESIONAL ===
+    // --- Días sin actividad reciente ---
+    const lastRunDate = tssData.length ? tssData[tssData.length - 1].date : null;
+    const daysSinceLast = lastRunDate ? Math.floor((now - lastRunDate) / 86400000) : 999;
+
+    // --- Mensaje general de carga ---
     let message = '';
     let color = '#333';
     let emoji = '';
 
-    // TSB principal
-    if (tsb < -15) { emoji = '⚠️'; message = 'Nivel de fatiga elevado, es recomendable reducir intensidad y priorizar recuperación'; color = '#FF4136'; }
-    else if (tsb >= -15 && tsb < -5) { emoji = '⚠️'; message = 'Fatiga moderada, mantener carga controlada'; color = '#FF851B'; }
-    else if (tsb >= -5 && tsb <= 5) { emoji = '✅'; message = 'Carga equilibrada, rendimiento estable'; color = '#0074D9'; }
-    else if (tsb > 5 && tsb <= 15) { emoji = '💪'; message = 'Nivel de recuperación bueno, puede incrementarse ligeramente la intensidad'; color = '#2ECC40'; }
-    else if (tsb > 15) { emoji = '💪'; message = 'Recuperación óptima, oportunidad de aumentar carga de entrenamiento'; color = '#2ECC40'; }
+    if (tsb < -15) { emoji = '⚠️'; message = 'Fatiga alta, descanso necesario'; color = '#FF4136'; }
+    else if (tsb < -5) { emoji = '⚠️'; message = 'Fatiga moderada, mantener carga controlada'; color = '#FF851B'; }
+    else if (tsb <= 5) { emoji = '✅'; message = 'Equilibrio óptimo de carga y recuperación'; color = '#0074D9'; }
+    else { emoji = '💪'; message = 'Listo para carga más intensa'; color = '#2ECC40'; }
 
-    // Ajuste según tendencia semanal
-    if (loadChange > 20) message += ', incremento fuerte de carga semanal';
-    else if (loadChange > 5) message += ', carga semanal en aumento';
-    else if (loadChange < -20) message += ', reducción fuerte de carga semanal';
-    else if (loadChange < -5) message += ', carga semanal en ligera disminución';
+    if (loadChange > 20) message += ', incremento fuerte semanal';
+    else if (loadChange > 5) message += ', carga en aumento';
+    else if (loadChange < -10) message += ', posible desentrenamiento';
 
-    // Ajuste según CTL vs ATL
-    if (ctl > atl * 1.2) message += ', fatiga acumulada alta';
-    else if (atl > ctl * 1.2) message += ', buena recuperación reciente';
+    // --- Modelo de riesgo de lesión realista ---
+    // Basado en: TSB (fatiga), cambio de carga, CTL/ATL ratio y descanso
+    const fatigueFactor = Math.max(0, -tsb) * 2;              // más fatiga → más riesgo
+    const loadFactor = Math.max(0, loadChange);               // subidas bruscas de carga
+    const ratioFactor = Math.abs(ctl - atl);                  // desequilibrio crónico-agudo
+    const restFactor = daysSinceLast > 3 ? (daysSinceLast - 3) * 3 : 0;  // inactividad excesiva también penaliza
 
-    // === RIESGO DE LESIÓN ===
-    let injuryRisk = '';
-    let injuryPercent = 0;
-    if (tsb < -15 || loadChange > 20 || ctl > atl * 1.2) { injuryRisk = 'Crítico'; injuryPercent = 75; }
-    else if (tsb >= -15 && tsb < -5) { injuryRisk = 'Alto'; injuryPercent = 50; }
-    else if (tsb >= -5 && tsb <= 5) { injuryRisk = 'Medio'; injuryPercent = 25; }
-    else { injuryRisk = 'Bajo'; injuryPercent = 10; }
+    let injuryScore = fatigueFactor + loadFactor * 0.6 + ratioFactor * 0.8 + restFactor;
+    injuryScore = Math.min(100, Math.max(5, injuryScore / 2)); // normalizado
 
+    let injuryRisk = 'Bajo';
+    if (injuryScore > 70) injuryRisk = 'Crítico';
+    else if (injuryScore > 50) injuryRisk = 'Alto';
+    else if (injuryScore > 30) injuryRisk = 'Moderado';
+
+    // --- Mostrar ---
     container.innerHTML = `
-        <div class="load-card" style="background: #f0f9ff; border-radius: 8px; padding: 1rem; margin: 1rem 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <div class="load-card" style="background:#f0f9ff;border-radius:8px;padding:1rem;margin:1rem 0;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
             <h3>📊 Carga de Entrenamiento</h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1rem;">
                 <div>
-                    <p style="font-size: 1.5rem; font-weight: bold; color: #0074D9;">CTL: ${ctl.toFixed(1)}</p>
-                    <small>Carga Crónica</small>
+                    <p style="font-size:1.4rem;font-weight:bold;color:#0074D9;">CTL: ${ctl.toFixed(1)}</p>
+                    <small>Carga crónica</small>
                 </div>
                 <div>
-                    <p style="font-size: 1.5rem; font-weight: bold; color: #FF4136;">ATL: ${atl.toFixed(1)}</p>
-                    <small>Carga Aguda</small>
+                    <p style="font-size:1.4rem;font-weight:bold;color:#FF4136;">ATL: ${atl.toFixed(1)}</p>
+                    <small>Carga aguda</small>
                 </div>
                 <div>
-                    <p style="font-size: 1.5rem; font-weight: bold; color: ${tsbColor};">TSB: ${tsb.toFixed(1)}</p>
-                    <small>Balance ${tsb > 0 ? '(Listo)' : '(Fatiga)'}</small>
+                    <p style="font-size:1.4rem;font-weight:bold;color:${tsbColor};">TSB: ${tsb.toFixed(1)}</p>
+                    <small>Balance</small>
                 </div>
                 <div>
-                    <p style="font-size: 1.5rem; font-weight: bold; color: #FC5200;">${totalLoad}</p>
-                    <small>Carga Acumulada</small>
+                    <p style="font-size:1.4rem;font-weight:bold;color:#FC5200;">${totalLoad}</p>
+                    <small>Carga total</small>
                 </div>
                 <div>
-                    <p style="font-size: 1.5rem; font-weight: bold; color: ${trendColor(loadChange)};">${loadTrend} ${loadChange}%</p>
-                    <small>Cambio Semanal</small>
+                    <p style="font-size:1.4rem;font-weight:bold;color:${trendColor(loadChange)};">${loadTrend} ${loadChange.toFixed(1)}%</p>
+                    <small>Cambio semanal</small>
                 </div>
             </div>
-            <p style="text-align:center; font-weight:bold; margin-top:0.5rem; color:${color};">${emoji} ${message}</p>
-            <p style="text-align:center; font-weight:bold; margin-top:0.25rem; color:#FF4136;">⚠️ Riesgo de lesión: ${injuryRisk} (~${injuryPercent}%)</p>
+            <p style="text-align:center;font-weight:bold;margin-top:0.5rem;color:${color};">${emoji} ${message}</p>
+            <p style="text-align:center;font-weight:bold;margin-top:0.25rem;color:#FF4136;">
+                ⚠️ Riesgo de lesión: ${injuryRisk} (~${injuryScore.toFixed(0)}%)
+            </p>
+            <small style="display:block;text-align:center;color:#666;">
+                Última actividad: ${daysSinceLast === 0 ? 'hoy' : daysSinceLast + ' días'}
+            </small>
         </div>
     `;
 }
+
 
 
 
@@ -794,3 +812,7 @@ function decodePolyline(encoded) {
 
     return poly;
 }
+
+
+
+
