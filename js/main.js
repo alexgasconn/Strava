@@ -32,15 +32,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const refreshButton = document.getElementById('refresh-button');
     const applyFilterButton = document.getElementById('apply-date-filter');
     const resetFilterButton = document.getElementById('reset-date-filter');
+    console.log("DOM references obtained.");
 
 
     // --- LÓGICA DE PESTAÑAS ---
     const tabLinks = document.querySelectorAll('.tab-link');
     const tabContents = document.querySelectorAll('.tab-content');
+    console.log("Tab elements selected.");
 
     tabLinks.forEach(link => {
         link.addEventListener('click', () => {
             const tabId = link.getAttribute('data-tab');
+
+            console.groupCollapsed(`🟦 Tab Click: ${tabId}`);
+
+        // Estado previo
+        console.log("Current state:", {
+            allActivitiesLoaded: allActivities.length > 0,
+            tabAlreadyRendered: {
+                dashboardTabRendered,
+                plannerTabRendered,
+                athleteTabRendered,
+                analysisTabRendered,
+                gearTabRendered,
+                runsTabRendered,
+                weatherTabRendered,
+                wrappedTabRendered
+            }
+        });
 
             tabLinks.forEach(item => item.classList.remove('active'));
             tabContents.forEach(item => item.classList.remove('active'));
@@ -75,7 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.warn("Activities not loaded yet, can't render athlete tab.");
                 }
             }
-            if (tabId === 'analysis-tab') {
+            if (tabId === 'analysis-tab' && !analysisTabRendered) {
                 if (allActivities.length > 0) {
                     renderAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
                     console.log("Analysis tab rendered.");
@@ -84,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.warn("Activities not loaded yet, can't render analysis tab.");
                 }
             }
-            if (tabId === 'gear-tab') {
+            if (tabId === 'gear-tab' && !gearTabRendered) {
                 if (allActivities.length > 0) {
                     renderGearTab(allActivities);
                     console.log("Gear tab rendered.");
@@ -93,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.warn("Activities not loaded yet, can't render gear tab.");
                 }
             }
-            if (tabId === 'runs-races-tab') {
+            if (tabId === 'runs-races-tab' && !runsTabRendered) {
                 if (allActivities.length > 0) {
                     renderRunsTab(allActivities);
                     console.log("Runs tab rendered.");
@@ -102,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.warn("Activities not loaded yet, can't render runs tab.");
                 }
             }
-            if (tabId === 'weather-tab') {
+            if (tabId === 'weather-tab' && !weatherTabRendered) {
                 if (allActivities.length > 0) {
                     renderWeatherTab(allActivities);
                     console.log("Weather tab rendered.");
@@ -111,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.warn("Activities not loaded yet, can't render weather tab.");
                 }
             }
-            if (tabId === 'wrapped-tab') {
+            if (tabId === 'wrapped-tab' && !wrappedTabRendered) {
                 if (allActivities.length > 0) {
                     renderWrappedTab(allActivities);
                     console.log("Wrapped tab rendered.");
