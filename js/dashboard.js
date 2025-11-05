@@ -51,6 +51,8 @@ function createDashboardChart(canvasId, config) {
     dashboardCharts[canvasId] = new Chart(canvas, config);
 }
 
+
+
 function renderDashboardSummary(lastRuns, previousLastRuns) {
     const container = document.getElementById('dashboard-summary');
     if (!container) return;
@@ -87,7 +89,7 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
     const distChange = calcChange(totalDistance, prevDistance);
     const timeChange = calcChange(totalTime, prevTime);
     const elevChange = calcChange(totalElevation, prevElevation);
-    const paceChange = calcChange(prevPace, avgPace); // si baja el ritmo, mejora
+    const paceChange = calcChange(avgPace, prevPace);
     const hrChange = calcChange(avgHR, prevHR);
     const vo2Change = calcChange(avgVO2, prevVO2);
 
@@ -96,57 +98,62 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
         <div class="card">
             <h3>📏 Distancia Total</h3>
             <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${totalDistance.toFixed(1)} km</p>
-            <small>vs prev: <span style="color:${trendColor(distChange)};">${trendIcon(distChange)} ${distChange}%</span></small>
+            <small><span style="color:${metricColor('distance', distChange)};">${metricIcon('distance', distChange)} ${distChange}%</span></small>
         </div>
 
         <div class="card">
             <h3>🕒 Tiempo Total</h3>
             <p style="font-size:2rem;font-weight:bold;color:#B10DC9;">${totalTime.toFixed(1)} h</p>
-            <small>vs prev: <span style="color:${trendColor(timeChange)};">${trendIcon(timeChange)} ${timeChange}%</span></small>
+            <small><span style="color:${metricColor('time', timeChange)};">${metricIcon('time', timeChange)} ${timeChange}%</span></small>
         </div>
 
         <div class="card">
             <h3>⛰️ Elevación</h3>
             <p style="font-size:2rem;font-weight:bold;color:#2ECC40;">${totalElevation.toFixed(0)} m</p>
-            <small><span style="color:${trendColor(elevChange)};">${trendIcon(elevChange)} ${elevChange}%</span></small>
+            <small><span style="color:${metricColor('elevation', elevChange)};">${metricIcon('elevation', elevChange)} ${elevChange}%</span></small>
         </div>
 
         <div class="card">
             <h3>⚡ Ritmo Medio</h3>
             <p style="font-size:2rem;font-weight:bold;color:#B10DC9;">${utils.formatPace(avgPace)}</p>
-            <small><span style="color:${trendColor(paceChange)};">${trendIcon(paceChange)} ${paceChange}%</span></small>
+            <small><span style="color:${metricColor('pace', paceChange)};">${metricIcon('pace', paceChange)} ${paceChange}%</span></small>
         </div>
 
         <div class="card">
             <h3>❤️ FC Media</h3>
             <p style="font-size:2rem;font-weight:bold;color:#FF4136;">${avgHR ? avgHR.toFixed(0) : '–'} bpm</p>
-            <small><span style="color:${trendColor(hrChange)};">${trendIcon(hrChange)} ${hrChange}%</span></small>
+            <small><span style="color:${metricColor('hr', hrChange)};">${metricIcon('hr', hrChange)} ${hrChange}%</span></small>
         </div>
 
         <div class="card">
             <h3>🫁 VO₂max</h3>
             <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${avgVO2 ? avgVO2.toFixed(1) : '–'}</p>
-            <small><span style="color:${trendColor(vo2Change)};">${trendIcon(vo2Change)} ${vo2Change}%</span></small>
+            <small><span style="color:${metricColor('vo2', vo2Change)};">${metricIcon('vo2', vo2Change)} ${vo2Change}%</span></small>
         </div>
     `;
 
-    // --- helpers de icono/color ---
-    function trendColor(p) {
-        return p > 0 ? '#2ECC40' : (p < 0 ? '#FF4136' : '#888');
+    // --- Colores e iconos por métrica ---
+    function metricColor(metric, change) {
+        if (change == 0) return '#888';
+
+        // Menor es mejor → verde si baja
+        if (['pace', 'hr'].includes(metric))
+            return change < 0 ? '#2ECC40' : '#FF4136';
+
+        // Mayor es mejor → verde si sube
+        return change > 0 ? '#2ECC40' : '#FF4136';
     }
-    function trendIcon(p) {
-        return p > 0 ? '▲' : (p < 0 ? '▼' : '•');
+
+    function metricIcon(metric, change) {
+        if (change == 0) return '•';
+
+        if (['pace', 'hr'].includes(metric))
+            return change < 0 ? '▼' : '▲'; // baja = mejora
+
+        return change > 0 ? '▲' : '▼';
     }
 }
 
-
-// --- helpers de icono/color ---
-function trendColor(p) {
-    return p > 0 ? '#2ECC40' : (p < 0 ? '#FF4136' : '#888');
-}
-function trendIcon(p) {
-    return p > 0 ? '▲' : (p < 0 ? '▼' : '•');
-}
 
 
 function renderTrainingLoadMetrics(runs) {
