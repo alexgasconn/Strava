@@ -41,7 +41,9 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("Tab elements selected.");
 
     tabLinks.forEach(link => {
+        console.log(`Setting up tab link for: ${link.getAttribute('data-tab')}`);
         link.addEventListener('click', () => {
+            console.log(`Tab link clicked: ${link.getAttribute('data-tab')}`);
             const tabId = link.getAttribute('data-tab');
 
             console.groupCollapsed(`🟦 Tab Click: ${tabId}`);
