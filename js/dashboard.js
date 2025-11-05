@@ -69,60 +69,164 @@ function formatTime(seconds) {
 }
 
 // === RESUMEN GENERAL (MEJORADO: +% CAMBIOS, COLORES, ICONOS) ===
+// === RESUMEN GENERAL COMPLETO ===
 function renderDashboardSummary(runs) {
     const container = document.getElementById('dashboard-summary');
     if (!container) return;
+    if (!runs.length) {
+        container.innerHTML = "<p>No hay datos suficientes.</p>";
+        return;
+    }
 
+    // --- Calcular métricas base ---
     const totalDistance = runs.reduce((sum, r) => sum + (r.distance / 1000), 0);
-    const totalTime = runs.reduce((sum, r) => sum + r.moving_time / 3600, 0); // Horas
+    const totalTime = runs.reduce((sum, r) => sum + (r.moving_time / 3600), 0);
     const totalElevation = runs.reduce((sum, r) => sum + (r.total_elevation_gain || 0), 0);
-    const avgHR = runs.filter(r => r.average_heartrate).reduce((sum, r) => sum + r.average_heartrate, 0) / 
-                  runs.filter(r => r.average_heartrate).length || 0;
+    const avgHR = runs.filter(r => r.average_heartrate)
+        .reduce((sum, r) => sum + r.average_heartrate, 0) / (runs.filter(r => r.average_heartrate).length || 1);
     const avgPace = runs.reduce((sum, r) => {
         const pace = (r.moving_time / 60) / (r.distance / 1000);
         return sum + pace;
     }, 0) / runs.length || 0;
     const avgDistance = totalDistance / runs.length || 0;
+    const avgVO2 = runs.filter(r => r.vo2max_estimate)
+        .reduce((s, r) => s + r.vo2max_estimate, 0) / (runs.filter(r => r.vo2max_estimate).length || 1);
 
-    // Cambios % (últimos 7 vs previos)
-    const last7 = runs.slice(-7);
-    const prev7 = runs.slice(-14, -7);
-    const distChange = last7.length && prev7.length ? ((last7.reduce((s, r) => s + r.distance/1000, 0) - prev7.reduce((s, r) => s + r.distance/1000, 0)) / prev7.reduce((s, r) => s + r.distance/1000, 0) * 100).toFixed(1) : 0;
-    const elevChange = last7.length && prev7.length ? ((last7.reduce((s, r) => s + r.total_elevation_gain, 0) - prev7.reduce((s, r) => s + r.total_elevation_gain, 0)) / prev7.reduce((s, r) => s + r.total_elevation_gain, 0) * 100).toFixed(1) : 0;
+    // --- Particiones por semanas (lunes a domingo) ---
+    const getWeek = d => {
+        const date = new Date(d);
+        const day = (date.getDay() + 6) % 7; // Lunes=0
+        const monday = new Date(date);
+        monday.setDate(date.getDate() - day);
+        monday.setHours(0, 0, 0, 0);
+        return monday.getTime();
+    };
 
+    const grouped = {};
+    runs.forEach(r => {
+        const week = getWeek(r.start_date_local);
+        grouped[week] = grouped[week] || [];
+        grouped[week].push(r);
+    });
+    const weeks = Object.keys(grouped).sort((a, b) => a - b);
+    const thisWeek = grouped[weeks.at(-1)] || [];
+    const prevWeek = grouped[weeks.at(-2)] || [];
+
+    // --- Cambios porcentuales ---
+    const calcChange = (curr, prev) => prev > 0 ? ((curr - prev) / prev * 100).toFixed(1) : 0;
+    const distChange = calcChange(sumDist(thisWeek), sumDist(prevWeek));
+    const elevChange = calcChange(sumElev(thisWeek), sumElev(prevWeek));
+    const paceChange = calcChange(avgPaceWeek(thisWeek), avgPaceWeek(prevWeek));
+    const vo2Change = calcChange(avgVO2Week(thisWeek), avgVO2Week(prevWeek));
+
+    // --- Carga de entrenamiento (TSS simplificado) ---
+    const USER_MAX_HR = 195;
+    const tssData = runs.map(r => {
+        const timeH = r.moving_time / 3600;
+        const intensity = r.average_heartrate ? (r.average_heartrate / USER_MAX_HR) : 0.7;
+        return timeH * Math.pow(intensity, 4) * 100;
+    });
+    const ctl = expAvg(tssData, 42);
+    const atl = expAvg(tssData, 7);
+    const tsb = ctl - atl;
+    const loadChange = calcChange(sumTss(thisWeek), sumTss(prevWeek));
+
+    // --- Riesgo de lesión dinámico ---
+    let injuryPercent = Math.min(
+        Math.max(
+            10 + ((atl - ctl) * 2) + (loadChange / 4) - (tsb / 3),
+            0
+        ),
+        100
+    );
+    injuryPercent = Math.round(injuryPercent);
+    let injuryRisk = injuryPercent > 70 ? "Crítico" :
+                     injuryPercent > 50 ? "Alto" :
+                     injuryPercent > 25 ? "Medio" : "Bajo";
+
+    // --- Renderizado ---
     container.innerHTML = `
-        <div class="card" style="background: linear-gradient(135deg, #fff, #f9f9f9);">
+        <div class="card" style="background:linear-gradient(135deg,#fff,#f9f9f9)">
             <h3>🏃 Actividades</h3>
-            <p style="font-size: 2rem; font-weight: bold; color: #FC5200;">${runs.length}</p>
-            <small>Últimas 30</small>
+            <p style="font-size:2rem;font-weight:bold;color:#FC5200;">${runs.length}</p>
+            <small>Últimos 30 días</small>
         </div>
+
         <div class="card">
-            <h3>📏 Km Total</h3>
-            <p style="font-size: 2rem; font-weight: bold; color: #0074D9;">${totalDistance.toFixed(1)}</p>
-            <small>Media: ${avgDistance.toFixed(1)} km <span style="color: ${trendColor(distChange)};">${trendIcon(distChange)} ${distChange}%</span></small>
+            <h3>📏 Distancia Total</h3>
+            <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${totalDistance.toFixed(1)} km</p>
+            <small>Media: ${avgDistance.toFixed(1)} km <span style="color:${trendColor(distChange)};">${trendIcon(distChange)} ${distChange}%</span></small>
         </div>
+
         <div class="card">
-            <h3>🕒 Horas Total</h3>
-            <p style="font-size: 2rem; font-weight: bold; color: #B10DC9;">${totalTime.toFixed(1)}</p>
-            <small>Acumulado</small>
+            <h3>🕒 Tiempo Total</h3>
+            <p style="font-size:2rem;font-weight:bold;color:#B10DC9;">${totalTime.toFixed(1)} h</p>
+            <small>Semana vs anterior: <span style="color:${trendColor(loadChange)};">${trendIcon(loadChange)} ${loadChange}%</span></small>
         </div>
+
         <div class="card">
-            <h3>⛰️ Elevación Total</h3>
-            <p style="font-size: 2rem; font-weight: bold; color: #2ECC40;">${totalElevation.toFixed(0)} m</p>
-            <small>Media: ${(totalElevation / runs.length).toFixed(0)} m <span style="color: ${trendColor(elevChange)};">${trendIcon(elevChange)} ${elevChange}%</span></small>
+            <h3>⛰️ Elevación</h3>
+            <p style="font-size:2rem;font-weight:bold;color:#2ECC40;">${totalElevation.toFixed(0)} m</p>
+            <small><span style="color:${trendColor(elevChange)};">${trendIcon(elevChange)} ${elevChange}%</span></small>
         </div>
+
         <div class="card">
             <h3>❤️ FC Media</h3>
-            <p style="font-size: 2rem; font-weight: bold; color: #FF4136;">${avgHR.toFixed(0)} bpm</p>
-            <small>En ${runs.filter(r => r.average_heartrate).length} carreras</small>
+            <p style="font-size:2rem;font-weight:bold;color:#FF4136;">${avgHR.toFixed(0)} bpm</p>
+            <small>vs prev: <span style="color:${trendColor(paceChange)};">${trendIcon(paceChange)} ${paceChange}%</span></small>
         </div>
+
         <div class="card">
             <h3>⚡ Ritmo Medio</h3>
-            <p style="font-size: 2rem; font-weight: bold; color: #B10DC9;">${formatPace(avgPace)}</p>
-            <small>min/km</small>
+            <p style="font-size:2rem;font-weight:bold;color:#B10DC9;">${formatPace(avgPace)}</p>
+            <small><span style="color:${trendColor(paceChange)};">${trendIcon(paceChange)} ${paceChange}%</span></small>
+        </div>
+
+        <div class="card">
+            <h3>🫁 VO₂max</h3>
+            <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${avgVO2 ? avgVO2.toFixed(1) : '–'}</p>
+            <small><span style="color:${trendColor(vo2Change)};">${trendIcon(vo2Change)} ${vo2Change}%</span></small>
+        </div>
+
+        <div class="card" style="background:#fff4f4;">
+            <h3>⚠️ Riesgo Lesión</h3>
+            <p style="font-size:2rem;font-weight:bold;color:${injuryColor(injuryPercent)};">${injuryRisk}</p>
+            <small>Prob: ${injuryPercent}%</small>
         </div>
     `;
+
+    // --- helpers internos ---
+    function sumDist(arr) { return arr.reduce((s, r) => s + (r.distance / 1000), 0); }
+    function sumElev(arr) { return arr.reduce((s, r) => s + (r.total_elevation_gain || 0), 0); }
+    function avgPaceWeek(arr) {
+        if (!arr.length) return 0;
+        return arr.reduce((s, r) => s + ((r.moving_time / 60) / (r.distance / 1000)), 0) / arr.length;
+    }
+    function avgVO2Week(arr) {
+        const vals = arr.filter(r => r.vo2max_estimate);
+        if (!vals.length) return 0;
+        return vals.reduce((s, r) => s + r.vo2max_estimate, 0) / vals.length;
+    }
+    function sumTss(arr) {
+        return arr.reduce((s, r) => {
+            const timeH = r.moving_time / 3600;
+            const intensity = r.average_heartrate ? (r.average_heartrate / USER_MAX_HR) : 0.7;
+            return s + timeH * Math.pow(intensity, 4) * 100;
+        }, 0);
+    }
+    function expAvg(data, n) {
+        let avg = 0;
+        for (let i = 0; i < data.length; i++) avg = (data[i] + avg * (n - 1)) / n;
+        return avg;
+    }
+    function injuryColor(p) {
+        if (p > 70) return '#FF0000';
+        if (p > 50) return '#FF6600';
+        if (p > 25) return '#FFCC00';
+        return '#2ECC40';
+    }
 }
+
 
 
 
