@@ -111,7 +111,7 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
 
         <div class="card">
             <h3>⚡ Ritmo Medio</h3>
-            <p style="font-size:2rem;font-weight:bold;color:#B10DC9;">${formatPace(avgPace)}</p>
+            <p style="font-size:2rem;font-weight:bold;color:#B10DC9;">${utils.formatPace(avgPace)}</p>
             <small><span style="color:${trendColor(paceChange)};">${trendIcon(paceChange)} ${paceChange}%</span></small>
         </div>
 
@@ -134,12 +134,6 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
     }
     function trendIcon(p) {
         return p > 0 ? '▲' : (p < 0 ? '▼' : '•');
-    }
-    function formatPace(pace) {
-        if (!pace) return '–';
-        const min = Math.floor(pace);
-        const sec = Math.round((pace - min) * 60);
-        return `${min}:${sec.toString().padStart(2, '0')} /km`;
     }
 }
 
@@ -443,7 +437,7 @@ function renderRecentMetrics(runs) {
                 </div>
                 <div style="text-align: center; min-width: 80px;">
                     <div style="font-weight: bold; color: #FC5200;">${(r.distance / 1000).toFixed(2)} km</div>
-                    <small style="color: #666;">${formatPace(pace)}/km</small>
+                    <small style="color: #666;">${utils.formatPace(pace)}/km</small>
                 </div>
                 <div style="text-align: center; min-width: 80px;">
                     ${r.average_heartrate ? `
@@ -680,7 +674,7 @@ function renderRecentRunsWithMapsAndVO2max(runs) {
                         <div style="font-size: 0.9rem; color: #666;">
                             ${new Date(r.start_date_local).toLocaleDateString()} • 
                             ${(r.distance / 1000).toFixed(2)} km • 
-                            ${formatTime(r.moving_time)}
+                            ${utils.formatTime(r.moving_time)}
                         </div>
                     </div>
                     <div style="text-align: right;">
