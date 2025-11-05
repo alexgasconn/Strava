@@ -165,7 +165,22 @@
                         style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
                     </div>
 
-                    <div id="training-load-metrics"></div>
+                    <div
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin: 1rem 0;">
+
+                        <div class="chart-container">
+                            <h3>🕐 Time Distribution</h3>
+                            <canvas id="dashboard-time-dist" style="height: 250px;"></canvas>
+                        </div>
+
+                        <div class="chart-container">
+                            <h3>📈 Training Load Metrics</h3>
+                            <canvas id="training-load-metrics" style="height: 250px;"></canvas>
+                        </div>
+
+                    </div>
+
+
 
                     <div class="chart-container">
                         <h3>📈 VO₂max Evolution</h3>
@@ -177,14 +192,7 @@
                         <div id="dashboard-recent-metrics"></div>
                     </div>
 
-                    <div
-                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin: 1rem 0;">
-                        <!-- Time Distribution -->
-                        <div class="chart-container">
-                            <h3>🕐 Time Distribution</h3>
-                            <canvas id="dashboard-time-dist" style="height: 250px;"></canvas>
-                        </div>
-                    </div>
+
 
                     <!-- Pace Progression -->
                     <div class="chart-container">
