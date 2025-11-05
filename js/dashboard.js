@@ -28,6 +28,7 @@ export function renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo) 
     renderHeartRateZones(recentRuns);
     renderRecentActivitiesList(recentRuns);
     renderRecentRunsWithMapsAndVO2max(recentRuns);
+    renderHeatmapRuns(recentRuns);
 }
 
 let dashboardCharts = {};
@@ -899,3 +900,88 @@ function decodePolyline(encoded) {
 
 
 
+
+
+// === NUEVO: HEATMAP DE RUTAS ===
+function renderHeatmapRuns(runs) {
+    const container = document.getElementById('runs-heatmap');
+    if (!container) return;
+
+    // Filtrar runs con datos GPS
+    const runsWithMap = runs.filter(r => r.map && r.map.summary_polyline);
+    if (runsWithMap.length === 0) {
+        container.innerHTML = "<p style='text-align:center; color:#888;'>No hay rutas con mapa disponibles.</p>";
+        return;
+    }
+
+    // Inicializar mapa
+    const map = L.map(container).setView([41.3851, 2.1734], 12); // centrado en Barcelona por defecto
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        opacity: 0.6
+    }).addTo(map);
+
+    // Decodificar polilíneas y crear puntos
+    const allPoints = [];
+    runsWithMap.forEach(r => {
+        try {
+            const coords = decodePolyline(r.map.summary_polyline);
+            coords.forEach(([lat, lng]) => allPoints.push([lat, lng, 0.5])); // intensidad 0.5
+        } catch {}
+    });
+
+    // Añadir capa heatmap
+    const heat = L.heatLayer(allPoints, {
+        radius: 20,
+        blur: 15,
+        minOpacity: 0.3,
+        gradient: {
+            0.2: '#0074D9',
+            0.5: '#FF851B',
+            0.8: '#FF4136'
+        }
+    }).addTo(map);
+
+    // Ajustar a los puntos
+    const bounds = L.latLngBounds(allPoints.map(p => [p[0], p[1]]));
+    if (bounds.isValid()) map.fitBounds(bounds);
+
+    // Título
+    const title = L.control({ position: 'topright' });
+    title.onAdd = function () {
+        const div = L.DomUtil.create('div', 'heatmap-title');
+        div.innerHTML = `<div style="background:#fff;padding:.4rem .6rem;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);font-size:.9rem;">🔥 Rutas recientes</div>`;
+        return div;
+    };
+    title.addTo(map);
+}
+
+// === Helper: Decodificar polilínea de Strava ===
+// function decodePolyline(encoded) {
+//     let points = [];
+//     let index = 0, lat = 0, lng = 0;
+
+//     while (index < encoded.length) {
+//         let b, shift = 0, result = 0;
+//         do {
+//             b = encoded.charCodeAt(index++) - 63;
+//             result |= (b & 0x1f) << shift;
+//             shift += 5;
+//         } while (b >= 0x20);
+//         const dlat = (result & 1) ? ~(result >> 1) : (result >> 1);
+//         lat += dlat;
+
+//         shift = 0;
+//         result = 0;
+//         do {
+//             b = encoded.charCodeAt(index++) - 63;
+//             result |= (b & 0x1f) << shift;
+//             shift += 5;
+//         } while (b >= 0x20);
+//         const dlng = (result & 1) ? ~(result >> 1) : (result >> 1);
+//         lng += dlng;
+
+//         points.push([lat / 1e5, lng / 1e5]);
+//     }
+
+//     return po
