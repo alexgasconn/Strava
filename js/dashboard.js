@@ -21,8 +21,8 @@ export function renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo) 
     console.log('Rendering dashboard with', thirtyRecentRuns.length, 'recent runs');
     console.log('Recent runs:', thirtyRecentRuns);
 
-    renderVO2maxEvolution(thirtyRecentRuns);
-    renderTrainingLoadMetrics(thirtyRecentRuns); // NUEVO: CTL, ATL, TSB, Carga
+    renderVO2maxEvolution(thirtyRecentRuns, midRecentRuns);
+    renderTrainingLoadMetrics(thirtyRecentRuns, midRecentRuns); // NUEVO: CTL, ATL, TSB, Carga
     renderDashboardSummary(thirtyRecentRuns, midRecentRuns);
     
     
@@ -339,7 +339,8 @@ function renderRestDaysAndAccumulated(runs) {
 }
 
 
-function renderVO2maxEvolution(runs) {
+function renderVO2maxEvolution(lastRuns, previousLastRuns) {
+    runs = lastRuns.concat(previousLastRuns);
     const USER_MAX_HR = 195;
 
     // Calcular VO₂max y añadirlo a cada run
