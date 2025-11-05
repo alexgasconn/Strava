@@ -24,7 +24,6 @@ export function renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo) 
     renderRestDaysAndAccumulated(recentRuns); // NUEVO: Días descanso, acumulados
     renderRecentMetrics(recentRuns);
     renderTimeDistribution(recentRuns);
-    renderWeekdayActivity(runs);
     renderPaceProgression(recentRuns);
     renderHeartRateZones(recentRuns);
     renderRecentActivitiesList(recentRuns);
@@ -340,52 +339,85 @@ function renderTrainingLoadMetrics(runs) {
 
 
 
-// === NUEVO: DÍAS DESCANSO + ACUMULADOS (CON BARRAS PROGRESO) ===
+// === NUEVO: DÍAS DESCANSO + ACUMULADOS (MEJORADO) ===
 function renderRestDaysAndAccumulated(runs) {
     const container = document.getElementById('rest-accumulated');
     if (!container) return;
 
-    // Días descanso: Contar días sin runs en últimos 30 días
-    const dates = runs.map(r => new Date(r.start_date_local).toDateString());
-    const uniqueDays = new Set(dates);
-    const totalDays = 30; // Asumir últimos 30
-    const restDays = totalDays - uniqueDays.size;
+    // Últimos 30 días
+    const today = new Date();
+    const last30 = new Date(today);
+    last30.setDate(today.getDate() - 30);
 
-    // Progreso: % de meta, asumir meta 200km/mes
+    const recentRuns = runs.filter(r => new Date(r.start_date_local) >= last30);
+    const runDays = new Set(recentRuns.map(r => new Date(r.start_date_local).toDateString()));
+    const restDays = 30 - runDays.size;
+
+    // Métricas acumuladas
+    const totalKm = recentRuns.reduce((sum, r) => sum + r.distance / 1000, 0);
+    const totalElev = recentRuns.reduce((sum, r) => sum + (r.total_elevation_gain || 0), 0);
+    const totalTime = recentRuns.reduce((sum, r) => sum + (r.moving_time || 0), 0) / 3600; // h
+
+    // Objetivos mensuales (pueden adaptarse dinámicamente)
     const goalKm = 200;
-    const totalKm = runs.reduce((sum, r) => sum + r.distance / 1000, 0);
-    const kmProgress = (totalKm / goalKm * 100).toFixed(1);
+    const goalElev = 2000;
+    const kmProgress = Math.min(totalKm / goalKm * 100, 100).toFixed(1);
+    const elevProgress = Math.min(totalElev / goalElev * 100, 100).toFixed(1);
 
-    // Elevación acumulada
-    const totalElev = runs.reduce((sum, r) => sum + (r.total_elevation_gain || 0), 0);
+    // Promedios útiles
+    const avgKmPerRun = totalKm / recentRuns.length || 0;
+    const avgPace = (() => {
+        const totalSec = recentRuns.reduce((sum, r) => sum + r.moving_time, 0);
+        const totalDist = recentRuns.reduce((sum, r) => sum + r.distance / 1000, 0);
+        if (totalDist === 0) return '-';
+        const paceSec = totalSec / totalDist;
+        const min = Math.floor(paceSec / 60);
+        const sec = Math.round(paceSec % 60).toString().padStart(2, '0');
+        return `${min}:${sec}/km`;
+    })();
 
-    // Barra progreso
     container.innerHTML = `
-        <div class="accum-card" style="background: #fff; border-radius: 8px; padding: 1rem; margin: 1rem 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <h3>📅 Acumulados & Descanso</h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem;">
+        <div class="accum-card" style="background:#fff;border-radius:12px;padding:1.2rem;margin:1rem 0;box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+            <h3 style="margin-bottom:.8rem;">📅 Últimos 30 días</h3>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1rem;text-align:center;">
                 <div>
-                    <p style="font-size: 1.5rem; font-weight: bold; color: #2ECC40;">${restDays}</p>
-                    <small>Días Descanso</small>
+                    <p style="font-size:1.4rem;font-weight:700;color:#FF851B;">${restDays}</p>
+                    <small>Días de descanso</small>
                 </div>
                 <div>
-                    <p style="font-size: 1.5rem; font-weight: bold; color: #0074D9;">${totalKm.toFixed(1)} km</p>
-                    <small>Acumulado</small>
+                    <p style="font-size:1.4rem;font-weight:700;color:#0074D9;">${totalKm.toFixed(1)} km</p>
+                    <small>Distancia acumulada</small>
                 </div>
                 <div>
-                    <p style="font-size: 1.5rem; font-weight: bold; color: #FF4136;">${totalElev.toFixed(0)} m</p>
-                    <small>Elev. Acumulada</small>
+                    <p style="font-size:1.4rem;font-weight:700;color:#2ECC40;">${totalElev.toFixed(0)} m</p>
+                    <small>Elevación ganada</small>
+                </div>
+                <div>
+                    <p style="font-size:1.4rem;font-weight:700;color:#B10DC9;">${totalTime.toFixed(1)} h</p>
+                    <small>Tiempo total</small>
                 </div>
             </div>
-            <div style="margin-top: 1rem;">
-                <small>Progreso Km: ${kmProgress}%</small>
-                <div style="background: #eee; border-radius: 4px; height: 8px; overflow: hidden;">
-                    <div style="width: ${Math.min(kmProgress, 100)}%; background: #2ECC40; height: 100%;"></div>
+
+            <div style="margin-top:1rem;">
+                <div style="margin-bottom:.4rem;"><small>Progreso mensual: ${kmProgress}%</small></div>
+                <div style="background:#eee;border-radius:4px;height:8px;overflow:hidden;">
+                    <div style="width:${kmProgress}%;background:#0074D9;height:100%;"></div>
                 </div>
+                <div style="margin-top:.6rem;margin-bottom:.4rem;"><small>Elevación: ${elevProgress}%</small></div>
+                <div style="background:#eee;border-radius:4px;height:8px;overflow:hidden;">
+                    <div style="width:${elevProgress}%;background:#2ECC40;height:100%;"></div>
+                </div>
+            </div>
+
+            <div style="margin-top:1rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:.5rem;">
+                <small>Media por salida: ${avgKmPerRun.toFixed(1)} km</small>
+                <small>Paso medio: ${avgPace}</small>
+                <small>Sesiones: ${recentRuns.length}</small>
             </div>
         </div>
     `;
 }
+
 
 function renderVO2maxEvolution(runs) {
     const USER_MAX_HR = 195;
@@ -551,59 +583,6 @@ function renderTimeDistribution(runs) {
     });
 }
 
-function renderWeekdayActivity(runs) {
-    const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    
-    const weekdayData = runs.reduce((acc, r) => {
-        const day = new Date(r.start_date_local).toLocaleDateString('en-US', { weekday: 'long' });
-        if (!acc[day]) acc[day] = { count: 0, distance: 0 };
-        acc[day].count += 1;
-        acc[day].distance += r.distance / 1000;
-        return acc;
-    }, {});
-
-    const counts = weekdays.map(day => weekdayData[day]?.count || 0);
-    const distances = weekdays.map(day => weekdayData[day]?.distance || 0);
-
-    createDashboardChart('dashboard-weekday', {
-        type: 'bar',
-        data: {
-            labels: weekdays.map(d => d.slice(0, 3)),
-            datasets: [
-                {
-                    label: '# Runs',
-                    data: counts,
-                    backgroundColor: 'rgba(252, 82, 0, 0.7)',
-                    yAxisID: 'y'
-                },
-                {
-                    label: 'Distance (km)',
-                    data: distances,
-                    backgroundColor: 'rgba(0, 116, 217, 0.5)',
-                    yAxisID: 'y1',
-                    hidden: true
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    type: 'linear',
-                    position: 'left',
-                    title: { display: true, text: '# Runs' }
-                },
-                y1: {
-                    type: 'linear',
-                    position: 'right',
-                    title: { display: true, text: 'Distance (km)' },
-                    grid: { drawOnChartArea: false }
-                }
-            }
-        }
-    });
-}
 
 function renderPaceProgression(runs) {
     const paceData = runs.map((r, idx) => {
