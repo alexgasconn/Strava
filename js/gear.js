@@ -20,7 +20,6 @@ export function renderGearTab(allActivities) {
     const gearGanttChartContainer = document.getElementById('gear-gantt-chart-container');
     const gearGanttChartCanvas = document.getElementById('gear-gantt-chart');
 
-    // Verifica que todos los contenedores necesarios existan en el HTML
     if (!gearInfoSection || !gearInfoList || !gearChartContainer || !gearChartCanvas || !gearGanttChartContainer || !gearGanttChartCanvas) {
         console.error("Missing expected HTML elements for Gear Tab. Please check your HTML structure for IDs: gear-info-section, gear-info-list, gear-chart-container, gearChart, gear-gantt-chart-container, gear-gantt-chart.");
         if (gearTabContainer) {
@@ -29,10 +28,8 @@ export function renderGearTab(allActivities) {
         return;
     }
 
-    // Si no hay carreras o no hay carreras con gear_id válido, limpiar y mostrar mensaje
     if (runs.length === 0) {
         gearInfoList.innerHTML = '<p>No running data with associated gear available.</p>';
-        // Destruir instancias de gráficos y ocultar sus contenedores
         if (gearChartInstance) { gearChartInstance.destroy(); gearChartInstance = null; }
         if (gearChartContainer) gearChartContainer.style.display = 'none';
 
@@ -41,15 +38,13 @@ export function renderGearTab(allActivities) {
 
         return;
     } else {
-        // Asegurarse de que los contenedores de los gráficos estén visibles si hay datos
         if (gearChartContainer) gearChartContainer.style.display = '';
         if (gearGanttChartContainer) gearGanttChartContainer.style.display = '';
     }
 
-    // Renderizar ambas secciones y ambos gráficos
     renderGearSection(runs);
-    renderGearChart(runs); // Renderiza el gráfico de líneas
-    renderGearGanttChart(runs); // Renderiza el gráfico de barras (Gantt)
+    renderGearChart(runs);
+    renderGearGanttChart(runs);
 }
 
 /**
@@ -135,6 +130,8 @@ async function renderGearSection(runs) {
                 gearDetailsMap.set(gear.id, gear);
             }
         });
+
+        console.log("Fetched gear details:", gearDetailsMap);
 
         const combinedGearData = Array.from(gearDetailsMap.values()).map(gear => {
             const metrics = gearMetrics.get(gear.id) || {};
