@@ -35,6 +35,20 @@ export function renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo) 
 
 let dashboardCharts = {};
 
+// --- UTILITY ---
+function createDashboardChart(canvasId, config) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) {
+        console.error(`Canvas with id ${canvasId} not found.`);
+        return;
+    }
+    // Si ya existe un gráfico en ese canvas, lo destruimos primero
+    if (dashboardCharts[canvasId]) {
+        dashboardCharts[canvasId].destroy();
+    }
+    dashboardCharts[canvasId] = new Chart(canvas, config);
+}
+
 function renderDashboardSummary(lastRuns, previousLastRuns) {
     const container = document.getElementById('dashboard-summary');
     if (!container) return;
