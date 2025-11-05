@@ -356,7 +356,7 @@ function renderVO2maxEvolution(lastRuns, previousLastRuns) {
     });
 
     // Crear los datos para la gráfica
-    let vo2maxData = runs
+    let vo2maxData = lastRuns
         .filter(r => r.vo2max !== null)
         .map((r, idx) => ({
             run: `R${idx + 1}`,
