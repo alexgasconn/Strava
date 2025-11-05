@@ -25,6 +25,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let runsTabRendered = false;
     let weatherTabRendered = false;
     let wrappedTabRendered = false;
+    let analysisTabRendered = false;
+    let gearTabRendered = false;
+    console.log("Initial state set.");
 
     // --- DOM REFERENCES ---
     const loginButton = document.getElementById('login-button');
