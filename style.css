@@ -2263,3 +2263,19 @@ main {
 .activity-item:hover {
     background: #f9f9f9;
 }
+
+
+
+
+.range-btn {
+  padding: 0.4rem 0.8rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #f7f7f7;
+  cursor: pointer;
+}
+.range-btn.active {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
+}

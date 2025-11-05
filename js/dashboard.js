@@ -1,43 +1,80 @@
-// js/dashboard.js
 import * as utils from './utils.js';
 
+let selectedRangeDays = 30; // rango inicial
+
 export function renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo) {
+    // --- contenedor de botones ---
+    const container = document.getElementById('dashboard-tab');
+    if (container && !document.getElementById('range-selector')) {
+        const rangeDiv = document.createElement('div');
+        rangeDiv.id = 'range-selector';
+        rangeDiv.style = 'display:flex;gap:.5rem;margin-bottom:1rem;';
+        container.prepend(rangeDiv);
+    }
+
+    renderRangeSelector(allActivities, dateFilterFrom, dateFilterTo);
+}
+
+function renderRangeSelector(allActivities, dateFilterFrom, dateFilterTo) {
+    const container = document.getElementById('range-selector');
+    if (!container) return;
+
+    const ranges = [7, 30, 90];
+    container.innerHTML = ranges.map(days => `
+        <button 
+            class="range-btn ${days === selectedRangeDays ? 'active' : ''}" 
+            data-days="${days}">
+            Últimos ${days} días
+        </button>
+    `).join('');
+
+    container.querySelectorAll('.range-btn').forEach(btn => {
+        btn.onclick = () => {
+            selectedRangeDays = parseInt(btn.dataset.days);
+            renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo);
+            renderRangeSelector(allActivities, dateFilterFrom, dateFilterTo); // re-render activo
+        };
+    });
+
+    // render inicial
+    renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo);
+}
+
+function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
     const filteredActivities = utils.filterActivitiesByDate(allActivities, dateFilterFrom, dateFilterTo);
     const runs = filteredActivities.filter(a => a.type && a.type.includes('Run'));
 
-    // Ordenar runs por fecha ascendente (start_date_local)
-    runs.sort((a, b) => {
-        const da = a.start_date_local ? new Date(a.start_date_local) : new Date(0);
-        const db = b.start_date_local ? new Date(b.start_date_local) : new Date(0);
-        return da - db;
+    runs.sort((a, b) => new Date(a.start_date_local || 0) - new Date(b.start_date_local || 0));
+
+    const now = new Date();
+    const recentRuns = runs.filter(r => {
+        const date = new Date(r.start_date_local);
+        const diffDays = (now - date) / (1000 * 3600 * 24);
+        return diffDays <= selectedRangeDays;
     });
 
-    const sixtyRecentRuns = runs.slice(-60);
-    const thirtyRecentRuns = runs.slice(-30);
-    const midRecentRuns = runs.slice(-60, -30);
+    const midRecentRuns = runs.filter(r => {
+        const date = new Date(r.start_date_local);
+        const diffDays = (now - date) / (1000 * 3600 * 24);
+        return diffDays > selectedRangeDays && diffDays <= selectedRangeDays * 2;
+    });
 
+    console.log(`Rendering dashboard (${selectedRangeDays} días) con ${recentRuns.length} runs`);
 
-
-    console.log('Rendering dashboard with', thirtyRecentRuns.length, 'recent runs');
-    console.log('Recent runs:', thirtyRecentRuns);
-
-    renderVO2maxEvolution(thirtyRecentRuns, midRecentRuns);
-    renderTrainingLoadMetrics(thirtyRecentRuns, midRecentRuns); // NUEVO: CTL, ATL, TSB, Carga
-    renderDashboardSummary(thirtyRecentRuns, midRecentRuns);
-    
-    
-    renderRestDaysAndAccumulated(thirtyRecentRuns); // NUEVO: Días descanso, acumulados
-    renderRecentMetrics(thirtyRecentRuns);
-    renderTimeDistribution(thirtyRecentRuns);
-    renderPaceProgression(thirtyRecentRuns);
-    renderHeartRateZones(thirtyRecentRuns);
-    renderRecentActivitiesList(thirtyRecentRuns);
-    renderRecentRunsWithMapsAndVO2max(sixtyRecentRuns);
+    // --- Llamadas originales adaptadas ---
+    renderVO2maxEvolution(recentRuns, midRecentRuns);
+    renderTrainingLoadMetrics(recentRuns, midRecentRuns);
+    renderDashboardSummary(recentRuns, midRecentRuns);
+    renderRestDaysAndAccumulated(recentRuns);
+    renderRecentMetrics(recentRuns);
+    renderTimeDistribution(recentRuns);
+    renderPaceProgression(recentRuns);
+    renderHeartRateZones(recentRuns);
+    renderRecentActivitiesList(recentRuns);
+    renderRecentRunsWithMapsAndVO2max(recentRuns);
 }
 
 let dashboardCharts = {};
-
-// --- UTILITY ---
 function createDashboardChart(canvasId, config) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) {
