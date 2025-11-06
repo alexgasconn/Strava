@@ -78,3 +78,11 @@ export function formatPace(seconds, km) {
     const secRest = Math.round(pace % 60);
     return `${min}:${secRest.toString().padStart(2, '0')} /km`;
 }
+
+function formatDate(date) {
+    if (!(date instanceof Date)) date = new Date(date);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+}

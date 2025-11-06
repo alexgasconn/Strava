@@ -1,6 +1,6 @@
 // js/gear.js - Enhanced Version
 
-import { formatDistance, formatPace, formatTime } from './utils.js';
+import { formatDistance, formatPace, formatTime, formatDate } from './utils.js';
 import { fetchGearById } from './api.js';
 
 let gearChartInstance = null;
@@ -300,7 +300,7 @@ function createStatsSection(metrics, gear, euroPerKm) {
                 </div>
                 <div class="stat-item">
                     <span class="stat-label">First Use</span>
-                    <span class="stat-value">${metrics.firstUse ? formatDateShort(metrics.firstUse) : 'N/A'}</span>
+                    <span class="stat-value">${metrics.firstUse ? formatDate(metrics.firstUse) : 'N/A'}</span>
                 </div>
             </div>
             <div class="stat-row">
@@ -310,7 +310,7 @@ function createStatsSection(metrics, gear, euroPerKm) {
                 </div>
                 <div class="stat-item">
                     <span class="stat-label">Last Use</span>
-                    <span class="stat-value">${metrics.lastUse ? formatDateShort(metrics.lastUse) : 'N/A'}</span>
+                    <span class="stat-value">${metrics.lastUse ? formatDate(metrics.lastUse) : 'N/A'}</span>
                 </div>
             </div>
         </div>
@@ -421,17 +421,6 @@ function sortGearData(data) {
     });
 }
 
-function formatDateShort(date) {
-    const now = new Date();
-    const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays}d ago`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
-    
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
 
 function showNotification(message, type = 'info') {
     const notification = document.createElement('div');

@@ -19,7 +19,7 @@
 🟡🚧fer servir lo de utils.js sempre, no repetir codi formatPace, formatTime...
 🟡🚧tot english 
 🟡🚧molts mes logs (a cada grafica?) 
-🔴⚠️avergae pace no surt a Dashboard?? 
+🔴🚨avergae pace no surt a Dashboard?? 
 🔴🩹wrapped -> exportar captura pels fans 
 🔴🚧text de alerta si no hi ha dades de HR 
 🔴⚠️arreglar "gears" del wrapped! (mapejar i eliminar "sources" com Hevy) 
@@ -32,12 +32,7 @@
 🔴🚧TLB ACT FRM.... que conti TOTES les activitats, no nomes running
 🔴🩹versio mobil
 🔴🚧carregar zonas, profile, gear, weather api... al iniciar app
-
 🟡⚠️GEARS separate bikes and shoes
-fer servir notification a shoes
-frame_type:
--MTB: 1
--gravel: 5
--TT: 4
--ROAD: 3
--CROSS: 2
+🟢🩹bike gears frame type!
+🔴🩹trail/road shoes in gears
+🔴🚨data xx/xx/xxxx en lastuse i firstuse
