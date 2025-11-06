@@ -1,5 +1,8 @@
 // js/activity.js
 
+
+//NO OFFICIAL
+
 // --- 1. IMPORTACIONES ---
 import * as utils from './utils.js';
 import { classifyRun } from './classifyRun.js';
