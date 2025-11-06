@@ -2273,10 +2273,11 @@ main {
   border-radius: 6px;
   background: #f7f7f7;
   cursor: pointer;
+  color: #0b0b0b;
 }
 .range-btn.active {
   background: #007bff;
-  color: white;
+  color:#0b0b0b;
   border-color: #007bff;
 }
 

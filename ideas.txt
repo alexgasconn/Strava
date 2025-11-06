@@ -6,14 +6,15 @@
 ⚠️ High Importance
 🚧 Medium priority
 🩹 Nice-to-have
+🌈 Algun dia...
 
 
 
 🔴⚠️logout no funciona (sen recorda) 
 🔴⚠️consistency map no es fiable, li falten/sobren dies?... 
-🔴⚠️Botons de filtre de Last days no es veuen 
-🔴⚠️wrapped no pot canviar de any 
-🔴🚧No es veu Monday a una matrix de Athlete 
+🔴🚨Botons de filtre de Last days no es veuen 
+🔴🚨wrapped no pot canviar de any 
+🔴🚨No es veu Monday a una matrix de Athlete 
 🔴🚨error a vegades al Heatmap calendar = (consistencymap) 
 🟡🚧esborrar codi inutil 
 🟡🚧fer servir lo de utils.js sempre, no repetir codi formatPace, formatTime...
@@ -30,11 +31,13 @@
 🔴🩹activity -> poder elegir el rolling mean dels streams!
 🔴🩹DASHBOARD -> objectius personalitzables (hores, # activities, km...)
 🔴🚧TLB ACT FRM.... que conti TOTES les activitats, no nomes running
-🔴🩹versio mobil
+🔴🌈versio mobil
 🔴🚧carregar zonas, profile, gear, weather api... al iniciar app
 🟡⚠️GEARS separate bikes and shoes
 🟢🩹bike gears frame type!
 🔴🩹trail/road shoes in gears
-🟡🚨data xx/xx/xxxx en lastuse i firstuse
+🟢🚨data xx/xx/xxxx en lastuse i firstuse
 🟡⚠️totes les dates mateix format
-🔴🚨time zones???
+🔴🚧time zones???
+🔴🚧miles or km...
+🔴🌈idiomes
