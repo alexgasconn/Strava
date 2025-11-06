@@ -131,7 +131,7 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
     const container = document.getElementById('dashboard-summary');
     if (!container) return;
     if (!lastRuns.length) {
-        container.innerHTML = "<p>No hay datos suficientes.</p>";
+        container.innerHTML = "<p>Not enough data.</p>";
         return;
     }
 
@@ -253,6 +253,7 @@ function renderTrainingLoadMetrics(runs) {
     const USER_MAX_HR = 195;
     const now = new Date();
 
+    // --- Compute daily TSS ---
     const tssData = runs.map(r => {
         const timeHours = r.moving_time / 3600;
         const intensity = r.average_heartrate ? (r.average_heartrate / USER_MAX_HR) : 0.7;
@@ -260,17 +261,27 @@ function renderTrainingLoadMetrics(runs) {
         return { date: new Date(r.start_date_local), tss };
     }).sort((a, b) => a.date - b.date);
 
-    // --- Calculate CTL (42d) and ATL (7d) ---
-    let ctl = 0, atl = 0;
-    const ctlDays = 42, atlDays = 7;
-    for (let i = 0; i < tssData.length; i++) {
-        ctl = (tssData[i].tss + ctl * (ctlDays - 1)) / ctlDays;
-        atl = (tssData[i].tss + atl * (atlDays - 1)) / atlDays;
-    }
+    // --- Aggregate by day ---
+    const effortByDay = {};
+    tssData.forEach(({ date, tss }) => {
+        const day = date.toISOString().split('T')[0];
+        effortByDay[day] = (effortByDay[day] || 0) + tss;
+    });
 
-    const tsb = ctl - atl;
-    const tsbColor = tsb > 0 ? '#2ECC40' : '#FF4136';
-    const totalLoad = tssData.reduce((sum, t) => sum + t.tss, 0).toFixed(0);
+    const days = Object.keys(effortByDay).sort();
+    const dailyEffort = days.map(d => effortByDay[d] || 0);
+
+    // --- Use calculateFitness() ---
+    const { atl, ctl, tsb, injuryRisk } = utils.calculateFitness(dailyEffort);
+
+    // Últimos valores (día más reciente)
+    const lastATL = atl.at(-1);
+    const lastCTL = ctl.at(-1);
+    const lastTSB = tsb.at(-1);
+    const lastInjuryRisk = injuryRisk.at(-1);
+
+    const tsbColor = lastTSB > 0 ? '#2ECC40' : '#FF4136';
+    const totalLoad = dailyEffort.reduce((sum, v) => sum + v, 0).toFixed(0);
 
     // --- Weekly load change ---
     const recent = tssData.filter(t => (now - t.date) / 86400000 <= 14);
@@ -281,38 +292,23 @@ function renderTrainingLoadMetrics(runs) {
     const loadChange = load2 > 0 ? ((load1 - load2) / load2) * 100 : 0;
     const loadTrend = loadChange > 0 ? '↗' : '↘';
 
-    // --- Days without recent activity ---
+    // --- Days since last activity ---
     const lastRunDate = tssData.length ? tssData[tssData.length - 1].date : null;
     const daysSinceLast = lastRunDate ? Math.floor((now - lastRunDate) / 86400000) : 999;
 
-    // --- General load message ---
+    // --- Load message ---
     let message = '';
     let color = '#333';
     let emoji = '';
 
-    if (tsb < -15) { emoji = '⚠️'; message = 'High fatigue, rest needed'; color = '#FF4136'; }
-    else if (tsb < -5) { emoji = '⚠️'; message = 'Moderate fatigue, maintain controlled load'; color = '#FF851B'; }
-    else if (tsb <= 5) { emoji = '✅'; message = 'Optimal balance of load and recovery'; color = '#0074D9'; }
+    if (lastTSB < -15) { emoji = '⚠️'; message = 'High fatigue, rest needed'; color = '#FF4136'; }
+    else if (lastTSB < -5) { emoji = '⚠️'; message = 'Moderate fatigue, maintain controlled load'; color = '#FF851B'; }
+    else if (lastTSB <= 5) { emoji = '✅'; message = 'Optimal balance of load and recovery'; color = '#0074D9'; }
     else { emoji = '💪'; message = 'Ready for more intense load'; color = '#2ECC40'; }
 
     if (loadChange > 20) message += ', strong weekly increase';
     else if (loadChange > 5) message += ', load increasing';
     else if (loadChange < -10) message += ', possible detraining';
-
-    // --- Realistic injury risk model ---
-    // Based on: TSB (fatigue), load change, CTL/ATL ratio, and rest
-    const fatigueFactor = Math.max(0, -tsb) * 2;              // more fatigue → more risk
-    const loadFactor = Math.max(0, loadChange);               // sharp increases in load
-    const ratioFactor = Math.abs(ctl - atl);                  // chronic-acute imbalance
-    const restFactor = daysSinceLast > 3 ? (daysSinceLast - 3) * 3 : 0;  // excessive inactivity also penalizes
-
-    let injuryScore = fatigueFactor + loadFactor * 0.6 + ratioFactor * 0.8 + restFactor;
-    injuryScore = Math.min(100, Math.max(5, injuryScore / 2)); // normalized
-
-    let injuryRisk = 'Low';
-    if (injuryScore > 70) injuryRisk = 'Critical';
-    else if (injuryScore > 50) injuryRisk = 'High';
-    else if (injuryScore > 30) injuryRisk = 'Moderate';
 
     // --- Display ---
     container.innerHTML = `
@@ -320,15 +316,15 @@ function renderTrainingLoadMetrics(runs) {
             <h3>📊 Training Load</h3>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1rem;">
                 <div>
-                    <p style="font-size:1.4rem;font-weight:bold;color:#0074D9;">CTL: ${ctl.toFixed(1)}</p>
+                    <p style="font-size:1.4rem;font-weight:bold;color:#0074D9;">CTL: ${lastCTL.toFixed(1)}</p>
                     <small>Chronic load</small>
                 </div>
                 <div>
-                    <p style="font-size:1.4rem;font-weight:bold;color:#FF4136;">ATL: ${atl.toFixed(1)}</p>
+                    <p style="font-size:1.4rem;font-weight:bold;color:#FF4136;">ATL: ${lastATL.toFixed(1)}</p>
                     <small>Acute load</small>
                 </div>
                 <div>
-                    <p style="font-size:1.4rem;font-weight:bold;color:${tsbColor};">TSB: ${tsb.toFixed(1)}</p>
+                    <p style="font-size:1.4rem;font-weight:bold;color:${tsbColor};">TSB: ${lastTSB.toFixed(1)}</p>
                     <small>Balance</small>
                 </div>
                 <div>
@@ -342,7 +338,7 @@ function renderTrainingLoadMetrics(runs) {
             </div>
             <p style="text-align:center;font-weight:bold;margin-top:0.5rem;color:${color};">${emoji} ${message}</p>
             <p style="text-align:center;font-weight:bold;margin-top:0.25rem;color:#FF4136;">
-                ⚠️ Injury risk: ${injuryRisk} (~${injuryScore.toFixed(0)}%)
+                ⚠️ Injury risk: ~${lastInjuryRisk.toFixed(1)}%
             </p>
             <small style="display:block;text-align:center;color:#666;">
                 Last activity: ${daysSinceLast === 0 ? 'today' : daysSinceLast + ' days'}
@@ -350,6 +346,7 @@ function renderTrainingLoadMetrics(runs) {
         </div>
     `;
 }
+
 
 
 
@@ -382,7 +379,7 @@ function renderVO2maxEvolution(lastRuns, previousLastRuns) {
 
     if (vo2maxData.length < 2) {
         const canvas = document.getElementById('dashboard-vo2max');
-        if (canvas) canvas.innerHTML = '<p style="text-align:center; padding:2rem;">No datos FC para VO₂max</p>';
+        if (canvas) canvas.innerHTML = '<p style="text-align:center; padding:2rem;">No HR data available for VO₂max</p>';
         return;
     }
 
