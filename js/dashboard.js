@@ -178,81 +178,56 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
         <div class="card">
             <h3>📏 Total Distance</h3>
             <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${totalDistance.toFixed(1)} km</p>
-            <small><span style="color:${metricColor('distance', distChange)};">${metricIcon('distance', distChange)} ${distChange}%</span></small>
+            <small><span style="color:${utils.metricColor('distance', distChange)};">${utils.metricIcon('distance', distChange)} ${distChange}%</span></small>
         </div>
 
         <div class="card">
             <h3>🕒 Total Time</h3>
             <p style="font-size:2rem;font-weight:bold;color:#B10DC9;">${totalTime.toFixed(1)} h</p>
-            <small><span style="color:${metricColor('time', timeChange)};">${metricIcon('time', timeChange)} ${timeChange}%</span></small>
+            <small><span style="color:${utils.metricColor('time', timeChange)};">${utils.metricIcon('time', timeChange)} ${timeChange}%</span></small>
         </div>
 
         <div class="card">
             <h3>⛰️ Elevationn</h3>
             <p style="font-size:2rem;font-weight:bold;color:#2ECC40;">${totalElevation.toFixed(0)} m</p>
-            <small><span style="color:${metricColor('elevation', elevChange)};">${metricIcon('elevation', elevChange)} ${elevChange}%</span></small>
+            <small><span style="color:${utils.metricColor('elevation', elevChange)};">${utils.metricIcon('elevation', elevChange)} ${elevChange}%</span></small>
         </div>
 
         <div class="card">
             <h3>⚡ Average Pace</h3>
             <p style="font-size:2rem;font-weight:bold;color:#B10DC9;"> ${utils.paceDecimalToTime(avgPace)} </p>
-            <small><span style="color:${metricColor('pace', paceChange)};">${metricIcon('pace', paceChange)} ${paceChange}%</small>
+            <small><span style="color:${utils.metricColor('pace', paceChange)};">${utils.metricIcon('pace', paceChange)} ${paceChange}%</small>
         </div>
 
 
         <div class="card">
             <h3>❤️ Average HR</h3>
             <p style="font-size:2rem;font-weight:bold;color:#FF4136;">${avgHR ? avgHR.toFixed(0) : '–'} bpm</p>
-            <small><span style="color:${metricColor('hr', hrChange)};">${metricIcon('hr', hrChange)} ${hrChange}%</span></small>
+            <small><span style="color:${utils.metricColor('hr', hrChange)};">${utils.metricIcon('hr', hrChange)} ${hrChange}%</span></small>
         </div>
 
         <div class="card">
             <h3>🫁 VO₂max</h3>
             <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${avgVO2 ? avgVO2.toFixed(1) : '–'}</p>
-            <small><span style="color:${metricColor('vo2', vo2Change)};">${metricIcon('vo2', vo2Change)} ${vo2Change}%</span></small>
+            <small><span style="color:${utils.metricColor('vo2', vo2Change)};">${utils.metricIcon('vo2', vo2Change)} ${vo2Change}%</span></small>
         </div>
         <div class="card">
 
             <h3>🏃‍♂️ Average Distance</h3>
             <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${avgDistance.toFixed(1)} km</p>
-            <small><span style="color:${metricColor('distance', avgDistChange)};">${metricIcon('distance', avgDistChange)} ${avgDistChange}%</span></small>
+            <small><span style="color:${utils.metricColor('distance', avgDistChange)};">${utils.metricIcon('distance', avgDistChange)} ${avgDistChange}%</span></small>
         </div>
         <div class="card">
             <h3>⚠️ Injury Risk</h3>
             <p style="font-size:2rem;font-weight:bold;color:#FF4136;">${injuryRisk.toFixed(1)}%</p>
-            <small><span style="color:${metricColor('injury', injuryRiskChange)};">${metricIcon('injury', injuryRiskChange)} ${injuryRiskChange}%</span></small>
+            <small><span style="color:${utils.metricColor('injury', injuryRiskChange)};">${utils.metricIcon('injury', injuryRiskChange)} ${injuryRiskChange}%</span></small>
         </div>
     `;
 
-    // --- Colores e iconos por métrica ---
-    function metricColor(metric, change) {
-        if (change == 0) return '#888';
 
-        // Menor es mejor → verde si baja
-        if (['pace', 'hr'].includes(metric))
-            return change < 0 ? '#2ECC40' : '#FF4136';
-
-        // Mayor es mejor → verde si sube
-        return change > 0 ? '#2ECC40' : '#FF4136';
-    }
-
-    function metricIcon(metric, change) {
-        if (change == 0) return '•';
-
-        if (['pace', 'hr'].includes(metric))
-            return change < 0 ? '▼' : '▲'; // baja = mejora
-
-        return change > 0 ? '▲' : '▼';
-    }
 }
 
-// --- helpers de icono/color --- 
-function trendColor(p) {
-    return p > 0 ? '#2ECC40' : (p < 0 ? '#FF4136' : '#888');
-}
-function trendIcon(p) {
-    return p > 0 ? '▲' : (p < 0 ? '▼' : '•');
-}
+
 
 function renderTrainingLoadMetrics(runs, allActivities) {
     const container = document.getElementById('training-load-metrics');
@@ -272,7 +247,6 @@ function renderTrainingLoadMetrics(runs, allActivities) {
         })
         .sort((a, b) => a.date - b.date);
 
-    // --- 2️⃣ Agregar por día
     const effortByDayAll = {};
     tssDataAll.forEach(({ date, tss }) => {
         const day = date.toISOString().split('T')[0];
@@ -282,17 +256,15 @@ function renderTrainingLoadMetrics(runs, allActivities) {
     const daysAll = Object.keys(effortByDayAll).sort();
     const dailyEffortAll = daysAll.map(d => effortByDayAll[d] || 0);
 
-    // --- 3️⃣ Calcular fitness global (todas las fechas)
     const { atl, ctl, tsb, injuryRisk } = utils.calculateFitness(dailyEffortAll);
 
-    // --- 4️⃣ Asignar valores de riesgo a las actividades visibles
     runs.forEach(r => {
         const day = new Date(r.start_date_local).toISOString().split('T')[0];
         const idx = daysAll.indexOf(day);
         r.injuryRisk = idx >= 0 ? injuryRisk[idx] || 0 : null;
     });
 
-    // --- 5️⃣ Mostrar solo métricas del rango visible (último día del rango)
+
     const tssDataVisible = runs.map(r => {
         const timeHours = r.moving_time / 3600;
         const intensity = r.average_heartrate ? (r.average_heartrate / USER_MAX_HR) : 0.7;
@@ -361,7 +333,7 @@ function renderTrainingLoadMetrics(runs, allActivities) {
                     <small>Total load (range)</small>
                 </div>
                 <div>
-                    <p style="font-size:1.4rem;font-weight:bold;color:${trendColor(loadChange)};">${loadTrend} ${loadChange.toFixed(1)}%</p>
+                    <p style="font-size:1.4rem;font-weight:bold;color:${utils.trendColor(loadChange)};">${loadTrend} ${loadChange.toFixed(1)}%</p>
                     <small>Weekly change</small>
                 </div>
             </div>
@@ -421,8 +393,8 @@ function renderVO2maxEvolution(lastRuns, previousLastRuns) {
 
     // Calcular tendencia
     const vo2maxChange = ((vo2maxData.at(-1).vo2max - vo2maxData[0].vo2max) / vo2maxData[0].vo2max * 100);
-    const changeColor = trendColor(vo2maxChange);
-    const changeIcon = trendIcon(vo2maxChange);
+    const changeColor = utils.trendColor(vo2maxChange);
+    const changeIcon = utils.trendIcon(vo2maxChange);
 
     // Mostrar tendencia
     const container = document.getElementById('dashboard-vo2max').parentElement;

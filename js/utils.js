@@ -94,13 +94,43 @@ export function formatDate(date) {
 }
 
 export function paceDecimalToTime(paceDecimal) {
-  if (isNaN(paceDecimal) || paceDecimal <= 0) return "–";
+    if (isNaN(paceDecimal) || paceDecimal <= 0) return "–";
 
-  const minutes = Math.floor(paceDecimal);
-  const seconds = Math.round((paceDecimal - minutes) * 60);
+    const minutes = Math.floor(paceDecimal);
+    const seconds = Math.round((paceDecimal - minutes) * 60);
 
-  const adjMinutes = seconds === 60 ? minutes + 1 : minutes;
-  const adjSeconds = seconds === 60 ? 0 : seconds;
+    const adjMinutes = seconds === 60 ? minutes + 1 : minutes;
+    const adjSeconds = seconds === 60 ? 0 : seconds;
 
-  return `${adjMinutes}:${adjSeconds.toString().padStart(2, "0")}`;
+    return `${adjMinutes}:${adjSeconds.toString().padStart(2, "0")}`;
+}
+
+
+// --- helpers de icono/color --- 
+export function trendColor(p) {
+    return p > 0 ? '#2ECC40' : (p < 0 ? '#FF4136' : '#888');
+}
+export function trendIcon(p) {
+    return p > 0 ? '▲' : (p < 0 ? '▼' : '•');
+}
+
+// --- Colores e iconos por métrica ---
+export function metricColor(metric, change) {
+    if (change == 0) return '#888';
+
+    // Menor es mejor → verde si baja
+    if (['pace', 'hr'].includes(metric))
+        return change < 0 ? '#2ECC40' : '#FF4136';
+
+    // Mayor es mejor → verde si sube
+    return change > 0 ? '#2ECC40' : '#FF4136';
+}
+
+export function metricIcon(metric, change) {
+    if (change == 0) return '•';
+
+    if (['pace', 'hr'].includes(metric))
+        return change < 0 ? '▼' : '▲'; // baja = mejora
+
+    return change > 0 ? '▲' : '▼';
 }
