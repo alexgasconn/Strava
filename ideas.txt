@@ -32,6 +32,7 @@
 🔴🩹DASHBOARD -> objectius personalitzables (hores, # activities, km...)
 🔴🚧TLB ACT FRM.... que conti TOTES les activitats, no nomes running
 🔴🌈versio mobil
+🔴🌈fer gear_{id} amb mapes i mes stats de cada gear
 🔴🚧carregar zonas, profile, gear, weather api... al iniciar app
 🟡⚠️GEARS separate bikes and shoes
 🟢🩹bike gears frame type!
@@ -41,3 +42,5 @@
 🔴🚧time zones???
 🔴🚧miles or km...
 🔴🌈idiomes
+🔴⚠️format del pace decimals-> time amb utils.paceDecimalToTime(pace)
+🟡⚠️DASHBOARD-> juntar "Recent Runs with Maps and VO₂max" i "Last 5 activities"

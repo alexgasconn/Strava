@@ -34,16 +34,23 @@ export function calculateFitness(dailyEffort) {
         }
         return result;
     }
+
     const atl = expMovingAvg(dailyEffort, 1 / 7);
     const ctl = expMovingAvg(dailyEffort, 1 / 42);
     const tsb = ctl.map((c, i) => c - atl[i]);
-    return { atl, ctl, tsb };
+
+    const injuryRisk = tsb.map(tsbVal => {
+        const k = 0.25;  // steepness of the curve
+        const x0 = -10;  // TSB where risk = 50%
+        const risk = 1 / (1 + Math.exp(-k * (x0 - tsbVal))); // sigmoid
+        return +(risk * 100).toFixed(2); // convert to %
+    });
+
+    return { atl, ctl, tsb, injuryRisk };
 }
 
-/**
- * @param {Date} date - El objeto Date.
- * @returns {number} - El número de la semana.
- */
+
+
 export function getISOWeek(date) {
     const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
     const dayNum = d.getUTCDay() || 7;
@@ -51,7 +58,6 @@ export function getISOWeek(date) {
     const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
     return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 }
-
 
 
 export function formatTime(sec) {
