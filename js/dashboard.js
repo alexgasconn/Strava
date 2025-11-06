@@ -285,7 +285,7 @@ function renderTrainingLoadMetrics(runs) {
     runs.forEach(r => {
         const day = new Date(r.start_date_local).toISOString().split('T')[0];
         const idx = days.indexOf(day);
-        r.injury_risk = idx >= 0 ? injuryRisk[idx] || 0 : null;
+        r.injuryRisk = idx >= 0 ? injuryRisk[idx] || 0 : null;
     });
 
     // Últimos valores (día más reciente)
