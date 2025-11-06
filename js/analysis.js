@@ -13,7 +13,7 @@ export function renderAnalysisTab(allActivities, dateFilterFrom, dateFilterTo) {
     renderPaceVsDistanceChart(runs);
     renderDistanceHistogram(runs);
     renderVo2maxChart(runs);
-    renderFitnessChart(runs);
+    renderFitnessChart(filteredActivities);
     renderAccumulatedDistanceChart(runs);
     renderRollingMeanDistanceChart(runs);
     renderDistanceVsElevationChart(runs);
