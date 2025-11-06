@@ -134,6 +134,26 @@ async function renderGearSection(runs) {
                     gear.type = 'shoe';
                 }
 
+                if (gear.type === 'shoe') {
+
+                    gear.notification_distance = gear.notification_distance ?? 700;
+                    gear.durability = gear.notification_distance;
+                } else if (gear.type === 'bike') {
+
+                    gear.durability = 15000;
+                    gear.notification_distance = null;
+                } else {
+                    gear.durability = 1000;
+                }
+
+                const frameTypeMap = {
+                    1: 'MTB',
+                    2: 'CROSS',
+                    3: 'ROAD',
+                    4: 'TT',
+                    5: 'GRAVEL'
+                };
+                gear.frame_category = frameTypeMap[gear.frame_type] || 'UNKNOWN';
                 gearDetailsMap.set(gear.id, gear);
             }
         });
@@ -247,6 +267,8 @@ function renderGearCards(combinedGearData) {
                 <span><strong>First Use:</strong> ${metrics.firstUse ? metrics.firstUse.toLocaleDateString() : 'N/A'}</span>
                 <span><strong>Last Use:</strong> ${metrics.lastUse ? metrics.lastUse.toLocaleDateString() : 'N/A'}</span>
                 <span><strong>Type:</strong> ${type}</span>
+                <span><strong>Category:</strong> ${gear.frame_category || '-'}</span>
+                <span><strong>Durability:</strong> ${gear.durability ? formatDistance(gear.durability, 0) : '-'}</span>
             </div>
             ${needsReplacement && !gear.retired ? '<div class="alert-danger">Replacement Needed!</div>' : ''}
             ${isEditMode ? editInputs : ''}
