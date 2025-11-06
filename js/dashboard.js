@@ -102,7 +102,7 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
     console.log(`Rendering dashboard (${selectedRangeDays} días) con ${recentRuns.length} runs`);
 
     renderVO2maxEvolution(recentRuns, midRecentRuns);
-    renderTrainingLoadMetrics(recentRuns, midRecentRuns);
+    renderTrainingLoadMetrics(recentRuns, allActivities);
     renderDashboardSummary(recentRuns, midRecentRuns);
     renderRecentMetrics(recentRuns);
     renderTimeDistribution(recentRuns);
@@ -254,63 +254,78 @@ function trendIcon(p) {
     return p > 0 ? '▲' : (p < 0 ? '▼' : '•');
 }
 
-function renderTrainingLoadMetrics(runs) {
+function renderTrainingLoadMetrics(runs, allActivities) {
     const container = document.getElementById('training-load-metrics');
     if (!container) return;
 
     const USER_MAX_HR = 195;
     const now = new Date();
 
-    // --- Compute daily TSS ---
-    const tssData = runs.map(r => {
+    // --- 1️⃣ Calcular TSS para TODAS las actividades (no solo las del rango)
+    const tssDataAll = allActivities
+        .filter(a => a.type && a.type.includes('Run'))
+        .map(r => {
+            const timeHours = r.moving_time / 3600;
+            const intensity = r.average_heartrate ? (r.average_heartrate / USER_MAX_HR) : 0.7;
+            const tss = timeHours * Math.pow(intensity, 4) * 100;
+            return { date: new Date(r.start_date_local), tss };
+        })
+        .sort((a, b) => a.date - b.date);
+
+    // --- 2️⃣ Agregar por día
+    const effortByDayAll = {};
+    tssDataAll.forEach(({ date, tss }) => {
+        const day = date.toISOString().split('T')[0];
+        effortByDayAll[day] = (effortByDayAll[day] || 0) + tss;
+    });
+
+    const daysAll = Object.keys(effortByDayAll).sort();
+    const dailyEffortAll = daysAll.map(d => effortByDayAll[d] || 0);
+
+    // --- 3️⃣ Calcular fitness global (todas las fechas)
+    const { atl, ctl, tsb, injuryRisk } = utils.calculateFitness(dailyEffortAll);
+
+    // --- 4️⃣ Asignar valores de riesgo a las actividades visibles
+    runs.forEach(r => {
+        const day = new Date(r.start_date_local).toISOString().split('T')[0];
+        const idx = daysAll.indexOf(day);
+        r.injuryRisk = idx >= 0 ? injuryRisk[idx] || 0 : null;
+    });
+
+    // --- 5️⃣ Mostrar solo métricas del rango visible (último día del rango)
+    const tssDataVisible = runs.map(r => {
         const timeHours = r.moving_time / 3600;
         const intensity = r.average_heartrate ? (r.average_heartrate / USER_MAX_HR) : 0.7;
         const tss = timeHours * Math.pow(intensity, 4) * 100;
         return { date: new Date(r.start_date_local), tss };
     }).sort((a, b) => a.date - b.date);
 
-    // --- Aggregate by day ---
-    const effortByDay = {};
-    tssData.forEach(({ date, tss }) => {
-        const day = date.toISOString().split('T')[0];
-        effortByDay[day] = (effortByDay[day] || 0) + tss;
-    });
+    const lastRunDate = tssDataVisible.length
+        ? tssDataVisible[tssDataVisible.length - 1].date
+        : null;
+    const lastDay = lastRunDate
+        ? lastRunDate.toISOString().split('T')[0]
+        : daysAll.at(-1);
+    const idx = daysAll.indexOf(lastDay);
 
-    const days = Object.keys(effortByDay).sort();
-    const dailyEffort = days.map(d => effortByDay[d] || 0);
+    const lastATL = atl[idx] ?? atl.at(-1);
+    const lastCTL = ctl[idx] ?? ctl.at(-1);
+    const lastTSB = tsb[idx] ?? tsb.at(-1);
+    const lastInjuryRisk = injuryRisk[idx] ?? injuryRisk.at(-1);
 
-    // --- Use calculateFitness() ---
-    const { atl, ctl, tsb, injuryRisk } = utils.calculateFitness(dailyEffort);
+    const totalLoad = tssDataVisible.reduce((sum, v) => sum + v.tss, 0).toFixed(0);
 
-    runs.forEach(r => {
-        const day = new Date(r.start_date_local).toISOString().split('T')[0];
-        const idx = days.indexOf(day);
-        r.injuryRisk = idx >= 0 ? injuryRisk[idx] || 0 : null;
-    });
-
-    // Últimos valores (día más reciente)
-    const lastATL = atl.at(-1);
-    const lastCTL = ctl.at(-1);
-    const lastTSB = tsb.at(-1);
-    const lastInjuryRisk = injuryRisk.at(-1);
-
-    const tsbColor = lastTSB > 0 ? '#2ECC40' : '#FF4136';
-    const totalLoad = dailyEffort.reduce((sum, v) => sum + v, 0).toFixed(0);
-
-    // --- Weekly load change ---
-    const recent = tssData.filter(t => (now - t.date) / 86400000 <= 14);
+    // --- Weekly load change solo dentro del rango visible
+    const recent = tssDataVisible.filter(t => (now - t.date) / 86400000 <= 14);
     const week1 = recent.filter(t => (now - t.date) / 86400000 <= 7);
     const week2 = recent.filter(t => (now - t.date) / 86400000 > 7);
     const load1 = week1.reduce((a, b) => a + b.tss, 0);
     const load2 = week2.reduce((a, b) => a + b.tss, 0);
     const loadChange = load2 > 0 ? ((load1 - load2) / load2) * 100 : 0;
     const loadTrend = loadChange > 0 ? '↗' : '↘';
+    const tsbColor = lastTSB > 0 ? '#2ECC40' : '#FF4136';
 
-    // --- Days since last activity ---
-    const lastRunDate = tssData.length ? tssData[tssData.length - 1].date : null;
-    const daysSinceLast = lastRunDate ? Math.floor((now - lastRunDate) / 86400000) : 999;
-
-    // --- Load message ---
+    // --- Mensaje
     let message = '';
     let color = '#333';
     let emoji = '';
@@ -324,7 +339,7 @@ function renderTrainingLoadMetrics(runs) {
     else if (loadChange > 5) message += ', load increasing';
     else if (loadChange < -10) message += ', possible detraining';
 
-    // --- Display ---
+    // --- Renderizado
     container.innerHTML = `
         <div class="load-card" style="background:#f0f9ff;border-radius:8px;padding:1rem;margin:1rem 0;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
             <h3>📊 Training Load</h3>
@@ -343,7 +358,7 @@ function renderTrainingLoadMetrics(runs) {
                 </div>
                 <div>
                     <p style="font-size:1.4rem;font-weight:bold;color:#FC5200;">${totalLoad}</p>
-                    <small>Total load</small>
+                    <small>Total load (range)</small>
                 </div>
                 <div>
                     <p style="font-size:1.4rem;font-weight:bold;color:${trendColor(loadChange)};">${loadTrend} ${loadChange.toFixed(1)}%</p>
@@ -354,12 +369,10 @@ function renderTrainingLoadMetrics(runs) {
             <p style="text-align:center;font-weight:bold;margin-top:0.25rem;color:#FF4136;">
                 ⚠️ Injury risk: ~${lastInjuryRisk.toFixed(1)}%
             </p>
-            <small style="display:block;text-align:center;color:#666;">
-                Last activity: ${daysSinceLast === 0 ? 'today' : daysSinceLast + ' days'}
-            </small>
         </div>
     `;
 }
+
 
 
 
