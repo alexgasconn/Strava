@@ -150,6 +150,7 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
     const avgVO2 = avg(lastRuns.filter(r => r.vo2max).map(r => r.vo2max));
     const avgPace = avg(lastRuns.map(r => (r.moving_time / 60) / (r.distance / 1000)));
     const avgDistance = totalDistance / lastRuns.length || 0;
+    const injuryRisk = avg(lastRuns.map(r => r.injuryRisk || 0));
 
     // --- Métricas previas ---
     const prevDistance = sum(previousLastRuns, km);
@@ -159,6 +160,7 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
     const prevVO2 = avg(previousLastRuns.filter(r => r.vo2max).map(r => r.vo2max));
     const prevPace = avg(previousLastRuns.map(r => (r.moving_time / 60) / (r.distance / 1000)));
     const prevAvgDistance = prevDistance / previousLastRuns.length || 0;
+    const prevInjuryRisk = avg(previousLastRuns.map(r => r.injuryRisk || 0));
 
     // --- Cambios porcentuales ---
     const distChange = calcChange(totalDistance, prevDistance);
@@ -168,6 +170,7 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
     const hrChange = calcChange(avgHR, prevHR);
     const vo2Change = calcChange(avgVO2, prevVO2);
     const avgDistChange = calcChange(avgDistance, prevAvgDistance);
+    const injuryRiskChange = calcChange(injuryRisk, prevInjuryRisk);
 
 
     // --- Renderizado ---
@@ -213,6 +216,11 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
             <h3>🏃‍♂️ Average Distance</h3>
             <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${avgDistance.toFixed(1)} km</p>
             <small><span style="color:${metricColor('distance', avgDistChange)};">${metricIcon('distance', avgDistChange)} ${avgDistChange}%</span></small>
+        </div>
+        <div class="card">
+            <h3>⚠️ Injury Risk</h3>
+            <p style="font-size:2rem;font-weight:bold;color:#FF4136;">${injuryRisk.toFixed(1)}%</p>
+            <small><span style="color:${metricColor('injury', injuryRiskChange)};">${metricIcon('injury', injuryRiskChange)} ${injuryRiskChange}%</span></small>
         </div>
     `;
 
