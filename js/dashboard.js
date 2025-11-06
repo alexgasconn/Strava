@@ -192,9 +192,10 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
 
         <div class="card">
             <h3>⚡ Average Pace</h3>
-            <p style="font-size:2rem;font-weight:bold;color:#B10DC9;">${avgPace.toFixed(2)}</p>
-            <small><span style="color:${metricColor('pace', paceChange)};">${metricIcon('pace', paceChange)} ${paceChange}%</span></small>
+            <p style="font-size:2rem;font-weight:bold;color:#B10DC9;"> ${Number(avgPace).toFixed(2)} </p>
+            <small><span style="color:${metricColor('pace', paceChange)};">${metricIcon('pace', paceChange)} ${paceChange}%</small>
         </div>
+
 
         <div class="card">
             <h3>❤️ Average HR</h3>
