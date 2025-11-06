@@ -169,6 +169,21 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
     const vo2Change = calcChange(avgVO2, prevVO2);
     const avgDistChange = calcChange(avgDistance, prevAvgDistance);
 
+    console.log('Dashboard Summary Changes:', {
+        distance: totalDistance, prevDistance, distChange,
+        time: totalTime, prevTime, timeChange,
+        elevation: totalElevation, prevElevation, elevChange,
+        pace: avgPace, prevPace, paceChange,
+        hr: avgHR, prevHR, hrChange,
+        vo2: avgVO2, prevVO2, vo2Change,
+        avgDistance: avgDistance, prevAvgDistance, avgDistChange
+    });
+
+
+    console.log(utils.formatPace(avgPace));
+    console.log(utils.formatPace(prevPace));
+    console.log(utils.formatPace(paceChange));
+
     // --- Renderizado ---
     container.innerHTML = `
         <div class="card">
