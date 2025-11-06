@@ -35,4 +35,6 @@
 🟡⚠️GEARS separate bikes and shoes
 🟢🩹bike gears frame type!
 🔴🩹trail/road shoes in gears
-🔴🚨data xx/xx/xxxx en lastuse i firstuse
+🟡🚨data xx/xx/xxxx en lastuse i firstuse
+🟡⚠️totes les dates mateix format
+🔴🚨time zones???

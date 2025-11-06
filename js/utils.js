@@ -79,7 +79,7 @@ export function formatPace(seconds, km) {
     return `${min}:${secRest.toString().padStart(2, '0')} /km`;
 }
 
-function formatDate(date) {
+ function formatDate(date) {
     if (!(date instanceof Date)) date = new Date(date);
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
