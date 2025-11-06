@@ -158,11 +158,7 @@ function processGearDetails(results) {
     results.forEach(result => {
         const gear = result.gear;
         if (!gear) return;
-
-        // Determine gear type
         gear.type = ('frame_type' in gear || 'weight' in gear) ? 'bike' : 'shoe';
-
-        // Set durability values
         if (gear.type === 'shoe') {
             gear.notification_distance = gear.notification_distance ?? 700;
             gear.durability = gear.notification_distance;
@@ -175,6 +171,7 @@ function processGearDetails(results) {
 
         gear.frame_category = frameTypeMap[gear.frame_type] || 'N/A';
         gearDetailsMap.set(gear.id, gear);
+        console.log(gearDetailsMap);
     });
 
     return gearDetailsMap;
@@ -302,8 +299,8 @@ function createStatsSection(metrics, gear, euroPerKm) {
                     <span class="stat-value">${formatDistance(metrics.avgDistancePerUse || 0, 1)}</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">Avg Pace</span>
-                    <span class="stat-value">${metrics.avgPace > 0 ? formatPace(metrics.avgPace) : '-'}</span>
+                    <span class="stat-label">First Use</span>
+                    <span class="stat-value">${metrics.firstUse ? formatDateShort(metrics.firstUse) : 'N/A'}</span>
                 </div>
             </div>
             <div class="stat-row">
