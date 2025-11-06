@@ -1,5 +1,6 @@
 // js/activity.js
 // import { classifyRun } from './classifyRun.js';
+import * as utils from './js/utils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -114,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return `
             <tr>
                 <td>${effort.name}</td>
-                <td>${formatTime(effort.moving_time)}</td>
+                <td>${utils.formatTime(effort.moving_time)}</td>
                 <td>${pace} /km</td>
                 <td>${achievements}</td>
             </tr>`;
@@ -152,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <tr>
                 <td>${lap.lap_index}</td>
                 <td>${(lap.distance / 1000).toFixed(2)} km</td>
-                <td>${formatTime(lap.moving_time)}</td>
+                <td>${utils.formatTime(lap.moving_time)}</td>
                 <td>${pace} /km</td>
                 <td>${Math.round(lap.total_elevation_gain)} m</td>
                 <td>${lap.average_heartrate ? Math.round(lap.average_heartrate) : '-'} bpm</td>
@@ -199,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return `
             <tr>
                 <td><a href="https://www.strava.com/segments/${effort.segment.id}" target="_blank">${effort.name}</a></td>
-                <td>${formatTime(effort.moving_time)}</td>
+                <td>${utils.formatTime(effort.moving_time)}</td>
                 <td>${pace} /km</td>
                 <td>${effort.average_heartrate ? Math.round(effort.average_heartrate) : '-'} bpm</td>
                 <td>${rank}</td>
@@ -230,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- Stats ---
         const distanceKm = (act.distance / 1000).toFixed(2);
-        const duration = formatTime(act.moving_time);
+        const duration = utils.formatTime(act.moving_time);
         const pace = formatPace(act.average_speed);
         const elevation = act.total_elevation_gain !== undefined ? act.total_elevation_gain : '-';
         const elevationPerKm = act.distance > 0 ? (act.total_elevation_gain / (act.distance / 1000)).toFixed(2) : '-';
@@ -555,11 +556,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Ejecutamos la función principal
     main();
 });
 
-const USER_MAX_HR = 190; // Cambia esto por tu FC máxima real o estimada
+const USER_MAX_HR = 190;
 
 function estimateVO2max(act, userMaxHr = USER_MAX_HR) {
     if (!act.distance || !act.moving_time || !act.average_heartrate) return '-';
@@ -588,16 +588,6 @@ function rollingMean(arr, windowSize = 25) {
     return result;
 }
 
-
-// =============================================
-//  NUEVA FUNCIÓN: COEFICIENTE DE VARIACIÓN (CV)
-// =============================================
-/**
- * Calcula el Coeficiente de Variación (CV) para un array de números.
- * El CV es la desviación estándar dividida por la media, expresada como porcentaje.
- * @param {number[]} data - Array de números (ej. ritmo, FC).
- * @returns {string} El CV como un string de porcentaje (ej. "4.5%") o '-' si no se puede calcular.
- */
 function calculateVariability(data, applySmoothing = false) {
     if (applySmoothing) {
         data = rollingMean(data, 150); // Aplica suavizado solo si se solicita
@@ -620,7 +610,6 @@ function calculateVariability(data, applySmoothing = false) {
     return `${cv.toFixed(1)}%`;
 }
 
-
 function formatPace(speedInMps) {
     if (!speedInMps || speedInMps === 0) return '-';
     const paceInSecPerKm = 1000 / speedInMps;
@@ -630,17 +619,6 @@ function formatPace(speedInMps) {
 }
 
 
-
-
-
-
-
-
-
-/**
- * Renderiza los resultados del clasificador en la UI.
- * @param {object[]} results - El array de resultados de la función classifyRun.
- */
 function renderClassifierResults(classificationData) {
     const container = document.getElementById('run-classifier-results');
     if (!container) return;
@@ -671,18 +649,6 @@ function renderClassifierResults(classificationData) {
 }
 
 
-
-// =================================================================
-//     NUEVO MÓDULO: GRÁFICO DE DISTRIBUCIÓN DE ZONAS DE FC (Barra)
-// =================================================================
-
-/**
- * Procesa los streams de FC y tiempo para calcular el tiempo total en cada zona de FC.
- * @param {object} heartrateStream - El stream de datos de FC.
- * @param {object} timeStream - El stream de datos de tiempo.
- * @param {object[]} zones - Las zonas de FC del atleta (de la API).
- * @returns {number[]} Un array con el tiempo en segundos para cada zona.
- */
 function calculateTimeInZones(heartrateStream, timeStream, zones) {
     if (!heartrateStream || !timeStream || !zones || zones.length === 0) {
         return [];
@@ -711,10 +677,7 @@ function calculateTimeInZones(heartrateStream, timeStream, zones) {
     return timeInZones;
 }
 
-/**
- * Renderiza un gráfico de barras con la distribución del tiempo en zonas de FC.
- * @param {object} streams - Los streams de la actividad.
- */
+
 function renderHrZoneDistributionChart(streams) {
     const canvas = document.getElementById('hr-zones-chart');
     if (!canvas || !streams.heartrate || !streams.time) {
@@ -788,8 +751,6 @@ function renderHrZoneDistributionChart(streams) {
         }
     });
 }
-
-
 
 
 function renderHrMinMaxAreaChart(streams) {

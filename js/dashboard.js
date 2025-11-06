@@ -112,6 +112,7 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
     renderRecentRunsWithMapsAndVO2max(recentRuns);
 }
 
+
 let dashboardCharts = {};
 function createDashboardChart(canvasId, config) {
     const canvas = document.getElementById(canvasId);
@@ -226,8 +227,6 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
 
 
 }
-
-
 
 function renderTrainingLoadMetrics(runs, allActivities) {
     const container = document.getElementById('training-load-metrics');
@@ -346,11 +345,6 @@ function renderTrainingLoadMetrics(runs, allActivities) {
 }
 
 
-
-
-
-
-
 function renderVO2maxEvolution(lastRuns, previousLastRuns) {
     const runs = lastRuns.concat(previousLastRuns);
     const USER_MAX_HR = 195;
@@ -446,8 +440,6 @@ function renderVO2maxEvolution(lastRuns, previousLastRuns) {
         }
     });
 }
-
-
 
 function renderRecentMetrics(runs) {
     const container = document.getElementById('dashboard-recent-metrics');
@@ -666,7 +658,6 @@ function renderRecentActivitiesList(runs) {
     container.innerHTML = activitiesHtml;
 }
 
-// === NUEVO: CARRERAS RECIENTES CON MAPAS Y VO2MAX ===
 function renderRecentRunsWithMapsAndVO2max(runs) {
     const container = document.getElementById('recent-runs-maps');
     if (!container) return;
@@ -800,7 +791,6 @@ function renderMiniMap(runId, polyline) {
     }
 }
 
-// Polyline decoder (Google Encoded Polyline Algorithm Format)
 function decodePolyline(encoded) {
     if (!encoded) return [];
 
