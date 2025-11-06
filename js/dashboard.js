@@ -169,20 +169,6 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
     const vo2Change = calcChange(avgVO2, prevVO2);
     const avgDistChange = calcChange(avgDistance, prevAvgDistance);
 
-    console.log('Dashboard Summary Changes:', {
-        distance: totalDistance, prevDistance, distChange,
-        time: totalTime, prevTime, timeChange,
-        elevation: totalElevation, prevElevation, elevChange,
-        pace: avgPace, prevPace, paceChange,
-        hr: avgHR, prevHR, hrChange,
-        vo2: avgVO2, prevVO2, vo2Change,
-        avgDistance: avgDistance, prevAvgDistance, avgDistChange
-    });
-
-
-    console.log(utils.formatPace(avgPace));
-    console.log(utils.formatPace(prevPace));
-    console.log(utils.formatPace(paceChange));
 
     // --- Renderizado ---
     container.innerHTML = `
@@ -206,7 +192,7 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
 
         <div class="card">
             <h3>⚡ Average Pace</h3>
-            <p style="font-size:2rem;font-weight:bold;color:#B10DC9;">${utils.formatPace(avgPace)}</p>
+            <p style="font-size:2rem;font-weight:bold;color:#B10DC9;">${avgPace}</p>
             <small><span style="color:${metricColor('pace', paceChange)};">${metricIcon('pace', paceChange)} ${paceChange}%</span></small>
         </div>
 
