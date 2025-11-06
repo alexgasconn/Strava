@@ -94,9 +94,9 @@ function renderRecordStats(runs) {
 
     container.innerHTML = `
             <ul style="list-style: none; padding-left: 0; line-height: 1.8;">
-                <li><strong>Longest Run:</strong> ${(longestRun.distance / 1000).toFixed(2)} km (<a href="activity.html?id=${longestRun.id}" target="_blank">View</a>)</li>
-                <li><strong>Fastest Run (Pace):</strong> ${paceStr} /km over ${(fastestRun.distance / 1000).toFixed(1)}k (<a href="activity.html?id=${fastestRun.id}" target="_blank">View</a>)</li>
-                <li><strong>Most Elevation:</strong> ${Math.round(mostElev.total_elevation_gain)} m (<a href="activity.html?id=${mostElev.id}" target="_blank">View</a>)</li>
+                <li><strong>Longest Run:</strong> ${(longestRun.distance / 1000).toFixed(2)} km (<a href="html/activity.html?id=${longestRun.id}" target="_blank">View</a>)</li>
+                <li><strong>Fastest Run (Pace):</strong> ${paceStr} /km over ${(fastestRun.distance / 1000).toFixed(1)}k (<a href="html/activity.html?id=${fastestRun.id}" target="_blank">View</a>)</li>
+                <li><strong>Most Elevation:</strong> ${Math.round(mostElev.total_elevation_gain)} m (<a href="html/activity.html?id=${mostElev.id}" target="_blank">View</a>)</li>
                 <li><strong>Time Span:</strong> ${timeDiffDays} days (${oldestRun.start_date_local.substring(0, 10)} to ${newestRun.start_date_local.substring(0, 10)})</li>
                 <li><strong>Favourite Hour:</strong> ${favHour}:00</li>
                 <li><strong>Favourite Day:</strong> ${favDay}</li>

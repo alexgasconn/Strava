@@ -876,7 +876,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
                   <td class="table-time">${utils.formatTime(Number(a.moving_time) || 0)}</td>
                   <td class="table-pace">${pace}</td>
                   <td class="table-action">
-                    <a href="activity.html?id=${a.id}" target="_blank" class="table-link">
+                    <a href="html/activity.html?id=${a.id}" target="_blank" class="table-link">
                       View →
                     </a>
                   </td>

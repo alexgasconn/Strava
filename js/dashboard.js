@@ -466,7 +466,7 @@ function renderRecentMetrics(runs) {
                     ` : '<small style="color: #999;">No HR</small>'}
                 </div>
                 <div style="text-align: right; min-width: 80px;">
-                    <a href="activity.html?id=${r.id}" target="_blank" style="font-size:0.9em; color:#0077cc; text-decoration:none;">
+                    <a href="html/activity.html?id=${r.id}" target="_blank" style="font-size:0.9em; color:#0077cc; text-decoration:none;">
                         View →
                     </a>
                 </div>
@@ -645,7 +645,7 @@ function renderRecentActivitiesList(runs) {
                     </div>
                 </div>
                 <div style="flex: 0 0 100px; text-align: right;">
-                    <a href="activity.html?id=${r.id}" target="_blank" 
+                    <a href="html/activity.html?id=${r.id}" target="_blank" 
                        style="display: inline-block; padding: 0.5rem 1rem; background: #FC5200; color: white; 
                               text-decoration: none; border-radius: 4px; font-size: 0.9rem;">
                         View
@@ -707,7 +707,7 @@ function renderRecentRunsWithMapsAndVO2max(runs) {
                 </div>
                 <div id="map-${r.id}" style="width: 100%; height: 200px; border-radius: 4px; background: #f0f0f0;"></div>
                 <div style="margin-top: 0.5rem; text-align: right;">
-                    <a href="activity.html?id=${r.id}" target="_blank" style="font-size:0.9em; color:#0077cc; text-decoration:none;">
+                    <a href="html/activity.html?id=${r.id}" target="_blank" style="font-size:0.9em; color:#0077cc; text-decoration:none;">
                         View activity →
                     </a>
                 </div>

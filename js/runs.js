@@ -108,7 +108,7 @@ export function renderRunsTab(allActivities) {
                             <p style="font-size:1em; color:#333; margin:0;">Distance: ${run.actual_run_km.toFixed(2)} km</p>
                             <p style="font-size:0.9em; color:#555; margin:0;">Pace: ${formatPace(run.time_at_target, run.actual_run_km)}</p>
                             <p style="font-size:0.8em; color:#777; margin:0.2em 0;">${new Date(run.start_date).toLocaleDateString()}</p>
-                            <a href="activity.html?id=${run.id}" target="_blank" style="font-size:0.8em; color:#0077cc; text-decoration:none;">
+                            <a href="html/activity.html?id=${run.id}" target="_blank" style="font-size:0.8em; color:#0077cc; text-decoration:none;">
                                 View activity →
                             </a>
                         </div>
@@ -147,7 +147,7 @@ export function renderRunsTab(allActivities) {
                 <td>${distKm} km</td>
                 <td>${timeStr}</td>
                 <td>${paceStr} /km</td>
-                <td><a href="activity.html?id=${act.id}" target="_blank"><button>View</button></a></td>
+                <td><a href="html/activity.html?id=${act.id}" target="_blank"><button>View</button></a></td>
             </tr>`;
         }).join('');
         container.innerHTML = tableHeader + `<tbody>${tableBody}</tbody>`;
@@ -182,7 +182,7 @@ export function renderRunsTab(allActivities) {
                 <td>${distKm} km</td>
                 <td>${timeStr}</td>
                 <td>${paceStr} /km</td>
-                <td><a href="activity.html?id=${act.id}" target="_blank"><button>View</button></a></td>
+                <td><a href="html/activity.html?id=${act.id}" target="_blank"><button>View</button></a></td>
             </tr>`;
         }).join('');
 

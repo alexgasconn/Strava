@@ -1,9 +1,8 @@
 // js/activity.js
 // import { classifyRun } from './classifyRun.js';
 
-
 document.addEventListener('DOMContentLoaded', () => {
-
+    
     // --- 1. REFERENCIAS AL DOM Y ESTADO INICIAL ---
     const params = new URLSearchParams(window.location.search);
     const activityId = parseInt(params.get('id'), 10);
@@ -17,13 +16,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // --- 2. FUNCIONES DE UTILIDAD ---
-    // function formatTime(seconds) {
-    //     if (isNaN(seconds) || seconds < 0) return '0:00';
-    //     const h = Math.floor(seconds / 3600);
-    //     const m = Math.floor((seconds % 3600) / 60);
-    //     const s = Math.round(seconds % 60);
-    //     return `${h > 0 ? h + ':' : ''}${m.toString().padStart(h > 0 ? 2 : 1, '0')}:${s.toString().padStart(2, '0')}`;
-    // }
+    function formatTime(seconds) {
+        if (isNaN(seconds) || seconds < 0) return '0:00';
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = Math.round(seconds % 60);
+        return `${h > 0 ? h + ':' : ''}${m.toString().padStart(h > 0 ? 2 : 1, '0')}:${s.toString().padStart(2, '0')}`;
+    }
 
 
     function decodePolyline(str) {
@@ -115,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return `
             <tr>
                 <td>${effort.name}</td>
-                <td>${utils.formatTime(effort.moving_time)}</td>
+                <td>${formatTime(effort.moving_time)}</td>
                 <td>${pace} /km</td>
                 <td>${achievements}</td>
             </tr>`;
@@ -153,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <tr>
                 <td>${lap.lap_index}</td>
                 <td>${(lap.distance / 1000).toFixed(2)} km</td>
-                <td>${utils.formatTime(lap.moving_time)}</td>
+                <td>${formatTime(lap.moving_time)}</td>
                 <td>${pace} /km</td>
                 <td>${Math.round(lap.total_elevation_gain)} m</td>
                 <td>${lap.average_heartrate ? Math.round(lap.average_heartrate) : '-'} bpm</td>
@@ -200,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return `
             <tr>
                 <td><a href="https://www.strava.com/segments/${effort.segment.id}" target="_blank">${effort.name}</a></td>
-                <td>${utils.formatTime(effort.moving_time)}</td>
+                <td>${formatTime(effort.moving_time)}</td>
                 <td>${pace} /km</td>
                 <td>${effort.average_heartrate ? Math.round(effort.average_heartrate) : '-'} bpm</td>
                 <td>${rank}</td>
@@ -231,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- Stats ---
         const distanceKm = (act.distance / 1000).toFixed(2);
-        const duration = utils.formatTime(act.moving_time);
+        const duration = formatTime(act.moving_time);
         const pace = formatPace(act.average_speed);
         const elevation = act.total_elevation_gain !== undefined ? act.total_elevation_gain : '-';
         const elevationPerKm = act.distance > 0 ? (act.total_elevation_gain / (act.distance / 1000)).toFixed(2) : '-';
@@ -545,10 +544,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const classificationResults = classifyRun(activityData, streamData);
             renderClassifierResults(classificationResults);
             renderHrMinMaxAreaChart(streamData);
-
             renderHrZoneDistributionChart(streamData);
 
-            streamChartsDiv.style.display = ''; // o 'grid'
+            streamChartsDiv.style.display = '';
 
         } catch (error) {
             console.error("Failed to load activity page:", error);
@@ -559,7 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
     main();
 });
 
-const USER_MAX_HR = 190;
+const USER_MAX_HR = 195;
 
 function estimateVO2max(act, userMaxHr = USER_MAX_HR) {
     if (!act.distance || !act.moving_time || !act.average_heartrate) return '-';

@@ -1,4 +1,4 @@
-// js/gear.js - Enhanced Version
+// js/gear.js
 
 import { formatDistance, formatPace, formatTime, formatDate } from './utils.js';
 import { fetchGearById } from './api.js';
