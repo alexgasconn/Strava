@@ -467,9 +467,9 @@ export function renderFitnessChart(runs) {
     }
 
     const dailyEffort = days.map(date => effortByDay[date] || 0);
-    const { atl, ctl, tsb, injury } = calculateFitness(dailyEffort);
+    const { atl, ctl, tsb, injuryRisk } = calculateFitness(dailyEffort);
 
-    console.log('Fitness data:', { days, dailyEffort, atl, ctl, tsb, injury });
+    console.log('Fitness data:', { days, dailyEffort, atl, ctl, tsb, injuryRisk });
 
     createChart('ctl-atl-tsb', {
         type: 'line',
@@ -479,7 +479,7 @@ export function renderFitnessChart(runs) {
                 { label: 'ATL (Fatigue)', data: atl, borderColor: '#FC5200', fill: false, tension: 0.2, pointRadius: 0 },
                 { label: 'CTL (Fitness)', data: ctl, borderColor: '#0074D9', fill: true, backgroundColor: 'rgba(0,116,217,0.1)', tension: 0.2, pointRadius: 0 },
                 { label: 'TSB (Form)', data: tsb, borderColor: '#2ECC40', fill: false, tension: 0.2, pointRadius: 0, hidden: true },
-                { label: 'Injury Risk (%)', data: injury, borderColor: '#dbf706ff', fill: false, tension: 0.2, pointRadius: 0, yAxisID: 'y1', hidden: true }
+                { label: 'Injury Risk (%)', data: injuryRisk, borderColor: '#dbf706ff', fill: false, tension: 0.2, pointRadius: 0, yAxisID: 'y1', hidden: true }
             ]
         },
         options: { scales: { y: { title: { display: true, text: 'Load' } } } }
