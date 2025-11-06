@@ -86,3 +86,15 @@ export function formatDate(date) {
     const year = date.getFullYear();
     return `${day}/${month}/${year}`;
 }
+
+export function paceDecimalToTime(paceDecimal) {
+  if (isNaN(paceDecimal) || paceDecimal <= 0) return "–";
+
+  const minutes = Math.floor(paceDecimal);
+  const seconds = Math.round((paceDecimal - minutes) * 60);
+
+  const adjMinutes = seconds === 60 ? minutes + 1 : minutes;
+  const adjSeconds = seconds === 60 ? 0 : seconds;
+
+  return `${adjMinutes}:${adjSeconds.toString().padStart(2, "0")}`;
+}
