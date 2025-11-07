@@ -378,6 +378,13 @@ function handleSaveGear(btn, combinedGearData) {
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
+function getDefaultValues(type) {
+    const defaults = { bike: { price: 1000, durationKm: 15000 }, shoe: { price: 120, durationKm: 700 }, unknown: { price: 100, durationKm: 1000 } };
+    return defaults[type] || defaults.unknown;
+}
+function getCustomData(gearId) {
+    return JSON.parse(localStorage.getItem(`gear-custom-${gearId}`) || '{}');
+}
 
 function sortGearData(data) {
     return data.sort((a, b) => {
