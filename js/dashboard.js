@@ -617,7 +617,7 @@ function renderRecentActivitiesPreview(runs) {
                             <div style="flex:1; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                                         padding:0.65rem 0.8rem; border-radius:8px; color:#fff;">
                                 <div style="font-size:1.5rem; font-weight:700; line-height:1;">
-                                    ${utils.formatPace(pace)}
+                                    ${utils.paceDecimalToTime(pace)}
                                 </div>
                                 <div style="font-size:0.7rem; opacity:0.9; margin-top:3px; font-weight:500;">
                                     MIN/KM
