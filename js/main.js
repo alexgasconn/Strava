@@ -200,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Fetched training zones:', zones);
 
             console.log('Preprocessing activities...');
-            const preprocessed = preprocessActivities(activities, athlete, zones);
+            const preprocessed = preprocessActivities(activities);
             allActivities = preprocessed;
             console.log("4timestamp:", new Date().toISOString());
             console.log(`Preprocessed ${allActivities.length} activities.`);
