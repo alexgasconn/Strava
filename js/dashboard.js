@@ -352,21 +352,47 @@ function renderVO2maxEvolution(lastRuns, previousLastRuns) {
     const runs = lastRuns.concat(previousLastRuns);
     const USER_MAX_HR = 195;
 
-    // Calcular VO₂max y añadirlo a cada run
+    // --- 1. Calcular VO₂max ---
     runs.forEach(r => {
         if (r.average_heartrate && r.moving_time > 0 && r.distance > 0) {
             const vel_m_min = (r.distance / r.moving_time) * 60;
             const vo2_at_pace = (vel_m_min * 0.2) + 3.5;
-            const vo2max = vo2_at_pace / (r.average_heartrate / USER_MAX_HR);
-            r.vo2max = vo2max;
+            const hr_percentage = r.average_heartrate / USER_MAX_HR;
+            r.vo2max = vo2_at_pace / hr_percentage;
         } else {
             r.vo2max = null;
         }
     });
 
-    // Crear datos para la gráfica
+    // --- 2. Calcular Injury Risk (ejemplo realista) ---
+    // Necesitamos al menos 7 días para carga crónica
+    const recentRuns = runs.slice(-28); // Últimos 28 días
+    const acuteLoad = recentRuns.slice(-7).reduce((sum, r) => sum + (r.distance || 0), 0) / 7;
+    const chronicLoad = recentRuns.reduce((sum, r) => sum + (r.distance || 0), 0) / Math.min(28, recentRuns.length);
+
+    const acwr = chronicLoad > 0 ? acuteLoad / chronicLoad : 1;
+
+    runs.forEach(r => {
+        // Base: ACWR (Acute:Chronic Workload Ratio)
+        let risk = 0;
+
+        if (acwr < 0.8) risk += 0.3;
+        else if (acwr > 1.3) risk += 0.6;
+        else if (acwr > 1.5) risk += 0.9;
+
+        // HRV proxy: si HR promedio alto en ritmo bajo → fatiga
+        if (r.average_heartrate && r.distance && r.moving_time) {
+            const pace_min_km = r.moving_time / (r.distance / 1000);
+            if (pace_min_km > 6 && r.average_heartrate > 160) risk += 0.3; // Ritmo lento + HR alto
+        }
+
+        // Variabilidad entre runs (simplificado)
+        r.injuryRisk = Math.min(1, risk); // 0 a 1
+    });
+
+    // --- 3. Preparar datos para gráfica ---
     let chartData = lastRuns
-        .filter(r => r.vo2max !== null && r.injuryRisk !== undefined)
+        .filter(r => r.vo2max !== null && r.injuryRisk !== undefined && r.injuryRisk >= 0)
         .map((r, idx) => ({
             run: `R${idx + 1}`,
             date: r.start_date_local.substring(0, 10),
@@ -374,15 +400,17 @@ function renderVO2maxEvolution(lastRuns, previousLastRuns) {
             injuryRisk: r.injuryRisk
         }));
 
+    // --- 4. Validación: si no hay datos ---
     if (chartData.length < 2) {
         const canvas = document.getElementById('dashboard-vo2max');
-        if (canvas)
-            canvas.innerHTML = '<p style="text-align:center; padding:2rem;">No HR or Injury data available</p>';
+        if (canvas) {
+            canvas.innerHTML = '<p style="text-align:center; padding:2rem;">Insufficient data for VO₂max + Injury Risk</p>';
+        }
         return;
     }
 
-    // Suavizado VO₂max
-    const windowSize = 7;
+    // --- 5. Suavizado VO₂max ---
+    const windowSize = Math.min(7, chartData.length);
     chartData = chartData.map((d, i, arr) => {
         const start = Math.max(0, i - windowSize + 1);
         const slice = arr.slice(start, i + 1);
@@ -390,7 +418,7 @@ function renderVO2maxEvolution(lastRuns, previousLastRuns) {
         return { ...d, vo2max: avgVo2 };
     });
 
-    // Tendencia VO₂max
+    // --- 6. Tendencia ---
     const vo2maxChange = ((chartData.at(-1).vo2max - chartData[0].vo2max) / chartData[0].vo2max) * 100;
     const changeColor = utils.trendColor(vo2maxChange);
     const changeIcon = utils.trendIcon(vo2maxChange);
@@ -407,7 +435,7 @@ function renderVO2maxEvolution(lastRuns, previousLastRuns) {
         </p>`;
     container.appendChild(trendDiv);
 
-    // Crear la gráfica combinada
+    // --- 7. Gráfica combinada ---
     createDashboardChart('dashboard-vo2max', {
         type: 'line',
         data: {
@@ -468,13 +496,14 @@ function renderVO2maxEvolution(lastRuns, previousLastRuns) {
                     min: 0,
                     max: 1,
                     ticks: {
-                        callback: val => `${(val * 100).toFixed(0)}%`
+                        callback: val => `${Math.round(val * 100)}%`
                     },
                     grid: { drawOnChartArea: false }
                 }
             }
         }
     });
+    console.log("Runs con injuryRisk:", lastRuns.map(r => ({date: r.start_date_local, injuryRisk: r.injuryRisk})));
 }
 
 
