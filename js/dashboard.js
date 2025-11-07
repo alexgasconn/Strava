@@ -105,9 +105,6 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
     renderTrainingLoadMetrics(recentRuns, allActivities);
     renderDashboardSummary(recentRuns, midRecentRuns);
     renderRecentMetrics(recentRuns);
-    renderTimeDistribution(recentRuns);
-    renderPaceProgression(recentRuns);
-    renderHeartRateZones(recentRuns);
     renderRecentActivitiesList(recentRuns);
     renderRecentRunsWithMapsAndVO2max(recentRuns);
 }
@@ -478,136 +475,7 @@ function renderRecentMetrics(runs) {
     container.innerHTML = metricsHtml;
 }
 
-function renderTimeDistribution(runs) {
-    const getTimeOfDay = (dateStr) => {
-        const hour = new Date(dateStr).getHours();
-        if (hour >= 5 && hour < 12) return 'Morning';
-        if (hour >= 12 && hour < 17) return 'Afternoon';
-        if (hour >= 17 && hour < 21) return 'Evening';
-        return 'Night';
-    };
 
-    const distribution = runs.reduce((acc, r) => {
-        const timeOfDay = getTimeOfDay(r.start_date_local);
-        acc[timeOfDay] = (acc[timeOfDay] || 0) + 1;
-        return acc;
-    }, {});
-
-    const colors = {
-        'Morning': '#fbbf24',
-        'Afternoon': '#f97316',
-        'Evening': '#8b5cf6',
-        'Night': '#3b82f6'
-    };
-
-    const labels = Object.keys(distribution);
-    const data = Object.values(distribution);
-
-    createDashboardChart('dashboard-time-dist', {
-        type: 'doughnut',
-        data: {
-            labels: labels,
-            datasets: [{
-                data: data,
-                backgroundColor: labels.map(l => colors[l])
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'bottom' }
-            }
-        }
-    });
-}
-
-
-function renderPaceProgression(runs) {
-    const paceData = runs.map((r, idx) => {
-        const pace = (r.moving_time / 60) / (r.distance / 1000);
-        return {
-            run: `R${idx + 1}`,
-            pace: pace,
-            date: r.start_date_local.substring(0, 10)
-        };
-    });
-
-    createDashboardChart('dashboard-pace', {
-        type: 'line',
-        data: {
-            labels: paceData.map(d => d.date),
-            datasets: [{
-                label: 'Pace (min/km)',
-                data: paceData.map(d => d.pace),
-                borderColor: '#B10DC9',
-                backgroundColor: 'rgba(177, 13, 201, 0.1)',
-                fill: true,
-                tension: 0.2,
-                pointRadius: 4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false }
-            },
-            scales: {
-                y: {
-                    title: { display: true, text: 'Pace (min/km)' },
-                    reverse: true // Lower is better
-                }
-            }
-        }
-    });
-}
-
-function renderHeartRateZones(runs) {
-    const hrData = runs
-        .filter(r => r.average_heartrate && r.max_heartrate)
-        .map((r, idx) => ({
-            run: `R${idx + 1}`,
-            avg: r.average_heartrate,
-            max: r.max_heartrate,
-            date: r.start_date_local.substring(0, 10)
-        }));
-
-    if (hrData.length === 0) {
-        const canvas = document.getElementById('dashboard-hr-zones');
-        if (canvas) canvas.innerHTML = '<p style="text-align:center; padding:2rem;">No heart rate data available</p>';
-        return;
-    }
-
-    createDashboardChart('dashboard-hr-zones', {
-        type: 'bar',
-        data: {
-            labels: hrData.map(d => d.date),
-            datasets: [
-                {
-                    label: 'Avg HR',
-                    data: hrData.map(d => d.avg),
-                    backgroundColor: 'rgba(255, 65, 54, 0.6)'
-                },
-                {
-                    label: 'Max HR',
-                    data: hrData.map(d => d.max),
-                    backgroundColor: 'rgba(255, 133, 27, 0.4)'
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    title: { display: true, text: 'Heart Rate (bpm)' },
-                    beginAtZero: false
-                }
-            }
-        }
-    });
-}
 
 function renderRecentActivitiesList(runs) {
     const container = document.getElementById('dashboard-activities-list');
