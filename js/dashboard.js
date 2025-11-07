@@ -444,6 +444,8 @@ function renderVO2maxEvolution(lastRuns, previousLastRuns) {
     });
 }
 
+
+
 function renderRecentActivitiesPreview(runs) {
     const container = document.getElementById('recent-activities-preview');
     if (!container) return;
@@ -565,17 +567,59 @@ function renderRecentActivitiesPreview(runs) {
 
                         <!-- Stats secundarias - más compactas y organizadas -->
                         <div style="display:flex; gap:1rem; flex-wrap:wrap;">
-                            <div style="display:flex; align-items:center; gap:0.4rem;">
-                                <span style="font-size:1rem;">⚡</span>
-                                <div>
-                                    <div style="font-weight:600; color:#2c3e50; font-size:0.9rem; line-height:1.2;">
-                                        ${avgSpeed} km/h
-                                    </div>
-                                    <div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:0.3px;">
-                                        Speed
+                            ${r.athlete_count && r.athlete_count > 1 ? `
+                                <div style="display:flex; align-items:center; gap:0.4rem;">
+                                    <span style="font-size:1rem;">👥</span>
+                                    <div>
+                                        <div style="font-weight:600; color:#9b59b6; font-size:0.9rem; line-height:1.2;">
+                                            ${r.athlete_count} athletes
+                                        </div>
+                                        <div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:0.3px;">
+                                            Group run
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            ` : `
+                                <div style="display:flex; align-items:center; gap:0.4rem;">
+                                    <span style="font-size:1rem;">🏃</span>
+                                    <div>
+                                        <div style="font-weight:600; color:#7f8c8d; font-size:0.9rem; line-height:1.2;">
+                                            Solo
+                                        </div>
+                                        <div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:0.3px;">
+                                            Training
+                                        </div>
+                                    </div>
+                                </div>
+                            `}
+
+                            ${r.suffer_score ? `
+                                <div style="display:flex; align-items:center; gap:0.4rem;">
+                                    <span style="font-size:1rem;">🔥</span>
+                                    <div>
+                                        <div style="font-weight:600; color:#e67e22; font-size:0.9rem; line-height:1.2;">
+                                            ${r.suffer_score}
+                                        </div>
+                                        <div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:0.3px;">
+                                            Suffer
+                                        </div>
+                                    </div>
+                                </div>
+                            ` : ''}
+
+                            ${r.elapsed_time && r.moving_time ? `
+                                <div style="display:flex; align-items:center; gap:0.4rem;">
+                                    <span style="font-size:1rem;">⏸️</span>
+                                    <div>
+                                        <div style="font-weight:600; color:#34495e; font-size:0.9rem; line-height:1.2;">
+                                            ${((r.moving_time / r.elapsed_time) * 100).toFixed(0)}%
+                                        </div>
+                                        <div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:0.3px;">
+                                            Moving
+                                        </div>
+                                    </div>
+                                </div>
+                            ` : ''}
 
                             ${r.average_heartrate ? `
                                 <div style="display:flex; align-items:center; gap:0.4rem;">
