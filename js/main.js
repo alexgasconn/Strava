@@ -3,13 +3,15 @@ import { redirectToStrava, logout, handleAuth } from './auth.js';
 import { setupDashboard, showLoading, hideLoading, handleError,  } from './ui.js';
 import { renderAnalysisTab } from './analysis.js';
 import { renderDashboardTab } from './dashboard.js';
-import { renderAthleteProfile, renderTrainingZones, renderAthleteTab } from './athlete.js';
+import { renderAthleteTab } from './athlete.js';
 import { renderPlannerTab } from './planner.js';
 import { renderGearTab } from './gear.js';
 import { renderWeatherTab } from './weather.js';
 import { renderRunsTab } from './runs.js';
 import { renderWrappedTab } from './wrapped.js';
 import { fetchAllActivities, fetchAthleteData, fetchTrainingZones } from './api.js';
+import { preprocessActivities } from './preprocessing.js';
+
 
 // Espera a que el DOM esté completamente cargado
 document.addEventListener('DOMContentLoaded', () => {
@@ -198,8 +200,11 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Fetched training zones:', zones);
 
             console.log('Preprocessing activities...');
-            //preprocessing.js->voxmax, tsb atl ctb injuryRisk, weatherData...
-
+            const preprocessed = preprocessActivities(activities, athlete, zones);
+            allActivities = preprocessed;
+            console.log("4timestamp:", new Date().toISOString());
+            console.log(`Preprocessed ${allActivities.length} activities.`);
+            console.log(`Preprocessed activities:`, allActivities);
             localStorage.setItem('strava_athlete_data', JSON.stringify(athlete));
             localStorage.setItem('strava_training_zones', JSON.stringify(zones));
 
