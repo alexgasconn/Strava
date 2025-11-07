@@ -379,45 +379,11 @@ function handleSaveGear(btn, combinedGearData) {
 // UTILITY FUNCTIONS
 // ============================================================================
 
-function getDefaultValues(type) {
-    const defaults = {
-        bike: { price: 1000, durationKm: 15000 },
-        shoe: { price: 120, durationKm: 700 },
-        unknown: { price: 100, durationKm: 1000 }
-    };
-    return defaults[type] || defaults.unknown;
-}
-
-function getCustomData(gearId) {
-    return JSON.parse(localStorage.getItem(`gear-custom-${gearId}`) || '{}');
-}
-
 function sortGearData(data) {
     return data.sort((a, b) => {
-        const customA = getCustomData(a.gear.id);
-        const customB = getCustomData(b.gear.id);
-        
-        const defaultsA = getDefaultValues(a.gear.type || 'unknown');
-        const defaultsB = getDefaultValues(b.gear.type || 'unknown');
-        
-        const durationA = customA.durationKm ?? defaultsA.durationKm;
-        const durationB = customB.durationKm ?? defaultsB.durationKm;
-        
-        const kmA = a.gear.distance / 1000;
-        const kmB = b.gear.distance / 1000;
-        
-        const percentA = (kmA / durationA) * 100;
-        const percentB = (kmB / durationB) * 100;
-        
-        const needsA = percentA >= 100;
-        const needsB = percentB >= 100;
-        
-        if (needsA && !needsB) return -1;
-        if (!needsA && needsB) return 1;
-        if (a.gear.primary && !b.gear.primary) return -1;
-        if (!a.gear.primary && b.gear.primary) return 1;
-        
-        return kmB - kmA;
+        const dateA = a.gear.last_activity_date ? new Date(a.gear.last_activity_date) : new Date(0);
+        const dateB = b.gear.last_activity_date ? new Date(b.gear.last_activity_date) : new Date(0);
+        return dateB - dateA; // más reciente primero
     });
 }
 
