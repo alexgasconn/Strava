@@ -24,6 +24,7 @@ function renderRangeSelector(allActivities, dateFilterFrom, dateFilterTo) {
         { label: 'This Month', type: 'month' },
         { label: 'Last 30 Days', type: 'last30' },
         { label: 'Last 90 Days', type: 'last90' },
+        { label: 'Last 365 Days', type: 'last365' },
         { label: 'This Year', type: 'year' }
     ];
 
@@ -84,6 +85,11 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
         case 'last90': {
             startDate = new Date(now);
             startDate.setDate(now.getDate() - 90);
+            break;
+        }
+        case 'last365': {
+            startDate = new Date(now);
+            startDate.setDate(now.getDate() - 365);
             break;
         }
         default: {
@@ -228,6 +234,7 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
 }
 
 function renderTrainingLoadMetrics(runs, allActivities) {
+    console.log('aaaaaaaaaa, activity: ', allActivities);
     const container = document.getElementById('training-load-metrics');
     if (!container) return;
 
