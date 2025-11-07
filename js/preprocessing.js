@@ -76,7 +76,10 @@ export function computeDailyEffort(groupedByDay) {
     const sortedDates = Object.keys(groupedByDay).sort();
     const dailyEffort = sortedDates.map(d => groupedByDay[d].effort);
     console.log(`[preprocessing] 📊 Calculado esfuerzo diario para ${sortedDates.length} días.`);
-    console.log(`[preprocessing] Ejemplo:`, sortedDates.slice(0, 3).map((d, i) => ({ d, e: dailyEffort[i].toFixed(2) })));
+    console.log(`[preprocessing] Ejemplo:`, sortedDates.slice(0, 3).map((d, i) => ({
+        d,
+        e: dailyEffort[i].toFixed(2)
+    })));
     return { dates: sortedDates, dailyEffort };
 }
 
@@ -130,7 +133,7 @@ export function preprocessActivities(activities) {
     const t0 = performance.now();
     if (!activities || !activities.length) {
         console.warn("[preprocessing] ⚠️ No hay actividades, abortando.");
-        return null;
+        return [];
     }
 
     // 1. VO₂max
@@ -147,7 +150,11 @@ export function preprocessActivities(activities) {
     // 4. Fitness
     console.log("[preprocessing] 🧮 Calculando ATL/CTL/TSB/InjuryRisk...");
     const fitness = utils.calculateFitness(smoothed);
-    console.log(`[preprocessing] Fitness ejemplo: ATL=${fitness.atl.slice(-3)}, CTL=${fitness.ctl.slice(-3)}, TSB=${fitness.tsb.slice(-3)}`);
+    console.log(`[preprocessing] Fitness ejemplo:`, {
+        ATL: fitness.atl.slice(-3).map(v => v.toFixed(2)),
+        CTL: fitness.ctl.slice(-3).map(v => v.toFixed(2)),
+        TSB: fitness.tsb.slice(-3).map(v => v.toFixed(2))
+    });
 
     // 5. Asignar a actividades
     assignFitnessToActivities(activities, dates, fitness);
@@ -156,5 +163,5 @@ export function preprocessActivities(activities) {
     console.log(`[preprocessing] ✅ Pipeline completado en ${(t1 - t0).toFixed(1)} ms.`);
     console.log(`[preprocessing] 📅 Rango de fechas procesadas: ${dates[0]} → ${dates[dates.length - 1]}`);
 
-    return { dates, dailyEffort, smoothed, fitness, activities };
+    return activities; // ← devuelve solo las actividades ya procesadas
 }
