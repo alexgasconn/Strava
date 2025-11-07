@@ -493,143 +493,147 @@ function renderRecentActivitiesPreview(runs) {
                         margin:1.5rem 0; overflow:hidden; transition: transform 0.2s, box-shadow 0.2s;
                         border: 1px solid #f0f0f0;">
                 
-                <!-- Header with map and quick stats -->
-                <div style="display:flex; gap:1rem; padding:1rem;">
-                    <!-- Mini mapa más cuadrado -->
+                <div style="display:flex; gap:1.25rem; padding:1.25rem;">
+                    <!-- Mapa más grande y sin nada debajo -->
                     <div style="flex-shrink:0;">
-                        <div style="width:140px; height:140px; background:#f8f9fa; border-radius:8px; overflow:hidden; border:2px solid #e9ecef;" 
+                        <div style="width:200px; height:200px; background:#f8f9fa; border-radius:10px; 
+                                    overflow:hidden; border:2px solid #e9ecef; box-shadow:0 2px 4px rgba(0,0,0,0.06);" 
                              id="map-${r.id}"></div>
                     </div>
                     
-                    <!-- Info principal -->
-                    <div style="flex:1; display:flex; flex-direction:column; justify-content:space-between; min-width:0;">
-                        <div>
-                            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:0.5rem;">
-                                <div style="flex:1; min-width:0;">
-                                    <h3 style="margin:0; font-size:1.1rem; font-weight:600; color:#1a1a1a; 
-                                               white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                                        ${r.name || 'Run'}
-                                    </h3>
-                                    <div style="display:flex; align-items:center; gap:0.5rem; margin-top:0.25rem;">
-                                        <span style="font-size:0.85rem; color:#666;">
-                                            ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    <!-- Contenido a la derecha -->
+                    <div style="flex:1; display:flex; flex-direction:column; gap:1rem; min-width:0;">
+                        <!-- Header -->
+                        <div style="display:flex; justify-content:space-between; align-items:start;">
+                            <div style="flex:1; min-width:0;">
+                                <h3 style="margin:0; font-size:1.15rem; font-weight:600; color:#1a1a1a; 
+                                           white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                    ${r.name || 'Run'}
+                                </h3>
+                                <div style="display:flex; align-items:center; gap:0.5rem; margin-top:0.35rem;">
+                                    <span style="font-size:0.85rem; color:#666;">
+                                        ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                    </span>
+                                    ${hrZone ? `
+                                        <span style="background:${hrZoneColors[hrZone]}; color:#fff; 
+                                                     padding:2px 7px; border-radius:4px; font-size:0.7rem; font-weight:600;">
+                                            Z${hrZone}
                                         </span>
-                                        ${hrZone ? `
-                                            <span style="background:${hrZoneColors[hrZone]}; color:#fff; 
-                                                         padding:2px 6px; border-radius:4px; font-size:0.7rem; font-weight:600;">
-                                                Z${hrZone}
-                                            </span>
-                                        ` : ''}
-                                    </div>
+                                    ` : ''}
                                 </div>
-                                <a href="html/activity.html?id=${r.id}" target="_blank" 
-                                   style="font-size:0.85rem; color:#FC5200; text-decoration:none; font-weight:500;
-                                          padding:4px 12px; border-radius:6px; background:#FFF5F0; 
-                                          white-space:nowrap; margin-left:0.5rem;">
-                                    View →
-                                </a>
                             </div>
+                            <a href="html/activity.html?id=${r.id}" target="_blank" 
+                               style="font-size:0.85rem; color:#FC5200; text-decoration:none; font-weight:500;
+                                      padding:5px 14px; border-radius:6px; background:#FFF5F0; 
+                                      white-space:nowrap; margin-left:0.5rem; transition:background 0.2s;">
+                                View →
+                            </a>
                         </div>
 
-                        <!-- Stats principales destacadas -->
-                        <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:0.75rem;">
-                            <div style="background:linear-gradient(135deg, #FF6B35 0%, #FC5200 100%); 
-                                        padding:0.6rem; border-radius:8px; color:#fff;">
-                                <div style="font-size:1.4rem; font-weight:700; line-height:1;">
+                        <!-- Stats principales - más compactas -->
+                        <div style="display:flex; gap:0.75rem;">
+                            <div style="flex:1; background:linear-gradient(135deg, #FF6B35 0%, #FC5200 100%); 
+                                        padding:0.65rem 0.8rem; border-radius:8px; color:#fff;">
+                                <div style="font-size:1.5rem; font-weight:700; line-height:1;">
                                     ${distKm}
                                 </div>
-                                <div style="font-size:0.75rem; opacity:0.9; margin-top:2px;">
-                                    km distance
+                                <div style="font-size:0.7rem; opacity:0.9; margin-top:3px; font-weight:500;">
+                                    KILOMETERS
                                 </div>
                             </div>
                             
-                            <div style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                                        padding:0.6rem; border-radius:8px; color:#fff;">
-                                <div style="font-size:1.4rem; font-weight:700; line-height:1;">
+                            <div style="flex:1; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                                        padding:0.65rem 0.8rem; border-radius:8px; color:#fff;">
+                                <div style="font-size:1.5rem; font-weight:700; line-height:1;">
                                     ${utils.formatPace(pace)}
                                 </div>
-                                <div style="font-size:0.75rem; opacity:0.9; margin-top:2px;">
-                                    min/km pace
+                                <div style="font-size:0.7rem; opacity:0.9; margin-top:3px; font-weight:500;">
+                                    MIN/KM
+                                </div>
+                            </div>
+
+                            <div style="flex:1; background:linear-gradient(135deg, #f093fb 0%, #f5576c 100%); 
+                                        padding:0.65rem 0.8rem; border-radius:8px; color:#fff;">
+                                <div style="font-size:1.5rem; font-weight:700; line-height:1;">
+                                    ${time.split(':')[0]}:${time.split(':')[1]}
+                                </div>
+                                <div style="font-size:0.7rem; opacity:0.9; margin-top:3px; font-weight:500;">
+                                    DURATION
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Stats secundarias - más compactas y organizadas -->
+                        <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+                            <div style="display:flex; align-items:center; gap:0.4rem;">
+                                <span style="font-size:1rem;">⚡</span>
+                                <div>
+                                    <div style="font-weight:600; color:#2c3e50; font-size:0.9rem; line-height:1.2;">
+                                        ${avgSpeed} km/h
+                                    </div>
+                                    <div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:0.3px;">
+                                        Speed
+                                    </div>
+                                </div>
+                            </div>
+
+                            ${r.average_heartrate ? `
+                                <div style="display:flex; align-items:center; gap:0.4rem;">
+                                    <span style="font-size:1rem;">❤️</span>
+                                    <div>
+                                        <div style="font-weight:600; color:#e74c3c; font-size:0.9rem; line-height:1.2;">
+                                            ${r.average_heartrate.toFixed(0)} bpm
+                                        </div>
+                                        <div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:0.3px;">
+                                            Avg HR
+                                        </div>
+                                    </div>
+                                </div>
+                            ` : ''}
+
+                            ${vo2max ? `
+                                <div style="display:flex; align-items:center; gap:0.4rem;">
+                                    <span style="font-size:1rem;">💨</span>
+                                    <div>
+                                        <div style="font-weight:600; color:#3498db; font-size:0.9rem; line-height:1.2;">
+                                            ${vo2max.toFixed(1)}
+                                        </div>
+                                        <div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:0.3px;">
+                                            VO₂max
+                                        </div>
+                                    </div>
+                                </div>
+                            ` : ''}
+
+                            ${r.total_elevation_gain ? `
+                                <div style="display:flex; align-items:center; gap:0.4rem;">
+                                    <span style="font-size:1rem;">⛰️</span>
+                                    <div>
+                                        <div style="font-weight:600; color:#16a085; font-size:0.9rem; line-height:1.2;">
+                                            ${r.total_elevation_gain.toFixed(0)}m
+                                        </div>
+                                        <div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:0.3px;">
+                                            Elevation
+                                        </div>
+                                    </div>
+                                </div>
+                            ` : ''}
+
+                            ${r.average_cadence ? `
+                                <div style="display:flex; align-items:center; gap:0.4rem;">
+                                    <span style="font-size:1rem;">👟</span>
+                                    <div>
+                                        <div style="font-weight:600; color:#f39c12; font-size:0.9rem; line-height:1.2;">
+                                            ${r.average_cadence.toFixed(0)} spm
+                                        </div>
+                                        <div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:0.3px;">
+                                            Cadence
+                                        </div>
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
                     </div>
-                </div>
-
-                <!-- Separador -->
-                <div style="height:1px; background:linear-gradient(to right, transparent, #e0e0e0, transparent); margin:0 1rem;"></div>
-
-                <!-- Stats secundarias -->
-                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(80px, 1fr)); 
-                            gap:0.5rem; padding:1rem;">
-                    
-                    <div style="text-align:center; padding:0.5rem;">
-                        <div style="font-size:0.7rem; color:#888; text-transform:uppercase; 
-                                    letter-spacing:0.5px; margin-bottom:4px;">
-                            ⏱️ Time
-                        </div>
-                        <div style="font-weight:600; color:#2c3e50; font-size:0.95rem;">
-                            ${time}
-                        </div>
-                    </div>
-
-                    <div style="text-align:center; padding:0.5rem;">
-                        <div style="font-size:0.7rem; color:#888; text-transform:uppercase; 
-                                    letter-spacing:0.5px; margin-bottom:4px;">
-                            ⚡ Speed
-                        </div>
-                        <div style="font-weight:600; color:#2c3e50; font-size:0.95rem;">
-                            ${avgSpeed} km/h
-                        </div>
-                    </div>
-
-                    ${r.average_heartrate ? `
-                        <div style="text-align:center; padding:0.5rem;">
-                            <div style="font-size:0.7rem; color:#888; text-transform:uppercase; 
-                                        letter-spacing:0.5px; margin-bottom:4px;">
-                                ❤️ Avg HR
-                            </div>
-                            <div style="font-weight:600; color:#e74c3c; font-size:0.95rem;">
-                                ${r.average_heartrate.toFixed(0)} bpm
-                            </div>
-                        </div>
-                    ` : ''}
-
-                    ${vo2max ? `
-                        <div style="text-align:center; padding:0.5rem;">
-                            <div style="font-size:0.7rem; color:#888; text-transform:uppercase; 
-                                        letter-spacing:0.5px; margin-bottom:4px;">
-                                💨 VO₂max
-                            </div>
-                            <div style="font-weight:600; color:#3498db; font-size:0.95rem;">
-                                ${vo2max.toFixed(1)}
-                            </div>
-                        </div>
-                    ` : ''}
-
-                    ${r.total_elevation_gain ? `
-                        <div style="text-align:center; padding:0.5rem;">
-                            <div style="font-size:0.7rem; color:#888; text-transform:uppercase; 
-                                        letter-spacing:0.5px; margin-bottom:4px;">
-                                ⛰️ Elevation
-                            </div>
-                            <div style="font-weight:600; color:#16a085; font-size:0.95rem;">
-                                ${r.total_elevation_gain.toFixed(0)}m
-                            </div>
-                        </div>
-                    ` : ''}
-
-                    ${r.average_cadence ? `
-                        <div style="text-align:center; padding:0.5rem;">
-                            <div style="font-size:0.7rem; color:#888; text-transform:uppercase; 
-                                        letter-spacing:0.5px; margin-bottom:4px;">
-                                👟 Cadence
-                            </div>
-                            <div style="font-weight:600; color:#f39c12; font-size:0.95rem;">
-                                ${r.average_cadence.toFixed(0)} spm
-                            </div>
-                        </div>
-                    ` : ''}
                 </div>
             </div>
         `;
@@ -642,12 +646,15 @@ function renderRecentActivitiesPreview(runs) {
         renderMiniMap(r.id, r.map.summary_polyline);
     });
 
-    // Añadir efecto hover a las cards
+    // Añadir estilos hover
     const style = document.createElement('style');
     style.textContent = `
         .activity-card:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0,0,0,0.12) !important;
+        }
+        .activity-card a:hover {
+            background: #FFE5DB !important;
         }
     `;
     document.head.appendChild(style);
