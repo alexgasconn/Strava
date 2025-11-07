@@ -111,9 +111,6 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
     renderTrainingLoadMetrics(recentRuns, allActivities);
     renderRecentActivitiesPreview(recentRuns);
     renderDashboardSummary(recentRuns, midRecentRuns);
-    renderRecentMetrics(recentRuns);
-    renderRecentActivitiesList(recentRuns);
-    renderRecentRunsWithMapsAndVO2max(recentRuns);
 }
 
 
@@ -466,6 +463,7 @@ function renderRecentActivitiesPreview(runs) {
         const distKm = (r.distance / 1000).toFixed(2);
         const pace = (r.moving_time / 60) / (r.distance / 1000);
         const time = utils.formatTime(r.moving_time);
+        const avgSpeed = ((r.distance / 1000) / (r.moving_time / 3600)).toFixed(1);
 
         // Calcular VO₂max si hay HR
         const vo2max = r.average_heartrate && r.moving_time > 0 && r.distance > 0
@@ -476,51 +474,162 @@ function renderRecentActivitiesPreview(runs) {
             })()
             : null;
 
+        // Calcular zona de HR si existe
+        const hrZone = r.average_heartrate 
+            ? Math.min(5, Math.floor((r.average_heartrate / USER_MAX_HR) * 5) + 1)
+            : null;
+
+        const hrZoneColors = {
+            1: '#4CAF50',
+            2: '#8BC34A', 
+            3: '#FFC107',
+            4: '#FF9800',
+            5: '#F44336'
+        };
+
         return `
             <div class="activity-card" 
-                 style="background:#fff; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.1); margin:1rem 0; overflow:hidden;">
-                <div style="height:180px; background:#f3f3f3;" id="map-${r.id}"></div>
-
-                <div style="padding:1rem;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                 style="background:#fff; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.08); 
+                        margin:1.5rem 0; overflow:hidden; transition: transform 0.2s, box-shadow 0.2s;
+                        border: 1px solid #f0f0f0;">
+                
+                <!-- Header with map and quick stats -->
+                <div style="display:flex; gap:1rem; padding:1rem;">
+                    <!-- Mini mapa más cuadrado -->
+                    <div style="flex-shrink:0;">
+                        <div style="width:140px; height:140px; background:#f8f9fa; border-radius:8px; overflow:hidden; border:2px solid #e9ecef;" 
+                             id="map-${r.id}"></div>
+                    </div>
+                    
+                    <!-- Info principal -->
+                    <div style="flex:1; display:flex; flex-direction:column; justify-content:space-between; min-width:0;">
                         <div>
-                            <strong>${r.name || 'Run'}</strong><br>
-                            <small style="color:#666;">${date.toLocaleDateString()}</small>
+                            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:0.5rem;">
+                                <div style="flex:1; min-width:0;">
+                                    <h3 style="margin:0; font-size:1.1rem; font-weight:600; color:#1a1a1a; 
+                                               white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                        ${r.name || 'Run'}
+                                    </h3>
+                                    <div style="display:flex; align-items:center; gap:0.5rem; margin-top:0.25rem;">
+                                        <span style="font-size:0.85rem; color:#666;">
+                                            ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                        </span>
+                                        ${hrZone ? `
+                                            <span style="background:${hrZoneColors[hrZone]}; color:#fff; 
+                                                         padding:2px 6px; border-radius:4px; font-size:0.7rem; font-weight:600;">
+                                                Z${hrZone}
+                                            </span>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                                <a href="html/activity.html?id=${r.id}" target="_blank" 
+                                   style="font-size:0.85rem; color:#FC5200; text-decoration:none; font-weight:500;
+                                          padding:4px 12px; border-radius:6px; background:#FFF5F0; 
+                                          white-space:nowrap; margin-left:0.5rem;">
+                                    View →
+                                </a>
+                            </div>
                         </div>
-                        <a href="html/activity.html?id=${r.id}" target="_blank" 
-                           style="font-size:0.9em; color:#0077cc; text-decoration:none;">
-                            View →
-                        </a>
+
+                        <!-- Stats principales destacadas -->
+                        <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:0.75rem;">
+                            <div style="background:linear-gradient(135deg, #FF6B35 0%, #FC5200 100%); 
+                                        padding:0.6rem; border-radius:8px; color:#fff;">
+                                <div style="font-size:1.4rem; font-weight:700; line-height:1;">
+                                    ${distKm}
+                                </div>
+                                <div style="font-size:0.75rem; opacity:0.9; margin-top:2px;">
+                                    km distance
+                                </div>
+                            </div>
+                            
+                            <div style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                                        padding:0.6rem; border-radius:8px; color:#fff;">
+                                <div style="font-size:1.4rem; font-weight:700; line-height:1;">
+                                    ${utils.formatPace(pace)}
+                                </div>
+                                <div style="font-size:0.75rem; opacity:0.9; margin-top:2px;">
+                                    min/km pace
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Separador -->
+                <div style="height:1px; background:linear-gradient(to right, transparent, #e0e0e0, transparent); margin:0 1rem;"></div>
+
+                <!-- Stats secundarias -->
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(80px, 1fr)); 
+                            gap:0.5rem; padding:1rem;">
+                    
+                    <div style="text-align:center; padding:0.5rem;">
+                        <div style="font-size:0.7rem; color:#888; text-transform:uppercase; 
+                                    letter-spacing:0.5px; margin-bottom:4px;">
+                            ⏱️ Time
+                        </div>
+                        <div style="font-weight:600; color:#2c3e50; font-size:0.95rem;">
+                            ${time}
+                        </div>
                     </div>
 
-                    <div style="display:flex; justify-content:space-between; margin-top:0.75rem;">
-                        <div style="text-align:center; flex:1;">
-                            <div style="font-weight:bold; color:#FC5200;">${distKm} km</div>
-                            <small style="color:#666;">Distance</small>
+                    <div style="text-align:center; padding:0.5rem;">
+                        <div style="font-size:0.7rem; color:#888; text-transform:uppercase; 
+                                    letter-spacing:0.5px; margin-bottom:4px;">
+                            ⚡ Speed
                         </div>
-                        <div style="text-align:center; flex:1;">
-                            <div style="font-weight:bold;">${utils.formatPace(pace)}/km</div>
-                            <small style="color:#666;">Pace</small>
-                        </div>
-                        <div style="text-align:center; flex:1;">
-                            ${r.average_heartrate
-                                ? `<div style="font-weight:bold; color:#FF4136;">${r.average_heartrate.toFixed(0)} bpm</div>
-                                   <small style="color:#666;">Avg HR</small>`
-                                : `<small style="color:#999;">No HR</small>`
-                            }
-                        </div>
-                        <div style="text-align:center; flex:1;">
-                            ${vo2max
-                                ? `<div style="font-weight:bold; color:#0074D9;">${vo2max.toFixed(1)}</div>
-                                   <small style="color:#666;">VO₂max</small>`
-                                : `<small style="color:#999;">—</small>`
-                            }
+                        <div style="font-weight:600; color:#2c3e50; font-size:0.95rem;">
+                            ${avgSpeed} km/h
                         </div>
                     </div>
 
-                    <div style="text-align:center; margin-top:0.5rem; color:#666; font-size:0.9rem;">
-                        ${time} • ${r.total_elevation_gain ? `${r.total_elevation_gain.toFixed(0)}m ↗` : 'Flat'}
-                    </div>
+                    ${r.average_heartrate ? `
+                        <div style="text-align:center; padding:0.5rem;">
+                            <div style="font-size:0.7rem; color:#888; text-transform:uppercase; 
+                                        letter-spacing:0.5px; margin-bottom:4px;">
+                                ❤️ Avg HR
+                            </div>
+                            <div style="font-weight:600; color:#e74c3c; font-size:0.95rem;">
+                                ${r.average_heartrate.toFixed(0)} bpm
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${vo2max ? `
+                        <div style="text-align:center; padding:0.5rem;">
+                            <div style="font-size:0.7rem; color:#888; text-transform:uppercase; 
+                                        letter-spacing:0.5px; margin-bottom:4px;">
+                                💨 VO₂max
+                            </div>
+                            <div style="font-weight:600; color:#3498db; font-size:0.95rem;">
+                                ${vo2max.toFixed(1)}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${r.total_elevation_gain ? `
+                        <div style="text-align:center; padding:0.5rem;">
+                            <div style="font-size:0.7rem; color:#888; text-transform:uppercase; 
+                                        letter-spacing:0.5px; margin-bottom:4px;">
+                                ⛰️ Elevation
+                            </div>
+                            <div style="font-weight:600; color:#16a085; font-size:0.95rem;">
+                                ${r.total_elevation_gain.toFixed(0)}m
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${r.average_cadence ? `
+                        <div style="text-align:center; padding:0.5rem;">
+                            <div style="font-size:0.7rem; color:#888; text-transform:uppercase; 
+                                        letter-spacing:0.5px; margin-bottom:4px;">
+                                👟 Cadence
+                            </div>
+                            <div style="font-weight:600; color:#f39c12; font-size:0.95rem;">
+                                ${r.average_cadence.toFixed(0)} spm
+                            </div>
+                        </div>
+                    ` : ''}
                 </div>
             </div>
         `;
@@ -532,6 +641,16 @@ function renderRecentActivitiesPreview(runs) {
     recentRuns.forEach(r => {
         renderMiniMap(r.id, r.map.summary_polyline);
     });
+
+    // Añadir efecto hover a las cards
+    const style = document.createElement('style');
+    style.textContent = `
+        .activity-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12) !important;
+        }
+    `;
+    document.head.appendChild(style);
 }
 
 function renderMiniMap(runId, polyline) {
