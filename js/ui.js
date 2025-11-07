@@ -1,6 +1,4 @@
 // js/ui.js
-import { fetchGearById } from './api.js';
-import * as charts from './charts.js';
 import * as utils from './utils.js';
 
 // --- DOM REFERENCES  ---
