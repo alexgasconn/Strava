@@ -184,11 +184,20 @@ document.addEventListener('DOMContentLoaded', () => {
     async function initializeApp(tokenData) {
         showLoading('Loading activities...');
         try {
+            console.log("Fetching athlete data and activities...");
+            console.log("timestamp:", new Date().toISOString());
             const [activities, athlete, zones] = await Promise.all([
                 fetchAllActivities(),
                 fetchAthleteData(),
                 fetchTrainingZones()
             ]);
+            console.log("timestamp:", new Date().toISOString());
+            console.log(`Fetched ${activities.length} activities.`);
+            console.log('Fetched athlete data:', athlete);
+            console.log('Fetched training zones:', zones);
+
+            console.log('Preprocessing activities...');
+            //preprocessing.js->voxmax, tsb atl ctb injuryRisk, weatherData...
 
             localStorage.setItem('strava_athlete_data', JSON.stringify(athlete));
             localStorage.setItem('strava_training_zones', JSON.stringify(zones));
