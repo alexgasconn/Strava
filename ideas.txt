@@ -44,3 +44,4 @@
 🔴🌈idiomes
 🔴⚠️format del pace decimals-> time amb utils.paceDecimalToTime(pace)
 🟡⚠️DASHBOARD-> juntar "Recent Runs with Maps and VO₂max" i "Last 5 activities"
+🟡⚠️zonas (Z2) del dashboard de la ma amb las zoonas del perfil strava

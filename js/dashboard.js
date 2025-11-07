@@ -358,42 +358,43 @@ function renderVO2maxEvolution(lastRuns, previousLastRuns) {
             const vel_m_min = (r.distance / r.moving_time) * 60;
             const vo2_at_pace = (vel_m_min * 0.2) + 3.5;
             const vo2max = vo2_at_pace / (r.average_heartrate / USER_MAX_HR);
-            r.vo2max = vo2max; // ← nueva propiedad añadida
+            r.vo2max = vo2max;
         } else {
             r.vo2max = null;
         }
     });
 
-    // Crear los datos para la gráfica
-    let vo2maxData = lastRuns
-        .filter(r => r.vo2max !== null)
+    // Crear datos para la gráfica
+    let chartData = lastRuns
+        .filter(r => r.vo2max !== null && r.injuryRisk !== undefined)
         .map((r, idx) => ({
             run: `R${idx + 1}`,
+            date: r.start_date_local.substring(0, 10),
             vo2max: r.vo2max,
-            date: r.start_date_local.substring(0, 10)
+            injuryRisk: r.injuryRisk
         }));
 
-    if (vo2maxData.length < 2) {
+    if (chartData.length < 2) {
         const canvas = document.getElementById('dashboard-vo2max');
-        if (canvas) canvas.innerHTML = '<p style="text-align:center; padding:2rem;">No HR data available for VO₂max</p>';
+        if (canvas)
+            canvas.innerHTML = '<p style="text-align:center; padding:2rem;">No HR or Injury data available</p>';
         return;
     }
 
-    // Suavizado por ventana móvil
+    // Suavizado VO₂max
     const windowSize = 7;
-    vo2maxData = vo2maxData.map((d, i, arr) => {
+    chartData = chartData.map((d, i, arr) => {
         const start = Math.max(0, i - windowSize + 1);
         const slice = arr.slice(start, i + 1);
-        const avg = slice.reduce((sum, v) => sum + v.vo2max, 0) / slice.length;
-        return { ...d, vo2max: avg };
+        const avgVo2 = slice.reduce((sum, v) => sum + v.vo2max, 0) / slice.length;
+        return { ...d, vo2max: avgVo2 };
     });
 
-    // Calcular tendencia
-    const vo2maxChange = ((vo2maxData.at(-1).vo2max - vo2maxData[0].vo2max) / vo2maxData[0].vo2max * 100);
+    // Tendencia VO₂max
+    const vo2maxChange = ((chartData.at(-1).vo2max - chartData[0].vo2max) / chartData[0].vo2max) * 100;
     const changeColor = utils.trendColor(vo2maxChange);
     const changeIcon = utils.trendIcon(vo2maxChange);
 
-    // Mostrar tendencia
     const container = document.getElementById('dashboard-vo2max').parentElement;
     const existingNote = container.querySelector('.vo2max-trend');
     if (existingNote) existingNote.remove();
@@ -403,46 +404,79 @@ function renderVO2maxEvolution(lastRuns, previousLastRuns) {
     trendDiv.innerHTML = `
         <p style="text-align: center; margin-top: 0.5rem; font-weight: bold; color: ${changeColor};">
             ${changeIcon} ${vo2maxChange >= 0 ? '+' : ''}${vo2maxChange.toFixed(1)}%
-        </p>
-    `;
+        </p>`;
     container.appendChild(trendDiv);
 
-    // Crear la gráfica
+    // Crear la gráfica combinada
     createDashboardChart('dashboard-vo2max', {
         type: 'line',
         data: {
-            labels: vo2maxData.map(d => d.date),
-            datasets: [{
-                label: 'VO₂max',
-                data: vo2maxData.map(d => d.vo2max),
-                borderColor: '#0074D9',
-                backgroundColor: 'rgba(0, 116, 217, 0.1)',
-                fill: true,
-                tension: 0.3,
-                pointRadius: 4,
-                pointHoverRadius: 6
-            }]
+            labels: chartData.map(d => d.date),
+            datasets: [
+                {
+                    label: 'VO₂max',
+                    data: chartData.map(d => d.vo2max),
+                    borderColor: '#0074D9',
+                    backgroundColor: 'rgba(0, 116, 217, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    yAxisID: 'y1',
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                },
+                {
+                    label: 'Injury Risk',
+                    data: chartData.map(d => d.injuryRisk),
+                    borderColor: '#FF4136',
+                    backgroundColor: 'rgba(255, 65, 54, 0.15)',
+                    fill: true,
+                    tension: 0.3,
+                    yAxisID: 'y2',
+                    pointRadius: 3,
+                    pointHoverRadius: 5
+                }
+            ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { display: false },
+                legend: { display: true },
                 tooltip: {
                     callbacks: {
-                        label: ctx => `VO₂max: ${ctx.parsed.y.toFixed(1)}`
+                        label: ctx => {
+                            const label = ctx.dataset.label;
+                            const val = ctx.parsed.y;
+                            if (label === 'VO₂max') return `VO₂max: ${val.toFixed(1)} ml/kg/min`;
+                            if (label === 'Injury Risk') return `Injury Risk: ${(val * 100).toFixed(0)}%`;
+                            return val;
+                        }
                     }
                 }
             },
             scales: {
-                y: {
-                    title: { display: true, text: 'ml/kg/min' },
+                y1: {
+                    type: 'linear',
+                    position: 'left',
+                    title: { display: true, text: 'VO₂max (ml/kg/min)' },
                     beginAtZero: false
+                },
+                y2: {
+                    type: 'linear',
+                    position: 'right',
+                    title: { display: true, text: 'Injury Risk (%)' },
+                    min: 0,
+                    max: 1,
+                    ticks: {
+                        callback: val => `${(val * 100).toFixed(0)}%`
+                    },
+                    grid: { drawOnChartArea: false }
                 }
             }
         }
     });
 }
+
 
 
 
