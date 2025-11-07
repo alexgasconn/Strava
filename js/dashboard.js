@@ -439,113 +439,27 @@ function renderVO2maxEvolution(lastRuns, previousLastRuns) {
     });
 }
 
-function renderRecentMetrics(runs) {
-    const container = document.getElementById('dashboard-recent-metrics');
+function renderRecentActivitiesPreview(runs) {
+    const container = document.getElementById('recent-activities-preview');
     if (!container) return;
 
-    const metricsHtml = runs.slice(-5).reverse().map(r => {
-        const pace = (r.moving_time / 60) / (r.distance / 1000);
+    const USER_MAX_HR = 195;
 
-        return `
-            <div class="metric-row" style="display: flex; justify-content: space-between; padding: 0.8rem; border-bottom: 1px solid #eee;">
-                <div style="flex: 1;">
-                    <strong>${new Date(r.start_date_local).toLocaleDateString()}</strong>
-                    <br>
-                    <small style="color: #666;">${r.name || 'Run'}</small>
-                </div>
-                <div style="text-align: center; min-width: 80px;">
-                    <div style="font-weight: bold; color: #FC5200;">${(r.distance / 1000).toFixed(2)} km</div>
-                    <small style="color: #666;">${utils.formatPace(pace)}/km</small>
-                </div>
-                <div style="text-align: center; min-width: 80px;">
-                    ${r.average_heartrate ? `
-                        <div style="font-weight: bold; color: #FF4136;">${r.average_heartrate.toFixed(0)} bpm</div>
-                        <small style="color: #666;">Avg HR</small>
-                    ` : '<small style="color: #999;">No HR</small>'}
-                </div>
-                <div style="text-align: right; min-width: 80px;">
-                    <a href="html/activity.html?id=${r.id}" target="_blank" style="font-size:0.9em; color:#0077cc; text-decoration:none;">
-                        View →
-                    </a>
-                </div>
-            </div>
-        `;
-    }).join('');
-
-    container.innerHTML = metricsHtml;
-}
-
-
-
-function renderRecentActivitiesList(runs) {
-    const container = document.getElementById('dashboard-activities-list');
-    if (!container) return;
-
-    if (runs.length === 0) {
+    if (!runs || runs.length === 0) {
         container.innerHTML = '<p style="text-align:center; padding:2rem; color:#666;">No recent activities</p>';
         return;
     }
 
-    const activitiesHtml = runs.slice().reverse().map(r => {
+    // Tomamos las 8 más recientes con mapa
+    const recentRuns = runs.slice(-8).reverse().filter(r => r.map && r.map.summary_polyline);
+
+    const html = recentRuns.map(r => {
         const date = new Date(r.start_date_local);
-        const formatDuration = (seconds) => {
-            const h = Math.floor(seconds / 3600);
-            const m = Math.floor((seconds % 3600) / 60);
-            return h > 0 ? `${h}h ${m}m` : `${m}m`;
-        };
+        const distKm = (r.distance / 1000).toFixed(2);
+        const pace = (r.moving_time / 60) / (r.distance / 1000);
+        const time = utils.formatTime(r.moving_time);
 
-        return `
-            <div class="activity-item" style="padding: 1rem; border-bottom: 1px solid #eee; display: flex; gap: 1rem; align-items: center;">
-                <div style="flex: 0 0 60px; text-align: center;">
-                    <div style="font-size: 1.5rem; font-weight: bold; color: #FC5200;">
-                        ${date.getDate()}
-                    </div>
-                    <div style="font-size: 0.8rem; color: #666;">
-                        ${date.toLocaleDateString('en-US', { month: 'short' })}
-                    </div>
-                </div>
-                <div style="flex: 1;">
-                    <div style="font-weight: bold; margin-bottom: 0.25rem;">
-                        ${r.name || 'Run Activity'}
-                    </div>
-                    <div style="font-size: 0.9rem; color: #666;">
-                        ${(r.distance / 1000).toFixed(2)} km • ${formatDuration(r.moving_time)} • 
-                        ${r.total_elevation_gain ? `${r.total_elevation_gain.toFixed(0)}m ↗` : 'Flat'}
-                    </div>
-                </div>
-                <div style="flex: 0 0 100px; text-align: right;">
-                    <a href="html/activity.html?id=${r.id}" target="_blank" 
-                       style="display: inline-block; padding: 0.5rem 1rem; background: #FC5200; color: white; 
-                              text-decoration: none; border-radius: 4px; font-size: 0.9rem;">
-                        View
-                    </a>
-                </div>
-            </div>
-        `;
-    }).join('');
-
-    container.innerHTML = activitiesHtml;
-}
-
-function renderRecentRunsWithMapsAndVO2max(runs) {
-    const container = document.getElementById('recent-runs-maps');
-    if (!container) return;
-
-    if (runs.length === 0) {
-        container.innerHTML = '<p style="text-align:center; padding:2rem;">No recent runs with maps</p>';
-        return;
-    }
-
-    const USER_MAX_HR = 195;
-
-    const runsWithMaps = runs.slice(-10).reverse().filter(r => r.map && r.map.summary_polyline);
-
-    if (runsWithMaps.length === 0) {
-        container.innerHTML = '<p style="text-align:center; padding:2rem;">No runs with map data</p>';
-        return;
-    }
-
-    const mapsHtml = runsWithMaps.map(r => {
+        // Calcular VO₂max si hay HR
         const vo2max = r.average_heartrate && r.moving_time > 0 && r.distance > 0
             ? (() => {
                 const vel_m_min = (r.distance / r.moving_time) * 60;
@@ -555,148 +469,59 @@ function renderRecentRunsWithMapsAndVO2max(runs) {
             : null;
 
         return `
-            <div class="map-card" style="background: #fff; border-radius: 8px; padding: 1rem; margin: 1rem 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                    <div>
-                        <strong>${r.name || 'Run'}</strong>
-                        <div style="font-size: 0.9rem; color: #666;">
-                            ${new Date(r.start_date_local).toLocaleDateString()} • 
-                            ${(r.distance / 1000).toFixed(2)} km • 
-                            ${utils.formatTime(r.moving_time)}
+            <div class="activity-card" 
+                 style="background:#fff; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.1); margin:1rem 0; overflow:hidden;">
+                <div style="height:180px; background:#f3f3f3;" id="map-${r.id}"></div>
+
+                <div style="padding:1rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <strong>${r.name || 'Run'}</strong><br>
+                            <small style="color:#666;">${date.toLocaleDateString()}</small>
+                        </div>
+                        <a href="html/activity.html?id=${r.id}" target="_blank" 
+                           style="font-size:0.9em; color:#0077cc; text-decoration:none;">
+                            View →
+                        </a>
+                    </div>
+
+                    <div style="display:flex; justify-content:space-between; margin-top:0.75rem;">
+                        <div style="text-align:center; flex:1;">
+                            <div style="font-weight:bold; color:#FC5200;">${distKm} km</div>
+                            <small style="color:#666;">Distance</small>
+                        </div>
+                        <div style="text-align:center; flex:1;">
+                            <div style="font-weight:bold;">${utils.formatPace(pace)}/km</div>
+                            <small style="color:#666;">Pace</small>
+                        </div>
+                        <div style="text-align:center; flex:1;">
+                            ${r.average_heartrate
+                                ? `<div style="font-weight:bold; color:#FF4136;">${r.average_heartrate.toFixed(0)} bpm</div>
+                                   <small style="color:#666;">Avg HR</small>`
+                                : `<small style="color:#999;">No HR</small>`
+                            }
+                        </div>
+                        <div style="text-align:center; flex:1;">
+                            ${vo2max
+                                ? `<div style="font-weight:bold; color:#0074D9;">${vo2max.toFixed(1)}</div>
+                                   <small style="color:#666;">VO₂max</small>`
+                                : `<small style="color:#999;">—</small>`
+                            }
                         </div>
                     </div>
-                    <div style="text-align: right;">
-                        ${vo2max ? `
-                            <div style="font-size: 1.2rem; font-weight: bold; color: #0074D9;">
-                                VO₂max: ${vo2max.toFixed(1)}
-                            </div>
-                            <small style="color: #666;">ml/kg/min</small>
-                        ` : ''}
+
+                    <div style="text-align:center; margin-top:0.5rem; color:#666; font-size:0.9rem;">
+                        ${time} • ${r.total_elevation_gain ? `${r.total_elevation_gain.toFixed(0)}m ↗` : 'Flat'}
                     </div>
-                </div>
-                <div id="map-${r.id}" style="width: 100%; height: 200px; border-radius: 4px; background: #f0f0f0;"></div>
-                <div style="margin-top: 0.5rem; text-align: right;">
-                    <a href="html/activity.html?id=${r.id}" target="_blank" style="font-size:0.9em; color:#0077cc; text-decoration:none;">
-                        View activity →
-                    </a>
                 </div>
             </div>
         `;
     }).join('');
 
-    container.innerHTML = mapsHtml;
+    container.innerHTML = html;
 
-    // Render mini maps
-    runsWithMaps.forEach(r => {
+    // Renderizar los mini mapas
+    recentRuns.forEach(r => {
         renderMiniMap(r.id, r.map.summary_polyline);
     });
-}
-
-function renderMiniMap(runId, polyline) {
-    const mapDiv = document.getElementById(`map-${runId}`);
-    if (!mapDiv || !polyline) return;
-
-    // Check if Leaflet is available
-    if (typeof L === 'undefined') {
-        mapDiv.innerHTML = '<p style="text-align:center; padding:2rem; font-size:0.8rem; color:#999;">Leaflet not loaded</p>';
-        return;
-    }
-
-    try {
-        // Decode polyline
-        const coordinates = decodePolyline(polyline);
-
-        if (coordinates.length === 0) {
-            mapDiv.innerHTML = '<p style="text-align:center; padding:2rem; font-size:0.8rem; color:#999;">No coordinates</p>';
-            return;
-        }
-
-        // Create map
-        const map = L.map(mapDiv, {
-            zoomControl: false,
-            attributionControl: false,
-            dragging: false,
-            scrollWheelZoom: false,
-            doubleClickZoom: false,
-            touchZoom: false
-        });
-
-        // Add tile layer
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19
-        }).addTo(map);
-
-        // Add polyline
-        const polylineLayer = L.polyline(coordinates, {
-            color: '#FC5200',
-            weight: 3,
-            opacity: 0.8
-        }).addTo(map);
-
-        // Fit bounds
-        map.fitBounds(polylineLayer.getBounds(), { padding: [10, 10] });
-
-        // Add start/end markers
-        if (coordinates.length > 0) {
-            L.circleMarker(coordinates[0], {
-                radius: 5,
-                color: '#2ECC40',
-                fillColor: '#2ECC40',
-                fillOpacity: 0.8,
-                weight: 2
-            }).addTo(map).bindPopup('Start');
-
-            L.circleMarker(coordinates[coordinates.length - 1], {
-                radius: 5,
-                color: '#FF4136',
-                fillColor: '#FF4136',
-                fillOpacity: 0.8,
-                weight: 2
-            }).addTo(map).bindPopup('End');
-        }
-    } catch (error) {
-        console.error('Error rendering mini map:', error);
-        mapDiv.innerHTML = '<p style="text-align:center; padding:2rem; font-size:0.8rem; color:#999;">Error loading map</p>';
-    }
-}
-
-function decodePolyline(encoded) {
-    if (!encoded) return [];
-
-    const poly = [];
-    let index = 0;
-    const len = encoded.length;
-    let lat = 0;
-    let lng = 0;
-
-    while (index < len) {
-        let b;
-        let shift = 0;
-        let result = 0;
-
-        do {
-            b = encoded.charCodeAt(index++) - 63;
-            result |= (b & 0x1f) << shift;
-            shift += 5;
-        } while (b >= 0x20);
-
-        const dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
-        lat += dlat;
-
-        shift = 0;
-        result = 0;
-
-        do {
-            b = encoded.charCodeAt(index++) - 63;
-            result |= (b & 0x1f) << shift;
-            shift += 5;
-        } while (b >= 0x20);
-
-        const dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
-        lng += dlng;
-
-        poly.push([lat / 1e5, lng / 1e5]);
-    }
-
-    return poly;
 }
