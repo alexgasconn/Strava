@@ -526,3 +526,101 @@ function renderRecentActivitiesPreview(runs) {
         renderMiniMap(r.id, r.map.summary_polyline);
     });
 }
+
+function renderMiniMap(runId, polyline) {
+    const mapDiv = document.getElementById(`map-${runId}`);
+    if (!mapDiv || !polyline) return;
+
+    // Si Leaflet no está cargado
+    if (typeof L === 'undefined') {
+        mapDiv.innerHTML = '<p style="text-align:center; padding:2rem; font-size:0.8rem; color:#999;">Leaflet not loaded</p>';
+        return;
+    }
+
+    try {
+        const coordinates = decodePolyline(polyline);
+        if (coordinates.length === 0) {
+            mapDiv.innerHTML = '<p style="text-align:center; padding:2rem; font-size:0.8rem; color:#999;">No coordinates</p>';
+            return;
+        }
+
+        // Crear mapa sin controles
+        const map = L.map(mapDiv, {
+            zoomControl: false,
+            attributionControl: false,
+            dragging: false,
+            scrollWheelZoom: false,
+            doubleClickZoom: false,
+            touchZoom: false
+        });
+
+        // Capa base
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19
+        }).addTo(map);
+
+        // Trazado del recorrido
+        const polylineLayer = L.polyline(coordinates, {
+            color: '#FC5200',
+            weight: 3,
+            opacity: 0.8
+        }).addTo(map);
+
+        map.fitBounds(polylineLayer.getBounds(), { padding: [10, 10] });
+
+        // Marcadores inicio y fin
+        if (coordinates.length > 0) {
+            L.circleMarker(coordinates[0], {
+                radius: 5,
+                color: '#2ECC40',
+                fillColor: '#2ECC40',
+                fillOpacity: 0.8,
+                weight: 2
+            }).addTo(map);
+
+            L.circleMarker(coordinates[coordinates.length - 1], {
+                radius: 5,
+                color: '#FF4136',
+                fillColor: '#FF4136',
+                fillOpacity: 0.8,
+                weight: 2
+            }).addTo(map);
+        }
+    } catch (err) {
+        console.error('Error rendering mini map:', err);
+        mapDiv.innerHTML = '<p style="text-align:center; padding:2rem; font-size:0.8rem; color:#999;">Error loading map</p>';
+    }
+}
+
+
+function decodePolyline(encoded) {
+    if (!encoded) return [];
+
+    const poly = [];
+    let index = 0, lat = 0, lng = 0;
+
+    while (index < encoded.length) {
+        let b, shift = 0, result = 0;
+        do {
+            b = encoded.charCodeAt(index++) - 63;
+            result |= (b & 0x1f) << shift;
+            shift += 5;
+        } while (b >= 0x20);
+        const dlat = (result & 1) ? ~(result >> 1) : (result >> 1);
+        lat += dlat;
+
+        shift = 0;
+        result = 0;
+        do {
+            b = encoded.charCodeAt(index++) - 63;
+            result |= (b & 0x1f) << shift;
+            shift += 5;
+        } while (b >= 0x20);
+        const dlng = (result & 1) ? ~(result >> 1) : (result >> 1);
+        lng += dlng;
+
+        poly.push([lat / 1e5, lng / 1e5]);
+    }
+
+    return poly;
+}
