@@ -103,6 +103,7 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
 
     renderVO2maxEvolution(recentRuns, midRecentRuns);
     renderTrainingLoadMetrics(recentRuns, allActivities);
+    renderRecentActivitiesPreview(recentRuns);
     renderDashboardSummary(recentRuns, midRecentRuns);
     renderRecentMetrics(recentRuns);
     renderRecentActivitiesList(recentRuns);
