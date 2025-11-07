@@ -189,9 +189,21 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
         </div>
 
         <div class="card">
-            <h3>⛰️ Elevationn</h3>
+            <h3>⛰️ Elevation</h3>
             <p style="font-size:2rem;font-weight:bold;color:#2ECC40;">${totalElevation.toFixed(0)} m</p>
             <small><span style="color:${utils.metricColor('elevation', elevChange)};">${utils.metricIcon('elevation', elevChange)} ${elevChange}%</span></small>
+        </div>
+
+        <div class="card">
+            <h3>🫁 VO₂max</h3>
+            <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${avgVO2 ? avgVO2.toFixed(1) : '–'}</p>
+            <small><span style="color:${utils.metricColor('vo2', vo2Change)};">${utils.metricIcon('vo2', vo2Change)} ${vo2Change}%</span></small>
+        </div>
+
+        <div class="card">
+            <h3>⚠️ Injury Risk</h3>
+            <p style="font-size:2rem;font-weight:bold;color:#FF4136;">${injuryRisk.toFixed(1)}%</p>
+            <small><span style="color:${utils.metricColor('injury', injuryRiskChange)};">${utils.metricIcon('injury', injuryRiskChange)} ${injuryRiskChange}%</span></small>
         </div>
 
         <div class="card">
@@ -200,7 +212,6 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
             <small><span style="color:${utils.metricColor('pace', paceChange)};">${utils.metricIcon('pace', paceChange)} ${paceChange}%</small>
         </div>
 
-
         <div class="card">
             <h3>❤️ Average HR</h3>
             <p style="font-size:2rem;font-weight:bold;color:#FF4136;">${avgHR ? avgHR.toFixed(0) : '–'} bpm</p>
@@ -208,21 +219,11 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
         </div>
 
         <div class="card">
-            <h3>🫁 VO₂max</h3>
-            <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${avgVO2 ? avgVO2.toFixed(1) : '–'}</p>
-            <small><span style="color:${utils.metricColor('vo2', vo2Change)};">${utils.metricIcon('vo2', vo2Change)} ${vo2Change}%</span></small>
-        </div>
-        <div class="card">
-
             <h3>🏃‍♂️ Average Distance</h3>
             <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${avgDistance.toFixed(1)} km</p>
             <small><span style="color:${utils.metricColor('distance', avgDistChange)};">${utils.metricIcon('distance', avgDistChange)} ${avgDistChange}%</span></small>
         </div>
-        <div class="card">
-            <h3>⚠️ Injury Risk</h3>
-            <p style="font-size:2rem;font-weight:bold;color:#FF4136;">${injuryRisk.toFixed(1)}%</p>
-            <small><span style="color:${utils.metricColor('injury', injuryRiskChange)};">${utils.metricIcon('injury', injuryRiskChange)} ${injuryRiskChange}%</span></small>
-        </div>
+        
     `;
 
 
