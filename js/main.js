@@ -13,6 +13,7 @@ import { fetchAllActivities, fetchAthleteData, fetchTrainingZones } from './api.
 
 // Espera a que el DOM esté completamente cargado
 document.addEventListener('DOMContentLoaded', () => {
+    console.log("1timestamp:", new Date().toISOString());
     console.log("Initializing Strava Dashboard App...");
 
     // --- STATE ---
@@ -185,13 +186,13 @@ document.addEventListener('DOMContentLoaded', () => {
         showLoading('Loading activities...');
         try {
             console.log("Fetching athlete data and activities...");
-            console.log("timestamp:", new Date().toISOString());
+            console.log("2timestamp:", new Date().toISOString());
             const [activities, athlete, zones] = await Promise.all([
                 fetchAllActivities(),
                 fetchAthleteData(),
                 fetchTrainingZones()
             ]);
-            console.log("timestamp:", new Date().toISOString());
+            console.log("3timestamp:", new Date().toISOString());
             console.log(`Fetched ${activities.length} activities.`);
             console.log('Fetched athlete data:', athlete);
             console.log('Fetched training zones:', zones);
