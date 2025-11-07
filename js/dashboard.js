@@ -476,17 +476,24 @@ function renderRecentActivitiesPreview(runs) {
             })()
             : null;
 
-        // Calcular zona de HR si existe
-        const hrZone = r.average_heartrate 
-            ? Math.min(5, Math.floor((r.average_heartrate / USER_MAX_HR) * 5) + 1)
+        // Calcular zona de HR si existe (basado en % de HR máxima)
+        const hrZone = r.average_heartrate
+            ? (() => {
+                const hrPercent = (r.average_heartrate / USER_MAX_HR) * 100;
+                if (hrPercent < 60) return 1;      // Z1: 50-60% (Recuperación)
+                if (hrPercent < 70) return 2;      // Z2: 60-70% (Aeróbica)
+                if (hrPercent < 80) return 3;      // Z3: 70-80% (Tempo)
+                if (hrPercent < 90) return 4;      // Z4: 80-90% (Umbral)
+                return 5;                          // Z5: 90-100% (Máximo)
+            })()
             : null;
 
         const hrZoneColors = {
-            1: '#4CAF50',
-            2: '#8BC34A', 
-            3: '#FFC107',
-            4: '#FF9800',
-            5: '#F44336'
+            1: '#4CAF50',  // Verde - Recuperación
+            2: '#8BC34A',  // Verde claro - Aeróbica
+            3: '#FFC107',  // Amarillo - Tempo
+            4: '#FF9800',  // Naranja - Umbral
+            5: '#F44336'   // Rojo - Máximo
         };
 
         return `
