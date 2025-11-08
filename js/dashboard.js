@@ -875,7 +875,7 @@ function decodePolyline(encoded) {
 
 
 /**
- * Renderiza gráfica de barras: TSS por período
+ * Renderiza una gráfica de barras: TSS por período
  */
 function renderTSSBarChart(activities, rangeType) {
     const canvas = document.getElementById('tss-bar-chart');
@@ -884,8 +884,12 @@ function renderTSSBarChart(activities, rangeType) {
     const ctx = canvas.getContext('2d');
     if (window.tssBarChart) window.tssBarChart.destroy();
 
-    const grouped = groupTSSByPeriod(activities, rangeType);
-    const { labels, data } = grouped;
+    const { labels, data } = groupTSSByPeriod(activities, rangeType);
+
+    if (!labels.length || !data.length) {
+        console.warn('No TSS data to render');
+        return;
+    }
 
     window.tssBarChart = new Chart(ctx, {
         type: 'bar',
@@ -896,21 +900,33 @@ function renderTSSBarChart(activities, rangeType) {
                 data,
                 backgroundColor: '#e74c3c',
                 borderColor: '#fff',
-                borderWidth: 1
+                borderWidth: 1,
+                borderRadius: 4
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                title: { display: true, text: 'TSS por Período', font: { size: 16 } },
+                title: {
+                    display: true,
+                    text: 'TSS por período',
+                    font: { size: 16 }
+                },
                 tooltip: { mode: 'index', intersect: false },
-                legend: { position: 'top' }
+                legend: { display: false }
             },
             scales: {
-                y: { 
-                    beginAtZero: true, 
-                    title: { display: true, text: 'TSS' }
+                x: {
+                    ticks: {
+                        maxRotation: 0,
+                        autoSkip: true
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: 'TSS' },
+                    ticks: { precision: 0 }
                 }
             }
         }
@@ -918,49 +934,71 @@ function renderTSSBarChart(activities, rangeType) {
 }
 
 /**
- * Agrupa TSS por período según el rango seleccionado
+ * Agrupa TSS por período (día, semana o mes)
  */
 function groupTSSByPeriod(activities, rangeType) {
-    const daily = {};
+    const grouped = {};
 
-    // Definir tipo de agrupación
     const isDaily = ['week', 'last7', 'month', 'last30'].includes(rangeType);
     const isWeekly = ['last3m', 'last90', 'last6m'].includes(rangeType);
     const isMonthly = ['last365', 'year'].includes(rangeType);
 
     activities.forEach(a => {
+        if (!a.start_date_local) return;
         const date = new Date(a.start_date_local);
         if (isNaN(date)) return;
 
         let key;
+
         if (isDaily) {
             key = date.toISOString().split('T')[0]; // YYYY-MM-DD
         } else if (isWeekly) {
-            const start = new Date(date);
-            start.setDate(date.getDate() - date.getDay() + 1); // Lunes
-            key = start.toISOString().split('T')[0];
+            // Obtener lunes de la semana
+            const d = new Date(date);
+            const diff = (d.getDay() + 6) % 7; // lunes = 0
+            d.setDate(d.getDate() - diff);
+            key = d.toISOString().split('T')[0];
         } else if (isMonthly) {
-            key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`; // YYYY-MM
+        } else {
+            key = date.toISOString().split('T')[0];
         }
 
-        if (!daily[key]) daily[key] = 0;
-        const tss = a.tss ?? (a.suffer_score != null ? a.suffer_score * 1.05 : 0);
-        daily[key] += tss;
+        const tss = a.tss ?? (a.suffer_score ? a.suffer_score * 1.05 : 0);
+        grouped[key] = (grouped[key] || 0) + tss;
     });
 
-    const sortedKeys = Object.keys(daily).sort();
+    const sortedKeys = Object.keys(grouped).sort((a, b) => new Date(a) - new Date(b));
 
     const labels = sortedKeys.map(key => {
-        if (isDaily) return key.slice(5); // MM-DD
-        if (isWeekly) return `Sem ${key.slice(5)}`;
+        if (isDaily) {
+            const d = new Date(key);
+            return d.toLocaleDateString('default', { day: '2-digit', month: 'short' });
+        }
+        if (isWeekly) {
+            const d = new Date(key);
+            const weekNum = getWeekNumber(d);
+            return `Sem ${weekNum}`;
+        }
         if (isMonthly) {
             const [y, m] = key.split('-');
-            return `${new Date(y, m - 1, 1).toLocaleString('default', { month: 'short' })} ${y.slice(2)}`;
+            return `${new Date(y, m - 1).toLocaleString('default', { month: 'short' })} ${y.slice(2)}`;
         }
         return key;
     });
 
-    const data = sortedKeys.map(key => daily[key]);
+    const data = sortedKeys.map(k => Math.round(grouped[k]));
 
     return { labels, data };
+}
+
+/**
+ * Devuelve el número de semana ISO (lunes como primer día)
+ */
+function getWeekNumber(date) {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 }
