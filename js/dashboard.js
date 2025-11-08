@@ -1014,17 +1014,10 @@ function getWeekNumber(date) {
 /**
  * Agrupa TSS por período (día, semana o mes) incluyendo períodos sin datos
  */
-function groupTSSByPeriod(activities, rangeType) {
-    if (!activities?.length) return { labels: [], data: [] };
-
-    const dates = activities
-        .map(a => new Date(a.start_date_local))
-        .filter(d => !isNaN(d));
-
-    if (!dates.length) return { labels: [], data: [] };
-
-    const minDate = new Date(Math.min(...dates));
-    const maxDate = new Date(Math.max(...dates));
+function groupTSSByPeriod(activities, rangeType, startDate, endDate) {
+    // Usar las fechas del rango completo, no solo las de las actividades
+    const minDate = new Date(startDate);
+    const maxDate = new Date(endDate);
 
     const isDaily = ['week', 'last7', 'month', 'last30'].includes(rangeType);
     const isWeekly = ['last3m', 'last6m'].includes(rangeType);
@@ -1036,6 +1029,7 @@ function groupTSSByPeriod(activities, rangeType) {
     // Seguridad: límite máximo de iteraciones (por si hay error de rango)
     let guard = 0;
 
+    // Crear todos los períodos del rango (incluso sin datos)
     while (curr <= maxDate && guard++ < 2000) {
         let key;
         if (isDaily) {
@@ -1056,26 +1050,33 @@ function groupTSSByPeriod(activities, rangeType) {
         grouped[key] = 0;
     }
 
-    // Añadir datos reales
-    for (const a of activities) {
-        if (!a.start_date_local) continue;
-        const date = new Date(a.start_date_local);
-        if (isNaN(date)) continue;
+    // Añadir datos reales de actividades (solo si hay actividades)
+    if (activities && activities.length > 0) {
+        for (const a of activities) {
+            if (!a.start_date_local) continue;
+            const date = new Date(a.start_date_local);
+            if (isNaN(date)) continue;
 
-        let key;
-        if (isDaily) {
-            key = date.toISOString().split('T')[0];
-        } else if (isWeekly) {
-            const monday = getMondayOfWeek(date);
-            key = monday.toISOString().split('T')[0];
-        } else if (isMonthly) {
-            key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        } else {
-            key = date.toISOString().split('T')[0];
+            // Solo procesar si está dentro del rango
+            if (date < minDate || date > maxDate) continue;
+
+            let key;
+            if (isDaily) {
+                key = date.toISOString().split('T')[0];
+            } else if (isWeekly) {
+                const monday = getMondayOfWeek(date);
+                key = monday.toISOString().split('T')[0];
+            } else if (isMonthly) {
+                key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            } else {
+                key = date.toISOString().split('T')[0];
+            }
+
+            const tss = a.tss ?? (a.suffer_score ? a.suffer_score * 1.05 : 0);
+            if (grouped.hasOwnProperty(key)) {
+                grouped[key] += tss;
+            }
         }
-
-        const tss = a.tss ?? (a.suffer_score ? a.suffer_score * 1.05 : 0);
-        grouped[key] = (grouped[key] || 0) + tss;
     }
 
     const sortedKeys = Object.keys(grouped).sort((a, b) => new Date(a) - new Date(b));
