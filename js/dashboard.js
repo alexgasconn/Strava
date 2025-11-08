@@ -895,12 +895,11 @@ function renderTSSBarChart(activities, rangeType) {
 
     switch (rangeType) {
         case 'week': {
-            // Queremos lunes como inicio y domingo como final
-            const now = new Date();
-            const day = now.getDay(); // 0 = domingo
-            const diffToMonday = (day === 0 ? -6 : 1 - day); // si domingo → retrocede 6 días
-            startDate = new Date(now);
-            startDate.setDate(now.getDate() + diffToMonday);
+            const today = new Date();
+            const day = today.getDay(); // 0 = domingo, 1 = lunes...
+            const diffToMonday = day === 0 ? -6 : 1 - day; // si es domingo, retrocede 6
+            startDate = new Date(today);
+            startDate.setDate(today.getDate() + diffToMonday);
             startDate.setHours(0, 0, 0, 0);
 
             endDate = new Date(startDate);
@@ -910,12 +909,13 @@ function renderTSSBarChart(activities, rangeType) {
         }
 
         case 'month': {
-            const now = new Date();
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1); // 1 del mes actual
-            endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0); // último del mes actual
+            const today = new Date();
+            startDate = new Date(today.getFullYear(), today.getMonth(), 1); // 1 del mes actual
+            endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0); // último del mes actual
             endDate.setHours(23, 59, 59, 999);
             break;
         }
+
 
         case 'year': {
             startDate = new Date(now.getFullYear(), 0, 1);
