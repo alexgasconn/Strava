@@ -84,7 +84,7 @@ function calculatePMC(tssSeries) {
     const atl = rollingMean(tssSeries, 7);
     const ctl = rollingMean(tssSeries, 42);
     const tsb = [];
-    const rampRate = [0]; // primer día: 0
+    const rampRate = [0];
 
     for (let i = 0; i < tssSeries.length; i++) {
         const a = atl[i];
@@ -96,26 +96,61 @@ function calculatePMC(tssSeries) {
         }
     }
 
-    return { atl, ctl, tsb, rampRate };
+    return { atl, ctl, tsb, rampRate, tssSeries };
 }
 
 // ===================================================================
-// 6. Injury Risk (0.0 – 1.0)
+// 6. INJURY RISK: PRECISO, CONTINUO Y REALISTA
 // ===================================================================
-function calculateInjuryRisk(tsb, rampRate) {
+function calculateInjuryRisk(tsb, rampRate, atl, tssSeries) {
+    const riskHistory = [];
+
     return tsb.map((t, i) => {
         let risk = 0;
-        if (t < -25) risk += 0.6;
-        else if (t < -15) risk += 0.4;
-        else if (t < -5) risk += 0.2;
-        else if (t < 0) risk += 0.1;
 
+        // 1. TSB (fatiga crónica)
+        if (t < -30) risk += 0.45;
+        else if (t < -20) risk += 0.35;
+        else if (t < -10) risk += 0.25;
+        else if (t < -5) risk += 0.15;
+        else if (t < 0) risk += 0.08;
+        else if (t > 15) risk += 0.05; // Sobre-descanso
+
+        // 2. Ramp Rate (aumento rápido)
         const r = rampRate[i];
-        if (r > 7) risk += 0.4;
-        else if (r > 5) risk += 0.3;
-        else if (r > 3) risk += 0.2;
+        if (r > 10) risk += 0.35;
+        else if (r > 7) risk += 0.25;
+        else if (r > 5) risk += 0.15;
+        else if (r > 3) risk += 0.08;
 
-        return +(Math.min(risk, 1.0).toFixed(2));
+        // 3. ATL alto (carga aguda)
+        const a = atl[i];
+        if (a > 120) risk += 0.20;
+        else if (a > 100) risk += 0.12;
+        else if (a > 80) risk += 0.06;
+
+        // 4. Variabilidad reciente (CV de últimos 7 días)
+        const recent = tssSeries.slice(Math.max(0, i - 6), i + 1);
+        if (recent.length > 1) {
+            const mean = recent.reduce((a, b) => a + b, 0) / recent.length;
+            const variance = recent.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / recent.length;
+            const cv = Math.sqrt(variance) / mean;
+            if (cv > 0.5) risk += 0.15;
+            else if (cv > 0.3) risk += 0.08;
+        }
+
+        // Normalizar
+        risk = Math.min(risk, 1.0);
+        risk = Math.max(risk, 0.0);
+
+        // Suavizado exponencial (70% anterior, 30% actual)
+        if (i > 0) {
+            const prev = riskHistory[i - 1];
+            risk = prev * 0.7 + risk * 0.3;
+        }
+        riskHistory.push(risk);
+
+        return +risk.toFixed(3); // 0.123 → 12.3%
     });
 }
 
@@ -132,7 +167,7 @@ function assignMetrics(activities, dates, pmc, injuryRisk) {
             a.atl = +pmc.atl[i].toFixed(1);
             a.ctl = +pmc.ctl[i].toFixed(1);
             a.tsb = +pmc.tsb[i].toFixed(1);
-            a.injuryRisk = +injuryRisk[i].toFixed(2);
+            a.injuryRisk = +injuryRisk[i].toFixed(3); // 3 decimales para precisión
         } else {
             a.atl = a.ctl = a.tsb = a.injuryRisk = null;
         }
@@ -153,7 +188,7 @@ export function preprocessActivities(activities, userProfile = {}) {
     const daily = groupByDay(activities);
     const { dates, tssValues } = getTimeSeries(daily);
     const pmc = calculatePMC(tssValues);
-    const injuryRisk = calculateInjuryRisk(pmc.tsb, pmc.rampRate);
+    const injuryRisk = calculateInjuryRisk(pmc.tsb, pmc.rampRate, pmc.atl, pmc.tssSeries);
     assignMetrics(activities, dates, pmc, injuryRisk);
 
     // Log final
@@ -162,7 +197,7 @@ export function preprocessActivities(activities, userProfile = {}) {
     console.log(`  CTL: ${pmc.ctl[last]?.toFixed(1) ?? 'n/a'}`);
     console.log(`  ATL: ${pmc.atl[last]?.toFixed(1) ?? 'n/a'}`);
     console.log(`  TSB: ${pmc.tsb[last]?.toFixed(1) ?? 'n/a'}`);
-    console.log(`  Injury Risk: ${injuryRisk[last]?.toFixed(2) ?? 'n/a'}`);
+    console.log(`  Injury Risk: ${(injuryRisk[last] * 100).toFixed(1)}%`);
 
     return activities;
 }
