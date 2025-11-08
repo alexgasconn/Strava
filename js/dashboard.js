@@ -931,12 +931,14 @@ function renderTSSBarChart(activities, rangeType) {
  * Agrupa TSS por período (día, semana o mes) incluyendo períodos sin datos
  */
 function groupTSSByPeriod(activities, rangeType) {
-    const grouped = {};
-    
-    if (!activities.length) return { labels: [], data: [] };
+    if (!activities?.length) return { labels: [], data: [] };
 
-    // Get date range
-    const dates = activities.map(a => new Date(a.start_date_local)).filter(d => !isNaN(d));
+    const dates = activities
+        .map(a => new Date(a.start_date_local))
+        .filter(d => !isNaN(d));
+
+    if (!dates.length) return { labels: [], data: [] };
+
     const minDate = new Date(Math.min(...dates));
     const maxDate = new Date(Math.max(...dates));
 
@@ -944,9 +946,13 @@ function groupTSSByPeriod(activities, rangeType) {
     const isWeekly = ['last3m', 'last6m'].includes(rangeType);
     const isMonthly = ['last365', 'year'].includes(rangeType);
 
-    // Initialize all periods with 0
+    const grouped = {};
     const curr = new Date(minDate);
-    while (curr <= maxDate) {
+
+    // Seguridad: límite máximo de iteraciones (por si hay error de rango)
+    let guard = 0;
+
+    while (curr <= maxDate && guard++ < 1000) {
         let key;
         if (isDaily) {
             key = curr.toISOString().split('T')[0];
@@ -960,15 +966,19 @@ function groupTSSByPeriod(activities, rangeType) {
         } else if (isMonthly) {
             key = `${curr.getFullYear()}-${String(curr.getMonth() + 1).padStart(2, '0')}`;
             curr.setMonth(curr.getMonth() + 1);
+        } else {
+            // fallback: evitar bucle infinito
+            key = curr.toISOString().split('T')[0];
+            curr.setDate(curr.getDate() + 1);
         }
         grouped[key] = 0;
     }
 
-    // Add activity TSS values
-    activities.forEach(a => {
-        if (!a.start_date_local) return;
+    // Añadir datos reales
+    for (const a of activities) {
+        if (!a.start_date_local) continue;
         const date = new Date(a.start_date_local);
-        if (isNaN(date)) return;
+        if (isNaN(date)) continue;
 
         let key;
         if (isDaily) {
@@ -980,11 +990,13 @@ function groupTSSByPeriod(activities, rangeType) {
             key = d.toISOString().split('T')[0];
         } else if (isMonthly) {
             key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        } else {
+            key = date.toISOString().split('T')[0];
         }
 
         const tss = a.tss ?? (a.suffer_score ? a.suffer_score * 1.05 : 0);
         grouped[key] = (grouped[key] || 0) + tss;
-    });
+    }
 
     const sortedKeys = Object.keys(grouped).sort((a, b) => new Date(a) - new Date(b));
 
@@ -995,8 +1007,7 @@ function groupTSSByPeriod(activities, rangeType) {
         }
         if (isWeekly) {
             const d = new Date(key);
-            const weekNum = getWeekNumber(d);
-            return `Sem ${weekNum}`;
+            return `Sem ${getWeekNumber(d)}`;
         }
         if (isMonthly) {
             const [y, m] = key.split('-');
@@ -1006,17 +1017,5 @@ function groupTSSByPeriod(activities, rangeType) {
     });
 
     const data = sortedKeys.map(k => Math.round(grouped[k]));
-
     return { labels, data };
-}
-
-/**
- * Devuelve el número de semana ISO (lunes como primer día)
- */
-function getWeekNumber(date) {
-    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-    const dayNum = d.getUTCDay() || 7;
-    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 }
