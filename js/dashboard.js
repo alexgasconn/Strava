@@ -229,101 +229,94 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
 
 }
 
+/**
+ * Renderiza métricas de carga de entrenamiento
+ * Usa datos ya preprocesados: tss, atl, ctl, tsb, injuryRisk
+ */
 function renderTrainingLoadMetrics(runs, allActivities) {
-    console.log('aaaaaaaaaa, activity: ', allActivities);
     const container = document.getElementById('training-load-metrics');
     if (!container) return;
 
-    const USER_MAX_HR = 195;
     const now = new Date();
 
-    // --- 1️⃣ Calcular TSS para TODAS las actividades (no solo las del rango)
-    const tssDataAll = allActivities
-        .filter(a => a.type && a.type.includes('Run'))
-        .map(r => {
-            const timeHours = r.moving_time / 3600;
-            const intensity = r.average_heartrate ? (r.average_heartrate / USER_MAX_HR) : 0.7;
-            const tss = timeHours * Math.pow(intensity, 4) * 100;
-            return { date: new Date(r.start_date_local), tss };
-        })
-        .sort((a, b) => a.date - b.date);
+    // --- 1. Usar solo actividades preprocesadas (con .tss, .atl, etc.)
+    const validRuns = runs.filter(r => 
+        r.tss != null && 
+        r.atl != null && 
+        r.ctl != null && 
+        r.tsb != null && 
+        r.injuryRisk != null
+    );
 
-    const effortByDayAll = {};
-    tssDataAll.forEach(({ date, tss }) => {
-        const day = date.toISOString().split('T')[0];
-        effortByDayAll[day] = (effortByDayAll[day] || 0) + tss;
+    if (validRuns.length === 0) {
+        container.innerHTML = `<p style="color:#999;">No hay datos de carga procesados.</p>`;
+        return;
+    }
+
+    // --- 2. Última actividad del rango visible
+    const lastRun = validRuns[validRuns.length - 1];
+    const lastATL = lastRun.atl;
+    const lastCTL = lastRun.ctl;
+    const lastTSB = lastRun.tsb;
+    const lastInjuryRisk = lastRun.injuryRisk;
+
+    // --- 3. Carga total en el rango visible
+    const totalLoad = validRuns.reduce((sum, r) => sum + (r.tss || 0), 0).toFixed(0);
+
+    // --- 4. Cambio semanal (últimos 14 días)
+    const recent = validRuns.filter(r => {
+        const actDate = new Date(r.start_date_local);
+        return (now - actDate) / 86400000 <= 14;
     });
 
-    const daysAll = Object.keys(effortByDayAll).sort();
-    const dailyEffortAll = daysAll.map(d => effortByDayAll[d] || 0);
+    const week1 = recent.filter(r => (now - new Date(r.start_date_local)) / 86400000 <= 7);
+    const week2 = recent.filter(r => (now - new Date(r.start_date_local)) / 86400000 > 7);
 
-    const { atl, ctl, tsb, injuryRisk } = utils.calculateFitness(dailyEffortAll);
-
-    runs.forEach(r => {
-        const day = new Date(r.start_date_local).toISOString().split('T')[0];
-        const idx = daysAll.indexOf(day);
-        r.injuryRisk = idx >= 0 ? injuryRisk[idx] || 0 : null;
-    });
-
-
-    const tssDataVisible = runs.map(r => {
-        const timeHours = r.moving_time / 3600;
-        const intensity = r.average_heartrate ? (r.average_heartrate / USER_MAX_HR) : 0.7;
-        const tss = timeHours * Math.pow(intensity, 4) * 100;
-        return { date: new Date(r.start_date_local), tss };
-    }).sort((a, b) => a.date - b.date);
-
-    const lastRunDate = tssDataVisible.length
-        ? tssDataVisible[tssDataVisible.length - 1].date
-        : null;
-    const lastDay = lastRunDate
-        ? lastRunDate.toISOString().split('T')[0]
-        : daysAll.at(-1);
-    const idx = daysAll.indexOf(lastDay);
-
-    const lastATL = atl[idx] ?? atl.at(-1);
-    const lastCTL = ctl[idx] ?? ctl.at(-1);
-    const lastTSB = tsb[idx] ?? tsb.at(-1);
-    const lastInjuryRisk = injuryRisk[idx] ?? injuryRisk.at(-1);
-
-    const totalLoad = tssDataVisible.reduce((sum, v) => sum + v.tss, 0).toFixed(0);
-
-    // --- Weekly load change solo dentro del rango visible
-    const recent = tssDataVisible.filter(t => (now - t.date) / 86400000 <= 14);
-    const week1 = recent.filter(t => (now - t.date) / 86400000 <= 7);
-    const week2 = recent.filter(t => (now - t.date) / 86400000 > 7);
-    const load1 = week1.reduce((a, b) => a + b.tss, 0);
-    const load2 = week2.reduce((a, b) => a + b.tss, 0);
+    const load1 = week1.reduce((a, b) => a + (b.tss || 0), 0);
+    const load2 = week2.reduce((a, b) => a + (b.tss || 0), 0);
     const loadChange = load2 > 0 ? ((load1 - load2) / load2) * 100 : 0;
-    const loadTrend = loadChange > 0 ? '↗' : '↘';
+    const loadTrend = loadChange > 0 ? 'Up' : 'Down';
     const tsbColor = lastTSB > 0 ? '#2ECC40' : '#FF4136';
 
-    // --- Mensaje
+    // --- 5. Mensaje inteligente
     let message = '';
     let color = '#333';
     let emoji = '';
 
-    if (lastTSB < -15) { emoji = '⚠️'; message = 'High fatigue, rest needed'; color = '#FF4136'; }
-    else if (lastTSB < -5) { emoji = '⚠️'; message = 'Moderate fatigue, maintain controlled load'; color = '#FF851B'; }
-    else if (lastTSB <= 5) { emoji = '✅'; message = 'Optimal balance of load and recovery'; color = '#0074D9'; }
-    else { emoji = '💪'; message = 'Ready for more intense load'; color = '#2ECC40'; }
+    if (lastTSB < -15) {
+        emoji = 'Warning';
+        message = 'Alta fatiga, necesitas descanso';
+        color = '#FF4136';
+    } else if (lastTSB < -5) {
+        emoji = 'Warning';
+        message = 'Fatiga moderada, controla la carga';
+        color = '#FF851B';
+    } else if (lastTSB <= 5) {
+        emoji = 'Checkmark';
+        message = 'Equilibrio óptimo';
+        color = '#0074D9';
+    } else {
+        emoji = 'Muscle';
+        message = 'Listo para más intensidad';
+        color = '#2ECC40';
+    }
 
-    if (loadChange > 20) message += ', strong weekly increase';
-    else if (loadChange > 5) message += ', load increasing';
-    else if (loadChange < -10) message += ', possible detraining';
+    if (loadChange > 20) message += ', aumento fuerte semanal';
+    else if (loadChange > 5) message += ', carga en aumento';
+    else if (loadChange < -10) message += ', posible pérdida de forma';
 
-    // --- Renderizado
+    // --- 6. Renderizado
     container.innerHTML = `
         <div class="load-card" style="background:#f0f9ff;border-radius:8px;padding:1rem;margin:1rem 0;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
-            <h3>📊 Training Load</h3>
+            <h3>Training Load</h3>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1rem;">
                 <div>
                     <p style="font-size:1.4rem;font-weight:bold;color:#0074D9;">CTL: ${lastCTL.toFixed(1)}</p>
-                    <small>Chronic load</small>
+                    <small>Carga crónica</small>
                 </div>
                 <div>
                     <p style="font-size:1.4rem;font-weight:bold;color:#FF4136;">ATL: ${lastATL.toFixed(1)}</p>
-                    <small>Acute load</small>
+                    <small>Carga aguda</small>
                 </div>
                 <div>
                     <p style="font-size:1.4rem;font-weight:bold;color:${tsbColor};">TSB: ${lastTSB.toFixed(1)}</p>
@@ -331,16 +324,20 @@ function renderTrainingLoadMetrics(runs, allActivities) {
                 </div>
                 <div>
                     <p style="font-size:1.4rem;font-weight:bold;color:#FC5200;">${totalLoad}</p>
-                    <small>Total load (range)</small>
+                    <small>Carga total (rango)</small>
                 </div>
                 <div>
-                    <p style="font-size:1.4rem;font-weight:bold;color:${utils.trendColor(loadChange)};">${loadTrend} ${loadChange.toFixed(1)}%</p>
-                    <small>Weekly change</small>
+                    <p style="font-size:1.4rem;font-weight:bold;color:${utils.trendColor(loadChange)};">
+                        ${loadTrend} ${Math.abs(loadChange).toFixed(1)}%
+                    </p>
+                    <small>Cambio semanal</small>
                 </div>
             </div>
-            <p style="text-align:center;font-weight:bold;margin-top:0.5rem;color:${color};">${emoji} ${message}</p>
+            <p style="text-align:center;font-weight:bold;margin-top:0.5rem;color:${color};">
+                ${emoji} ${message}
+            </p>
             <p style="text-align:center;font-weight:bold;margin-top:0.25rem;color:#FF4136;">
-                ⚠️ Injury risk: ~${lastInjuryRisk.toFixed(1)}%
+                Warning Riesgo de lesión: ~${(lastInjuryRisk * 100).toFixed(0)}%
             </p>
         </div>
     `;
