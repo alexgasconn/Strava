@@ -115,14 +115,19 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
         return d < startDate && d >= new Date(startDate.getTime() - 30 * 24 * 3600 * 1000);
     });
 
+    const recentActivities = allActivities.filter(r => new Date(r.start_date_local) >= startDate);
+    const midRecentActivities = allActivities.filter(r => {
+        const d = new Date(r.start_date_local);
+        return d < startDate && d >= new Date(startDate.getTime() - 30 * 24 * 3600 * 1000);
+    });
 
     console.log(`Rendering dashboard (${selectedRangeDays} días) con ${recentRuns.length} runs`);
 
     renderTrainingLoadMetrics(recentRuns, allActivities);
-    renderPMCChart(recentRuns, allActivities);
+    renderPMCChart(recentActivities, allActivities);
     renderRecentActivitiesPreview(recentRuns);
     renderDashboardSummary(recentRuns, midRecentRuns);
-    renderTSSBarChart(recentRuns, selectedRangeDays);
+    renderTSSBarChart(recentActivities, selectedRangeDays);
 }
 
 
@@ -368,7 +373,7 @@ function getTrendColor(pct) {
 /**
  * Renders PMC Chart: CTL, ATL, TSB, Injury Risk + VO₂max (runs only)
  */
-function renderPMCChart(runs, allActivities) {
+function renderPMCChart(runs) {
     const canvas = document.getElementById('pmc-chart');
     if (!canvas) return;
 
