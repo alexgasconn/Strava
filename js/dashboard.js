@@ -108,6 +108,7 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
     console.log(`Rendering dashboard (${selectedRangeDays} días) con ${recentRuns.length} runs`);
 
     renderTrainingLoadMetrics(recentRuns, allActivities);
+    renderPMCChart(recentRuns, allActivities);
     renderRecentActivitiesPreview(recentRuns);
     renderDashboardSummary(recentRuns, midRecentRuns);
 }
@@ -230,16 +231,14 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
 }
 
 /**
- * Renderiza métricas de carga de entrenamiento
- * Usa datos ya preprocesados: tss, atl, ctl, tsb, injuryRisk
+ * Renders Training Load Metrics (CTL, ATL, TSB, Injury Risk, Load)
+ * Uses preprocessed activities with .tss, .atl, .ctl, .tsb, .injuryRisk
  */
 function renderTrainingLoadMetrics(runs, allActivities) {
     const container = document.getElementById('training-load-metrics');
     if (!container) return;
 
     const now = new Date();
-
-    // --- 1. Usar solo actividades preprocesadas (con .tss, .atl, etc.)
     const validRuns = runs.filter(r => 
         r.tss != null && 
         r.atl != null && 
@@ -249,21 +248,21 @@ function renderTrainingLoadMetrics(runs, allActivities) {
     );
 
     if (validRuns.length === 0) {
-        container.innerHTML = `<p style="color:#999;">No hay datos de carga procesados.</p>`;
+        container.innerHTML = `<p style="color:#999;">No processed training load data.</p>`;
         return;
     }
 
-    // --- 2. Última actividad del rango visible
-    const lastRun = validRuns[validRuns.length - 1];
-    const lastATL = lastRun.atl;
-    const lastCTL = lastRun.ctl;
-    const lastTSB = lastRun.tsb;
-    const lastInjuryRisk = lastRun.injuryRisk;
+    // Latest values
+    const last = validRuns[validRuns.length - 1];
+    const lastCTL = last.ctl;
+    const lastATL = last.atl;
+    const lastTSB = last.tsb;
+    const lastInjuryRisk = last.injuryRisk;
 
-    // --- 3. Carga total en el rango visible
-    const totalLoad = validRuns.reduce((sum, r) => sum + (r.tss || 0), 0).toFixed(0);
+    // Total load in visible range
+    const totalLoad = validRuns.reduce((sum, r) => sum + r.tss, 0).toFixed(0);
 
-    // --- 4. Cambio semanal (últimos 14 días)
+    // Weekly load change (last 14 days)
     const recent = validRuns.filter(r => {
         const actDate = new Date(r.start_date_local);
         return (now - actDate) / 86400000 <= 14;
@@ -272,75 +271,224 @@ function renderTrainingLoadMetrics(runs, allActivities) {
     const week1 = recent.filter(r => (now - new Date(r.start_date_local)) / 86400000 <= 7);
     const week2 = recent.filter(r => (now - new Date(r.start_date_local)) / 86400000 > 7);
 
-    const load1 = week1.reduce((a, b) => a + (b.tss || 0), 0);
-    const load2 = week2.reduce((a, b) => a + (b.tss || 0), 0);
-    const loadChange = load2 > 0 ? ((load1 - load2) / load2) * 100 : 0;
-    const loadTrend = loadChange > 0 ? 'Up' : 'Down';
+    const loadWeek1 = week1.reduce((a, b) => a + b.tss, 0);
+    const loadWeek2 = week2.reduce((a, b) => a + b.tss, 0);
+    const loadChangePct = loadWeek2 > 0 ? ((loadWeek1 - loadWeek2) / loadWeek2) * 100 : 0;
+    const trend = loadChangePct > 0 ? 'Up' : 'Down';
     const tsbColor = lastTSB > 0 ? '#2ECC40' : '#FF4136';
 
-    // --- 5. Mensaje inteligente
+    // Smart message
     let message = '';
     let color = '#333';
     let emoji = '';
 
     if (lastTSB < -15) {
         emoji = 'Warning';
-        message = 'Alta fatiga, necesitas descanso';
+        message = 'High fatigue — rest needed';
         color = '#FF4136';
     } else if (lastTSB < -5) {
         emoji = 'Warning';
-        message = 'Fatiga moderada, controla la carga';
+        message = 'Moderate fatigue — monitor load';
         color = '#FF851B';
     } else if (lastTSB <= 5) {
         emoji = 'Checkmark';
-        message = 'Equilibrio óptimo';
+        message = 'Optimal balance';
         color = '#0074D9';
     } else {
         emoji = 'Muscle';
-        message = 'Listo para más intensidad';
+        message = 'Ready for intensity';
         color = '#2ECC40';
     }
 
-    if (loadChange > 20) message += ', aumento fuerte semanal';
-    else if (loadChange > 5) message += ', carga en aumento';
-    else if (loadChange < -10) message += ', posible pérdida de forma';
+    if (loadChangePct > 20) message += ', strong weekly ramp';
+    else if (loadChangePct > 5) message += ', load increasing';
+    else if (loadChangePct < -10) message += ', possible form loss';
 
-    // --- 6. Renderizado
+    // Render
     container.innerHTML = `
-        <div class="load-card" style="background:#f0f9ff;border-radius:8px;padding:1rem;margin:1rem 0;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
-            <h3>Training Load</h3>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1rem;">
+        <div class="load-card" style="background:#f8f9fa;border-radius:12px;padding:1.2rem;margin:1rem 0;box-shadow:0 4px 8px rgba(0,0,0,0.08);">
+            <h3 style="margin:0 0 0.8rem;font-size:1.1rem;color:#1a1a1a;">Training Load</h3>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:0.8rem;">
                 <div>
-                    <p style="font-size:1.4rem;font-weight:bold;color:#0074D9;">CTL: ${lastCTL.toFixed(1)}</p>
-                    <small>Carga crónica</small>
+                    <p style="margin:0;font-size:1.4rem;font-weight:bold;color:#0074D9;">${lastCTL.toFixed(1)}</p>
+                    <small style="color:#666;">CTL (Chronic)</small>
                 </div>
                 <div>
-                    <p style="font-size:1.4rem;font-weight:bold;color:#FF4136;">ATL: ${lastATL.toFixed(1)}</p>
-                    <small>Carga aguda</small>
+                    <p style="margin:0;font-size:1.4rem;font-weight:bold;color:#FF4136;">${lastATL.toFixed(1)}</p>
+                    <small style="color:#666;">ATL (Acute)</small>
                 </div>
                 <div>
-                    <p style="font-size:1.4rem;font-weight:bold;color:${tsbColor};">TSB: ${lastTSB.toFixed(1)}</p>
-                    <small>Balance</small>
+                    <p style="margin:0;font-size:1.4rem;font-weight:bold;color:${tsbColor};">${lastTSB.toFixed(1)}</p>
+                    <small style="color:#666;">TSB (Balance)</small>
                 </div>
                 <div>
-                    <p style="font-size:1.4rem;font-weight:bold;color:#FC5200;">${totalLoad}</p>
-                    <small>Carga total (rango)</small>
+                    <p style="margin:0;font-size:1.4rem;font-weight:bold;color:#8E44AD;">${totalLoad}</p>
+                    <small style="color:#666;">Total Load</small>
                 </div>
                 <div>
-                    <p style="font-size:1.4rem;font-weight:bold;color:${utils.trendColor(loadChange)};">
-                        ${loadTrend} ${Math.abs(loadChange).toFixed(1)}%
+                    <p style="margin:0;font-size:1.3rem;font-weight:bold;color:${getTrendColor(loadChangePct)};">
+                        ${trend} ${Math.abs(loadChangePct).toFixed(0)}%
                     </p>
-                    <small>Cambio semanal</small>
+                    <small style="color:#666;">Weekly Δ</small>
                 </div>
             </div>
-            <p style="text-align:center;font-weight:bold;margin-top:0.5rem;color:${color};">
+            <p style="text-align:center;margin:0.8rem 0 0.4rem;font-weight:600;color:${color};">
                 ${emoji} ${message}
             </p>
-            <p style="text-align:center;font-weight:bold;margin-top:0.25rem;color:#FF4136;">
-                Warning Riesgo de lesión: ~${(lastInjuryRisk * 100).toFixed(0)}%
+            <p style="text-align:center;margin:0;font-weight:600;color:#e74c3c;">
+                Warning Injury Risk: ~${(lastInjuryRisk * 100).toFixed(0)}%
             </p>
         </div>
     `;
+}
+
+// Helper
+function getTrendColor(pct) {
+    if (pct > 15) return '#e74c3c';
+    if (pct > 5) return '#f39c12';
+    if (pct < -10) return '#e74c3c';
+    if (pct < -5) return '#f39c12';
+    return '#27ae60';
+}
+
+
+
+/**
+ * Renders PMC Chart: CTL, ATL, TSB, Injury Risk + VO₂max (runs only)
+ */
+function renderPMCChart(runs, allActivities) {
+    const canvas = document.getElementById('pmc-chart');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (window.pmcChart) window.pmcChart.destroy();
+
+    // Extract time series from preprocessed runs
+    const sorted = runs
+        .filter(r => r.atl != null && r.ctl != null && r.tsb != null && r.injuryRisk != null)
+        .sort((a, b) => new Date(a.start_date_local) - new Date(b.start_date_local));
+
+    if (sorted.length === 0) {
+        ctx.font = '16px sans-serif';
+        ctx.fillStyle = '#999';
+        ctx.textAlign = 'center';
+        ctx.fillText('No data to display', canvas.width / 2, canvas.height / 2);
+        return;
+    }
+
+    const labels = sorted.map(r => {
+        const d = new Date(r.start_date_local);
+        return `${d.getMonth() + 1}/${d.getDate()}`;
+    });
+
+    const ctl = sorted.map(r => r.ctl);
+    const atl = sorted.map(r => r.atl);
+    const tsb = sorted.map(r => r.tsb);
+    const injuryRisk = sorted.map(r => r.injuryRisk * 100); // %
+    const vo2max = sorted.map(r => r.vo2max || null);
+
+    window.pmcChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'CTL (Chronic)',
+                    data: ctl,
+                    borderColor: '#0074D9',
+                    backgroundColor: 'rgba(0, 116, 217, 0.1)',
+                    tension: 0.3,
+                    yAxisID: 'y',
+                    pointRadius: 0
+                },
+                {
+                    label: 'ATL (Acute)',
+                    data: atl,
+                    borderColor: '#FF4136',
+                    backgroundColor: 'rgba(255, 65, 54, 0.1)',
+                    tension: 0.3,
+                    yAxisID: 'y',
+                    pointRadius: 0
+                },
+                {
+                    label: 'TSB (Balance)',
+                    data: tsb,
+                    borderColor: '#2ECC40',
+                    backgroundColor: 'rgba(46, 204, 64, 0.1)',
+                    tension: 0.3,
+                    yAxisID: 'y1',
+                    pointRadius: 0
+                },
+                {
+                    label: 'Injury Risk %',
+                    data: injuryRisk,
+                    borderColor: '#e74c3c',
+                    backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                    tension: 0.3,
+                    yAxisID: 'y2',
+                    pointRadius: 0,
+                    borderWidth: 2
+                },
+                {
+                    label: 'VO₂max (ml/kg/min)',
+                    data: vo2max,
+                    borderColor: '#9B59B6',
+                    backgroundColor: 'rgba(155, 89, 182, 0.1)',
+                    tension: 0.3,
+                    yAxisID: 'y3',
+                    pointRadius: 3,
+                    pointBackgroundColor: '#9B59B6',
+                    borderDash: [5, 5]
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                title: { display: true, text: 'Performance Management Chart', font: { size: 16 } },
+                tooltip: { mode: 'index', intersect: false },
+                legend: { position: 'top' }
+            },
+            scales: {
+                x: { display: true, title: { display: true, text: 'Date' } },
+                y: {
+                    type: 'linear',
+                    position: 'left',
+                    title: { display: true, text: 'TSS' },
+                    min: 0,
+                    max: Math.max(...ctl, ...atl) * 1.2
+                },
+                y1: {
+                    type: 'linear',
+                    position: 'right',
+                    title: { display: true, text: 'TSB' },
+                    grid: { drawOnChartArea: false },
+                    min: -40,
+                    max: 40
+                },
+                y2: {
+                    type: 'linear',
+                    position: 'right',
+                    title: { display: true, text: 'Risk %' },
+                    grid: { drawOnChartArea: false },
+                    min: 0,
+                    max: 100,
+                    display: false
+                },
+                y3: {
+                    type: 'linear',
+                    position: 'left',
+                    title: { display: true, text: 'VO₂max' },
+                    grid: { drawOnChartArea: false },
+                    min: 20,
+                    max: 80,
+                    display: false
+                }
+            }
+        }
+    });
 }
 
 
