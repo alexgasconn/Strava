@@ -13,24 +13,24 @@ export function filterActivitiesByDate(activities, from, to) {
     });
 }
 
-export function rollingMean(arr, windowSize) {
-    const result = [];
-    for (let i = 0; i < arr.length; i++) {
-        const start = Math.max(0, i - windowSize + 1);
-        const window = arr.slice(start, i + 1);
-        result.push(window.reduce((a, b) => a + b, 0) / window.length);
-    }
-    return result;
-}
-
-// // js/utils.js
-// export function rollingMean(arr, window) {
-//     return arr.map((_, i) => {
-//         const start = Math.max(0, i - window + 1);
-//         const slice = arr.slice(start, i + 1);
-//         return slice.reduce((a, b) => a + b, 0) / slice.length;
-//     });
+// export function rollingMean(arr, windowSize) {
+//     const result = [];
+//     for (let i = 0; i < arr.length; i++) {
+//         const start = Math.max(0, i - windowSize + 1);
+//         const window = arr.slice(start, i + 1);
+//         result.push(window.reduce((a, b) => a + b, 0) / window.length);
+//     }
+//     return result;
 // }
+
+// js/utils.js
+export function rollingMean(arr, window) {
+    return arr.map((_, i) => {
+        const start = Math.max(0, i - window + 1);
+        const slice = arr.slice(start, i + 1);
+        return slice.reduce((a, b) => a + b, 0) / slice.length;
+    });
+}
 
 export function calculateFitness(dailyEffort) {
     function expMovingAvg(arr, lambda) {
