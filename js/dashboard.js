@@ -992,10 +992,10 @@ function renderTSSBarChart(activities, rangeType) {
  */
 function getMondayOfWeek(date) {
     const d = new Date(date);
-    const day = d.getDay(); // 0 = domingo, 1 = lunes, ..., 6 = sábado
-    const diff = day === 0 ? -6 : 1 - day; // Si es domingo, retroceder 6 días
-    d.setDate(d.getDate() + diff);
     d.setHours(0, 0, 0, 0);
+    const day = d.getDay(); // 0 = domingo, 1 = lunes, ..., 6 = sábado
+    const diff = day === 0 ? -6 : 1 - day; // Si es domingo, ir al lunes anterior (retroceder 6)
+    d.setDate(d.getDate() + diff);
     return d;
 }
 
