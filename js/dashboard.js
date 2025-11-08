@@ -890,7 +890,7 @@ function renderTSSBarChart(activities, rangeType) {
     // Calcular las fechas de inicio y fin del período seleccionado
     const now = new Date();
     let startDate;
-    const endDate = new Date(now);
+    let endDate = new Date(now);
     endDate.setHours(23, 59, 59, 999);
 
     switch (rangeType) {
