@@ -24,7 +24,6 @@ function renderRangeSelector(allActivities, dateFilterFrom, dateFilterTo) {
         { label: 'This Month', type: 'month' },
         { label: 'Last 30 Days', type: 'last30' },
         { label: 'Last 3 Months', type: 'last3m' },
-        { label: 'Last 90 Days', type: 'last90' },
         { label: 'Last 6 Months', type: 'last6m' },
         { label: 'This Year', type: 'year' },
         { label: 'Last 365 Days', type: 'last365' }
@@ -89,11 +88,6 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
             startDate.setMonth(now.getMonth() - 3);
             break;
         }
-        case 'last90': {
-            startDate = new Date(now);
-            startDate.setDate(now.getDate() - 90);
-            break;
-        }
         case 'last6m': {
             startDate = new Date(now);
             startDate.setMonth(now.getMonth() - 6);
@@ -123,7 +117,7 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
     renderPMCChart(recentRuns, allActivities);
     renderRecentActivitiesPreview(recentRuns);
     renderDashboardSummary(recentRuns, midRecentRuns);
-    renderTSSBarChart(filteredActivities, selectedRangeDays);
+    renderTSSBarChart(recentRuns, selectedRangeDays);
 }
 
 
@@ -940,7 +934,7 @@ function groupTSSByPeriod(activities, rangeType) {
     const grouped = {};
 
     const isDaily = ['week', 'last7', 'month', 'last30'].includes(rangeType);
-    const isWeekly = ['last3m', 'last90', 'last6m'].includes(rangeType);
+    const isWeekly = ['last3m', 'last6m'].includes(rangeType);
     const isMonthly = ['last365', 'year'].includes(rangeType);
 
     activities.forEach(a => {
