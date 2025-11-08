@@ -748,6 +748,19 @@ function renderRecentActivitiesPreview(runs) {
                                     </div>
                                 </div>
                             ` : ''}
+                            ${r.tss ? `
+                                <div style="display:flex; align-items:center; gap:0.4rem;">
+                                    <span style="font-size:1rem;">📊</span>
+                                    <div>
+                                        <div style="font-weight:600; color:#e74c3c; font-size:0.9rem; line-height:1.2;">
+                                            ${r.tss.toFixed(0)} TSS
+                                        </div>
+                                        <div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:0.3px;">
+                                            TSS
+                                        </div>
+                                    </div>
+                                </div>
+                            ` : ''}
                         </div>
                     </div>
                 </div>
