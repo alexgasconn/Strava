@@ -108,8 +108,6 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
             startDate = new Date(now);
             startDate.setDate(now.getDate() - 30);
         }
-        { label: 'Last 6 Months', type: 'last6m' },
-    ];
     }
 
     const recentRuns = runs.filter(r => new Date(r.start_date_local) >= startDate);
