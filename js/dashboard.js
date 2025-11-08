@@ -1,6 +1,6 @@
 import * as utils from './utils.js';
 
-let selectedRangeDays = 30; // rango inicial
+let selectedRangeDays = 'last30'; // rango inicial
 
 export function renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo) {
     const container = document.getElementById('dashboard-tab');
@@ -59,16 +59,21 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
 
     switch (selectedRangeDays) {
         case 'week': {
-            const day = now.getDay();
-            const diff = (day === 0 ? 6 : day - 1); // start Monday
+            // Obtener lunes de la semana actual (lunes = 1, domingo = 0)
+            const currentDay = now.getDay();
+            const diffToMonday = currentDay === 0 ? -6 : 1 - currentDay; // si es domingo, retrocede 6
             startDate = new Date(now);
-            startDate.setDate(now.getDate() - diff);
+            startDate.setDate(now.getDate() + diffToMonday);
+            startDate.setHours(0, 0, 0, 0);
             break;
         }
+
         case 'month': {
             startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            startDate.setHours(0, 0, 0, 0);
             break;
         }
+
         case 'year': {
             startDate = new Date(now.getFullYear(), 0, 1);
             break;
@@ -246,11 +251,11 @@ function renderTrainingLoadMetrics(runs, allActivities) {
     if (!container) return;
 
     const now = new Date();
-    const validRuns = runs.filter(r => 
-        r.tss != null && 
-        r.atl != null && 
-        r.ctl != null && 
-        r.tsb != null && 
+    const validRuns = runs.filter(r =>
+        r.tss != null &&
+        r.atl != null &&
+        r.ctl != null &&
+        r.tsb != null &&
         r.injuryRisk != null
     );
 
@@ -879,23 +884,34 @@ function renderTSSBarChart(activities, rangeType) {
 
     // Calcular las fechas de inicio y fin del período seleccionado
     const now = new Date();
-    let startDate, endDate = new Date(now);
+    let startDate;
+    const endDate = new Date(now);
     endDate.setHours(23, 59, 59, 999);
 
     switch (rangeType) {
         case 'week': {
-            const day = now.getDay();
-            const diff = (day === 0 ? 6 : day - 1); // start Monday
+            // Queremos lunes como inicio y domingo como final
+            const now = new Date();
+            const day = now.getDay(); // 0 = domingo
+            const diffToMonday = (day === 0 ? -6 : 1 - day); // si domingo → retrocede 6 días
             startDate = new Date(now);
-            startDate.setDate(now.getDate() - diff);
+            startDate.setDate(now.getDate() + diffToMonday);
             startDate.setHours(0, 0, 0, 0);
+
+            endDate = new Date(startDate);
+            endDate.setDate(startDate.getDate() + 6); // lunes + 6 = domingo
+            endDate.setHours(23, 59, 59, 999);
             break;
         }
+
         case 'month': {
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-            startDate.setHours(0, 0, 0, 0);
+            const now = new Date();
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1); // 1 del mes actual
+            endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0); // último del mes actual
+            endDate.setHours(23, 59, 59, 999);
             break;
         }
+
         case 'year': {
             startDate = new Date(now.getFullYear(), 0, 1);
             startDate.setHours(0, 0, 0, 0);
