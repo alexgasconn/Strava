@@ -877,7 +877,68 @@ function renderTSSBarChart(activities, rangeType) {
     const ctx = canvas.getContext('2d');
     if (window.tssBarChart) window.tssBarChart.destroy();
 
-    const { labels, data } = groupTSSByPeriod(activities, rangeType);
+    // Calcular las fechas de inicio y fin del período seleccionado
+    const now = new Date();
+    let startDate, endDate = new Date(now);
+    endDate.setHours(23, 59, 59, 999);
+
+    switch (rangeType) {
+        case 'week': {
+            const day = now.getDay();
+            const diff = (day === 0 ? 6 : day - 1); // start Monday
+            startDate = new Date(now);
+            startDate.setDate(now.getDate() - diff);
+            startDate.setHours(0, 0, 0, 0);
+            break;
+        }
+        case 'month': {
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            startDate.setHours(0, 0, 0, 0);
+            break;
+        }
+        case 'year': {
+            startDate = new Date(now.getFullYear(), 0, 1);
+            startDate.setHours(0, 0, 0, 0);
+            break;
+        }
+        case 'last7': {
+            startDate = new Date(now);
+            startDate.setDate(now.getDate() - 7);
+            startDate.setHours(0, 0, 0, 0);
+            break;
+        }
+        case 'last30': {
+            startDate = new Date(now);
+            startDate.setDate(now.getDate() - 30);
+            startDate.setHours(0, 0, 0, 0);
+            break;
+        }
+        case 'last3m': {
+            startDate = new Date(now);
+            startDate.setMonth(now.getMonth() - 3);
+            startDate.setHours(0, 0, 0, 0);
+            break;
+        }
+        case 'last6m': {
+            startDate = new Date(now);
+            startDate.setMonth(now.getMonth() - 6);
+            startDate.setHours(0, 0, 0, 0);
+            break;
+        }
+        case 'last365': {
+            startDate = new Date(now);
+            startDate.setDate(now.getDate() - 365);
+            startDate.setHours(0, 0, 0, 0);
+            break;
+        }
+        default: {
+            startDate = new Date(now);
+            startDate.setDate(now.getDate() - 30);
+            startDate.setHours(0, 0, 0, 0);
+        }
+    }
+
+    const { labels, data } = groupTSSByPeriod(activities, rangeType, startDate, endDate);
 
     if (!labels.length || !data.length) {
         console.warn('No TSS data to render');
