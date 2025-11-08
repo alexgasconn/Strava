@@ -1,5 +1,5 @@
 // js/preprocessing.js
-import { movingAverage } from './utils.js';
+import { rollingMean } from './utils.js';
 
 // ===================================================================
 // CONFIGURACIÓN
@@ -29,7 +29,7 @@ function calculateTSS(activity) {
 }
 
 // ===================================================================
-// 2. VO₂max: solo running, ACSM + HR
+// 2. VO₂max: solo running (ACSM + HR)
 // ===================================================================
 function computeVO2max(activity, maxHr = MAX_HR_DEFAULT) {
     if (activity.type !== 'Run' || !activity.distance || activity.moving_time < 600) {
@@ -78,21 +78,22 @@ function getTimeSeries(daily) {
 }
 
 // ===================================================================
-// 5. PMC: ATL, CTL, TSB + Ramp Rate
+// 5. PMC: ATL (7d), CTL (42d), TSB, Ramp Rate
 // ===================================================================
 function calculatePMC(tssSeries) {
-    const atl = movingAverage(tssSeries, 7);
-    const ctl = movingAverage(tssSeries, 42);
+    const atl = rollingMean(tssSeries, 7);
+    const ctl = rollingMean(tssSeries, 42);
     const tsb = [];
-    const rampRate = [];
+    const rampRate = [0]; // primer día: 0
 
     for (let i = 0; i < tssSeries.length; i++) {
-        const a = atl[i] ?? 0;
-        const c = ctl[i] ?? 0;
+        const a = atl[i];
+        const c = ctl[i];
         tsb.push(+(a - c).toFixed(1));
 
-        const prevCtl = i > 0 ? ctl[i - 1] : c;
-        rampRate.push(+(c - prevCtl).toFixed(1));
+        if (i > 0) {
+            rampRate.push(+(c - ctl[i - 1]).toFixed(1));
+        }
     }
 
     return { atl, ctl, tsb, rampRate };
@@ -119,7 +120,7 @@ function calculateInjuryRisk(tsb, rampRate) {
 }
 
 // ===================================================================
-// 7. Asignar métricas a actividades
+// 7. Asignar métricas
 // ===================================================================
 function assignMetrics(activities, dates, pmc, injuryRisk) {
     const map = Object.fromEntries(dates.map((d, i) => [d, i]));
