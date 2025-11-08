@@ -23,6 +23,15 @@ export function rollingMean(arr, windowSize) {
     return result;
 }
 
+// // js/utils.js
+// export function rollingMean(arr, window) {
+//     return arr.map((_, i) => {
+//         const start = Math.max(0, i - window + 1);
+//         const slice = arr.slice(start, i + 1);
+//         return slice.reduce((a, b) => a + b, 0) / slice.length;
+//     });
+// }
+
 export function calculateFitness(dailyEffort) {
     function expMovingAvg(arr, lambda) {
         const result = [];
