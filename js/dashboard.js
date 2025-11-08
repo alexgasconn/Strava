@@ -928,34 +928,58 @@ function renderTSSBarChart(activities, rangeType) {
 }
 
 /**
- * Agrupa TSS por período (día, semana o mes)
+ * Agrupa TSS por período (día, semana o mes) incluyendo períodos sin datos
  */
 function groupTSSByPeriod(activities, rangeType) {
     const grouped = {};
+    
+    if (!activities.length) return { labels: [], data: [] };
+
+    // Get date range
+    const dates = activities.map(a => new Date(a.start_date_local)).filter(d => !isNaN(d));
+    const minDate = new Date(Math.min(...dates));
+    const maxDate = new Date(Math.max(...dates));
 
     const isDaily = ['week', 'last7', 'month', 'last30'].includes(rangeType);
     const isWeekly = ['last3m', 'last6m'].includes(rangeType);
     const isMonthly = ['last365', 'year'].includes(rangeType);
 
+    // Initialize all periods with 0
+    const curr = new Date(minDate);
+    while (curr <= maxDate) {
+        let key;
+        if (isDaily) {
+            key = curr.toISOString().split('T')[0];
+            curr.setDate(curr.getDate() + 1);
+        } else if (isWeekly) {
+            const monday = new Date(curr);
+            const diff = (monday.getDay() + 6) % 7;
+            monday.setDate(monday.getDate() - diff);
+            key = monday.toISOString().split('T')[0];
+            curr.setDate(curr.getDate() + 7);
+        } else if (isMonthly) {
+            key = `${curr.getFullYear()}-${String(curr.getMonth() + 1).padStart(2, '0')}`;
+            curr.setMonth(curr.getMonth() + 1);
+        }
+        grouped[key] = 0;
+    }
+
+    // Add activity TSS values
     activities.forEach(a => {
         if (!a.start_date_local) return;
         const date = new Date(a.start_date_local);
         if (isNaN(date)) return;
 
         let key;
-
         if (isDaily) {
-            key = date.toISOString().split('T')[0]; // YYYY-MM-DD
+            key = date.toISOString().split('T')[0];
         } else if (isWeekly) {
-            // Obtener lunes de la semana
             const d = new Date(date);
-            const diff = (d.getDay() + 6) % 7; // lunes = 0
+            const diff = (d.getDay() + 6) % 7;
             d.setDate(d.getDate() - diff);
             key = d.toISOString().split('T')[0];
         } else if (isMonthly) {
-            key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`; // YYYY-MM
-        } else {
-            key = date.toISOString().split('T')[0];
+            key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         }
 
         const tss = a.tss ?? (a.suffer_score ? a.suffer_score * 1.05 : 0);
