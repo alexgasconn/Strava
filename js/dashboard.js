@@ -875,8 +875,7 @@ function decodePolyline(encoded) {
 
 
 /**
- * Renderiza gráfica de barras apiladas: TSS por período
- * Apilado por tipo de actividad
+ * Renderiza gráfica de barras: TSS por período
  */
 function renderTSSBarChart(activities, rangeType) {
     const canvas = document.getElementById('tss-bar-chart');
@@ -886,28 +885,20 @@ function renderTSSBarChart(activities, rangeType) {
     if (window.tssBarChart) window.tssBarChart.destroy();
 
     const grouped = groupTSSByPeriod(activities, rangeType);
-    const { labels, datasets } = grouped;
-
-    const typeColors = {
-        Run: '#e74c3c',
-        Ride: '#3498db',
-        Swim: '#2ecc71',
-        Workout: '#9b59b6',
-        WeightTraining: '#f1c40f',
-        default: '#95a5a6'
-    };
-
-    const chartDatasets = Object.entries(datasets).map(([type, data]) => ({
-        label: type,
-        data,
-        backgroundColor: typeColors[type] || typeColors.default,
-        borderColor: '#fff',
-        borderWidth: 1
-    }));
+    const { labels, data } = grouped;
 
     window.tssBarChart = new Chart(ctx, {
         type: 'bar',
-        data: { labels, datasets: chartDatasets },
+        data: {
+            labels,
+            datasets: [{
+                label: 'TSS',
+                data,
+                backgroundColor: '#e74c3c',
+                borderColor: '#fff',
+                borderWidth: 1
+            }]
+        },
         options: {
             responsive: true,
             maintainAspectRatio: false,
@@ -917,8 +908,10 @@ function renderTSSBarChart(activities, rangeType) {
                 legend: { position: 'top' }
             },
             scales: {
-                x: { stacked: true },
-                y: { stacked: true, beginAtZero: true, title: { display: true, text: 'TSS' } }
+                y: { 
+                    beginAtZero: true, 
+                    title: { display: true, text: 'TSS' }
+                }
             }
         }
     });
@@ -950,18 +943,12 @@ function groupTSSByPeriod(activities, rangeType) {
             key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         }
 
-        if (!daily[key]) daily[key] = {};
-        const type = a.type || 'Other';
+        if (!daily[key]) daily[key] = 0;
         const tss = a.tss ?? (a.suffer_score != null ? a.suffer_score * 1.05 : 0);
-        daily[key][type] = (daily[key][type] || 0) + tss;
+        daily[key] += tss;
     });
 
     const sortedKeys = Object.keys(daily).sort();
-    const types = new Set();
-    sortedKeys.forEach(k => Object.keys(daily[k]).forEach(t => types.add(t)));
-
-    const datasets = {};
-    types.forEach(t => datasets[t] = []);
 
     const labels = sortedKeys.map(key => {
         if (isDaily) return key.slice(5); // MM-DD
@@ -973,11 +960,7 @@ function groupTSSByPeriod(activities, rangeType) {
         return key;
     });
 
-    sortedKeys.forEach(key => {
-        types.forEach(t => {
-            datasets[t].push(daily[key][t] || 0);
-        });
-    });
+    const data = sortedKeys.map(key => daily[key]);
 
-    return { labels, datasets };
+    return { labels, data };
 }
