@@ -23,9 +23,11 @@ function renderRangeSelector(allActivities, dateFilterFrom, dateFilterTo) {
         { label: 'Last 7 Days', type: 'last7' },
         { label: 'This Month', type: 'month' },
         { label: 'Last 30 Days', type: 'last30' },
+        { label: 'Last 3 Months', type: 'last3m' },
         { label: 'Last 90 Days', type: 'last90' },
-        { label: 'Last 365 Days', type: 'last365' },
-        { label: 'This Year', type: 'year' }
+        { label: 'Last 6 Months', type: 'last6m' },
+        { label: 'This Year', type: 'year' },
+        { label: 'Last 365 Days', type: 'last365' }
     ];
 
     container.innerHTML = ranges.map(r => `
@@ -58,7 +60,7 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
 
     switch (selectedRangeDays) {
         case 'week': {
-            const day = now.getDay(); // 0=Sunday
+            const day = now.getDay();
             const diff = (day === 0 ? 6 : day - 1); // start Monday
             startDate = new Date(now);
             startDate.setDate(now.getDate() - diff);
@@ -82,9 +84,19 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
             startDate.setDate(now.getDate() - 30);
             break;
         }
+        case 'last3m': {
+            startDate = new Date(now);
+            startDate.setMonth(now.getMonth() - 3);
+            break;
+        }
         case 'last90': {
             startDate = new Date(now);
             startDate.setDate(now.getDate() - 90);
+            break;
+        }
+        case 'last6m': {
+            startDate = new Date(now);
+            startDate.setMonth(now.getMonth() - 6);
             break;
         }
         case 'last365': {
@@ -96,6 +108,8 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
             startDate = new Date(now);
             startDate.setDate(now.getDate() - 30);
         }
+        { label: 'Last 6 Months', type: 'last6m' },
+    ];
     }
 
     const recentRuns = runs.filter(r => new Date(r.start_date_local) >= startDate);
@@ -111,6 +125,7 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
     renderPMCChart(recentRuns, allActivities);
     renderRecentActivitiesPreview(recentRuns);
     renderDashboardSummary(recentRuns, midRecentRuns);
+    renderTSSBarChart(filteredActivities, selectedRangeDays);
 }
 
 
@@ -855,4 +870,116 @@ function decodePolyline(encoded) {
     }
 
     return poly;
+}
+
+
+
+
+
+/**
+ * Renderiza gráfica de barras apiladas: TSS por período
+ * Apilado por tipo de actividad
+ */
+function renderTSSBarChart(activities, rangeType) {
+    const canvas = document.getElementById('tss-bar-chart');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (window.tssBarChart) window.tssBarChart.destroy();
+
+    const grouped = groupTSSByPeriod(activities, rangeType);
+    const { labels, datasets } = grouped;
+
+    const typeColors = {
+        Run: '#e74c3c',
+        Ride: '#3498db',
+        Swim: '#2ecc71',
+        Workout: '#9b59b6',
+        WeightTraining: '#f1c40f',
+        default: '#95a5a6'
+    };
+
+    const chartDatasets = Object.entries(datasets).map(([type, data]) => ({
+        label: type,
+        data,
+        backgroundColor: typeColors[type] || typeColors.default,
+        borderColor: '#fff',
+        borderWidth: 1
+    }));
+
+    window.tssBarChart = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets: chartDatasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: { display: true, text: 'TSS por Período', font: { size: 16 } },
+                tooltip: { mode: 'index', intersect: false },
+                legend: { position: 'top' }
+            },
+            scales: {
+                x: { stacked: true },
+                y: { stacked: true, beginAtZero: true, title: { display: true, text: 'TSS' } }
+            }
+        }
+    });
+}
+
+/**
+ * Agrupa TSS por período según el rango seleccionado
+ */
+function groupTSSByPeriod(activities, rangeType) {
+    const daily = {};
+
+    // Definir tipo de agrupación
+    const isDaily = ['week', 'last7', 'month', 'last30'].includes(rangeType);
+    const isWeekly = ['last3m', 'last90', 'last6m'].includes(rangeType);
+    const isMonthly = ['last365', 'year'].includes(rangeType);
+
+    activities.forEach(a => {
+        const date = new Date(a.start_date_local);
+        if (isNaN(date)) return;
+
+        let key;
+        if (isDaily) {
+            key = date.toISOString().split('T')[0]; // YYYY-MM-DD
+        } else if (isWeekly) {
+            const start = new Date(date);
+            start.setDate(date.getDate() - date.getDay() + 1); // Lunes
+            key = start.toISOString().split('T')[0];
+        } else if (isMonthly) {
+            key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        }
+
+        if (!daily[key]) daily[key] = {};
+        const type = a.type || 'Other';
+        const tss = a.tss ?? (a.suffer_score != null ? a.suffer_score * 1.05 : 0);
+        daily[key][type] = (daily[key][type] || 0) + tss;
+    });
+
+    const sortedKeys = Object.keys(daily).sort();
+    const types = new Set();
+    sortedKeys.forEach(k => Object.keys(daily[k]).forEach(t => types.add(t)));
+
+    const datasets = {};
+    types.forEach(t => datasets[t] = []);
+
+    const labels = sortedKeys.map(key => {
+        if (isDaily) return key.slice(5); // MM-DD
+        if (isWeekly) return `Sem ${key.slice(5)}`;
+        if (isMonthly) {
+            const [y, m] = key.split('-');
+            return `${new Date(y, m - 1, 1).toLocaleString('default', { month: 'short' })} ${y.slice(2)}`;
+        }
+        return key;
+    });
+
+    sortedKeys.forEach(key => {
+        types.forEach(t => {
+            datasets[t].push(daily[key][t] || 0);
+        });
+    });
+
+    return { labels, datasets };
 }

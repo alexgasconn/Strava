@@ -5,7 +5,7 @@ import { rollingMean } from './utils.js';
 // CONFIGURACIÓN
 // ===================================================================
 const SUFFER_TO_TSS = 1.05;
-const MAX_HR_DEFAULT = 190;
+const MAX_HR_DEFAULT = 200;
 
 // ===================================================================
 // 1. TSS: suffer_score → TSS (fallback: 36/hora)

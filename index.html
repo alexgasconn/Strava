@@ -112,7 +112,7 @@
                             <h3>Distance Distribution</h3>
                             <canvas id="distance-histogram"></canvas>
                         </div>
-                        
+
                         <div class="chart-container">
                             <h3>Accumulated Distance vs Time</h3>
                             <canvas id="accumulated-distance-chart"></canvas>
@@ -143,6 +143,11 @@
 
                     <div id="dashboard-summary"
                         style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+                    </div>
+
+                    <div class="chart-container">
+                        <h3>TSS por Período (apilado por tipo)</h3>
+                        <canvas id="tss-bar-chart" height="300"></canvas>
                     </div>
 
                     <div id="training-load-metrics" class="chart-container" style="width: 100%;">
