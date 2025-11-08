@@ -180,15 +180,12 @@ function assignFitnessToActivities(activities, dates, fitness) {
         }
     });
 
-    console.log(`[preprocessing] Fitness asignado a ${matched}/${activities.length} actividades.`);
 }
 
 /**
  * Pipeline principal
  */
 export function preprocessActivities(activities) {
-    console.log(`[preprocessing] Iniciando pipeline con ${activities?.length || 0} actividades...`);
-    const t0 = performance.now();
 
     if (!activities || activities.length === 0) {
         console.warn("[preprocessing] No hay actividades.");
@@ -208,23 +205,42 @@ export function preprocessActivities(activities) {
     // 4. Asignar a actividades
     assignFitnessToActivities(activities, dates, fitness);
 
-    const t1 = performance.now();
-    console.log(`[preprocessing] Pipeline completado en ${(t1 - t0).toFixed(1)} ms`);
 
-    // Ejemplo final
-    const last = activities.at(-1);
-    if (last) {
-        console.log(`[preprocessing] Última actividad:`, {
-            date: last.start_date_local?.split('T')[0],
-            type: last.type,
-            tss: last.tss,
-            atl: last.atl,
-            ctl: last.ctl,
-            tsb: last.tsb,
-            injuryRisk: last.injuryRisk,
-            vo2max: last.vo2max
+
+
+    // Log top 30 activities by TSS
+    try {
+        const top30 = [...activities]
+            .filter(a => typeof a.tss === 'number' && !isNaN(a.tss))
+            .sort((a, b) => b.tss - a.tss)
+            .slice(0, 30);
+
+        console.log(`[preprocessing] Top ${top30.length} activities by TSS:`);
+        top30.forEach((a, i) => {
+            console.log(
+                `${i + 1}. ${a.start_date_local?.split('T')[0] || 'unknown'} | ${a.name || a.type || 'activity'} | TSS: ${a.tss} | method: ${a.tss_method || 'n/a'} | ATL:${a.atl ?? 'n/a'} CTL:${a.ctl ?? 'n/a'} TSB:${a.tsb ?? 'n/a'} Injury:${a.injuryRisk ?? 'n/a'} VO2:${a.vo2max ?? 'n/a'} dist:${(a.distance||0)/1000}km time:${a.moving_time||0}s`
+            );
         });
+
+        // Additionally print a compact table for quick inspection
+        console.table(top30.map((a, i) => ({
+            rank: i + 1,
+            date: a.start_date_local?.split('T')[0] || '',
+            name: a.name || a.type || '',
+            tss: a.tss,
+            method: a.tss_method || '',
+            atl: a.atl,
+            ctl: a.ctl,
+            tsb: a.tsb,
+            injuryRisk: a.injuryRisk,
+            vo2max: a.vo2max,
+            km: ((a.distance||0)/1000).toFixed(2),
+            moving_time_s: a.moving_time || 0
+        })));
+    } catch (e) {
+        console.warn('[preprocessing] Error al generar top30 por TSS:', e);
     }
 
     return activities;
+    
 }
