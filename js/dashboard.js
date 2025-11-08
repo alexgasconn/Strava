@@ -867,7 +867,6 @@ function decodePolyline(encoded) {
 
 
 
-
 /**
  * Renderiza una gráfica de barras: TSS por período
  */
@@ -928,6 +927,30 @@ function renderTSSBarChart(activities, rangeType) {
 }
 
 /**
+ * Obtiene el lunes de la semana para una fecha dada
+ */
+function getMondayOfWeek(date) {
+    const d = new Date(date);
+    const day = d.getDay(); // 0 = domingo, 1 = lunes, ..., 6 = sábado
+    const diff = day === 0 ? -6 : 1 - day; // Si es domingo, retroceder 6 días
+    d.setDate(d.getDate() + diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
+}
+
+/**
+ * Obtiene el número de semana del año (ISO 8601)
+ */
+function getWeekNumber(date) {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+    const yearStart = new Date(d.getFullYear(), 0, 1);
+    const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    return weekNo;
+}
+
+/**
  * Agrupa TSS por período (día, semana o mes) incluyendo períodos sin datos
  */
 function groupTSSByPeriod(activities, rangeType) {
@@ -952,15 +975,13 @@ function groupTSSByPeriod(activities, rangeType) {
     // Seguridad: límite máximo de iteraciones (por si hay error de rango)
     let guard = 0;
 
-    while (curr <= maxDate && guard++ < 1000) {
+    while (curr <= maxDate && guard++ < 2000) {
         let key;
         if (isDaily) {
             key = curr.toISOString().split('T')[0];
             curr.setDate(curr.getDate() + 1);
         } else if (isWeekly) {
-            const monday = new Date(curr);
-            const diff = (monday.getDay() + 6) % 7;
-            monday.setDate(monday.getDate() - diff);
+            const monday = getMondayOfWeek(curr);
             key = monday.toISOString().split('T')[0];
             curr.setDate(curr.getDate() + 7);
         } else if (isMonthly) {
@@ -984,10 +1005,8 @@ function groupTSSByPeriod(activities, rangeType) {
         if (isDaily) {
             key = date.toISOString().split('T')[0];
         } else if (isWeekly) {
-            const d = new Date(date);
-            const diff = (d.getDay() + 6) % 7;
-            d.setDate(d.getDate() - diff);
-            key = d.toISOString().split('T')[0];
+            const monday = getMondayOfWeek(date);
+            key = monday.toISOString().split('T')[0];
         } else if (isMonthly) {
             key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         } else {
