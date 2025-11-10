@@ -161,7 +161,6 @@ function calculateInjuryRiskImproved(tsb, rampRate, atl, tssSeries) {
     const riskHistory = [];
     const len = tsb.length;
 
-    // Función helper: z-score relativo
     const zScore = (x, mean, std) => std > 0 ? (x - mean) / std : 0;
 
     for (let i = 0; i < len; i++) {
@@ -171,21 +170,18 @@ function calculateInjuryRiskImproved(tsb, rampRate, atl, tssSeries) {
         const tsbWindow = tsb.slice(Math.max(0, i - 42), i + 1);
         const tsbMean = tsbWindow.reduce((a,b)=>a+b,0)/tsbWindow.length;
         const tsbStd = Math.sqrt(tsbWindow.reduce((a,b)=>a+Math.pow(b-tsbMean,2),0)/tsbWindow.length);
-        const tsbRel = -zScore(tsb[i], tsbMean, tsbStd); // más negativo = más riesgo
-        risk += Math.tanh(tsbRel); // mapea suavemente [-1,1] → [-0.76,0.76]
+        risk += 0.5 * Math.tanh(-zScore(tsb[i], tsbMean, tsbStd));
 
         // --- 2. Ramp Rate relativo ---
         const rrWindow = rampRate.slice(Math.max(0,i-14), i+1);
         const rrMean = rrWindow.reduce((a,b)=>a+b,0)/rrWindow.length;
         const rrStd = Math.sqrt(rrWindow.reduce((a,b)=>a+Math.pow(b-rrMean,2),0)/rrWindow.length);
-        const rrRel = zScore(rampRate[i], rrMean, rrStd);
-        risk += 0.5 * Math.tanh(rrRel); // peso menor que TSB
+        risk += 0.25 * Math.tanh(zScore(rampRate[i], rrMean, rrStd));
 
         // --- 3. Carga aguda (ATL) ---
         const atlWindow = atl.slice(Math.max(0,i-7), i+1);
         const atlMean = atlWindow.reduce((a,b)=>a+b,0)/atlWindow.length;
-        const atlRel = (atl[i] - atlMean) / 50; // normaliza a factor [aprox -1,+1]
-        risk += 0.3 * Math.tanh(atlRel);
+        risk += 0.15 * Math.tanh((atl[i] - atlMean)/50);
 
         // --- 4. Variabilidad reciente ---
         const recent = tssSeries.slice(Math.max(0,i-6), i+1);
@@ -193,17 +189,17 @@ function calculateInjuryRiskImproved(tsb, rampRate, atl, tssSeries) {
             const mean = recent.reduce((a,b)=>a+b,0)/recent.length;
             const variance = recent.reduce((a,b)=>a+Math.pow(b-mean,2),0)/recent.length;
             const cv = Math.sqrt(variance)/mean;
-            risk += 0.15 * Math.tanh((cv-0.2)*2); // CV alto → más riesgo
+            risk += 0.1 * Math.tanh((cv-0.2)*2);
         }
 
-        // --- 5. Normalizar a [0,1] ---
-        risk = 0.5 + risk/2; 
+        // Normalizar a [0,1]
+        risk = 0.5 + risk/2;
         risk = Math.min(Math.max(risk, 0), 1);
 
-        // --- 6. Suavizado EWMA adaptativo ---
+        // --- Suavizado EWMA conservador ---
         if (i > 0) {
             const prev = riskHistory[i-1];
-            const alpha = 0.3 + 0.7 * Math.min(1, Math.abs(risk - prev)); // más cambio → más rápido
+            const alpha = 0.15; // solo 15% del cambio diario → más estable
             risk = prev * (1 - alpha) + risk * alpha;
         }
 
