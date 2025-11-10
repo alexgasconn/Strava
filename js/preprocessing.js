@@ -161,27 +161,30 @@ function calculateInjuryRiskImproved(tsb, rampRate, atl, tssSeries) {
     const riskHistory = [];
     const len = tsb.length;
 
-    const zScore = (x, mean, std) => std > 0 ? (x - mean) / std : 0;
+    // Helper: percentil relativo al historial
+    const percentile = (arr, val) => {
+        if (!arr.length) return 0.5;
+        const sorted = [...arr].sort((a,b)=>a-b);
+        let count = 0;
+        for (const x of sorted) if (x <= val) count++;
+        return count / arr.length;
+    }
 
     for (let i = 0; i < len; i++) {
-        let risk = 0;
-
-        // --- 1. Fatiga relativa (TSB) ---
-        const tsbWindow = tsb.slice(Math.max(0, i - 42), i + 1);
-        const tsbMean = tsbWindow.reduce((a,b)=>a+b,0)/tsbWindow.length;
-        const tsbStd = Math.sqrt(tsbWindow.reduce((a,b)=>a+Math.pow(b-tsbMean,2),0)/tsbWindow.length);
-        risk += 0.5 * Math.tanh(-zScore(tsb[i], tsbMean, tsbStd));
+        // --- 1. TSB relativo (fatiga) ---
+        const tsbWindow = tsb.slice(Math.max(0,i-42), i+1);
+        const tsbPerc = 1 - percentile(tsbWindow, tsb[i]); // más negativo → más riesgo
+        let risk = 0.6 * Math.pow(tsbPerc, 1.5); // efecto no lineal
 
         // --- 2. Ramp Rate relativo ---
         const rrWindow = rampRate.slice(Math.max(0,i-14), i+1);
-        const rrMean = rrWindow.reduce((a,b)=>a+b,0)/rrWindow.length;
-        const rrStd = Math.sqrt(rrWindow.reduce((a,b)=>a+Math.pow(b-rrMean,2),0)/rrWindow.length);
-        risk += 0.25 * Math.tanh(zScore(rampRate[i], rrMean, rrStd));
+        const rrPerc = percentile(rrWindow, rampRate[i]);
+        risk += 0.25 * Math.pow(rrPerc, 1.3) * tsbPerc; // interacción: ramp fuerte + fatiga
 
-        // --- 3. Carga aguda (ATL) ---
+        // --- 3. ATL relativo (carga aguda) ---
         const atlWindow = atl.slice(Math.max(0,i-7), i+1);
-        const atlMean = atlWindow.reduce((a,b)=>a+b,0)/atlWindow.length;
-        risk += 0.15 * Math.tanh((atl[i] - atlMean)/50);
+        const atlPerc = percentile(atlWindow, atl[i]);
+        risk += 0.15 * Math.pow(atlPerc, 1.2);
 
         // --- 4. Variabilidad reciente ---
         const recent = tssSeries.slice(Math.max(0,i-6), i+1);
@@ -189,17 +192,16 @@ function calculateInjuryRiskImproved(tsb, rampRate, atl, tssSeries) {
             const mean = recent.reduce((a,b)=>a+b,0)/recent.length;
             const variance = recent.reduce((a,b)=>a+Math.pow(b-mean,2),0)/recent.length;
             const cv = Math.sqrt(variance)/mean;
-            risk += 0.1 * Math.tanh((cv-0.2)*2);
+            risk *= 1 + Math.min(cv, 1) * 0.3; // hasta +30% si CV alto
         }
 
-        // Normalizar a [0,1]
-        risk = 0.5 + risk/2;
+        // --- Normalizar a [0,1] ---
         risk = Math.min(Math.max(risk, 0), 1);
 
-        // --- Suavizado EWMA conservador ---
+        // --- Suavizado EWMA adaptativo ---
         if (i > 0) {
             const prev = riskHistory[i-1];
-            const alpha = 0.15; // solo 15% del cambio diario → más estable
+            const alpha = 0.2 + 0.5 * Math.min(1, Math.abs(risk - prev)); 
             risk = prev * (1 - alpha) + risk * alpha;
         }
 
