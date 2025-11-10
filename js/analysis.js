@@ -42,7 +42,7 @@ export function renderConsistencyChart(runs) {
     const heatmapContainer = document.getElementById('cal-heatmap');
     if (!heatmapContainer) return;
 
-    // Manejo de error si CalHeatmap no está disponible
+    // Si CalHeatmap no está disponible
     if (typeof CalHeatmap === 'undefined') {
         heatmapContainer.innerHTML = `
             <p style="text-align:center; color:#8c8c8c;">
@@ -61,7 +61,7 @@ export function renderConsistencyChart(runs) {
         return;
     }
 
-    // --- Layout centrado ---
+    // Layout centrado
     heatmapContainer.style.display = 'flex';
     heatmapContainer.style.justifyContent = 'center';
     heatmapContainer.style.alignItems = 'center';
@@ -69,7 +69,7 @@ export function renderConsistencyChart(runs) {
     heatmapContainer.style.overflowX = 'auto';
     heatmapContainer.style.padding = '1rem 0';
 
-    // --- Agregación por día ---
+    // Agregar datos por día
     const aggregatedData = runs.reduce((acc, act) => {
         const date = act.start_date_local.substring(0, 10);
         acc[date] = (acc[date] || 0) + (act.distance ? act.distance / 1000 : 0);
@@ -79,9 +79,17 @@ export function renderConsistencyChart(runs) {
     const years = runs.map(act => new Date(act.start_date_local).getFullYear());
     const year = Math.max(...years);
 
+    // Desde el lunes de la primera semana del año hasta el domingo de la última
     const startDate = new Date(`${year}-01-01`);
-    const endDate = new Date(`${year}-12-31`);
+    const day = startDate.getDay();
+    const diffToMonday = (day === 0 ? -6 : 1) - day; // mover al lunes
+    startDate.setDate(startDate.getDate() + diffToMonday);
 
+    const endDate = new Date(`${year}-12-31`);
+    const diffToSunday = 7 - (endDate.getDay() === 0 ? 7 : endDate.getDay());
+    endDate.setDate(endDate.getDate() + diffToSunday);
+
+    // Escala de colores
     const kmValues = Object.values(aggregatedData).filter(v => v > 0).sort((a, b) => a - b);
     const thresholds = kmValues.length >= 5
         ? [
@@ -94,14 +102,18 @@ export function renderConsistencyChart(runs) {
 
     heatmapContainer.innerHTML = '';
 
-    // --- Heatmap semanal completo (7 filas, 52 columnas aprox) ---
+    // --- Heatmap semanal (lunes–domingo, meses arriba) ---
     const cal = new CalHeatmap();
     cal.paint({
         itemSelector: heatmapContainer,
         domain: {
             type: "year",
-            gutter: 2,
-            label: { text: "MMM", position: "top" } // etiqueta de mes encima
+            gutter: 4,
+            label: {
+                text: "MMM", // nombre del mes
+                position: "top",
+                align: "start" // asegura alineación con la primera semana del mes
+            }
         },
         subDomain: {
             type: "day",
@@ -112,15 +124,15 @@ export function renderConsistencyChart(runs) {
             label: {
                 position: "left",
                 text: (date) => {
-                    const day = date.getDay();
-                    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-                    return days[day];
+                    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                    // Convertimos getDay() (0=domingo) a 0=lunes
+                    return days[(date.getDay() + 6) % 7];
                 }
             },
-            // Queremos una fila por día (7 filas)
-            rowLimit: 7,
+            rowLimit: 7, // 7 filas = lunes a domingo
         },
         range: 1, // 1 año completo
+        date: { start: startDate, end: endDate },
         data: {
             source: Object.entries(aggregatedData).map(([date, value]) => ({ date, value })),
             x: 'date',
@@ -133,10 +145,10 @@ export function renderConsistencyChart(runs) {
                 domain: thresholds
             }
         },
-        date: { start: startDate, end: endDate },
         theme: 'light'
     });
 }
+
 
 
 
