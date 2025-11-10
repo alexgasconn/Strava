@@ -39,57 +39,57 @@ function createChart(canvasId, config) {
 
 // --- CHART RENDERING FUNCTIONS ---
 export function renderConsistencyChart(runs) {
-    const heatmapContainer = document.getElementById('cal-heatmap');
-    if (!heatmapContainer) return;
+    const container = document.getElementById('cal-heatmap');
+    if (!container) return;
 
-    // Si CalHeatmap no está disponible
+    container.innerHTML = '';
+    container.style.display = 'flex';
+    container.style.alignItems = 'flex-start';
+    container.style.width = '100%';
+    container.style.overflowX = 'auto';
+
     if (typeof CalHeatmap === 'undefined') {
-        heatmapContainer.innerHTML = `
-            <p style="text-align:center; color:#8c8c8c;">
-                Heatmap not available on this device or browser.
-            </p>`;
-        console.warn("CalHeatmap is not defined — skipping heatmap rendering.");
+        container.innerHTML = `<p style="text-align:center; color:#8c8c8c;">
+            Heatmap not available on this device or browser.
+        </p>`;
         return;
     }
 
-    // Si no hay datos
     if (!runs || runs.length === 0) {
-        heatmapContainer.innerHTML = `
-            <p style="text-align:center; color:#8c8c8c;">
-                No activity data for this period.
-            </p>`;
+        container.innerHTML = `<p style="text-align:center; color:#8c8c8c;">
+            No activity data for this period.
+        </p>`;
         return;
     }
 
-    // Layout centrado
-    heatmapContainer.style.display = 'flex';
-    heatmapContainer.style.justifyContent = 'center';
-    heatmapContainer.style.alignItems = 'center';
-    heatmapContainer.style.width = '100%';
-    heatmapContainer.style.overflowX = 'auto';
-    heatmapContainer.style.padding = '1rem 0';
+    // --- Etiquetas de filas (días) ---
+    const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const labelsDiv = document.createElement('div');
+    labelsDiv.style.display = 'flex';
+    labelsDiv.style.flexDirection = 'column';
+    labelsDiv.style.justifyContent = 'space-between';
+    labelsDiv.style.marginRight = '4px';
+    labelsDiv.style.height = '100%';
+    weekdays.forEach(d => {
+        const dLabel = document.createElement('div');
+        dLabel.textContent = d;
+        dLabel.style.fontSize = '10px';
+        labelsDiv.appendChild(dLabel);
+    });
+    container.appendChild(labelsDiv);
 
-    // Agregar datos por día
+    // --- Heatmap principal ---
+    const heatmapDiv = document.createElement('div');
+    heatmapDiv.style.flex = '1';
+    container.appendChild(heatmapDiv);
+
+    // Agregar datos
     const aggregatedData = runs.reduce((acc, act) => {
         const date = act.start_date_local.substring(0, 10);
         acc[date] = (acc[date] || 0) + (act.distance ? act.distance / 1000 : 0);
         return acc;
     }, {});
 
-    const years = runs.map(act => new Date(act.start_date_local).getFullYear());
-    const year = Math.max(...years);
-
-    // Desde el lunes de la primera semana del año hasta el domingo de la última
-    const startDate = new Date(`${year}-01-01`);
-    const day = startDate.getDay();
-    const diffToMonday = (day === 0 ? -6 : 1) - day; // mover al lunes
-    startDate.setDate(startDate.getDate() + diffToMonday);
-
-    const endDate = new Date(`${year}-12-31`);
-    const diffToSunday = 7 - (endDate.getDay() === 0 ? 7 : endDate.getDay());
-    endDate.setDate(endDate.getDate() + diffToSunday);
-
-    // Escala de colores
     const kmValues = Object.values(aggregatedData).filter(v => v > 0).sort((a, b) => a - b);
     const thresholds = kmValues.length >= 5
         ? [
@@ -100,54 +100,46 @@ export function renderConsistencyChart(runs) {
         ]
         : [2, 5, 10, 15];
 
-    heatmapContainer.innerHTML = '';
-
-    // --- Heatmap semanal (lunes–domingo, meses arriba) ---
+    // Crear CalHeatmap
     const cal = new CalHeatmap();
     cal.paint({
-        itemSelector: heatmapContainer,
-        domain: {
-            type: "year",
-            gutter: 4,
-            label: {
-                text: "MMM", // nombre del mes
-                position: "top",
-                align: "start" // asegura alineación con la primera semana del mes
-            }
-        },
-        subDomain: {
-            type: "day",
-            width: 13,
-            height: 13,
-            gutter: 3,
-            radius: 2,
-            label: {
-                position: "left",
-                text: (date) => {
-                    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                    // Convertimos getDay() (0=domingo) a 0=lunes
-                    return days[(date.getDay() + 6) % 7];
-                }
-            },
-            rowLimit: 7, // 7 filas = lunes a domingo
-        },
-        range: 1, // 1 año completo
-        date: { start: startDate, end: endDate },
-        data: {
-            source: Object.entries(aggregatedData).map(([date, value]) => ({ date, value })),
-            x: 'date',
-            y: 'value'
-        },
+        itemSelector: heatmapDiv,
+        domain: { type: 'week', gutter: 2 },
+        subDomain: { type: 'day', width: 13, height: 13, gutter: 3, radius: 2 },
+        range: 54, // semanas
+        start: new Date(new Date().getFullYear(), 0, 1), // primer día del año
+        data: Object.entries(aggregatedData).map(([date, value]) => ({ date, value })),
         scale: {
             color: {
                 type: 'threshold',
-                range: ['#ebedf0', '#fcbba1', '#fc9272', '#fb6a4a', '#de2d26'],
+                range: ['#ebedf0','#fcbba1','#fc9272','#fb6a4a','#de2d26'],
                 domain: thresholds
             }
-        },
-        theme: 'light'
+        }
     });
+
+    // --- Agregar meses encima manualmente ---
+    const monthsDiv = document.createElement('div');
+    monthsDiv.style.display = 'flex';
+    monthsDiv.style.position = 'absolute';
+    monthsDiv.style.top = '0';
+    monthsDiv.style.left = labelsDiv.offsetWidth + 'px';
+    monthsDiv.style.width = heatmapDiv.offsetWidth + 'px';
+    monthsDiv.style.justifyContent = 'space-between';
+    monthsDiv.style.fontSize = '10px';
+    monthsDiv.style.pointerEvents = 'none';
+
+    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    monthNames.forEach(m => {
+        const mDiv = document.createElement('div');
+        mDiv.textContent = m;
+        monthsDiv.appendChild(mDiv);
+    });
+
+    container.style.position = 'relative';
+    container.appendChild(monthsDiv);
 }
+
 
 
 
