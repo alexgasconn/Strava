@@ -41,33 +41,41 @@ function createChart(canvasId, config) {
 export function renderConsistencyChart(runs) {
     const container = document.getElementById('cal-heatmap');
     if (!container) return;
-    
+
     container.innerHTML = '';
     container.style.position = 'relative';
     container.style.width = '100%';
-    
+    container.style.display = 'flex';
+    container.style.justifyContent = 'center'; // CENTRAR
+    container.style.alignItems = 'flex-start'; // alineación vertical al top
+
+    // Wrapper interno para mantener la anchura del heatmap
+    const heatmapWrapper = document.createElement('div');
+    heatmapWrapper.style.display = 'inline-block';
+    container.appendChild(heatmapWrapper);
+
     // Verificar disponibilidad de CalHeatmap
     if (typeof CalHeatmap === 'undefined') {
-        container.innerHTML = `<p style="text-align:center; color:#8c8c8c;">
+        heatmapWrapper.innerHTML = `<p style="text-align:center; color:#8c8c8c;">
             Heatmap no disponible en este dispositivo o navegador.
         </p>`;
         return;
     }
-    
+
     if (!runs || runs.length === 0) {
-        container.innerHTML = `<p style="text-align:center; color:#8c8c8c;">
+        heatmapWrapper.innerHTML = `<p style="text-align:center; color:#8c8c8c;">
             No hay datos de actividad para este período.
         </p>`;
         return;
     }
-    
+
     // Agregar datos y calcular umbrales
     const aggregatedData = runs.reduce((acc, act) => {
         const date = act.start_date_local.substring(0, 10);
         acc[date] = (acc[date] || 0) + (act.distance ? act.distance / 1000 : 0);
         return acc;
     }, {});
-    
+
     const kmValues = Object.values(aggregatedData).filter(v => v > 0).sort((a, b) => a - b);
     const thresholds = kmValues.length >= 5
         ? [
@@ -77,24 +85,24 @@ export function renderConsistencyChart(runs) {
             kmValues[Math.floor(0.8 * kmValues.length)]
         ]
         : [2, 5, 10, 15];
-    
+
     // Crear CalHeatmap con configuración correcta
     const cal = new CalHeatmap();
     const today = new Date();
-    
+
     // Calcular el primer lunes del año
     const startOfYear = new Date(today.getFullYear(), 0, 1);
     const dayOfWeek = startOfYear.getDay(); // 0 = domingo, 1 = lunes, ...
     const daysUntilMonday = dayOfWeek === 0 ? 1 : (8 - dayOfWeek) % 7;
     const firstMonday = new Date(startOfYear);
     firstMonday.setDate(startOfYear.getDate() + daysUntilMonday);
-    
+
     cal.paint({
-        itemSelector: container,
+        itemSelector: heatmapWrapper, // usamos wrapper
         domain: {
             type: 'month',
             gutter: 4,
-            label: { text: 'MMM', textAlign: 'start', position: 'top' }
+            label: { text: 'MMM', textAlign: 'center', position: 'top' } // centrado
         },
         subDomain: {
             type: 'day',
@@ -123,12 +131,12 @@ export function renderConsistencyChart(runs) {
             }
         }
     });
-    
+
     // Agregar etiquetas de días de la semana (solo primera columna)
     setTimeout(() => {
         const weekdayLabels = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-        const firstColumn = container.querySelector('[data-week="1"]');
-        
+        const firstColumn = heatmapWrapper.querySelector('[data-week="1"]');
+
         if (firstColumn) {
             const days = firstColumn.querySelectorAll('[data-day]');
             days.forEach((day, idx) => {
@@ -146,6 +154,7 @@ export function renderConsistencyChart(runs) {
         }
     }, 100);
 }
+
 
 
 
