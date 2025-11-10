@@ -41,55 +41,33 @@ function createChart(canvasId, config) {
 export function renderConsistencyChart(runs) {
     const container = document.getElementById('cal-heatmap');
     if (!container) return;
-
+    
     container.innerHTML = '';
-    container.style.display = 'flex';
-    container.style.alignItems = 'flex-start';
+    container.style.position = 'relative';
     container.style.width = '100%';
-    container.style.overflowX = 'auto';
-
+    
+    // Verificar disponibilidad de CalHeatmap
     if (typeof CalHeatmap === 'undefined') {
         container.innerHTML = `<p style="text-align:center; color:#8c8c8c;">
-            Heatmap not available on this device or browser.
+            Heatmap no disponible en este dispositivo o navegador.
         </p>`;
         return;
     }
-
+    
     if (!runs || runs.length === 0) {
         container.innerHTML = `<p style="text-align:center; color:#8c8c8c;">
-            No activity data for this period.
+            No hay datos de actividad para este período.
         </p>`;
         return;
     }
-
-    // --- Etiquetas de filas (días) ---
-    const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const labelsDiv = document.createElement('div');
-    labelsDiv.style.display = 'flex';
-    labelsDiv.style.flexDirection = 'column';
-    labelsDiv.style.justifyContent = 'space-between';
-    labelsDiv.style.marginRight = '4px';
-    labelsDiv.style.height = '100%';
-    weekdays.forEach(d => {
-        const dLabel = document.createElement('div');
-        dLabel.textContent = d;
-        dLabel.style.fontSize = '10px';
-        labelsDiv.appendChild(dLabel);
-    });
-    container.appendChild(labelsDiv);
-
-    // --- Heatmap principal ---
-    const heatmapDiv = document.createElement('div');
-    heatmapDiv.style.flex = '1';
-    container.appendChild(heatmapDiv);
-
-    // Agregar datos
+    
+    // Agregar datos y calcular umbrales
     const aggregatedData = runs.reduce((acc, act) => {
         const date = act.start_date_local.substring(0, 10);
         acc[date] = (acc[date] || 0) + (act.distance ? act.distance / 1000 : 0);
         return acc;
     }, {});
-
+    
     const kmValues = Object.values(aggregatedData).filter(v => v > 0).sort((a, b) => a - b);
     const thresholds = kmValues.length >= 5
         ? [
@@ -99,47 +77,75 @@ export function renderConsistencyChart(runs) {
             kmValues[Math.floor(0.8 * kmValues.length)]
         ]
         : [2, 5, 10, 15];
-
-    // Crear CalHeatmap
+    
+    // Crear CalHeatmap con configuración correcta
     const cal = new CalHeatmap();
+    const today = new Date();
+    
+    // Calcular el primer lunes del año
+    const startOfYear = new Date(today.getFullYear(), 0, 1);
+    const dayOfWeek = startOfYear.getDay(); // 0 = domingo, 1 = lunes, ...
+    const daysUntilMonday = dayOfWeek === 0 ? 1 : (8 - dayOfWeek) % 7;
+    const firstMonday = new Date(startOfYear);
+    firstMonday.setDate(startOfYear.getDate() + daysUntilMonday);
+    
     cal.paint({
-        itemSelector: heatmapDiv,
-        domain: { type: 'week', gutter: 2 },
-        subDomain: { type: 'day', width: 13, height: 13, gutter: 3, radius: 2 },
-        range: 54, // semanas
-        start: new Date(new Date().getFullYear(), 0, 1), // primer día del año
-        data: Object.entries(aggregatedData).map(([date, value]) => ({ date, value })),
+        itemSelector: container,
+        domain: {
+            type: 'month',
+            gutter: 4,
+            label: { text: 'MMM', textAlign: 'start', position: 'top' }
+        },
+        subDomain: {
+            type: 'day',
+            width: 11,
+            height: 11,
+            gutter: 2,
+            radius: 2,
+            label: null
+        },
+        date: { start: firstMonday, locale: { weekStart: 1 } }, // Semana empieza en lunes
+        range: 12, // 12 meses
+        data: {
+            source: Object.entries(aggregatedData).map(([date, value]) => ({
+                date,
+                value
+            })),
+            type: 'json',
+            x: 'date',
+            y: 'value'
+        },
         scale: {
             color: {
                 type: 'threshold',
-                range: ['#ebedf0','#fcbba1','#fc9272','#fb6a4a','#de2d26'],
+                range: ['#ebedf0', '#fcbba1', '#fc9272', '#fb6a4a', '#de2d26'],
                 domain: thresholds
             }
         }
     });
-
-    // --- Agregar meses encima manualmente ---
-    const monthsDiv = document.createElement('div');
-    monthsDiv.style.display = 'flex';
-    monthsDiv.style.position = 'absolute';
-    monthsDiv.style.top = '0';
-    monthsDiv.style.left = labelsDiv.offsetWidth + 'px';
-    monthsDiv.style.width = heatmapDiv.offsetWidth + 'px';
-    monthsDiv.style.justifyContent = 'space-between';
-    monthsDiv.style.fontSize = '10px';
-    monthsDiv.style.pointerEvents = 'none';
-
-    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    monthNames.forEach(m => {
-        const mDiv = document.createElement('div');
-        mDiv.textContent = m;
-        monthsDiv.appendChild(mDiv);
-    });
-
-    container.style.position = 'relative';
-    container.appendChild(monthsDiv);
+    
+    // Agregar etiquetas de días de la semana (solo primera columna)
+    setTimeout(() => {
+        const weekdayLabels = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+        const firstColumn = container.querySelector('[data-week="1"]');
+        
+        if (firstColumn) {
+            const days = firstColumn.querySelectorAll('[data-day]');
+            days.forEach((day, idx) => {
+                if (weekdayLabels[idx]) {
+                    const label = document.createElement('span');
+                    label.textContent = weekdayLabels[idx];
+                    label.style.position = 'absolute';
+                    label.style.left = '-12px';
+                    label.style.fontSize = '9px';
+                    label.style.color = '#767676';
+                    day.style.position = 'relative';
+                    day.appendChild(label);
+                }
+            });
+        }
+    }, 100);
 }
-
 
 
 
