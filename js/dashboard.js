@@ -1166,10 +1166,11 @@ export function renderGoalsSectionAdvanced(allActivities) {
 
     const div = document.getElementById('goals-section');
     div.innerHTML = `
-        <h3>🎯 Running Goals ${currentYear}</h3>
-        
+    <h3>🎯 Running Goals ${currentYear}</h3>
+
+    <div style="display:flex;gap:2rem;">
         <!-- YEARLY GOAL -->
-        <div style="background:white;padding:1.5rem;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);margin-bottom:2rem;">
+        <div style="flex:1;background:white;padding:1.5rem;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
                 <h4 style="margin:0;">📅 Annual Goal</h4>
                 <div>
@@ -1182,11 +1183,11 @@ export function renderGoalsSectionAdvanced(allActivities) {
                 </div>
             </div>
             <div id="annual-stats" style="margin-bottom:1rem;padding:0.8rem;background:#f8f9fa;border-radius:4px;"></div>
-            <canvas id="annual-goal-chart" style="max-height:300px;"></canvas>
+            <canvas id="annual-goal-chart" style="max-height:300px;width:100%;"></canvas>
         </div>
 
         <!-- MONTHLY GOAL -->
-        <div style="background:white;padding:1.5rem;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+        <div style="flex:1;background:white;padding:1.5rem;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
                 <h4 style="margin:0;">📆 Monthly Goal - ${getMonthName(currentMonth)}</h4>
                 <div>
@@ -1199,9 +1200,11 @@ export function renderGoalsSectionAdvanced(allActivities) {
                 </div>
             </div>
             <div id="monthly-stats" style="margin-bottom:1rem;padding:0.8rem;background:#f8f9fa;border-radius:4px;"></div>
-            <canvas id="monthly-goal-chart" style="max-height:300px;"></canvas>
+            <canvas id="monthly-goal-chart" style="max-height:300px;width:100%;"></canvas>
         </div>
-    `;
+    </div>
+`;
+
 
     // Event listeners
     document.getElementById('update-annual-btn').onclick = () => {
@@ -1225,7 +1228,7 @@ export function renderGoalsSectionAdvanced(allActivities) {
 
 function renderAnnualChart(allActivities) {
     const runActivities = allActivities.filter(a => a.type && a.type.includes('Run'));
-    
+
     const labels = [];
     const actualData = [];
     const plannedData = [];
@@ -1234,15 +1237,15 @@ function renderAnnualChart(allActivities) {
     // Build monthly data
     for (let m = 0; m < 12; m++) {
         labels.push(getMonthName(m));
-        
+
         const monthStart = new Date(currentYear, m, 1);
         const monthEnd = new Date(currentYear, m + 1, 0, 23, 59, 59);
-        
+
         const monthActivities = runActivities.filter(a => {
             const d = new Date(a.start_date_local);
             return d >= monthStart && d <= monthEnd;
         });
-        
+
         const monthKm = monthActivities.reduce((sum, a) => sum + (a.distance || 0) / 1000, 0);
         cumulative += monthKm;
         actualData.push(parseFloat(cumulative.toFixed(2)));
@@ -1253,7 +1256,7 @@ function renderAnnualChart(allActivities) {
     const currentTotal = actualData[actualData.length - 1] || 0;
     const percentage = ((currentTotal / annualGoalKm) * 100).toFixed(1);
     const remaining = Math.max(0, annualGoalKm - currentTotal).toFixed(1);
-    
+
     document.getElementById('annual-stats').innerHTML = `
         <strong>Progress:</strong> ${currentTotal.toFixed(1)} / ${annualGoalKm} km (${percentage}%) 
         | <strong>Remaining:</strong> ${remaining} km
@@ -1317,7 +1320,7 @@ function renderAnnualChart(allActivities) {
 
 function renderMonthlyChart(allActivities) {
     const runActivities = allActivities.filter(a => a.type && a.type.includes('Run'));
-    
+
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
     const labels = [];
     const actualData = [];
@@ -1327,15 +1330,15 @@ function renderMonthlyChart(allActivities) {
     // Build daily data
     for (let d = 1; d <= daysInMonth; d++) {
         labels.push(d);
-        
+
         const dayStart = new Date(currentYear, currentMonth, d, 0, 0, 0);
         const dayEnd = new Date(currentYear, currentMonth, d, 23, 59, 59);
-        
+
         const dayActivities = runActivities.filter(a => {
             const dt = new Date(a.start_date_local);
             return dt >= dayStart && dt <= dayEnd;
         });
-        
+
         const dayKm = dayActivities.reduce((sum, a) => sum + (a.distance || 0) / 1000, 0);
         cumulative += dayKm;
         actualData.push(parseFloat(cumulative.toFixed(2)));
@@ -1346,7 +1349,7 @@ function renderMonthlyChart(allActivities) {
     const currentTotal = actualData[actualData.length - 1] || 0;
     const percentage = ((currentTotal / monthlyGoalKm) * 100).toFixed(1);
     const remaining = Math.max(0, monthlyGoalKm - currentTotal).toFixed(1);
-    
+
     document.getElementById('monthly-stats').innerHTML = `
         <strong>Progress:</strong> ${currentTotal.toFixed(1)} / ${monthlyGoalKm} km (${percentage}%) 
         | <strong>Remaining:</strong> ${remaining} km
@@ -1412,5 +1415,5 @@ function renderMonthlyChart(allActivities) {
 // ==============================================
 
 function getMonthName(monthIndex) {
-    return new Date(2000, monthIndex, 1).toLocaleString('default', {month: 'short'});
+    return new Date(2000, monthIndex, 1).toLocaleString('default', { month: 'short' });
 }
