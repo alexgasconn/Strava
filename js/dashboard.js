@@ -1220,83 +1220,88 @@ function renderGoalProgressChartAdvanced(allActivities) {
 
     periods.forEach((year, idx) => {
         const data = [];
-        if (selectedGoalPeriod==='year') {
-            for (let m=0; m<12; m++) labels.push(new Date(year, m, 1).toLocaleString('default',{month:'short'}));
-            for (let m=0; m<12; m++) {
+        if (selectedGoalPeriod === 'year') {
+            let cumulative = 0; // acumulado anual
+            for (let m = 0; m < 12; m++) labels.push(new Date(year, m, 1).toLocaleString('default',{month:'short'}));
+            for (let m = 0; m < 12; m++) {
                 const monthStart = new Date(year, m, 1);
-                const monthEnd = new Date(year, m+1, 0,23,59,59);
+                const monthEnd = new Date(year, m + 1, 0, 23, 59, 59);
                 const monthActivities = sportActivities.filter(a => {
                     const d = new Date(a.start_date_local);
                     return d >= monthStart && d <= monthEnd;
                 });
-                let value = selectedGoalType==='km'
-                    ? monthActivities.reduce((sum,a) => sum + (a.distance || 0)/1000,0)
-                    : monthActivities.reduce((sum,a) => sum + (a.moving_time || 0)/3600,0);
-                data.push(value);
+                let value = selectedGoalType === 'km'
+                    ? monthActivities.reduce((sum, a) => sum + (a.distance || 0) / 1000, 0)
+                    : monthActivities.reduce((sum, a) => sum + (a.moving_time || 0) / 3600, 0);
+
+                cumulative += value; // acumular
+                data.push(cumulative); // agregar acumulado
             }
 
-            // Crear línea planificada (objetivo lineal)
-            const planned = Array.from({length:12},(_,i) => annualGoal/12*(i+1));
+            const planned = Array.from({length:12}, (_, i) => annualGoal / 12 * (i + 1));
             datasets.push({
                 label: `Planned ${year}`,
                 data: planned,
-                borderColor: idx===0 ? '#28a745' : `rgba(40,167,69,0.5)`,
-                borderDash: [5,5],
-                fill:false,
-                tension:0.3
+                borderColor: idx === 0 ? '#28a745' : `rgba(40,167,69,0.5)`,
+                borderDash: [5, 5],
+                fill: false,
+                tension: 0.3
             });
 
             datasets.push({
                 label: `Actual ${year}`,
-                data:data,
-                borderColor: idx===0 ? '#007bff' : `rgba(0,123,255,0.5)`,
-                fill:false,
-                tension:0.3
+                data: data,
+                borderColor: idx === 0 ? '#007bff' : `rgba(0,123,255,0.5)`,
+                fill: false,
+                tension: 0.3
             });
 
         } else { // monthly
-            const daysInMonth = new Date(selectedYear, selectedMonth+1,0).getDate();
-            for (let d=1; d<=daysInMonth; d++) labels.push(d);
-            for (let d=1; d<=daysInMonth; d++) {
-                const dayStart = new Date(year, selectedMonth, d,0,0,0);
-                const dayEnd = new Date(year, selectedMonth, d,23,59,59);
+            const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+            let cumulative = 0; // acumulado mensual
+            for (let d = 1; d <= daysInMonth; d++) labels.push(d);
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dayStart = new Date(year, selectedMonth, d, 0, 0, 0);
+                const dayEnd = new Date(year, selectedMonth, d, 23, 59, 59);
                 const dayActivities = sportActivities.filter(a => {
                     const dt = new Date(a.start_date_local);
                     return dt >= dayStart && dt <= dayEnd;
                 });
-                let value = selectedGoalType==='km'
-                    ? dayActivities.reduce((sum,a) => sum + (a.distance || 0)/1000,0)
-                    : dayActivities.reduce((sum,a) => sum + (a.moving_time || 0)/3600,0);
-                data.push(value);
+                let value = selectedGoalType === 'km'
+                    ? dayActivities.reduce((sum, a) => sum + (a.distance || 0) / 1000, 0)
+                    : dayActivities.reduce((sum, a) => sum + (a.moving_time || 0) / 3600, 0);
+
+                cumulative += value;
+                data.push(cumulative); // acumulado
             }
 
-            const planned = Array.from({length:daysInMonth},(_,i) => monthlyGoal/daysInMonth*(i+1));
+            const planned = Array.from({length: daysInMonth}, (_, i) => monthlyGoal / daysInMonth * (i + 1));
             datasets.push({
                 label: `Planned ${year}`,
-                data:planned,
-                borderColor: idx===0 ? '#28a745' : `rgba(40,167,69,0.5)`,
-                borderDash: [5,5],
-                fill:false,
-                tension:0.3
+                data: planned,
+                borderColor: idx === 0 ? '#28a745' : `rgba(40,167,69,0.5)`,
+                borderDash: [5, 5],
+                fill: false,
+                tension: 0.3
             });
 
             datasets.push({
                 label: `Actual ${year}`,
-                data:data,
-                borderColor: idx===0 ? '#007bff' : `rgba(0,123,255,0.5)`,
-                fill:false,
-                tension:0.3
+                data: data,
+                borderColor: idx === 0 ? '#007bff' : `rgba(0,123,255,0.5)`,
+                fill: false,
+                tension: 0.3
             });
         }
     });
 
     const config = {
-        type:'line',
-        data:{labels,datasets},
-        options:{
-            responsive:true,
-            plugins:{legend:{position:'top'}},
-            scales:{y:{beginAtZero:true}}
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'top' } },
+            scales: { y: { beginAtZero: true } }
         }
     };
 
