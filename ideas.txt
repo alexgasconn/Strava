@@ -11,11 +11,11 @@
 
 
 🔴⚠️logout no funciona (sen recorda) 
-🟡⚠️consistency map no es fiable, li falten/sobren dies?... 
+🟢⚠️consistency map no es fiable, li falten/sobren dies?... 
 🟢🚨Botons de filtre de Last days no es veuen 
 🔴🚨wrapped no pot canviar de any 
 🔴🚨No es veu Monday a una matrix de Athlete 
-🟡🚨error a vegades al Heatmap calendar = (consistencymap) 
+🟢🚨error a vegades al Heatmap calendar = (consistencymap) 
 (ui.js:30 Could not initialize the app ReferenceError: CalHeatmap is not defined
     at renderConsistencyChart (analysis.js:84:17)
     at renderAnalysisTab (analysis.js:20:5)
