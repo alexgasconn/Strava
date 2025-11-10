@@ -38,11 +38,11 @@ function createChart(canvasId, config) {
 
 
 // --- CHART RENDERING FUNCTIONS ---
-
 export function renderConsistencyChart(runs) {
     const heatmapContainer = document.getElementById('cal-heatmap');
     if (!heatmapContainer) return;
 
+    // Manejo de error si CalHeatmap no está disponible
     if (typeof CalHeatmap === 'undefined') {
         heatmapContainer.innerHTML = `
             <p style="text-align:center; color:#8c8c8c;">
@@ -52,6 +52,7 @@ export function renderConsistencyChart(runs) {
         return;
     }
 
+    // Si no hay datos
     if (!runs || runs.length === 0) {
         heatmapContainer.innerHTML = `
             <p style="text-align:center; color:#8c8c8c;">
@@ -93,14 +94,14 @@ export function renderConsistencyChart(runs) {
 
     heatmapContainer.innerHTML = '';
 
-    // --- Heatmap semanal ---
+    // --- Heatmap semanal completo (7 filas, 52 columnas aprox) ---
     const cal = new CalHeatmap();
     cal.paint({
         itemSelector: heatmapContainer,
         domain: {
-            type: "week",
-            gutter: 5,
-            label: { text: "MMM", position: "top" } // muestra el mes encima de cada bloque
+            type: "year",
+            gutter: 2,
+            label: { text: "MMM", position: "top" } // etiqueta de mes encima
         },
         subDomain: {
             type: "day",
@@ -112,11 +113,14 @@ export function renderConsistencyChart(runs) {
                 position: "left",
                 text: (date) => {
                     const day = date.getDay();
-                    return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][day];
+                    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                    return days[day];
                 }
-            }
+            },
+            // Queremos una fila por día (7 filas)
+            rowLimit: 7,
         },
-        range: 54, // número de semanas del año aprox
+        range: 1, // 1 año completo
         data: {
             source: Object.entries(aggregatedData).map(([date, value]) => ({ date, value })),
             x: 'date',
@@ -129,9 +133,11 @@ export function renderConsistencyChart(runs) {
                 domain: thresholds
             }
         },
-        date: { start: startDate, end: endDate }
+        date: { start: startDate, end: endDate },
+        theme: 'light'
     });
 }
+
 
 
 
