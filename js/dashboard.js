@@ -128,6 +128,7 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
     renderRecentActivitiesPreview(recentRuns);
     renderDashboardSummary(recentRuns, midRecentRuns);
     renderTSSBarChart(recentActivities, selectedRangeDays);
+    renderGoalProgressChart(allActivities);
 }
 
 
@@ -1133,4 +1134,146 @@ function groupTSSByPeriod(activities, rangeType, startDate, endDate) {
 
     const data = sortedKeys.map(k => Math.round(grouped[k]));
     return { labels, data };
+}
+
+
+
+
+
+// --- Variables globales para objetivos ---
+let selectedSport = 'Run';
+let selectedGoalType = 'km'; // 'km' o 'hours'
+let selectedGoalPeriod = 'year'; // 'month' o 'year'
+let annualGoal = 1000; // km o horas
+let monthlyGoal = 100;  // km o horas
+
+export function renderGoalsSection(allActivities) {
+    const container = document.getElementById('dashboard-tab');
+    if (!container) return;
+
+    // Crear contenedor si no existe
+    if (!document.getElementById('goals-section')) {
+        const goalsDiv = document.createElement('div');
+        goalsDiv.id = 'goals-section';
+        goalsDiv.style = 'margin-top:2rem;padding:1rem;border-top:1px solid #ccc;';
+        container.appendChild(goalsDiv);
+    }
+
+    const div = document.getElementById('goals-section');
+    div.innerHTML = `
+        <h3>🎯 Objetivos</h3>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
+            <select id="goal-sport">
+                <option value="Run" ${selectedSport==='Run'?'selected':''}>Running</option>
+                <option value="Bike" ${selectedSport==='Bike'?'selected':''}>Biking</option>
+                <option value="Swim" ${selectedSport==='Swim'?'selected':''}>Swimming</option>
+            </select>
+
+            <select id="goal-type">
+                <option value="km" ${selectedGoalType==='km'?'selected':''}>Km</option>
+                <option value="hours" ${selectedGoalType==='hours'?'selected':''}>Hours</option>
+            </select>
+
+            <select id="goal-period">
+                <option value="month" ${selectedGoalPeriod==='month'?'selected':''}>Monthly</option>
+                <option value="year" ${selectedGoalPeriod==='year'?'selected':''}>Yearly</option>
+            </select>
+
+            <input type="number" id="goal-value" value="${selectedGoalPeriod==='year'?annualGoal:monthlyGoal}" style="width:80px;">
+            <button id="update-goal-btn">Update</button>
+        </div>
+
+        <canvas id="goal-progress-chart" height="200"></canvas>
+    `;
+
+    document.getElementById('update-goal-btn').onclick = () => {
+        selectedSport = document.getElementById('goal-sport').value;
+        selectedGoalType = document.getElementById('goal-type').value;
+        selectedGoalPeriod = document.getElementById('goal-period').value;
+        if (selectedGoalPeriod==='year') annualGoal = parseFloat(document.getElementById('goal-value').value);
+        else monthlyGoal = parseFloat(document.getElementById('goal-value').value);
+
+        renderGoalProgressChart(allActivities);
+    };
+
+    renderGoalProgressChart(allActivities);
+}
+
+
+function renderGoalProgressChart(allActivities) {
+    // Filtrar actividades por deporte
+    const sportActivities = allActivities.filter(a => a.type && a.type.includes(selectedSport));
+
+    const now = new Date();
+    let labels = [];
+    let actualData = [];
+    let plannedData = [];
+
+    if (selectedGoalPeriod==='year') {
+        for (let m=0; m<12; m++) labels.push(new Date(now.getFullYear(), m, 1).toLocaleString('default', {month:'short'}));
+        for (let m=0; m<12; m++) {
+            const monthStart = new Date(now.getFullYear(), m, 1);
+            const monthEnd = new Date(now.getFullYear(), m+1, 0, 23, 59, 59);
+            const monthActivities = sportActivities.filter(a => {
+                const d = new Date(a.start_date_local);
+                return d >= monthStart && d <= monthEnd;
+            });
+
+            let value = selectedGoalType==='km'
+                ? monthActivities.reduce((sum,a) => sum + (a.distance || 0)/1000, 0)
+                : monthActivities.reduce((sum,a) => sum + (a.moving_time || 0)/3600, 0);
+
+            actualData.push(value);
+            plannedData.push(annualGoal/12 * (m+1)); // progresión lineal del objetivo anual
+        }
+    } else { // monthly
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1,0).getDate();
+        for (let d=1; d<=daysInMonth; d++) labels.push(d);
+        for (let d=1; d<=daysInMonth; d++) {
+            const dayStart = new Date(now.getFullYear(), now.getMonth(), d, 0,0,0);
+            const dayEnd = new Date(now.getFullYear(), now.getMonth(), d,23,59,59);
+            const dayActivities = sportActivities.filter(a => {
+                const dt = new Date(a.start_date_local);
+                return dt >= dayStart && dt <= dayEnd;
+            });
+
+            let value = selectedGoalType==='km'
+                ? dayActivities.reduce((sum,a) => sum + (a.distance || 0)/1000, 0)
+                : dayActivities.reduce((sum,a) => sum + (a.moving_time || 0)/3600, 0);
+
+            actualData.push(value);
+            plannedData.push(monthlyGoal/daysInMonth*d);
+        }
+    }
+
+    const config = {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Actual',
+                    data: actualData,
+                    borderColor: '#007bff',
+                    fill: false,
+                    tension: 0.3
+                },
+                {
+                    label: 'Planned',
+                    data: plannedData,
+                    borderColor: '#28a745',
+                    borderDash: [5,5],
+                    fill: false,
+                    tension: 0.3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position:'top' } },
+            scales: { y: { beginAtZero:true } }
+        }
+    };
+
+    createDashboardChart('goal-progress-chart', config);
 }

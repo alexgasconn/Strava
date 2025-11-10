@@ -11,15 +11,16 @@
 
 
 🔴⚠️logout no funciona (sen recorda) 
-🔴⚠️consistency map no es fiable, li falten/sobren dies?... (ui.js:30 Could not initialize the app ReferenceError: CalHeatmap is not defined
-    at renderConsistencyChart (analysis.js:84:17)
-    at renderAnalysisTab (analysis.js:20:5)
-    at initializeApp (main.js:212:13)
-    at async handleAuth (auth.js:56:9)))
+🔴⚠️consistency map no es fiable, li falten/sobren dies?... 
 🟢🚨Botons de filtre de Last days no es veuen 
 🔴🚨wrapped no pot canviar de any 
 🔴🚨No es veu Monday a una matrix de Athlete 
 🔴🚨error a vegades al Heatmap calendar = (consistencymap) 
+(ui.js:30 Could not initialize the app ReferenceError: CalHeatmap is not defined
+    at renderConsistencyChart (analysis.js:84:17)
+    at renderAnalysisTab (analysis.js:20:5)
+    at initializeApp (main.js:212:13)
+    at async handleAuth (auth.js:56:9)))
 🟡🚧esborrar codi inutil 
 🟡🚧fer servir lo de utils.js sempre, no repetir codi formatPace, formatTime...
 🟡🚧tot english 
@@ -47,5 +48,5 @@
 🔴🚧miles or km...
 🔴🌈idiomes
 🔴⚠️format del pace decimals-> time amb utils.paceDecimalToTime(pace)
-🟡⚠️DASHBOARD-> juntar "Recent Runs with Maps and VO₂max" i "Last 5 activities"
+🟢⚠️DASHBOARD-> juntar "Recent Runs with Maps and VO₂max" i "Last 5 activities"
 🟡⚠️zonas (Z2) del dashboard de la ma amb las zoonas del perfil strava
