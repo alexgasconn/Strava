@@ -160,9 +160,47 @@
                     </div>
 
                     <div class="chart-container full-width">
-                        <h3>📊 Progress Tracking</h3>
+                        <h3>🎯 Objetivos</h3>
+                        <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
+                            <label>
+                                Sport:
+                                <select id="goal-sport">
+                                    <option value="Run">Running</option>
+                                    <option value="Bike">Biking</option>
+                                    <option value="Swim">Swimming</option>
+                                </select>
+                            </label>
+                            <label>
+                                Goal Type:
+                                <select id="goal-type">
+                                    <option value="km">Km</option>
+                                    <option value="hours">Hours</option>
+                                </select>
+                            </label>
+                            <label>
+                                Period:
+                                <select id="goal-period">
+                                    <option value="month">Monthly</option>
+                                    <option value="year">Yearly</option>
+                                </select>
+                            </label>
+                            <label>
+                                Year:
+                                <input type="number" id="goal-year" value="2025" style="width:80px;">
+                            </label>
+                            <label>
+                                Month:
+                                <input type="number" id="goal-month" value="11" min="1" max="12" style="width:60px;">
+                            </label>
+                            <label>
+                                Target:
+                                <input type="number" id="goal-value" value="100" style="width:80px;">
+                            </label>
+                            <button id="update-goal-btn">Update</button>
+                        </div>
                         <canvas id="goal-progress-chart" height="200"></canvas>
                     </div>
+
 
 
                     <div id="recent-activities-preview"></div>
