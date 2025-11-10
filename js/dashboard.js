@@ -128,7 +128,7 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
     renderRecentActivitiesPreview(recentRuns);
     renderDashboardSummary(recentRuns, midRecentRuns);
     renderTSSBarChart(recentActivities, selectedRangeDays);
-    renderGoalProgressChart(allActivities);
+    renderGoalProgressChartAdvanced(allActivities);
 }
 
 
@@ -1140,18 +1140,21 @@ function groupTSSByPeriod(activities, rangeType, startDate, endDate) {
 
 
 
-// --- Variables globales para objetivos ---
+// --- Variables globales para objetivos avanzados ---
 let selectedSport = 'Run';
 let selectedGoalType = 'km'; // 'km' o 'hours'
 let selectedGoalPeriod = 'year'; // 'month' o 'year'
+let selectedYear = new Date().getFullYear();
+let selectedMonth = new Date().getMonth(); // 0-indexed
 let annualGoal = 1000; // km o horas
-let monthlyGoal = 100;  // km o horas
+let monthlyGoal = 100; // km o horas
+let comparePastYears = [selectedYear-1]; // años a comparar
 
-export function renderGoalsSection(allActivities) {
+export function renderGoalsSectionAdvanced(allActivities) {
     const container = document.getElementById('dashboard-tab');
     if (!container) return;
 
-    // Crear contenedor si no existe
+    // Crear contenedor
     if (!document.getElementById('goals-section')) {
         const goalsDiv = document.createElement('div');
         goalsDiv.id = 'goals-section';
@@ -1180,6 +1183,10 @@ export function renderGoalsSection(allActivities) {
             </select>
 
             <input type="number" id="goal-value" value="${selectedGoalPeriod==='year'?annualGoal:monthlyGoal}" style="width:80px;">
+            
+            <input type="number" id="goal-year" value="${selectedYear}" style="width:70px;" title="Year">
+            <input type="number" id="goal-month" value="${selectedMonth+1}" min="1" max="12" style="width:50px;" title="Month">
+            
             <button id="update-goal-btn">Update</button>
         </div>
 
@@ -1193,85 +1200,103 @@ export function renderGoalsSection(allActivities) {
         if (selectedGoalPeriod==='year') annualGoal = parseFloat(document.getElementById('goal-value').value);
         else monthlyGoal = parseFloat(document.getElementById('goal-value').value);
 
-        renderGoalProgressChart(allActivities);
+        selectedYear = parseInt(document.getElementById('goal-year').value);
+        selectedMonth = parseInt(document.getElementById('goal-month').value) - 1;
+
+        renderGoalProgressChartAdvanced(allActivities);
     };
 
-    renderGoalProgressChart(allActivities);
+    renderGoalProgressChartAdvanced(allActivities);
 }
 
 
-function renderGoalProgressChart(allActivities) {
-    // Filtrar actividades por deporte
+function renderGoalProgressChartAdvanced(allActivities) {
     const sportActivities = allActivities.filter(a => a.type && a.type.includes(selectedSport));
+    const labels = [];
+    const datasets = [];
 
-    const now = new Date();
-    let labels = [];
-    let actualData = [];
-    let plannedData = [];
+    // Definir periodos a mostrar
+    let periods = [selectedYear, ...comparePastYears];
 
-    if (selectedGoalPeriod==='year') {
-        for (let m=0; m<12; m++) labels.push(new Date(now.getFullYear(), m, 1).toLocaleString('default', {month:'short'}));
-        for (let m=0; m<12; m++) {
-            const monthStart = new Date(now.getFullYear(), m, 1);
-            const monthEnd = new Date(now.getFullYear(), m+1, 0, 23, 59, 59);
-            const monthActivities = sportActivities.filter(a => {
-                const d = new Date(a.start_date_local);
-                return d >= monthStart && d <= monthEnd;
+    periods.forEach((year, idx) => {
+        const data = [];
+        if (selectedGoalPeriod==='year') {
+            for (let m=0; m<12; m++) labels.push(new Date(year, m, 1).toLocaleString('default',{month:'short'}));
+            for (let m=0; m<12; m++) {
+                const monthStart = new Date(year, m, 1);
+                const monthEnd = new Date(year, m+1, 0,23,59,59);
+                const monthActivities = sportActivities.filter(a => {
+                    const d = new Date(a.start_date_local);
+                    return d >= monthStart && d <= monthEnd;
+                });
+                let value = selectedGoalType==='km'
+                    ? monthActivities.reduce((sum,a) => sum + (a.distance || 0)/1000,0)
+                    : monthActivities.reduce((sum,a) => sum + (a.moving_time || 0)/3600,0);
+                data.push(value);
+            }
+
+            // Crear línea planificada (objetivo lineal)
+            const planned = Array.from({length:12},(_,i) => annualGoal/12*(i+1));
+            datasets.push({
+                label: `Planned ${year}`,
+                data: planned,
+                borderColor: idx===0 ? '#28a745' : `rgba(40,167,69,0.5)`,
+                borderDash: [5,5],
+                fill:false,
+                tension:0.3
             });
 
-            let value = selectedGoalType==='km'
-                ? monthActivities.reduce((sum,a) => sum + (a.distance || 0)/1000, 0)
-                : monthActivities.reduce((sum,a) => sum + (a.moving_time || 0)/3600, 0);
-
-            actualData.push(value);
-            plannedData.push(annualGoal/12 * (m+1)); // progresión lineal del objetivo anual
-        }
-    } else { // monthly
-        const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1,0).getDate();
-        for (let d=1; d<=daysInMonth; d++) labels.push(d);
-        for (let d=1; d<=daysInMonth; d++) {
-            const dayStart = new Date(now.getFullYear(), now.getMonth(), d, 0,0,0);
-            const dayEnd = new Date(now.getFullYear(), now.getMonth(), d,23,59,59);
-            const dayActivities = sportActivities.filter(a => {
-                const dt = new Date(a.start_date_local);
-                return dt >= dayStart && dt <= dayEnd;
+            datasets.push({
+                label: `Actual ${year}`,
+                data:data,
+                borderColor: idx===0 ? '#007bff' : `rgba(0,123,255,0.5)`,
+                fill:false,
+                tension:0.3
             });
 
-            let value = selectedGoalType==='km'
-                ? dayActivities.reduce((sum,a) => sum + (a.distance || 0)/1000, 0)
-                : dayActivities.reduce((sum,a) => sum + (a.moving_time || 0)/3600, 0);
+        } else { // monthly
+            const daysInMonth = new Date(selectedYear, selectedMonth+1,0).getDate();
+            for (let d=1; d<=daysInMonth; d++) labels.push(d);
+            for (let d=1; d<=daysInMonth; d++) {
+                const dayStart = new Date(year, selectedMonth, d,0,0,0);
+                const dayEnd = new Date(year, selectedMonth, d,23,59,59);
+                const dayActivities = sportActivities.filter(a => {
+                    const dt = new Date(a.start_date_local);
+                    return dt >= dayStart && dt <= dayEnd;
+                });
+                let value = selectedGoalType==='km'
+                    ? dayActivities.reduce((sum,a) => sum + (a.distance || 0)/1000,0)
+                    : dayActivities.reduce((sum,a) => sum + (a.moving_time || 0)/3600,0);
+                data.push(value);
+            }
 
-            actualData.push(value);
-            plannedData.push(monthlyGoal/daysInMonth*d);
+            const planned = Array.from({length:daysInMonth},(_,i) => monthlyGoal/daysInMonth*(i+1));
+            datasets.push({
+                label: `Planned ${year}`,
+                data:planned,
+                borderColor: idx===0 ? '#28a745' : `rgba(40,167,69,0.5)`,
+                borderDash: [5,5],
+                fill:false,
+                tension:0.3
+            });
+
+            datasets.push({
+                label: `Actual ${year}`,
+                data:data,
+                borderColor: idx===0 ? '#007bff' : `rgba(0,123,255,0.5)`,
+                fill:false,
+                tension:0.3
+            });
         }
-    }
+    });
 
     const config = {
-        type: 'line',
-        data: {
-            labels,
-            datasets: [
-                {
-                    label: 'Actual',
-                    data: actualData,
-                    borderColor: '#007bff',
-                    fill: false,
-                    tension: 0.3
-                },
-                {
-                    label: 'Planned',
-                    data: plannedData,
-                    borderColor: '#28a745',
-                    borderDash: [5,5],
-                    fill: false,
-                    tension: 0.3
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { position:'top' } },
-            scales: { y: { beginAtZero:true } }
+        type:'line',
+        data:{labels,datasets},
+        options:{
+            responsive:true,
+            plugins:{legend:{position:'top'}},
+            scales:{y:{beginAtZero:true}}
         }
     };
 
