@@ -1161,7 +1161,6 @@ export function renderGoalsSectionAdvanced(allActivities) {
 
     const div = document.getElementById('goals-section');
     div.innerHTML = `
-    <h3>🎯 Running Goals ${currentYear}</h3>
 
     <div style="display:flex;gap:2rem;">
         <!-- YEARLY GOAL -->

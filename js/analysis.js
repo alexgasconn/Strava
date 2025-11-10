@@ -41,32 +41,46 @@ function createChart(canvasId, config) {
 
 export function renderConsistencyChart(runs) {
     const heatmapContainer = document.getElementById('cal-heatmap');
-    if (!heatmapContainer) {
-        console.error("Heatmap container 'cal-heatmap' not found.");
+    if (!heatmapContainer) return;
+
+    // Si no existe CalHeatmap (por navegador, cache o script no cargado)
+    if (typeof CalHeatmap === 'undefined') {
+        heatmapContainer.innerHTML = `
+            <p style="text-align:center; color:#8c8c8c;">
+                Heatmap not available on this device or browser.
+            </p>`;
+        console.warn("CalHeatmap is not defined — skipping heatmap rendering.");
         return;
     }
 
     if (!runs || runs.length === 0) {
-        heatmapContainer.innerHTML = '<p style="text-align: center; color: #8c8c8c;">No activity data for this period.</p>';
+        heatmapContainer.innerHTML = `
+            <p style="text-align:center; color:#8c8c8c;">
+                No activity data for this period.
+            </p>`;
         return;
     }
 
-    // Aggregate distance per day (km)
+    // Agregar estilos para centrar correctamente el heatmap
+    heatmapContainer.style.display = 'flex';
+    heatmapContainer.style.justifyContent = 'center';
+    heatmapContainer.style.alignItems = 'center';
+    heatmapContainer.style.width = '100%';
+    heatmapContainer.style.overflowX = 'auto';
+    heatmapContainer.style.padding = '1rem 0';
+
+    // Agregar datos
     const aggregatedData = runs.reduce((acc, act) => {
         const date = act.start_date_local.substring(0, 10);
         acc[date] = (acc[date] || 0) + (act.distance ? act.distance / 1000 : 0);
         return acc;
     }, {});
 
-    // Find the year to display (use latest activity year)
     const years = runs.map(act => new Date(act.start_date_local).getFullYear());
     const year = Math.max(...years);
-
-    // Set start and end date to full calendar year
     const startDate = new Date(`${year}-01-01`);
     const endDate = new Date(`${year}-12-31`);
 
-    // Color thresholds
     const kmValues = Object.values(aggregatedData).filter(v => v > 0).sort((a, b) => a - b);
     const thresholds = kmValues.length >= 5
         ? [
@@ -77,24 +91,13 @@ export function renderConsistencyChart(runs) {
         ]
         : [2, 5, 10, 15];
 
-    // Clear previous content
     heatmapContainer.innerHTML = '';
 
-    // Render heatmap (no axes, just grid and months below)
     const cal = new CalHeatmap();
     cal.paint({
         itemSelector: heatmapContainer,
-        domain: {
-            type: "month",
-            gutter: 8
-        },
-        subDomain: {
-            type: "ghDay",
-            radius: 2,
-            width: 11,
-            height: 11,
-            gutter: 4
-        },
+        domain: { type: "month", gutter: 8 },
+        subDomain: { type: "ghDay", radius: 2, width: 12, height: 12, gutter: 3 },
         range: 12,
         data: {
             source: Object.entries(aggregatedData).map(([date, value]) => ({ date, value })),
@@ -108,12 +111,10 @@ export function renderConsistencyChart(runs) {
                 domain: thresholds
             }
         },
-        date: {
-            start: startDate,
-            end: endDate
-        }
+        date: { start: startDate, end: endDate }
     });
 }
+
 
 
 
