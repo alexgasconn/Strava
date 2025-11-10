@@ -997,11 +997,6 @@ function renderTSSBarChart(activities, rangeType) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                title: {
-                    display: true,
-                    text: 'TSS por período',
-                    font: { size: 16 }
-                },
                 tooltip: { mode: 'index', intersect: false },
                 legend: { display: false }
             },

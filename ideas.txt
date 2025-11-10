@@ -34,11 +34,11 @@
 🔴🩹coords streams in activity -> veure cap a on va el vent -> % de vent a favor, en contra, de costat...
 🔴🩹heatmap general com strava (que tardi una bona estona, pillar streams de coords de cada activitat...)
 🔴🩹activity -> poder elegir el rolling mean dels streams!
-🔴🩹DASHBOARD -> objectius personalitzables (hores, # activities, km...)
+🟡🩹DASHBOARD -> objectius personalitzables (hores, # activities, km...)
 🔴🚧TLB ACT FRM.... que conti TOTES les activitats, no nomes running
 🔴🌈versio mobil
 🔴🌈fer gear_{id} amb mapes i mes stats de cada gear
-🔴🚧carregar zonas, profile, gear, weather api... al iniciar app
+🟡🚧carregar zonas, profile, gear, weather api... al iniciar app
 🟡⚠️GEARS separate bikes and shoes
 🟢🩹bike gears frame type!
 🔴🩹trail/road shoes in gears
