@@ -155,6 +155,67 @@ function calculateInjuryRisk(tsb, rampRate, atl, tssSeries) {
 }
 
 // ===================================================================
+// 6. INJURY RISK MEJORADO
+// ===================================================================
+function calculateInjuryRiskImproved(tsb, rampRate, atl, tssSeries) {
+    const riskHistory = [];
+    const len = tsb.length;
+
+    // Función helper: z-score relativo
+    const zScore = (x, mean, std) => std > 0 ? (x - mean) / std : 0;
+
+    for (let i = 0; i < len; i++) {
+        let risk = 0;
+
+        // --- 1. Fatiga relativa (TSB) ---
+        const tsbWindow = tsb.slice(Math.max(0, i - 42), i + 1);
+        const tsbMean = tsbWindow.reduce((a,b)=>a+b,0)/tsbWindow.length;
+        const tsbStd = Math.sqrt(tsbWindow.reduce((a,b)=>a+Math.pow(b-tsbMean,2),0)/tsbWindow.length);
+        const tsbRel = -zScore(tsb[i], tsbMean, tsbStd); // más negativo = más riesgo
+        risk += Math.tanh(tsbRel); // mapea suavemente [-1,1] → [-0.76,0.76]
+
+        // --- 2. Ramp Rate relativo ---
+        const rrWindow = rampRate.slice(Math.max(0,i-14), i+1);
+        const rrMean = rrWindow.reduce((a,b)=>a+b,0)/rrWindow.length;
+        const rrStd = Math.sqrt(rrWindow.reduce((a,b)=>a+Math.pow(b-rrMean,2),0)/rrWindow.length);
+        const rrRel = zScore(rampRate[i], rrMean, rrStd);
+        risk += 0.5 * Math.tanh(rrRel); // peso menor que TSB
+
+        // --- 3. Carga aguda (ATL) ---
+        const atlWindow = atl.slice(Math.max(0,i-7), i+1);
+        const atlMean = atlWindow.reduce((a,b)=>a+b,0)/atlWindow.length;
+        const atlRel = (atl[i] - atlMean) / 50; // normaliza a factor [aprox -1,+1]
+        risk += 0.3 * Math.tanh(atlRel);
+
+        // --- 4. Variabilidad reciente ---
+        const recent = tssSeries.slice(Math.max(0,i-6), i+1);
+        if (recent.length > 1) {
+            const mean = recent.reduce((a,b)=>a+b,0)/recent.length;
+            const variance = recent.reduce((a,b)=>a+Math.pow(b-mean,2),0)/recent.length;
+            const cv = Math.sqrt(variance)/mean;
+            risk += 0.15 * Math.tanh((cv-0.2)*2); // CV alto → más riesgo
+        }
+
+        // --- 5. Normalizar a [0,1] ---
+        risk = 0.5 + risk/2; 
+        risk = Math.min(Math.max(risk, 0), 1);
+
+        // --- 6. Suavizado EWMA adaptativo ---
+        if (i > 0) {
+            const prev = riskHistory[i-1];
+            const alpha = 0.3 + 0.7 * Math.min(1, Math.abs(risk - prev)); // más cambio → más rápido
+            risk = prev * (1 - alpha) + risk * alpha;
+        }
+
+        riskHistory.push(+risk.toFixed(3));
+    }
+
+    return riskHistory;
+}
+
+
+
+// ===================================================================
 // 7. Asignar métricas
 // ===================================================================
 function assignMetrics(activities, dates, pmc, injuryRisk) {
@@ -188,7 +249,7 @@ export function preprocessActivities(activities, userProfile = {}) {
     const daily = groupByDay(activities);
     const { dates, tssValues } = getTimeSeries(daily);
     const pmc = calculatePMC(tssValues);
-    const injuryRisk = calculateInjuryRisk(pmc.tsb, pmc.rampRate, pmc.atl, pmc.tssSeries);
+    const injuryRisk = calculateInjuryRiskImproved(pmc.tsb, pmc.rampRate, pmc.atl, pmc.tssSeries);
     assignMetrics(activities, dates, pmc, injuryRisk);
 
     // Log final
@@ -197,7 +258,7 @@ export function preprocessActivities(activities, userProfile = {}) {
     console.log(`  CTL: ${pmc.ctl[last]?.toFixed(1) ?? 'n/a'}`);
     console.log(`  ATL: ${pmc.atl[last]?.toFixed(1) ?? 'n/a'}`);
     console.log(`  TSB: ${pmc.tsb[last]?.toFixed(1) ?? 'n/a'}`);
-    console.log(`  Injury Risk: ${(injuryRisk[last] * 100).toFixed(1)}%`);
+    console.log(`  Injury Risk: ${(injuryRisk[last] * 100).toFixed(2)}%`);
 
     return activities;
 }
