@@ -43,7 +43,6 @@ export function renderConsistencyChart(runs) {
     const heatmapContainer = document.getElementById('cal-heatmap');
     if (!heatmapContainer) return;
 
-    // Si no existe CalHeatmap (por navegador, cache o script no cargado)
     if (typeof CalHeatmap === 'undefined') {
         heatmapContainer.innerHTML = `
             <p style="text-align:center; color:#8c8c8c;">
@@ -61,7 +60,7 @@ export function renderConsistencyChart(runs) {
         return;
     }
 
-    // Agregar estilos para centrar correctamente el heatmap
+    // --- Layout centrado ---
     heatmapContainer.style.display = 'flex';
     heatmapContainer.style.justifyContent = 'center';
     heatmapContainer.style.alignItems = 'center';
@@ -69,7 +68,7 @@ export function renderConsistencyChart(runs) {
     heatmapContainer.style.overflowX = 'auto';
     heatmapContainer.style.padding = '1rem 0';
 
-    // Agregar datos
+    // --- Agregación por día ---
     const aggregatedData = runs.reduce((acc, act) => {
         const date = act.start_date_local.substring(0, 10);
         acc[date] = (acc[date] || 0) + (act.distance ? act.distance / 1000 : 0);
@@ -78,6 +77,7 @@ export function renderConsistencyChart(runs) {
 
     const years = runs.map(act => new Date(act.start_date_local).getFullYear());
     const year = Math.max(...years);
+
     const startDate = new Date(`${year}-01-01`);
     const endDate = new Date(`${year}-12-31`);
 
@@ -93,12 +93,30 @@ export function renderConsistencyChart(runs) {
 
     heatmapContainer.innerHTML = '';
 
+    // --- Heatmap semanal ---
     const cal = new CalHeatmap();
     cal.paint({
         itemSelector: heatmapContainer,
-        domain: { type: "month", gutter: 8 },
-        subDomain: { type: "ghDay", radius: 2, width: 12, height: 12, gutter: 3 },
-        range: 12,
+        domain: {
+            type: "week",
+            gutter: 5,
+            label: { text: "MMM", position: "top" } // muestra el mes encima de cada bloque
+        },
+        subDomain: {
+            type: "day",
+            width: 13,
+            height: 13,
+            gutter: 3,
+            radius: 2,
+            label: {
+                position: "left",
+                text: (date) => {
+                    const day = date.getDay();
+                    return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][day];
+                }
+            }
+        },
+        range: 54, // número de semanas del año aprox
         data: {
             source: Object.entries(aggregatedData).map(([date, value]) => ({ date, value })),
             x: 'date',
@@ -114,6 +132,7 @@ export function renderConsistencyChart(runs) {
         date: { start: startDate, end: endDate }
     });
 }
+
 
 
 
