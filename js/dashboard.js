@@ -128,7 +128,7 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
     renderRecentActivitiesPreview(recentRuns);
     renderDashboardSummary(recentRuns, midRecentRuns);
     renderTSSBarChart(recentActivities, selectedRangeDays);
-    renderGoalProgressChartAdvanced(allActivities);
+    renderGoalsSectionAdvanced(allActivities);
 }
 
 
@@ -1140,417 +1140,277 @@ function groupTSSByPeriod(activities, rangeType, startDate, endDate) {
 
 
 // ==============================================
-// SISTEMA DE OBJETIVOS MEJORADO
+// SIMPLE RUNNING GOALS TRACKER
 // ==============================================
 
-// Variables globales
-let selectedSport = 'Run';
-let selectedGoalType = 'km';
-let selectedGoalPeriod = 'year';
-let selectedYear = new Date().getFullYear();
-let selectedMonth = new Date().getMonth();
-let annualGoal = 1000;
-let monthlyGoal = 100;
-let comparePastYears = [selectedYear - 1];
+const currentYear = new Date().getFullYear();
+const currentMonth = new Date().getMonth();
+
+let annualGoalKm = 1000;
+let monthlyGoalKm = 100;
 
 // ==============================================
-// FUNCIÓN PRINCIPAL DE RENDERIZADO
+// MAIN RENDER FUNCTION
 // ==============================================
 
 export function renderGoalsSectionAdvanced(allActivities) {
     const container = document.getElementById('dashboard-tab');
     if (!container) return;
 
-    // Crear contenedor si no existe
     if (!document.getElementById('goals-section')) {
         const goalsDiv = document.createElement('div');
         goalsDiv.id = 'goals-section';
-        goalsDiv.className = 'goals-section';
-        goalsDiv.style = 'margin-top:2rem;padding:1.5rem;border-top:2px solid #e0e0e0;background:#f8f9fa;border-radius:8px;';
+        goalsDiv.style = 'margin-top:2rem;';
         container.appendChild(goalsDiv);
     }
 
     const div = document.getElementById('goals-section');
     div.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
-            <h3 style="margin:0;">🎯 Goal Tracking</h3>
-            <div id="goal-stats" style="font-size:0.9rem;color:#666;"></div>
-        </div>
-
-        <div class="goal-controls" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin-bottom:1.5rem;padding:1rem;background:white;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-            
-            <label style="display:flex;flex-direction:column;gap:0.3rem;">
-                <span style="font-weight:500;font-size:0.85rem;color:#555;">Sport</span>
-                <select id="goal-sport" style="padding:0.5rem;border:1px solid #ddd;border-radius:4px;font-size:0.9rem;">
-                    <option value="Run" ${selectedSport==='Run'?'selected':''}>🏃 Running</option>
-                    <option value="Bike" ${selectedSport==='Bike'?'selected':''}>🚴 Biking</option>
-                    <option value="Swim" ${selectedSport==='Swim'?'selected':''}>🏊 Swimming</option>
-                </select>
-            </label>
-
-            <label style="display:flex;flex-direction:column;gap:0.3rem;">
-                <span style="font-weight:500;font-size:0.85rem;color:#555;">Metric</span>
-                <select id="goal-type" style="padding:0.5rem;border:1px solid #ddd;border-radius:4px;font-size:0.9rem;">
-                    <option value="km" ${selectedGoalType==='km'?'selected':''}>📏 Distance (km)</option>
-                    <option value="hours" ${selectedGoalType==='hours'?'selected':''}>⏱️ Time (hours)</option>
-                </select>
-            </label>
-
-            <label style="display:flex;flex-direction:column;gap:0.3rem;">
-                <span style="font-weight:500;font-size:0.85rem;color:#555;">Period</span>
-                <select id="goal-period" style="padding:0.5rem;border:1px solid #ddd;border-radius:4px;font-size:0.9rem;">
-                    <option value="month" ${selectedGoalPeriod==='month'?'selected':''}>📅 Monthly</option>
-                    <option value="year" ${selectedGoalPeriod==='year'?'selected':''}>📆 Yearly</option>
-                </select>
-            </label>
-
-            <label style="display:flex;flex-direction:column;gap:0.3rem;">
-                <span style="font-weight:500;font-size:0.85rem;color:#555;">Target Goal</span>
-                <input type="number" id="goal-value" value="${selectedGoalPeriod==='year'?annualGoal:monthlyGoal}" 
-                       style="padding:0.5rem;border:1px solid #ddd;border-radius:4px;font-size:0.9rem;" min="1">
-            </label>
-            
-            <label style="display:flex;flex-direction:column;gap:0.3rem;">
-                <span style="font-weight:500;font-size:0.85rem;color:#555;">Year</span>
-                <input type="number" id="goal-year" value="${selectedYear}" 
-                       style="padding:0.5rem;border:1px solid #ddd;border-radius:4px;font-size:0.9rem;" min="2000" max="2099">
-            </label>
-
-            <label style="display:flex;flex-direction:column;gap:0.3rem;" id="month-selector">
-                <span style="font-weight:500;font-size:0.85rem;color:#555;">Month</span>
-                <input type="number" id="goal-month" value="${selectedMonth+1}" min="1" max="12" 
-                       style="padding:0.5rem;border:1px solid #ddd;border-radius:4px;font-size:0.9rem;">
-            </label>
-            
-            <div style="display:flex;align-items:flex-end;">
-                <button id="update-goal-btn" style="width:100%;padding:0.6rem 1.5rem;background:#007bff;color:white;border:none;border-radius:4px;font-weight:500;cursor:pointer;transition:background 0.2s;">
-                    Update Chart
-                </button>
+        <h3>🎯 Running Goals ${currentYear}</h3>
+        
+        <!-- YEARLY GOAL -->
+        <div style="background:white;padding:1.5rem;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);margin-bottom:2rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                <h4 style="margin:0;">📅 Annual Goal</h4>
+                <div>
+                    <input type="number" id="annual-goal" value="${annualGoalKm}" min="1" 
+                           style="width:100px;padding:0.5rem;border:1px solid #ddd;border-radius:4px;">
+                    <span style="margin-left:0.5rem;">km</span>
+                    <button id="update-annual-btn" style="margin-left:1rem;padding:0.5rem 1rem;background:#007bff;color:white;border:none;border-radius:4px;cursor:pointer;">
+                        Update
+                    </button>
+                </div>
             </div>
+            <div id="annual-stats" style="margin-bottom:1rem;padding:0.8rem;background:#f8f9fa;border-radius:4px;"></div>
+            <canvas id="annual-goal-chart" style="max-height:300px;"></canvas>
         </div>
 
-        <div style="background:white;padding:1.5rem;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-            <canvas id="goal-progress-chart" style="max-height:400px;"></canvas>
+        <!-- MONTHLY GOAL -->
+        <div style="background:white;padding:1.5rem;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                <h4 style="margin:0;">📆 Monthly Goal - ${getMonthName(currentMonth)}</h4>
+                <div>
+                    <input type="number" id="monthly-goal" value="${monthlyGoalKm}" min="1" 
+                           style="width:100px;padding:0.5rem;border:1px solid #ddd;border-radius:4px;">
+                    <span style="margin-left:0.5rem;">km</span>
+                    <button id="update-monthly-btn" style="margin-left:1rem;padding:0.5rem 1rem;background:#007bff;color:white;border:none;border-radius:4px;cursor:pointer;">
+                        Update
+                    </button>
+                </div>
+            </div>
+            <div id="monthly-stats" style="margin-bottom:1rem;padding:0.8rem;background:#f8f9fa;border-radius:4px;"></div>
+            <canvas id="monthly-goal-chart" style="max-height:300px;"></canvas>
         </div>
     `;
 
     // Event listeners
-    setupEventListeners(allActivities);
-    toggleMonthSelector();
-    renderGoalProgressChartAdvanced(allActivities);
-}
-
-// ==============================================
-// EVENT LISTENERS
-// ==============================================
-
-function setupEventListeners(allActivities) {
-    const updateBtn = document.getElementById('update-goal-btn');
-    const periodSelect = document.getElementById('goal-period');
-    
-    // Hover effect en botón
-    updateBtn.onmouseover = () => updateBtn.style.background = '#0056b3';
-    updateBtn.onmouseout = () => updateBtn.style.background = '#007bff';
-    
-    // Actualizar gráfico
-    updateBtn.onclick = () => {
-        selectedSport = document.getElementById('goal-sport').value;
-        selectedGoalType = document.getElementById('goal-type').value;
-        selectedGoalPeriod = document.getElementById('goal-period').value;
-        
-        const goalValue = parseFloat(document.getElementById('goal-value').value);
-        if (selectedGoalPeriod === 'year') {
-            annualGoal = goalValue;
-        } else {
-            monthlyGoal = goalValue;
-        }
-
-        selectedYear = parseInt(document.getElementById('goal-year').value);
-        selectedMonth = parseInt(document.getElementById('goal-month').value) - 1;
-
-        renderGoalProgressChartAdvanced(allActivities);
+    document.getElementById('update-annual-btn').onclick = () => {
+        annualGoalKm = parseFloat(document.getElementById('annual-goal').value);
+        renderAnnualChart(allActivities);
     };
 
-    // Toggle month selector visibility
-    periodSelect.onchange = toggleMonthSelector;
-}
-
-function toggleMonthSelector() {
-    const monthSelector = document.getElementById('month-selector');
-    const period = document.getElementById('goal-period').value;
-    monthSelector.style.display = period === 'month' ? 'flex' : 'none';
-}
-
-// ==============================================
-// RENDERIZADO DEL GRÁFICO
-// ==============================================
-
-function renderGoalProgressChartAdvanced(allActivities) {
-    const sportActivities = allActivities.filter(a => 
-        a.type && a.type.includes(selectedSport)
-    );
-    
-    const { labels, datasets } = selectedGoalPeriod === 'year' 
-        ? buildYearlyData(sportActivities)
-        : buildMonthlyData(sportActivities);
-    
-    // Actualizar estadísticas
-    updateGoalStats(sportActivities);
-    
-    const config = {
-        type: 'line',
-        data: { labels, datasets },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { 
-                legend: { 
-                    position: 'top',
-                    labels: { 
-                        usePointStyle: true,
-                        padding: 15,
-                        font: { size: 11 }
-                    }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const value = context.parsed.y.toFixed(2);
-                            const unit = selectedGoalType === 'km' ? 'km' : 'hrs';
-                            return `${context.dataset.label}: ${value} ${unit}`;
-                        }
-                    }
-                }
-            },
-            scales: { 
-                y: { 
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: selectedGoalType === 'km' ? 'Cumulative Distance (km)' : 'Cumulative Time (hours)',
-                        font: { size: 11, weight: 'bold' }
-                    },
-                    grid: { color: 'rgba(0,0,0,0.05)' }
-                },
-                x: {
-                    grid: { color: 'rgba(0,0,0,0.05)' }
-                }
-            },
-            interaction: {
-                intersect: false,
-                mode: 'index'
-            }
-        }
+    document.getElementById('update-monthly-btn').onclick = () => {
+        monthlyGoalKm = parseFloat(document.getElementById('monthly-goal').value);
+        renderMonthlyChart(allActivities);
     };
-    
-    createDashboardChart('goal-progress-chart', config);
+
+    // Render both charts
+    renderAnnualChart(allActivities);
+    renderMonthlyChart(allActivities);
 }
 
 // ==============================================
-// CONSTRUCCIÓN DE DATOS ANUALES
+// ANNUAL CHART
 // ==============================================
 
-function buildYearlyData(sportActivities) {
+function renderAnnualChart(allActivities) {
+    const runActivities = allActivities.filter(a => a.type && a.type.includes('Run'));
+    
     const labels = [];
-    const datasets = [];
-    const periods = [selectedYear, ...comparePastYears];
-    
-    // Labels de meses (solo una vez)
-    for (let m = 0; m < 12; m++) {
-        labels.push(new Date(2000, m, 1).toLocaleString('default', {month: 'short'}));
-    }
-    
-    periods.forEach((year, idx) => {
-        const actualData = calculateYearlyProgress(sportActivities, year);
-        const plannedData = calculatePlannedProgress(12, annualGoal);
-        
-        const isCurrentYear = idx === 0;
-        const opacity = isCurrentYear ? 1 : 0.5;
-        
-        // Dataset de objetivo planificado
-        datasets.push({
-            label: `📊 Goal ${year}`,
-            data: plannedData,
-            borderColor: `rgba(40, 167, 69, ${opacity})`,
-            backgroundColor: `rgba(40, 167, 69, ${opacity * 0.1})`,
-            borderDash: [8, 4],
-            borderWidth: 2,
-            fill: false,
-            tension: 0.1,
-            pointRadius: 0,
-            pointHoverRadius: 4
-        });
-        
-        // Dataset de progreso actual
-        datasets.push({
-            label: `🏃 Actual ${year}`,
-            data: actualData,
-            borderColor: `rgba(0, 123, 255, ${opacity})`,
-            backgroundColor: `rgba(0, 123, 255, ${opacity * 0.1})`,
-            borderWidth: isCurrentYear ? 3 : 2,
-            fill: isCurrentYear,
-            tension: 0.3,
-            pointRadius: isCurrentYear ? 3 : 1,
-            pointHoverRadius: 6,
-            pointBackgroundColor: `rgba(0, 123, 255, ${opacity})`
-        });
-    });
-    
-    return { labels, datasets };
-}
-
-// ==============================================
-// CONSTRUCCIÓN DE DATOS MENSUALES
-// ==============================================
-
-function buildMonthlyData(sportActivities) {
-    const labels = [];
-    const datasets = [];
-    const periods = [selectedYear, ...comparePastYears];
-    const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
-    
-    // Labels de días
-    for (let d = 1; d <= daysInMonth; d++) {
-        labels.push(d);
-    }
-    
-    periods.forEach((year, idx) => {
-        const actualData = calculateMonthlyProgress(sportActivities, year);
-        const plannedData = calculatePlannedProgress(daysInMonth, monthlyGoal);
-        
-        const isCurrentYear = idx === 0;
-        const opacity = isCurrentYear ? 1 : 0.5;
-        
-        datasets.push({
-            label: `📊 Goal ${year}`,
-            data: plannedData,
-            borderColor: `rgba(40, 167, 69, ${opacity})`,
-            backgroundColor: `rgba(40, 167, 69, ${opacity * 0.1})`,
-            borderDash: [8, 4],
-            borderWidth: 2,
-            fill: false,
-            tension: 0.1,
-            pointRadius: 0
-        });
-        
-        datasets.push({
-            label: `🏃 Actual ${year}`,
-            data: actualData,
-            borderColor: `rgba(0, 123, 255, ${opacity})`,
-            backgroundColor: `rgba(0, 123, 255, ${opacity * 0.1})`,
-            borderWidth: isCurrentYear ? 3 : 2,
-            fill: isCurrentYear,
-            tension: 0.3,
-            pointRadius: isCurrentYear ? 2 : 0,
-            pointHoverRadius: 5
-        });
-    });
-    
-    return { labels, datasets };
-}
-
-// ==============================================
-// CÁLCULOS DE PROGRESO
-// ==============================================
-
-function calculateYearlyProgress(activities, year) {
-    const data = [];
+    const actualData = [];
+    const plannedData = [];
     let cumulative = 0;
-    
+
+    // Build monthly data
     for (let m = 0; m < 12; m++) {
-        const monthStart = new Date(year, m, 1);
-        const monthEnd = new Date(year, m + 1, 0, 23, 59, 59);
+        labels.push(getMonthName(m));
         
-        const monthActivities = activities.filter(a => {
+        const monthStart = new Date(currentYear, m, 1);
+        const monthEnd = new Date(currentYear, m + 1, 0, 23, 59, 59);
+        
+        const monthActivities = runActivities.filter(a => {
             const d = new Date(a.start_date_local);
             return d >= monthStart && d <= monthEnd;
         });
         
-        const value = selectedGoalType === 'km'
-            ? monthActivities.reduce((sum, a) => sum + (a.distance || 0) / 1000, 0)
-            : monthActivities.reduce((sum, a) => sum + (a.moving_time || 0) / 3600, 0);
-        
-        cumulative += value;
-        data.push(parseFloat(cumulative.toFixed(2)));
+        const monthKm = monthActivities.reduce((sum, a) => sum + (a.distance || 0) / 1000, 0);
+        cumulative += monthKm;
+        actualData.push(parseFloat(cumulative.toFixed(2)));
+        plannedData.push(parseFloat((annualGoalKm / 12 * (m + 1)).toFixed(2)));
     }
+
+    // Update stats
+    const currentTotal = actualData[actualData.length - 1] || 0;
+    const percentage = ((currentTotal / annualGoalKm) * 100).toFixed(1);
+    const remaining = Math.max(0, annualGoalKm - currentTotal).toFixed(1);
     
-    return data;
+    document.getElementById('annual-stats').innerHTML = `
+        <strong>Progress:</strong> ${currentTotal.toFixed(1)} / ${annualGoalKm} km (${percentage}%) 
+        | <strong>Remaining:</strong> ${remaining} km
+    `;
+
+    // Chart config
+    const config = {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '🎯 Goal',
+                    data: plannedData,
+                    borderColor: '#28a745',
+                    borderDash: [8, 4],
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.1,
+                    pointRadius: 3
+                },
+                {
+                    label: '🏃 Actual',
+                    data: actualData,
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#007bff'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: (context) => `${context.dataset.label}: ${context.parsed.y.toFixed(1)} km`
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: 'Cumulative Distance (km)' }
+                }
+            }
+        }
+    };
+
+    createDashboardChart('annual-goal-chart', config);
 }
 
-function calculateMonthlyProgress(activities, year) {
-    const data = [];
-    const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
-    let cumulative = 0;
+// ==============================================
+// MONTHLY CHART
+// ==============================================
+
+function renderMonthlyChart(allActivities) {
+    const runActivities = allActivities.filter(a => a.type && a.type.includes('Run'));
     
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const labels = [];
+    const actualData = [];
+    const plannedData = [];
+    let cumulative = 0;
+
+    // Build daily data
     for (let d = 1; d <= daysInMonth; d++) {
-        const dayStart = new Date(year, selectedMonth, d, 0, 0, 0);
-        const dayEnd = new Date(year, selectedMonth, d, 23, 59, 59);
+        labels.push(d);
         
-        const dayActivities = activities.filter(a => {
+        const dayStart = new Date(currentYear, currentMonth, d, 0, 0, 0);
+        const dayEnd = new Date(currentYear, currentMonth, d, 23, 59, 59);
+        
+        const dayActivities = runActivities.filter(a => {
             const dt = new Date(a.start_date_local);
             return dt >= dayStart && dt <= dayEnd;
         });
         
-        const value = selectedGoalType === 'km'
-            ? dayActivities.reduce((sum, a) => sum + (a.distance || 0) / 1000, 0)
-            : dayActivities.reduce((sum, a) => sum + (a.moving_time || 0) / 3600, 0);
-        
-        cumulative += value;
-        data.push(parseFloat(cumulative.toFixed(2)));
-    }
-    
-    return data;
-}
-
-function calculatePlannedProgress(periods, totalGoal) {
-    return Array.from({length: periods}, (_, i) => 
-        parseFloat(((totalGoal / periods) * (i + 1)).toFixed(2))
-    );
-}
-
-// ==============================================
-// ESTADÍSTICAS DE OBJETIVO
-// ==============================================
-
-function updateGoalStats(activities) {
-    const statsDiv = document.getElementById('goal-stats');
-    if (!statsDiv) return;
-
-    let current = 0;
-    let goal = selectedGoalPeriod === 'year' ? annualGoal : monthlyGoal;
-
-    if (selectedGoalPeriod === 'year') {
-        for (let m = 0; m < 12; m++) {
-            const monthStart = new Date(selectedYear, m, 1);
-            const monthEnd = new Date(selectedYear, m + 1, 0, 23, 59, 59);
-            const monthActivities = activities.filter(a => {
-                const d = new Date(a.start_date_local);
-                return d >= monthStart && d <= monthEnd;
-            });
-            current += selectedGoalType === 'km'
-                ? monthActivities.reduce((sum, a) => sum + (a.distance || 0) / 1000, 0)
-                : monthActivities.reduce((sum, a) => sum + (a.moving_time || 0) / 3600, 0);
-        }
-    } else {
-        const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
-        for (let d = 1; d <= daysInMonth; d++) {
-            const dayStart = new Date(selectedYear, selectedMonth, d, 0, 0, 0);
-            const dayEnd = new Date(selectedYear, selectedMonth, d, 23, 59, 59);
-            const dayActivities = activities.filter(a => {
-                const dt = new Date(a.start_date_local);
-                return dt >= dayStart && dt <= dayEnd;
-            });
-            current += selectedGoalType === 'km'
-                ? dayActivities.reduce((sum, a) => sum + (a.distance || 0) / 1000, 0)
-                : dayActivities.reduce((sum, a) => sum + (a.moving_time || 0) / 3600, 0);
-        }
+        const dayKm = dayActivities.reduce((sum, a) => sum + (a.distance || 0) / 1000, 0);
+        cumulative += dayKm;
+        actualData.push(parseFloat(cumulative.toFixed(2)));
+        plannedData.push(parseFloat((monthlyGoalKm / daysInMonth * d).toFixed(2)));
     }
 
-    const percentage = ((current / goal) * 100).toFixed(1);
-    const unit = selectedGoalType === 'km' ? 'km' : 'hrs';
-    const status = percentage >= 100 ? '🎉 Goal Achieved!' : percentage >= 75 ? '💪 Almost there!' : '🏃 Keep going!';
+    // Update stats
+    const currentTotal = actualData[actualData.length - 1] || 0;
+    const percentage = ((currentTotal / monthlyGoalKm) * 100).toFixed(1);
+    const remaining = Math.max(0, monthlyGoalKm - currentTotal).toFixed(1);
     
-    statsDiv.innerHTML = `
-        <strong>${status}</strong> ${current.toFixed(1)} / ${goal} ${unit} (${percentage}%)
+    document.getElementById('monthly-stats').innerHTML = `
+        <strong>Progress:</strong> ${currentTotal.toFixed(1)} / ${monthlyGoalKm} km (${percentage}%) 
+        | <strong>Remaining:</strong> ${remaining} km
     `;
+
+    // Chart config
+    const config = {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '🎯 Goal',
+                    data: plannedData,
+                    borderColor: '#28a745',
+                    borderDash: [8, 4],
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.1,
+                    pointRadius: 0
+                },
+                {
+                    label: '🏃 Actual',
+                    data: actualData,
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 2,
+                    pointBackgroundColor: '#007bff'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: (context) => `${context.dataset.label}: ${context.parsed.y.toFixed(1)} km`
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: 'Cumulative Distance (km)' }
+                },
+                x: {
+                    title: { display: true, text: 'Day of Month' }
+                }
+            }
+        }
+    };
+
+    createDashboardChart('monthly-goal-chart', config);
+}
+
+// ==============================================
+// HELPER FUNCTION
+// ==============================================
+
+function getMonthName(monthIndex) {
+    return new Date(2000, monthIndex, 1).toLocaleString('default', {month: 'short'});
 }
