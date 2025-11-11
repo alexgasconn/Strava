@@ -2720,3 +2720,743 @@ main {
         top: 1rem;
     }
 }
+
+
+
+/* wrapped */
+/* General Layout & Responsiveness */
+.stats-grid,
+.sport-breakdown,
+.pb-grid,
+.extras-grid {
+    display: grid;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.sport-breakdown {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.pb-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.extras-grid {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+@media (max-width: 768px) {
+    .stats-grid, .sport-breakdown, .pb-grid, .extras-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Section Headers */
+.section-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+}
+
+.section-header h3 {
+    font-size: 1.8rem;
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.section-subtitle {
+    font-size: 0.95rem;
+    color: #666;
+}
+
+/* --- Summary Cards --- */
+.stat-card {
+    background-color: #fff;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+}
+
+.stat-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.8rem;
+}
+
+.stat-value {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 0.4rem;
+}
+
+.stat-label {
+    font-size: 0.95rem;
+    color: #777;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.quick-stats {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+    margin-bottom: 3rem;
+    background-color: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.quick-stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 120px;
+}
+
+.quick-stat-label {
+    font-size: 0.9rem;
+    color: #888;
+    margin-bottom: 0.3rem;
+}
+
+.quick-stat-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #444;
+}
+
+/* --- Sport Breakdown --- */
+.sport-card {
+    background-color: #fff;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.sport-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+}
+
+.sport-card-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.sport-icon {
+    font-size: 2rem;
+    margin-right: 1rem;
+    width: 40px;
+    text-align: center;
+}
+
+.sport-title {
+    flex-grow: 1;
+}
+
+.sport-title h4 {
+    margin: 0;
+    font-size: 1.3rem;
+    color: #333;
+}
+
+.sport-count {
+    font-size: 0.85rem;
+    color: #777;
+}
+
+.sport-share {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #007bff; /* Example accent color */
+}
+
+.sport-metrics {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 1rem;
+    border-top: 1px solid #eee;
+    padding-top: 1rem;
+}
+
+.metric {
+    text-align: center;
+}
+
+.metric-label {
+    font-size: 0.8rem;
+    color: #888;
+    margin-bottom: 0.2rem;
+}
+
+.metric-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.metric-change {
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.sport-progress {
+    height: 8px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+}
+
+.sport-progress-bar {
+    height: 100%;
+    background-color: #007bff; /* Example accent color */
+    border-radius: 4px;
+}
+
+/* --- Activity Patterns (Histograms) --- */
+.insights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.insight-card {
+    background-color: #fff;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    display: flex;
+    align-items: center;
+}
+
+.insight-icon {
+    font-size: 2rem;
+    margin-right: 1rem;
+}
+
+.insight-label {
+    font-size: 0.85rem;
+    color: #888;
+    margin-bottom: 0.2rem;
+}
+
+.insight-value {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.insight-detail {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+/* Temporal Charts Combined */
+.temporal-charts-combined {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Adjust minmax as needed */
+    gap: 1.5rem;
+    margin-top: 2rem;
+    margin-bottom: 3rem;
+}
+
+.chart-section {
+    background-color: #fff;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+}
+
+.chart-title-sm {
+    font-size: 1.1rem;
+    color: #444;
+    margin-bottom: 1rem;
+    text-align: center;
+    border-bottom: 1px dashed #eee;
+    padding-bottom: 0.5rem;
+}
+
+.chart-container-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 250px; /* Limit height for monthly/weekly bars */
+    overflow-y: auto; /* Scroll if too many months/days */
+    padding-right: 5px; /* Space for scrollbar */
+}
+
+.chart-row {
+    display: flex;
+    align-items: center;
+    font-size: 0.85rem;
+}
+
+.chart-label-sm {
+    width: 60px; /* Adjust width for labels */
+    flex-shrink: 0;
+    color: #555;
+    text-align: right;
+    padding-right: 5px;
+}
+
+.chart-bar-container-sm {
+    flex-grow: 1;
+    height: 12px;
+    background-color: #e9ecef;
+    border-radius: 6px;
+    margin: 0 8px;
+    position: relative;
+}
+
+.chart-bar {
+    height: 100%;
+    background-color: #007bff;
+    border-radius: 6px;
+    transition: width 0.5s ease-out;
+}
+
+.chart-bar-secondary {
+    background-color: #28a745; /* Green for weekly */
+}
+
+.chart-value-sm {
+    width: 50px; /* Adjust width for values */
+    flex-shrink: 0;
+    color: #333;
+    font-weight: 500;
+    text-align: left;
+}
+
+
+/* Hour Chart Compact */
+.hour-chart-compact {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end; /* Bars start from bottom */
+    height: 120px; /* Fixed height for the hour chart */
+    margin-top: 1rem;
+    padding: 0 5px;
+    overflow-x: auto; /* Allow scrolling for many hours */
+}
+
+.hour-bar-compact {
+    flex-shrink: 0;
+    width: 15px; /* Fixed width for each hour bar */
+    margin: 0 1px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    position: relative;
+}
+
+.hour-bar-fill-compact {
+    width: 100%;
+    background-color: #fd7e14; /* Orange for hourly */
+    border-radius: 3px 3px 0 0;
+    transition: height 0.5s ease-out;
+}
+
+.hour-label-compact {
+    font-size: 0.7rem;
+    color: #777;
+    margin-top: 5px;
+    transform: rotate(-45deg); /* Rotate labels for compactness */
+    white-space: nowrap;
+    position: absolute;
+    bottom: -20px; /* Adjust as needed */
+}
+
+/* --- Hardest Workouts (compact version) --- */
+.efforts-list-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem; /* Smaller gap */
+}
+
+.effort-card-compact {
+    background-color: #fff;
+    padding: 0.8rem 1.2rem; /* Reduced padding */
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    display: flex;
+    align-items: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.effort-card-compact:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.effort-rank {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #007bff;
+    margin-right: 1rem;
+    min-width: 30px;
+    text-align: center;
+}
+
+.effort-content-compact {
+    flex-grow: 1;
+}
+
+.effort-title-compact {
+    margin: 0;
+    font-size: 1rem;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.effort-meta-compact {
+    font-size: 0.75rem;
+    color: #888;
+    margin-bottom: 0.4rem;
+}
+
+.effort-score-bar-compact {
+    height: 6px; /* Smaller bar */
+    background-color: #eee;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.effort-score-fill-compact {
+    height: 100%;
+    background-color: #dc3545; /* Red accent */
+    border-radius: 3px;
+    transition: width 0.4s ease-out;
+}
+
+.effort-score-compact {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #dc3545;
+    margin-left: 1rem;
+    min-width: 40px;
+    text-align: right;
+}
+
+/* --- Personal Bests --- */
+.pb-category {
+    background-color: #fff;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+}
+
+.pb-category-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 1px dashed #eee;
+}
+
+.pb-icon {
+    font-size: 1.8rem;
+    margin-right: 0.8rem;
+}
+
+.pb-category-header h4 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #333;
+}
+
+.pb-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0;
+    border-bottom: 1px dotted #f0f0f0;
+}
+
+.pb-item:last-child {
+    border-bottom: none;
+}
+
+.pb-distance {
+    font-weight: 600;
+    color: #444;
+    flex-grow: 1;
+}
+
+.pb-time {
+    font-size: 0.95rem;
+    color: #555;
+    margin-left: 1rem;
+}
+
+.pb-attempts {
+    font-size: 0.8rem;
+    color: #888;
+    margin-left: 0.5rem;
+}
+
+.pb-highlights .pb-highlight {
+    padding: 0.8rem 0;
+    border-bottom: 1px dotted #f0f0f0;
+}
+.pb-highlights .pb-highlight:last-child {
+    border-bottom: none;
+}
+
+.pb-highlight-label {
+    font-size: 0.85rem;
+    color: #888;
+    margin-bottom: 0.3rem;
+}
+
+.pb-activity strong {
+    font-size: 1rem;
+    color: #333;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pb-details, .pb-date {
+    font-size: 0.75rem;
+    color: #777;
+}
+
+/* --- Gear & Countries (Extras) --- */
+.extra-section {
+    background-color: #fff;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+}
+
+.gear-list, .country-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.gear-item, .country-item {
+    display: flex;
+    align-items: center;
+    font-size: 0.9rem;
+    padding: 0.3rem 0;
+}
+
+.gear-name, .country-name {
+    flex-basis: 100px; /* Fixed width for names */
+    flex-shrink: 0;
+    color: #444;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gear-bar-container, .country-bar-container {
+    flex-grow: 1;
+    height: 8px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+    margin: 0 10px;
+    overflow: hidden;
+}
+
+.gear-bar {
+    height: 100%;
+    background-color: #ffc107; /* Yellow accent */
+    border-radius: 4px;
+    transition: width 0.5s ease-out;
+}
+
+.gear-hours, .country-count {
+    width: 50px; /* Fixed width for values */
+    text-align: right;
+    font-weight: 500;
+    color: #555;
+}
+
+.country-bar {
+    height: 100%;
+    background-color: #17a2b8; /* Cyan accent */
+    border-radius: 4px;
+    transition: width 0.5s ease-out;
+}
+
+/* --- Global Heatmap --- */
+#wrapped-heatmap {
+    height: 500px; /* Ensure map has a height */
+    width: 100%;
+    margin-top: 2rem;
+    margin-bottom: 3rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    overflow: hidden; /* Important for map corners */
+    position: relative; /* For header positioning */
+}
+
+#wrapped-heatmap .leaflet-pane {
+    z-index: 10; /* Ensure map content is above other page elements if needed */
+}
+
+.heatmap-header {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000; /* Ensure header is above the map */
+    background: rgba(255, 255, 255, 0.85);
+    padding: 0.8rem 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    width: auto; /* Adjust width based on content */
+    border-bottom: none; /* Remove border-bottom from general header */
+}
+.heatmap-header h3 {
+    margin: 0;
+    font-size: 1.4rem;
+    color: #333;
+}
+.heatmap-header .section-subtitle {
+    margin-top: 0.3rem;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+/* --- Activities Table --- */
+.activities-table-container {
+    overflow-x: auto;
+    margin-top: 2rem;
+    margin-bottom: 3rem;
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+}
+
+.activities-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 700px; /* Ensure table doesn't get too cramped */
+}
+
+.activities-table th, .activities-table td {
+    padding: 1rem 1.2rem;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.activities-table th {
+    background-color: #f8f9fa;
+    color: #555;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    position: sticky;
+    top: 0;
+    z-index: 2; /* Keep header visible on scroll */
+}
+
+.activities-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.activities-table tbody tr:hover {
+    background-color: #f4f7fa;
+}
+
+.table-date {
+    font-size: 0.9rem;
+    color: #777;
+}
+
+.table-name {
+    font-weight: 500;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 250px; /* Limit width */
+}
+
+.type-badge {
+    background-color: #e0f2f7; /* Light blue */
+    color: #007bff;
+    padding: 0.3em 0.7em;
+    border-radius: 15px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.table-distance, .table-time {
+    color: #555;
+    font-size: 0.9rem;
+}
+
+.table-pace {
+    font-style: italic;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.table-link {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.table-link:hover {
+    color: #0056b3;
+}
+
+/* Utility classes for animations */
+.fade-in-up {
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeInUp 0.5s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: #777;
+    font-style: italic;
+    background-color: #f8f8f8;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}

@@ -9,16 +9,15 @@ export async function renderWrappedTab(allActivities, options = {}) {
       personalBests: 'wrapped-personal-bests',
       sportComparison: 'wrapped-sport-comparison',
       temporalStats: 'wrapped-temporal-stats',
-      motivation: 'wrapped-motivation',
-      extremeStats: 'wrapped-extreme-stats',
+      motivation: 'wrapped-motivation', // Hardest Workouts
+      extremeStats: 'wrapped-extreme-stats', // Gear & Countries
       allActivities: 'wrapped-all-activities',
-      heatmap: 'wrapped-heatmap',
+      heatmap: 'wrapped-heatmap', // Global Heatmap
       ...options.containerIds
     },
+    // Allows custom geocoder. If null, Nominatim is used (but tries to get English country names).
     reverseGeocoder: options.reverseGeocoder || null
   };
-
-
 
   if (!allActivities || allActivities.length === 0) {
     document.getElementById(cfg.containerIds.summary).innerHTML = `
@@ -53,6 +52,23 @@ export async function renderWrappedTab(allActivities, options = {}) {
     },
     sum(arr, key) {
       return arr.reduce((s, a) => s + (Number(a[key]) || 0), 0);
+    },
+    // Simple helper to get English country name, might not be exhaustive
+    getEnglishCountryName: (countryName) => {
+        const countryMap = {
+            'España': 'Spain',
+            'Francia': 'France',
+            'Alemania': 'Germany',
+            'Italia': 'Italy',
+            'Reino Unido': 'United Kingdom',
+            'Estados Unidos': 'United States',
+            'Canadá': 'Canada',
+            'Australia': 'Australia',
+            'Suiza': 'Switzerland',
+            'Japón': 'Japan',
+            // Add more as needed
+        };
+        return countryMap[countryName] || countryName;
     }
   };
 
@@ -76,14 +92,14 @@ export async function renderWrappedTab(allActivities, options = {}) {
       const selectedYear = parseInt(yearSelect.value);
       renderWrappedTab(fullActivities, { selectedYear, fullActivities });
     };
-
   }
 
   // Get activities for current and previous year
+  function activitiesByYear(year) {
+    return fullActivities.filter(a => new Date(a.start_date).getFullYear() === year);
+  }
   const currentActs = activitiesByYear(displayYear);
   const prevActs = prevYear ? activitiesByYear(prevYear) : [];
-
-
 
   // Sport aggregation
   function compileSports(acts) {
@@ -145,8 +161,8 @@ export async function renderWrappedTab(allActivities, options = {}) {
   const weekdayHours = groupWeekdayHours(currentActs);
   const hourCounts = groupHourCounts(currentActs);
 
-  // Top efforts
-  function topByEffort(acts, n = 5) {
+  // Top efforts (now 10 activities)
+  function topByEffort(acts, n = 10) { // Changed default to 10
     const withScore = acts
       .filter(a => a.suffer_score || a.effort || a.trainer_score || a.intensity)
       .map(a => ({
@@ -156,13 +172,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
     return withScore.sort((a, b) => b._score - a._score).slice(0, n);
   }
 
-  const topEfforts = topByEffort(currentActs, 5);
-
-  function activitiesByYear(year) {
-    return fullActivities.filter(a => new Date(a.start_date).getFullYear() === year);
-  }
-
-
+  const topEfforts = topByEffort(currentActs, 10); // Ensure 10 are taken
 
   // Personal bests
   function findPBs(acts) {
@@ -249,18 +259,16 @@ export async function renderWrappedTab(allActivities, options = {}) {
   }
   const topGears = gearUsage(currentActs).slice(0, 6);
 
-
-
-  // Countries
+  // Countries (now resolves to English names)
   async function resolveCountries(acts) {
     const map = {};
-    const cache = {};
+    const cache = {}; // Cache for geocoding results
 
-    // redondea coordenadas a ~40 km para agrupar zonas cercanas
+    // Round coordinates to group nearby locations (~40 km for 0.5 degree)
     const round = (v) => Math.round(v / 5) * 0.5;
 
     const uniqueCoords = {};
-    const coordCounts = {}; // cuántas actividades hay por coordenada redondeada
+    const coordCounts = {}; // How many activities map to each rounded coordinate group
 
     for (const a of acts) {
       const coords = (a.start_latlng && a.start_latlng.length === 2)
@@ -274,9 +282,9 @@ export async function renderWrappedTab(allActivities, options = {}) {
     }
 
     const coordKeys = Object.keys(uniqueCoords);
-    console.log(`Unique coordinate groups: ${coordKeys.length}`);
+    console.log(`Unique coordinate groups for country resolution: ${coordKeys.length}`);
 
-    const concurrency = 5;
+    const concurrency = 5; // Number of parallel geocoding requests
     const chunks = [];
     for (let i = 0; i < coordKeys.length; i += concurrency) {
       chunks.push(coordKeys.slice(i, i + concurrency));
@@ -289,23 +297,31 @@ export async function renderWrappedTab(allActivities, options = {}) {
 
         if (cache[key]) {
           country = cache[key];
+        } else if (cfg.reverseGeocoder) {
+          try {
+            // Use provided reverse geocoder
+            country = await cfg.reverseGeocoder(lat, lon);
+          } catch (e) {
+            console.error("Custom reverse geocoder failed:", e);
+            country = 'Unknown';
+          }
         } else {
+          // Fallback to Nominatim (default)
           try {
             const res = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`,
+              `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&accept-language=en`, // Request English
               { headers: { 'User-Agent': 'FastCountryResolver/1.0' } }
             );
             if (res.ok) {
               const data = await res.json();
               country = data.address?.country || 'Unknown';
+              country = utils.getEnglishCountryName(country); // Attempt to standardize
             }
           } catch (_) {
             country = 'Unknown';
           }
-          cache[key] = country;
         }
-
-        // sumar la cantidad de actividades en ese grupo redondeado
+        cache[key] = country;
         map[country] = (map[country] || 0) + coordCounts[key];
       }));
     }
@@ -315,13 +331,8 @@ export async function renderWrappedTab(allActivities, options = {}) {
       .sort((a, b) => b.count - a.count);
   }
 
-
-  // Ejemplo
   const countries = await resolveCountries(currentActs);
-  console.log(countries);
-
-
-
+  console.log('Resolved Countries:', countries);
 
   // === RENDER COMPONENTS ===
 
@@ -379,32 +390,24 @@ export async function renderWrappedTab(allActivities, options = {}) {
     </div>
   `;
 
-  // Sport comparison
   // Sport comparison with minimum 5h filter
   function renderSportComparison(sportsCurr, sportsPrev) {
     const prevMap = new Map(sportsPrev.map(s => [s.sport, s]));
     const totalTime = utils.sum(sportsCurr, 'time');
 
     const sportIcons = {
-      'Run': '🏃',
-      'Running': '🏃',
-      'Ride': '🚴',
-      'Cycling': '🚴',
-      'Swim': '🏊',
-      'Swimming': '🏊',
-      'Walk': '🚶',
-      'Hike': '🥾',
-      'Workout': '💪',
-      'WeightTraining': '🏋️',
-      'Yoga': '🧘',
-      'Rowing': '🚣',
-      'Elliptical': '🚴‍♂️',
-      'Ski': '🎿',
-      'Snowboard': '🏂',
-      'Other': '🎯',
+      'Run': '🏃', 'Running': '🏃', 'Ride': '🚴', 'Cycling': '🚴',
+      'Swim': '🏊', 'Swimming': '🏊', 'Walk': '🚶', 'Hike': '🥾',
+      'Workout': '💪', 'WeightTraining': '🏋️', 'Yoga': '🧘',
+      'Rowing': '🚣', 'Elliptical': '🚴‍♂️', 'Ski': '🎿',
+      'Snowboard': '🏂', 'Other': '🎯', 'AlpineSki': '⛷️', 'Canoeing': '🛶',
+      'Crossfit': '💪', 'Kayaking': '🛶', 'MountainBikeRide': '🚵',
+      'RockClimbing': '🧗', 'RollerSkating': '⛸️', 'Snowshoe': '🥾',
+      'StandUpPaddling': '🏄‍♀️', 'Surfing': '🏄', 'VirtualRide': '🚴',
+      'VirtualRun': '🏃', 'Windsurf': '⛵'
     };
 
-    // Filtrar solo deportes con al menos 5h
+    // Filter sports with at least 5h
     const sportsToShow = sportsCurr.filter(s => s.time >= 5 * 3600);
 
     return `
@@ -469,8 +472,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
   `;
   }
 
-
-  // Temporal stats
+  // Temporal stats - Combined and more compact
   function renderHistograms(monthlyHours, weekdayHours, hourCounts) {
     const peakMonth = monthlyHours.length ?
       monthlyHours.reduce((a, b) => a.hours > b.hours ? a : b) : null;
@@ -483,15 +485,14 @@ export async function renderWrappedTab(allActivities, options = {}) {
 
     const monthBars = monthlyHours.map((m, idx) => {
       const pct = maxMonth ? (m.hours / maxMonth) * 100 : 0;
-      const label = new Date(m.month + '-01').toLocaleString(undefined, { month: 'short', year: 'numeric' });
+      const label = new Date(m.month + '-01').toLocaleString(undefined, { month: 'short' });
       return `
         <div class="chart-row fade-in-up" style="animation-delay: ${0.05 * idx}s">
-          <div class="chart-label">${label}</div>
-          <div class="chart-bar-container">
-            <div class="chart-bar" style="width: ${pct}%">
-              <span class="chart-bar-value">${m.hours.toFixed(1)}h</span>
-            </div>
+          <div class="chart-label-sm">${label}</div>
+          <div class="chart-bar-container chart-bar-container-sm">
+            <div class="chart-bar" style="width: ${pct}%"></div>
           </div>
+          <span class="chart-value-sm">${m.hours.toFixed(1)}h</span>
         </div>
       `;
     }).join('');
@@ -500,25 +501,22 @@ export async function renderWrappedTab(allActivities, options = {}) {
       const pct = maxW ? (h / maxW) * 100 : 0;
       return `
         <div class="chart-row">
-          <div class="chart-label chart-label-small">${wkNames[i]}</div>
-          <div class="chart-bar-container">
-            <div class="chart-bar chart-bar-secondary" style="width: ${pct}%">
-              <span class="chart-bar-value">${h.toFixed(1)}h</span>
-            </div>
+          <div class="chart-label-sm">${wkNames[i]}</div>
+          <div class="chart-bar-container chart-bar-container-sm">
+            <div class="chart-bar chart-bar-secondary" style="width: ${pct}%"></div>
           </div>
+          <span class="chart-value-sm">${h.toFixed(1)}h</span>
         </div>
       `;
     }).join('');
 
     const maxHour = Math.max(...hourCounts);
     const hourBars = hourCounts.map((c, h) => {
-      const height = maxHour > 0 ? (c / maxHour) * 60 : 0;
+      const height = maxHour > 0 ? (c / maxHour) * 60 : 0; // Max height for bars
       return `
-        <div class="hour-bar" title="${h}:00 - ${c} activities">
-          <div class="hour-bar-fill" style="height: ${height}px">
-            ${c > 0 ? `<span class="hour-bar-count">${c}</span>` : ''}
-          </div>
-          <div class="hour-label">${h}</div>
+        <div class="hour-bar-compact" title="${h}:00 - ${c} activities">
+          <div class="hour-bar-fill-compact" style="height: ${height}px"></div>
+          <div class="hour-label-compact">${h}</div>
         </div>
       `;
     }).join('');
@@ -526,7 +524,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
     return `
       <div class="section-header">
         <h3>📈 Activity Patterns</h3>
-        <p class="section-subtitle">When you train best</p>
+        <p class="section-subtitle">When you train best, by month, week & hour</p>
       </div>
       
       <div class="insights-grid">
@@ -558,24 +556,26 @@ export async function renderWrappedTab(allActivities, options = {}) {
         </div>
       </div>
 
-      <div class="chart-section">
-        <h4 class="chart-title">Monthly Activity (hours)</h4>
-        <div class="chart-container">${monthBars}</div>
-      </div>
+      <div class="temporal-charts-combined">
+        <div class="chart-section chart-section-monthly">
+          <h4 class="chart-title-sm">Monthly Activity (hours)</h4>
+          <div class="chart-container-compact">${monthBars}</div>
+        </div>
 
-      <div class="chart-section">
-        <h4 class="chart-title">Weekly Pattern</h4>
-        <div class="chart-container chart-container-compact">${weekdayBars}</div>
-      </div>
+        <div class="chart-section chart-section-weekly">
+          <h4 class="chart-title-sm">Weekly Pattern</h4>
+          <div class="chart-container-compact">${weekdayBars}</div>
+        </div>
 
-      <div class="chart-section">
-        <h4 class="chart-title">Time of Day Distribution</h4>
-        <div class="hour-chart">${hourBars}</div>
+        <div class="chart-section chart-section-hourly">
+          <h4 class="chart-title-sm">Time of Day Distribution</h4>
+          <div class="hour-chart-compact">${hourBars}</div>
+        </div>
       </div>
     `;
   }
 
-  // Top efforts
+  // Top efforts (more compact cards for 10 items)
   function renderTopEfforts(topEfforts) {
     if (!topEfforts || !topEfforts.length) {
       return '<div class="empty-state">No effort data available</div>';
@@ -584,28 +584,28 @@ export async function renderWrappedTab(allActivities, options = {}) {
     return `
       <div class="section-header">
         <h3>🔥 Hardest Workouts</h3>
-        <p class="section-subtitle">Your most intense sessions</p>
+        <p class="section-subtitle">Your 10 most intense sessions</p>
       </div>
       
-      <div class="efforts-list">
+      <div class="efforts-list efforts-list-compact">
         ${topEfforts.map((a, idx) => {
       const score = a._score;
       const maxScore = topEfforts[0]._score;
-      const scoreWidth = (score / maxScore) * 100;
+      const scoreWidth = (maxScore > 0) ? (score / maxScore) * 100 : 0;
 
       return `
-            <div class="effort-card fade-in-up" style="animation-delay: ${0.1 * idx}s">
+            <div class="effort-card effort-card-compact fade-in-up" style="animation-delay: ${0.05 * idx}s">
               <div class="effort-rank">#${idx + 1}</div>
-              <div class="effort-content">
-                <h4 class="effort-title">${a.name || 'Untitled'}</h4>
-                <div class="effort-meta">
-                  ${a.type || a.sport} • ${utils.formatTime(Number(a.moving_time) || 0)} • ${utils.formatDistance(Number(a.distance) || 0)}
+              <div class="effort-content-compact">
+                <h4 class="effort-title-compact">${a.name || 'Untitled'}</h4>
+                <div class="effort-meta-compact">
+                  ${a.type || a.sport} • ${utils.formatTime(Number(a.moving_time) || 0)}
                 </div>
-                <div class="effort-score-bar">
-                  <div class="effort-score-fill" style="width: ${scoreWidth}%"></div>
+                <div class="effort-score-bar-compact">
+                  <div class="effort-score-fill-compact" style="width: ${scoreWidth}%"></div>
                 </div>
               </div>
-              <div class="effort-score">${Math.round(score)}</div>
+              <div class="effort-score-compact">${Math.round(score)}</div>
             </div>
           `;
     }).join('')}
@@ -629,6 +629,16 @@ export async function renderWrappedTab(allActivities, options = {}) {
       `;
     }
 
+    // Determine if there are any PBs to show for a category
+    const hasRunningPBs = pbs.running.length > 0;
+    const hasSwimmingPBs = pbs.swimming.length > 0;
+    const hasRidingPBs = pbs.riding.length > 0;
+    const hasHighlights = pbs.longest || pbs.mostElevation || pbs.fastest;
+
+    if (!hasRunningPBs && !hasSwimmingPBs && !hasRidingPBs && !hasHighlights) {
+        return '<div class="empty-state">No personal bests recorded for this year.</div>';
+    }
+
     return `
       <div class="section-header">
         <h3>🏆 Personal Records</h3>
@@ -636,7 +646,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
       </div>
       
       <div class="pb-grid">
-        ${pbs.running.length > 0 ? `
+        ${hasRunningPBs ? `
           <div class="pb-category fade-in-up" style="animation-delay: 0.1s">
             <div class="pb-category-header">
               <span class="pb-icon">🏃</span>
@@ -652,7 +662,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
           </div>
         ` : ''}
 
-        ${pbs.swimming.length > 0 ? `
+        ${hasSwimmingPBs ? `
           <div class="pb-category fade-in-up" style="animation-delay: 0.2s">
             <div class="pb-category-header">
               <span class="pb-icon">🏊</span>
@@ -667,7 +677,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
           </div>
         ` : ''}
 
-        ${pbs.riding.length > 0 ? `
+        ${hasRidingPBs ? `
           <div class="pb-category fade-in-up" style="animation-delay: 0.3s">
             <div class="pb-category-header">
               <span class="pb-icon">🚴</span>
@@ -682,39 +692,48 @@ export async function renderWrappedTab(allActivities, options = {}) {
           </div>
         ` : ''}
 
-        <div class="pb-category pb-highlights fade-in-up" style="animation-delay: 0.4s">
-          <div class="pb-category-header">
-            <span class="pb-icon">⭐</span>
-            <h4>Highlights</h4>
+        ${hasHighlights ? `
+          <div class="pb-category pb-highlights fade-in-up" style="animation-delay: 0.4s">
+            <div class="pb-category-header">
+              <span class="pb-icon">⭐</span>
+              <h4>Highlights</h4>
+            </div>
+            ${pbs.longest ? `
+              <div class="pb-highlight">
+                <div class="pb-highlight-label">Longest</div>
+                ${actSummary(pbs.longest)}
+              </div>
+            ` : ''}
+            ${pbs.mostElevation ? `
+              <div class="pb-highlight">
+                <div class="pb-highlight-label">Most Elevation</div>
+                ${actSummary(pbs.mostElevation)}
+              </div>
+            ` : ''}
+            ${pbs.fastest ? `
+              <div class="pb-highlight">
+                <div class="pb-highlight-label">Fastest</div>
+                ${actSummary(pbs.fastest)}
+              </div>
+            ` : ''}
           </div>
-          ${pbs.longest ? `
-            <div class="pb-highlight">
-              <div class="pb-highlight-label">Longest</div>
-              ${actSummary(pbs.longest)}
-            </div>
-          ` : ''}
-          ${pbs.mostElevation ? `
-            <div class="pb-highlight">
-              <div class="pb-highlight-label">Most Elevation</div>
-              ${actSummary(pbs.mostElevation)}
-            </div>
-          ` : ''}
-          ${pbs.fastest ? `
-            <div class="pb-highlight">
-              <div class="pb-highlight-label">Fastest</div>
-              ${actSummary(pbs.fastest)}
-            </div>
-          ` : ''}
-        </div>
+        ` : ''}
       </div>
     `;
   }
 
-  // Gear and countries
+  // Gear and countries (countries now in English)
   function renderExtras(gears, countries) {
+    const hasGears = gears.length > 0;
+    const hasCountries = countries.length > 0;
+
+    if (!hasGears && !hasCountries) {
+        return '<div class="empty-state">No additional data for equipment or locations this year.</div>';
+    }
+
     return `
   <div class="extras-grid">
-    ${gears.length > 0 ? `
+    ${hasGears ? `
       <div class="extra-section fade-in-up" style="animation-delay: 0.1s">
         <div class="section-header">
           <h3>⚙️ Equipment</h3>
@@ -723,7 +742,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
         <div class="gear-list">
           ${gears.map((g, idx) => {
       const maxHours = gears[0].hours;
-      const width = (g.hours / maxHours) * 100;
+      const width = (maxHours > 0) ? (g.hours / maxHours) * 100 : 0;
       return `
               <div class="gear-item">
                 <div class="gear-name">${g.gear}</div>
@@ -738,30 +757,30 @@ export async function renderWrappedTab(allActivities, options = {}) {
       </div>
     ` : ''}
 
-    ${countries.length > 0 ? `
+    ${hasCountries ? `
       <div class="extra-section fade-in-up" style="animation-delay: 0.2s">
         <div class="section-header">
           <h3>🌍 Locations</h3>
-          <p class="section-subtitle">Where you trained</p>
+          <p class="section-subtitle">Countries where you trained</p>
         </div>
         <div class="country-list">
           ${(() => {
-          const total = countries.reduce((sum, c) => sum + c.count, 0);
-          const maxCount = countries[0].count;
-          return countries.map((c) => {
-            const width = (c.count / maxCount) * 100;
-            const percent = ((c.count / total) * 100).toFixed(1);
-            return `
-                <div class="country-item">
-                  <div class="country-name">${c.country}</div>
-                  <div class="country-bar-container">
-                    <div class="country-bar" style="width: ${width}%"></div>
+            const total = countries.reduce((sum, c) => sum + c.count, 0);
+            const maxCount = countries[0].count;
+            return countries.map((c) => {
+              const width = (maxCount > 0) ? (c.count / maxCount) * 100 : 0;
+              const percent = ((c.count / total) * 100).toFixed(1);
+              return `
+                  <div class="country-item">
+                    <div class="country-name">${c.country}</div>
+                    <div class="country-bar-container">
+                      <div class="country-bar" style="width: ${width}%"></div>
+                    </div>
+                    <div class="country-count">${percent}%</div>
                   </div>
-                  <div class="country-count">${percent}%</div>
-                </div>
-              `;
-          }).join('');
-        })()}
+                `;
+            }).join('');
+          })()}
         </div>
       </div>
     ` : ''}
@@ -769,74 +788,102 @@ export async function renderWrappedTab(allActivities, options = {}) {
   `;
   }
 
+  // Global Heatmap using Polylines
+  let globalMap; // Use a distinct variable for the global map
 
-  // === BEST-POSSIBLE HEATMAP CONFIG (copy-paste ready) ===
-  let map;
-
-  function renderHeatmap(activities, options = {}) {
-    const containerId = 'wrapped-map';
+  function renderGlobalHeatmap(activities) {
+    const containerId = cfg.containerIds.heatmap;
     const mapContainer = document.getElementById(containerId);
     if (!mapContainer) return;
     if (!mapContainer.offsetHeight) mapContainer.style.height = '500px';
 
-    const coords = activities
-      .map(a => (a.start_latlng && a.start_latlng.length === 2) ? a.start_latlng : null)
-      .filter(Boolean);
+    const activitiesWithPolyline = activities.filter(a => a.polyline);
 
-    if (!coords.length) {
-      mapContainer.innerHTML = '<div style="text-align:center;padding:2rem;color:#666;">No GPS data available for heatmap</div>';
+    if (!activitiesWithPolyline.length) {
+      mapContainer.innerHTML = '<div style="text-align:center;padding:2rem;color:#666;">No GPS data with polylines available for global heatmap</div>';
+      if (globalMap) {
+        globalMap.remove();
+        globalMap = null;
+      }
       return;
     }
 
-    const latAvg = coords.reduce((s, c) => s + c[0], 0) / coords.length;
-    const lngAvg = coords.reduce((s, c) => s + c[1], 0) / coords.length;
-
     // Remove previous map if exists
-    if (map) {
-      map.remove();
+    if (globalMap) {
+      globalMap.remove();
     }
 
-    map = L.map(containerId).setView([latAvg, lngAvg], 4);
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap',
-      maxZoom: 19
-    }).addTo(map);
-
-    const radius = options.radius ?? 45;
-    const blur = options.blur ?? 22;
-    const opacity = options.opacity ?? 0.78;
-    const intensity = options.intensity ?? 0.68;
-    const max = options.max ?? 1.0;
-
-    const heatPoints = coords.map(c => [...c, intensity]);
-    const heat = L.heatLayer(heatPoints, {
-      radius, blur, opacity, max,
-      gradient: { 0.0: '#1a2a6c', 0.4: '#b21f1f', 0.7: '#fdbb2d', 1.0: '#f8f9fa' },
-      minOpacity: 0.15
-    }).addTo(map);
-
-    map.on('zoomend', () => {
-      const z = map.getZoom();
-      heat.setOptions({
-        radius: Math.max(25, radius + (z - 4) * 5),
-        blur: Math.max(12, blur + (z - 4) * 2.5)
-      });
+    // Default view: calculate centroid of all polylines for initial view
+    let allLatLngs = [];
+    activitiesWithPolyline.forEach(a => {
+      try {
+        const decoded = L.Polyline.fromEncoded(a.polyline).getLatLngs();
+        allLatLngs = allLatLngs.concat(decoded);
+      } catch (e) {
+        console.warn("Error decoding polyline for activity:", a.id, e);
+      }
     });
 
-    // Optional auto-fit bounds
-    // const bounds = L.latLngBounds(coords);
-    // map.fitBounds(bounds, { padding: [30, 30] });
+    let initialCenter = [0, 0];
+    let initialZoom = 2; // World view
+
+    if (allLatLngs.length > 0) {
+      const bounds = L.latLngBounds(allLatLngs);
+      initialCenter = bounds.getCenter();
+      // Adjust zoom to fit bounds if there are enough points for a meaningful fit
+      // otherwise, keep world view
+      if (bounds.isValid()) {
+        globalMap = L.map(containerId).fitBounds(bounds, { padding: [20, 20] });
+      } else {
+         globalMap = L.map(containerId).setView(initialCenter, initialZoom);
+      }
+    } else {
+      // Fallback if no valid polylines found
+      globalMap = L.map(containerId).setView(initialCenter, initialZoom);
+    }
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(globalMap);
+
+    // Render polylines
+    activitiesWithPolyline.forEach(a => {
+      try {
+        const coords = L.Polyline.fromEncoded(a.polyline).getLatLngs();
+        L.polyline(coords, {
+          color: 'rgba(239, 68, 68, 0.7)', // Red with transparency
+          weight: 2,
+          opacity: 0.7,
+          lineCap: 'round',
+          lineJoin: 'round'
+        }).addTo(globalMap);
+      } catch (e) {
+        console.warn("Error decoding polyline for activity:", a.id, e);
+      }
+    });
+
+    // Add a title to the heatmap container
+    mapContainer.insertAdjacentHTML('afterbegin', `
+      <div class="section-header heatmap-header">
+        <h3>🌎 Your Global Activity Map</h3>
+        <p class="section-subtitle">All your tracked routes for ${displayYear}</p>
+      </div>
+    `);
   }
-
-
-  renderHeatmap(currentActs);
-
-
 
   // Activities table
   function renderActivitiesTable(activities) {
     const sorted = activities.slice().sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
+
+    if (!sorted.length) {
+        return `
+            <div class="section-header">
+                <h3>📋 All Activities</h3>
+                <p class="section-subtitle">No activities recorded for ${displayYear}.</p>
+            </div>
+            <div class="empty-state">No activities to display.</div>
+        `;
+    }
 
     return `
       <div class="section-header">
@@ -893,22 +940,6 @@ export async function renderWrappedTab(allActivities, options = {}) {
     `;
   }
 
-
-  function renderGlobalHeatmap(activities) {
-    const map = L.map('heatmap').setView([41.39, 2.17], 11); // Barcelona per defecte
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-    activities.forEach(a => {
-      if (!a.polyline) return;
-      const coords = L.Polyline.fromEncoded(a.polyline).getLatLngs();
-      L.polyline(coords, { color: 'red', weight: 2, opacity: 0.6 }).addTo(map);
-    });
-  }
-
-
-
-
-
   // === INJECT INTO DOM ===
   document.getElementById(cfg.containerIds.summary).innerHTML = summaryHtml;
   document.getElementById(cfg.containerIds.sportComparison).innerHTML = renderSportComparison(sportsCurrent, sportsPrev);
@@ -917,6 +948,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
   document.getElementById(cfg.containerIds.personalBests).innerHTML = renderPersonalBests(pbs);
   document.getElementById(cfg.containerIds.extremeStats).innerHTML = renderExtras(topGears, countries);
   document.getElementById(cfg.containerIds.allActivities).innerHTML = renderActivitiesTable(currentActs);
-  document.getElementById(cfg.containerIds.heatmap).innerHTML = renderGlobalHeatmap(currentActs);
+  
+  // Render the global heatmap LAST to ensure other elements are in place
+  renderGlobalHeatmap(currentActs);
 }
-
