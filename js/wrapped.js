@@ -473,107 +473,131 @@ export async function renderWrappedTab(allActivities, options = {}) {
   }
 
   // Temporal stats - Combined and more compact
+  // Temporal stats - Combined and more compact
   function renderHistograms(monthlyHours, weekdayHours, hourCounts) {
     const peakMonth = monthlyHours.length ?
       monthlyHours.reduce((a, b) => a.hours > b.hours ? a : b) : null;
     const peakDayIndex = weekdayHours.indexOf(Math.max(...weekdayHours));
-    const peakHour = hourCounts.indexOf(Math.max(...hourCounts));
 
     const wkNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const maxMonth = monthlyHours.length ? Math.max(...monthlyHours.map(m => m.hours)) : 0;
     const maxW = Math.max(...weekdayHours);
 
+    // --- Monthly Bars ---
     const monthBars = monthlyHours.map((m, idx) => {
       const pct = maxMonth ? (m.hours / maxMonth) * 100 : 0;
       const label = new Date(m.month + '-01').toLocaleString(undefined, { month: 'short' });
       return `
-        <div class="chart-row fade-in-up" style="animation-delay: ${0.05 * idx}s">
-          <div class="chart-label-sm">${label}</div>
-          <div class="chart-bar-container chart-bar-container-sm">
-            <div class="chart-bar" style="width: ${pct}%"></div>
-          </div>
-          <span class="chart-value-sm">${m.hours.toFixed(1)}h</span>
+      <div class="chart-row fade-in-up" style="animation-delay: ${0.05 * idx}s">
+        <div class="chart-label-sm">${label}</div>
+        <div class="chart-bar-container chart-bar-container-sm">
+          <div class="chart-bar" style="width: ${pct}%"></div>
         </div>
-      `;
+        <span class="chart-value-sm">${m.hours.toFixed(1)}h</span>
+      </div>
+    `;
     }).join('');
 
+    // --- Weekly Bars ---
     const weekdayBars = weekdayHours.map((h, i) => {
       const pct = maxW ? (h / maxW) * 100 : 0;
       return `
-        <div class="chart-row">
-          <div class="chart-label-sm">${wkNames[i]}</div>
-          <div class="chart-bar-container chart-bar-container-sm">
-            <div class="chart-bar chart-bar-secondary" style="width: ${pct}%"></div>
-          </div>
-          <span class="chart-value-sm">${h.toFixed(1)}h</span>
+      <div class="chart-row">
+        <div class="chart-label-sm">${wkNames[i]}</div>
+        <div class="chart-bar-container chart-bar-container-sm">
+          <div class="chart-bar chart-bar-secondary" style="width: ${pct}%"></div>
         </div>
-      `;
-    }).join('');
-
-    const maxHour = Math.max(...hourCounts);
-    const hourBars = hourCounts.map((c, h) => {
-      const height = maxHour > 0 ? (c / maxHour) * 60 : 0; // Max height for bars
-      return `
-        <div class="hour-bar-compact" title="${h}:00 - ${c} activities">
-          <div class="hour-bar-fill-compact" style="height: ${height}px"></div>
-          <div class="hour-label-compact">${h}</div>
-        </div>
-      `;
-    }).join('');
-
-    return `
-      <div class="section-header">
-        <h3>📈 Activity Patterns</h3>
-        <p class="section-subtitle">When you train best, by month, week & hour</p>
-      </div>
-      
-      <div class="insights-grid">
-        <div class="insight-card">
-          <div class="insight-icon">📅</div>
-          <div class="insight-content">
-            <div class="insight-label">Peak Month</div>
-            <div class="insight-value">
-              ${peakMonth ? new Date(peakMonth.month + '-01').toLocaleString(undefined, { month: 'long', year: 'numeric' }) : 'N/A'}
-            </div>
-            ${peakMonth ? `<div class="insight-detail">${peakMonth.hours.toFixed(1)} hours</div>` : ''}
-          </div>
-        </div>
-        
-        <div class="insight-card">
-          <div class="insight-icon">📆</div>
-          <div class="insight-content">
-            <div class="insight-label">Favorite Day</div>
-            <div class="insight-value">${wkNames[peakDayIndex]}</div>
-          </div>
-        </div>
-        
-        <div class="insight-card">
-          <div class="insight-icon">🕐</div>
-          <div class="insight-content">
-            <div class="insight-label">Peak Hour</div>
-            <div class="insight-value">${peakHour}:00</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="temporal-charts-combined">
-        <div class="chart-section chart-section-monthly">
-          <h4 class="chart-title-sm">Monthly Activity (hours)</h4>
-          <div class="chart-container-compact">${monthBars}</div>
-        </div>
-
-        <div class="chart-section chart-section-weekly">
-          <h4 class="chart-title-sm">Weekly Pattern</h4>
-          <div class="chart-container-compact">${weekdayBars}</div>
-        </div>
-
-        <div class="chart-section chart-section-hourly">
-          <h4 class="chart-title-sm">Time of Day Distribution</h4>
-          <div class="hour-chart-compact">${hourBars}</div>
-        </div>
+        <span class="chart-value-sm">${h.toFixed(1)}h</span>
       </div>
     `;
+    }).join('');
+
+    // --- Time of Day Bars (6 segments) ---
+    const timeRanges = [
+      { label: 'Night', start: 0, end: 5 },
+      { label: 'Morning', start: 6, end: 9 },
+      { label: 'Midday', start: 10, end: 13 },
+      { label: 'Afternoon', start: 14, end: 17 },
+      { label: 'Evening', start: 18, end: 21 },
+      { label: 'Late Night', start: 22, end: 23 },
+    ];
+
+    const momentCounts = timeRanges.map(r => {
+      const total = hourCounts
+        .map((c, h) => (h >= r.start && h <= r.end ? c : 0))
+        .reduce((a, b) => a + b, 0);
+      return { label: r.label, count: total };
+    });
+
+    const maxMoment = Math.max(...momentCounts.map(m => m.count));
+
+    const momentBars = momentCounts.map(m => {
+      const height = maxMoment > 0 ? (m.count / maxMoment) * 60 : 0;
+      return `
+      <div class="hour-bar-compact" title="${m.label}: ${m.count} activities">
+        <div class="hour-bar-fill-compact" style="height: ${height}px"></div>
+        <div class="hour-label-compact">${m.label}</div>
+      </div>
+    `;
+    }).join('');
+
+    // --- Peak Hour (originally by exact hour, optional keep) ---
+    const peakHour = hourCounts.indexOf(Math.max(...hourCounts));
+
+    return `
+    <div class="section-header">
+      <h3>📈 Activity Patterns</h3>
+      <p class="section-subtitle">When you train best, by month, week & time of day</p>
+    </div>
+    
+    <div class="insights-grid">
+      <div class="insight-card">
+        <div class="insight-icon">📅</div>
+        <div class="insight-content">
+          <div class="insight-label">Peak Month</div>
+          <div class="insight-value">
+            ${peakMonth ? new Date(peakMonth.month + '-01').toLocaleString(undefined, { month: 'long', year: 'numeric' }) : 'N/A'}
+          </div>
+          ${peakMonth ? `<div class="insight-detail">${peakMonth.hours.toFixed(1)} hours</div>` : ''}
+        </div>
+      </div>
+      
+      <div class="insight-card">
+        <div class="insight-icon">📆</div>
+        <div class="insight-content">
+          <div class="insight-label">Favorite Day</div>
+          <div class="insight-value">${wkNames[peakDayIndex]}</div>
+        </div>
+      </div>
+      
+      <div class="insight-card">
+        <div class="insight-icon">🕐</div>
+        <div class="insight-content">
+          <div class="insight-label">Peak Hour</div>
+          <div class="insight-value">${peakHour}:00</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="temporal-charts-combined">
+      <div class="chart-section chart-section-monthly">
+        <h4 class="chart-title-sm">Monthly Activity (hours)</h4>
+        <div class="chart-container-compact">${monthBars}</div>
+      </div>
+
+      <div class="chart-section chart-section-weekly">
+        <h4 class="chart-title-sm">Weekly Pattern</h4>
+        <div class="chart-container-compact">${weekdayBars}</div>
+      </div>
+
+      <div class="chart-section chart-section-hourly">
+        <h4 class="chart-title-sm">Time of Day Distribution</h4>
+        <div class="hour-chart-compact">${momentBars}</div>
+      </div>
+    </div>
+  `;
   }
+
 
   // Top efforts (more compact cards for 10 items)
   function renderTopEfforts(topEfforts) {
@@ -723,14 +747,14 @@ export async function renderWrappedTab(allActivities, options = {}) {
   }
 
 
-function renderExtras(gears, countries) {
-  const hasCountries = countries.length > 0;
+  function renderExtras(gears, countries) {
+    const hasCountries = countries.length > 0;
 
-  if (!hasCountries) {
-    return '<div class="empty-state">No location data for this year.</div>';
-  }
+    if (!hasCountries) {
+      return '<div class="empty-state">No location data for this year.</div>';
+    }
 
-  return `
+    return `
   <div class="extras-grid">
     <div class="extra-section fade-in-up" style="animation-delay: 0.1s">
       <div class="section-header">
@@ -747,12 +771,12 @@ function renderExtras(gears, countries) {
       </div>
       <div class="country-list">
         ${(() => {
-          const total = countries.reduce((sum, c) => sum + c.count, 0);
-          const maxCount = countries[0].count;
-          return countries.map((c) => {
-            const width = (maxCount > 0) ? (c.count / maxCount) * 100 : 0;
-            const percent = ((c.count / total) * 100).toFixed(1);
-            return `
+        const total = countries.reduce((sum, c) => sum + c.count, 0);
+        const maxCount = countries[0].count;
+        return countries.map((c) => {
+          const width = (maxCount > 0) ? (c.count / maxCount) * 100 : 0;
+          const percent = ((c.count / total) * 100).toFixed(1);
+          return `
               <div class="country-item">
                 <div class="country-name">${c.country}</div>
                 <div class="country-bar-container">
@@ -761,120 +785,120 @@ function renderExtras(gears, countries) {
                 <div class="country-count">${percent}%</div>
               </div>
             `;
-          }).join('');
-        })()}
+        }).join('');
+      })()}
       </div>
     </div>
   </div>
   `;
-}
+  }
 
-function initializeHeatmap(countries) {
-  // Esperar a que el DOM esté listo
-  setTimeout(() => {
-    const container = document.getElementById('heatmap-container');
-    if (!container) return;
+  function initializeHeatmap(countries) {
+    // Esperar a que el DOM esté listo
+    setTimeout(() => {
+      const container = document.getElementById('heatmap-container');
+      if (!container) return;
 
-    // Obtener coordenadas de los países con su intensidad
-    const points = countries.map(c => ({
-      lat: getCountryLatLng(c.country).lat,
-      lng: getCountryLatLng(c.country).lng,
-      intensity: c.count
-    }));
+      // Obtener coordenadas de los países con su intensidad
+      const points = countries.map(c => ({
+        lat: getCountryLatLng(c.country).lat,
+        lng: getCountryLatLng(c.country).lng,
+        intensity: c.count
+      }));
 
-    // Calcular centro del mapa
-    const avgLat = points.reduce((sum, p) => sum + p.lat, 0) / points.length;
-    const avgLng = points.reduce((sum, p) => sum + p.lng, 0) / points.length;
+      // Calcular centro del mapa
+      const avgLat = points.reduce((sum, p) => sum + p.lat, 0) / points.length;
+      const avgLng = points.reduce((sum, p) => sum + p.lng, 0) / points.length;
 
-    // Inicializar mapa Leaflet
-    const map = L.map('heatmap-container', {
-      center: [avgLat, avgLng],
-      zoom: points.length === 1 ? 10 : 4,
-      zoomControl: true,
-      attributionControl: true
-    });
+      // Inicializar mapa Leaflet
+      const map = L.map('heatmap-container', {
+        center: [avgLat, avgLng],
+        zoom: points.length === 1 ? 10 : 4,
+        zoomControl: true,
+        attributionControl: true
+      });
 
-    // Añadir capa de OpenStreetMap
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors',
-      maxZoom: 18
-    }).addTo(map);
+      // Añadir capa de OpenStreetMap
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 18
+      }).addTo(map);
 
-    // Preparar datos para el heatmap
-    const maxIntensity = Math.max(...points.map(p => p.intensity));
-    const heatmapData = points.map(p => [
-      p.lat,
-      p.lng,
-      p.intensity / maxIntensity // Normalizar intensidad
-    ]);
+      // Preparar datos para el heatmap
+      const maxIntensity = Math.max(...points.map(p => p.intensity));
+      const heatmapData = points.map(p => [
+        p.lat,
+        p.lng,
+        p.intensity / maxIntensity // Normalizar intensidad
+      ]);
 
-    // Añadir capa de heatmap
-    L.heatLayer(heatmapData, {
-      radius: 50,
-      blur: 35,
-      maxZoom: 10,
-      max: 1.0,
-      gradient: {
-        0.0: 'blue',
-        0.2: 'cyan',
-        0.4: 'lime',
-        0.6: 'yellow',
-        0.8: 'orange',
-        1.0: 'red'
+      // Añadir capa de heatmap
+      L.heatLayer(heatmapData, {
+        radius: 50,
+        blur: 35,
+        maxZoom: 10,
+        max: 1.0,
+        gradient: {
+          0.0: 'blue',
+          0.2: 'cyan',
+          0.4: 'lime',
+          0.6: 'yellow',
+          0.8: 'orange',
+          1.0: 'red'
+        }
+      }).addTo(map);
+
+      // Ajustar vista para mostrar todos los puntos
+      if (points.length > 1) {
+        const bounds = L.latLngBounds(points.map(p => [p.lat, p.lng]));
+        map.fitBounds(bounds, { padding: [50, 50] });
       }
-    }).addTo(map);
+    }, 100);
+  }
 
-    // Ajustar vista para mostrar todos los puntos
-    if (points.length > 1) {
-      const bounds = L.latLngBounds(points.map(p => [p.lat, p.lng]));
-      map.fitBounds(bounds, { padding: [50, 50] });
-    }
-  }, 100);
-}
+  function getCountryLatLng(country) {
+    // Coordenadas reales (lat, lng) de capitales/centros de países
+    const coords = {
+      'Spain': { lat: 40.4168, lng: -3.7038 },
+      'France': { lat: 48.8566, lng: 2.3522 },
+      'Italy': { lat: 41.9028, lng: 12.4964 },
+      'Germany': { lat: 52.5200, lng: 13.4050 },
+      'United Kingdom': { lat: 51.5074, lng: -0.1278 },
+      'Portugal': { lat: 38.7223, lng: -9.1393 },
+      'Netherlands': { lat: 52.3676, lng: 4.9041 },
+      'Belgium': { lat: 50.8503, lng: 4.3517 },
+      'Switzerland': { lat: 46.9480, lng: 7.4474 },
+      'Austria': { lat: 48.2082, lng: 16.3738 },
+      'United States': { lat: 38.9072, lng: -77.0369 },
+      'Canada': { lat: 45.4215, lng: -75.6972 },
+      'Mexico': { lat: 19.4326, lng: -99.1332 },
+      'Brazil': { lat: -15.7939, lng: -47.8828 },
+      'Argentina': { lat: -34.6037, lng: -58.3816 },
+      'Japan': { lat: 35.6762, lng: 139.6503 },
+      'China': { lat: 39.9042, lng: 116.4074 },
+      'Australia': { lat: -33.8688, lng: 151.2093 },
+      'New Zealand': { lat: -41.2865, lng: 174.7762 },
+      'India': { lat: 28.6139, lng: 77.2090 },
+      'Thailand': { lat: 13.7563, lng: 100.5018 },
+      'Singapore': { lat: 1.3521, lng: 103.8198 },
+      'UAE': { lat: 25.2048, lng: 55.2708 },
+      'South Africa': { lat: -33.9249, lng: 18.4241 },
+      'Morocco': { lat: 33.9716, lng: -6.8498 },
+      'Egypt': { lat: 30.0444, lng: 31.2357 },
+      'Kenya': { lat: -1.2921, lng: 36.8219 },
+      'Russia': { lat: 55.7558, lng: 37.6173 },
+      'Poland': { lat: 52.2297, lng: 21.0122 },
+      'Czech Republic': { lat: 50.0755, lng: 14.4378 },
+      'Greece': { lat: 37.9838, lng: 23.7275 },
+      'Turkey': { lat: 41.0082, lng: 28.9784 },
+      'Norway': { lat: 59.9139, lng: 10.7522 },
+      'Sweden': { lat: 59.3293, lng: 18.0686 },
+      'Denmark': { lat: 55.6761, lng: 12.5683 },
+      'Finland': { lat: 60.1699, lng: 24.9384 },
+    };
 
-function getCountryLatLng(country) {
-  // Coordenadas reales (lat, lng) de capitales/centros de países
-  const coords = {
-    'Spain': { lat: 40.4168, lng: -3.7038 },
-    'France': { lat: 48.8566, lng: 2.3522 },
-    'Italy': { lat: 41.9028, lng: 12.4964 },
-    'Germany': { lat: 52.5200, lng: 13.4050 },
-    'United Kingdom': { lat: 51.5074, lng: -0.1278 },
-    'Portugal': { lat: 38.7223, lng: -9.1393 },
-    'Netherlands': { lat: 52.3676, lng: 4.9041 },
-    'Belgium': { lat: 50.8503, lng: 4.3517 },
-    'Switzerland': { lat: 46.9480, lng: 7.4474 },
-    'Austria': { lat: 48.2082, lng: 16.3738 },
-    'United States': { lat: 38.9072, lng: -77.0369 },
-    'Canada': { lat: 45.4215, lng: -75.6972 },
-    'Mexico': { lat: 19.4326, lng: -99.1332 },
-    'Brazil': { lat: -15.7939, lng: -47.8828 },
-    'Argentina': { lat: -34.6037, lng: -58.3816 },
-    'Japan': { lat: 35.6762, lng: 139.6503 },
-    'China': { lat: 39.9042, lng: 116.4074 },
-    'Australia': { lat: -33.8688, lng: 151.2093 },
-    'New Zealand': { lat: -41.2865, lng: 174.7762 },
-    'India': { lat: 28.6139, lng: 77.2090 },
-    'Thailand': { lat: 13.7563, lng: 100.5018 },
-    'Singapore': { lat: 1.3521, lng: 103.8198 },
-    'UAE': { lat: 25.2048, lng: 55.2708 },
-    'South Africa': { lat: -33.9249, lng: 18.4241 },
-    'Morocco': { lat: 33.9716, lng: -6.8498 },
-    'Egypt': { lat: 30.0444, lng: 31.2357 },
-    'Kenya': { lat: -1.2921, lng: 36.8219 },
-    'Russia': { lat: 55.7558, lng: 37.6173 },
-    'Poland': { lat: 52.2297, lng: 21.0122 },
-    'Czech Republic': { lat: 50.0755, lng: 14.4378 },
-    'Greece': { lat: 37.9838, lng: 23.7275 },
-    'Turkey': { lat: 41.0082, lng: 28.9784 },
-    'Norway': { lat: 59.9139, lng: 10.7522 },
-    'Sweden': { lat: 59.3293, lng: 18.0686 },
-    'Denmark': { lat: 55.6761, lng: 12.5683 },
-    'Finland': { lat: 60.1699, lng: 24.9384 },
-  };
-  
-  return coords[country] || { lat: 40.4168, lng: -3.7038 }; // Default: Madrid
-}
+    return coords[country] || { lat: 40.4168, lng: -3.7038 }; // Default: Madrid
+  }
 
 
 
