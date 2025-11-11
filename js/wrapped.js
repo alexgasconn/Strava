@@ -735,69 +735,9 @@ function renderExtras(gears, countries) {
     <div class="extra-section fade-in-up" style="animation-delay: 0.1s">
       <div class="section-header">
         <h3>🗺️ Location Heatmap</h3>
-        <p class="section-subtitle">Training intensity by location</p>
+        <p class="section-subtitle">Training density by location</p>
       </div>
-      <div class="heatmap-container">
-        <svg viewBox="0 0 800 400" class="heatmap-svg">
-          <!-- Mapa mundial simplificado -->
-          <defs>
-            <filter id="glow">
-              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-              <feMerge>
-                <feMergeNode in="coloredBlur"/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
-            </filter>
-          </defs>
-          
-          <!-- Fondo del mapa -->
-          <rect x="0" y="0" width="800" height="400" fill="rgba(255,255,255,0.02)" rx="8"/>
-          
-          <!-- Grid de referencia -->
-          ${Array.from({length: 9}, (_, i) => `
-            <line x1="${i * 100}" y1="0" x2="${i * 100}" y2="400" 
-                  stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
-          `).join('')}
-          ${Array.from({length: 5}, (_, i) => `
-            <line x1="0" y1="${i * 100}" x2="800" y2="${i * 100}" 
-                  stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
-          `).join('')}
-          
-          <!-- Puntos de calor por país -->
-          ${countries.map(c => {
-            const coords = getCountryCoordinates(c.country);
-            const maxCount = countries[0].count;
-            const intensity = c.count / maxCount;
-            const radius = 15 + (intensity * 35);
-            const opacity = 0.3 + (intensity * 0.7);
-            const color = getHeatColor(intensity);
-            
-            return `
-              <g class="country-marker" data-country="${c.country}">
-                <!-- Círculo de brillo -->
-                <circle cx="${coords.x}" cy="${coords.y}" r="${radius * 1.5}" 
-                        fill="${color}" opacity="${opacity * 0.3}" 
-                        filter="url(#glow)"/>
-                <!-- Círculo principal -->
-                <circle cx="${coords.x}" cy="${coords.y}" r="${radius}" 
-                        fill="${color}" opacity="${opacity}" 
-                        class="heatmap-point">
-                  <title>${c.country}: ${c.count} activities</title>
-                </circle>
-                <!-- Punto central -->
-                <circle cx="${coords.x}" cy="${coords.y}" r="3" 
-                        fill="white" opacity="0.9"/>
-              </g>
-            `;
-          }).join('')}
-        </svg>
-        
-        <div class="heatmap-legend">
-          <span class="legend-label">Less active</span>
-          <div class="legend-gradient"></div>
-          <span class="legend-label">Most active</span>
-        </div>
-      </div>
+      <div id="heatmap-container" style="width: 100%; height: 400px; border-radius: 12px; overflow: hidden;"></div>
     </div>
 
     <div class="extra-section fade-in-up" style="animation-delay: 0.2s">
@@ -829,70 +769,114 @@ function renderExtras(gears, countries) {
   `;
 }
 
-function getCountryCoordinates(country) {
-  // Coordenadas aproximadas en el mapa SVG (800x400)
-  // Ajustadas a una proyección simple
-  const coords = {
-    'Spain': { x: 400, y: 180 },
-    'France': { x: 410, y: 160 },
-    'Italy': { x: 430, y: 180 },
-    'Germany': { x: 430, y: 150 },
-    'United Kingdom': { x: 390, y: 140 },
-    'Portugal': { x: 380, y: 190 },
-    'Netherlands': { x: 415, y: 145 },
-    'Belgium': { x: 410, y: 150 },
-    'Switzerland': { x: 420, y: 165 },
-    'Austria': { x: 440, y: 160 },
-    'United States': { x: 200, y: 180 },
-    'Canada': { x: 180, y: 120 },
-    'Mexico': { x: 180, y: 210 },
-    'Brazil': { x: 280, y: 280 },
-    'Argentina': { x: 270, y: 330 },
-    'Japan': { x: 680, y: 180 },
-    'China': { x: 620, y: 180 },
-    'Australia': { x: 700, y: 320 },
-    'New Zealand': { x: 730, y: 350 },
-    'India': { x: 580, y: 210 },
-    'Thailand': { x: 620, y: 220 },
-    'Singapore': { x: 630, y: 240 },
-    'UAE': { x: 530, y: 210 },
-    'South Africa': { x: 450, y: 320 },
-    'Morocco': { x: 390, y: 200 },
-    'Egypt': { x: 460, y: 200 },
-    'Kenya': { x: 470, y: 250 },
-    'Russia': { x: 520, y: 120 },
-    'Poland': { x: 450, y: 150 },
-    'Czech Republic': { x: 440, y: 155 },
-    'Greece': { x: 450, y: 195 },
-    'Turkey': { x: 470, y: 190 },
-    'Norway': { x: 430, y: 120 },
-    'Sweden': { x: 440, y: 125 },
-    'Denmark': { x: 430, y: 140 },
-    'Finland': { x: 460, y: 115 },
-  };
-  
-  // Si el país no está en la lista, posición por defecto (centro)
-  return coords[country] || { x: 400, y: 200 };
+function initializeHeatmap(countries) {
+  // Esperar a que el DOM esté listo
+  setTimeout(() => {
+    const container = document.getElementById('heatmap-container');
+    if (!container) return;
+
+    // Obtener coordenadas de los países con su intensidad
+    const points = countries.map(c => ({
+      lat: getCountryLatLng(c.country).lat,
+      lng: getCountryLatLng(c.country).lng,
+      intensity: c.count
+    }));
+
+    // Calcular centro del mapa
+    const avgLat = points.reduce((sum, p) => sum + p.lat, 0) / points.length;
+    const avgLng = points.reduce((sum, p) => sum + p.lng, 0) / points.length;
+
+    // Inicializar mapa Leaflet
+    const map = L.map('heatmap-container', {
+      center: [avgLat, avgLng],
+      zoom: points.length === 1 ? 10 : 4,
+      zoomControl: true,
+      attributionControl: true
+    });
+
+    // Añadir capa de OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 18
+    }).addTo(map);
+
+    // Preparar datos para el heatmap
+    const maxIntensity = Math.max(...points.map(p => p.intensity));
+    const heatmapData = points.map(p => [
+      p.lat,
+      p.lng,
+      p.intensity / maxIntensity // Normalizar intensidad
+    ]);
+
+    // Añadir capa de heatmap
+    L.heatLayer(heatmapData, {
+      radius: 50,
+      blur: 35,
+      maxZoom: 10,
+      max: 1.0,
+      gradient: {
+        0.0: 'blue',
+        0.2: 'cyan',
+        0.4: 'lime',
+        0.6: 'yellow',
+        0.8: 'orange',
+        1.0: 'red'
+      }
+    }).addTo(map);
+
+    // Ajustar vista para mostrar todos los puntos
+    if (points.length > 1) {
+      const bounds = L.latLngBounds(points.map(p => [p.lat, p.lng]));
+      map.fitBounds(bounds, { padding: [50, 50] });
+    }
+  }, 100);
 }
 
-function getHeatColor(intensity) {
-  // Paleta de colores: azul -> cyan -> verde -> amarillo -> naranja -> rojo
-  if (intensity < 0.2) {
-    return `rgb(${Math.round(intensity * 5 * 100)}, ${Math.round(150 + intensity * 5 * 105)}, 255)`;
-  } else if (intensity < 0.4) {
-    const v = (intensity - 0.2) * 5;
-    return `rgb(${Math.round(20 + v * 80)}, ${Math.round(255 - v * 100)}, ${Math.round(255 - v * 155)})`;
-  } else if (intensity < 0.6) {
-    const v = (intensity - 0.4) * 5;
-    return `rgb(${Math.round(100 + v * 155)}, ${Math.round(155 + v * 100)}, ${Math.round(100 - v * 100)})`;
-  } else if (intensity < 0.8) {
-    const v = (value - 0.6) * 5;
-    return `rgb(255, ${Math.round(255 - v * 100)}, 0)`;
-  } else {
-    const v = (intensity - 0.8) * 5;
-    return `rgb(255, ${Math.round(155 - v * 155)}, 0)`;
-  }
+function getCountryLatLng(country) {
+  // Coordenadas reales (lat, lng) de capitales/centros de países
+  const coords = {
+    'Spain': { lat: 40.4168, lng: -3.7038 },
+    'France': { lat: 48.8566, lng: 2.3522 },
+    'Italy': { lat: 41.9028, lng: 12.4964 },
+    'Germany': { lat: 52.5200, lng: 13.4050 },
+    'United Kingdom': { lat: 51.5074, lng: -0.1278 },
+    'Portugal': { lat: 38.7223, lng: -9.1393 },
+    'Netherlands': { lat: 52.3676, lng: 4.9041 },
+    'Belgium': { lat: 50.8503, lng: 4.3517 },
+    'Switzerland': { lat: 46.9480, lng: 7.4474 },
+    'Austria': { lat: 48.2082, lng: 16.3738 },
+    'United States': { lat: 38.9072, lng: -77.0369 },
+    'Canada': { lat: 45.4215, lng: -75.6972 },
+    'Mexico': { lat: 19.4326, lng: -99.1332 },
+    'Brazil': { lat: -15.7939, lng: -47.8828 },
+    'Argentina': { lat: -34.6037, lng: -58.3816 },
+    'Japan': { lat: 35.6762, lng: 139.6503 },
+    'China': { lat: 39.9042, lng: 116.4074 },
+    'Australia': { lat: -33.8688, lng: 151.2093 },
+    'New Zealand': { lat: -41.2865, lng: 174.7762 },
+    'India': { lat: 28.6139, lng: 77.2090 },
+    'Thailand': { lat: 13.7563, lng: 100.5018 },
+    'Singapore': { lat: 1.3521, lng: 103.8198 },
+    'UAE': { lat: 25.2048, lng: 55.2708 },
+    'South Africa': { lat: -33.9249, lng: 18.4241 },
+    'Morocco': { lat: 33.9716, lng: -6.8498 },
+    'Egypt': { lat: 30.0444, lng: 31.2357 },
+    'Kenya': { lat: -1.2921, lng: 36.8219 },
+    'Russia': { lat: 55.7558, lng: 37.6173 },
+    'Poland': { lat: 52.2297, lng: 21.0122 },
+    'Czech Republic': { lat: 50.0755, lng: 14.4378 },
+    'Greece': { lat: 37.9838, lng: 23.7275 },
+    'Turkey': { lat: 41.0082, lng: 28.9784 },
+    'Norway': { lat: 59.9139, lng: 10.7522 },
+    'Sweden': { lat: 59.3293, lng: 18.0686 },
+    'Denmark': { lat: 55.6761, lng: 12.5683 },
+    'Finland': { lat: 60.1699, lng: 24.9384 },
+  };
+  
+  return coords[country] || { lat: 40.4168, lng: -3.7038 }; // Default: Madrid
 }
+
+
 
 
   // Activities table
@@ -972,5 +956,7 @@ function getHeatColor(intensity) {
   document.getElementById(cfg.containerIds.personalBests).innerHTML = renderPersonalBests(pbs);
   document.getElementById(cfg.containerIds.extremeStats).innerHTML = renderExtras(topGears, countries);
   document.getElementById(cfg.containerIds.allActivities).innerHTML = renderActivitiesTable(currentActs);
+  initializeHeatmap(countries);
+  document.getElementById(cfg.containerIds.heatmap).innerHTML = renderHeatmap();
 
 }
