@@ -498,16 +498,16 @@ export async function renderWrappedTab(allActivities, options = {}) {
     `;
     }).join('');
 
-    // --- Weekly Bars ---
+    // --- Weekly Bars (horizontal layout) ---
     const weekdayBars = weekdayHours.map((h, i) => {
       const pct = maxW ? (h / maxW) * 100 : 0;
       return `
-      <div class="chart-row">
-        <div class="chart-label-sm">${wkNames[i]}</div>
-        <div class="chart-bar-container chart-bar-container-sm">
-          <div class="chart-bar chart-bar-secondary" style="width: ${pct}%"></div>
-        </div>
-        <span class="chart-value-sm">${h.toFixed(1)}h</span>
+      <div class="chart-row fade-in-up" style="animation-delay: ${0.05 * i}s; align-items: center;">
+      <div class="chart-label-sm" style="width:72px;text-align:left;padding-right:8px">${wkNames[i]}</div>
+      <div class="chart-bar-container chart-bar-container-sm" style="flex:1;display:flex;align-items:center">
+        <div class="chart-bar" style="width: ${pct}%;height:14px;border-radius:8px"></div>
+      </div>
+      <span class="chart-value-sm" style="width:54px;text-align:right;margin-left:8px">${h.toFixed(1)}h</span>
       </div>
     `;
     }).join('');
