@@ -1,6 +1,4 @@
 // wrapped-stats-pro.js
-// Professional Wrapped Stats Dashboard with enhanced visuals and animations
-// Usage: renderWrappedTab(allActivities, {containerIds, reverseGeocoder})
 
 export async function renderWrappedTab(allActivities, options = {}) {
   const fullActivities = options.fullActivities || allActivities; // lista completa
@@ -14,7 +12,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
       motivation: 'wrapped-motivation',
       extremeStats: 'wrapped-extreme-stats',
       allActivities: 'wrapped-all-activities',
-
+      heatmap: 'wrapped-heatmap',
       ...options.containerIds
     },
     reverseGeocoder: options.reverseGeocoder || null
@@ -168,7 +166,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
 
   // Personal bests
   function findPBs(acts) {
-    const runningTargets = { "Mile": 1609, "5K": 5000, "10K": 10000, "Half": 21097, "Marathon": 42195 };
+    const runningTargets = { "Mile": 1609, "5K": 5000, "10K": 10000, "Half Marathon": 21097, "Marathon": 42195 };
     const swimTargets = { "1K": 1000, "2K": 2000, "3K": 3000 };
     const rideTargets = { "10K": 10000, "20K": 20000, "30K": 30000, "40K": 40000, "50K": 50000 };
 
@@ -256,7 +254,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
   // Countries
   async function resolveCountries(acts) {
     const map = {};
-    const cache = {}; // cache por coordenadas redondeadas
+    const cache = {};
 
     // redondea coordenadas a ~40 km para agrupar zonas cercanas
     const round = (v) => Math.round(v / 5) * 0.5;
@@ -398,7 +396,12 @@ export async function renderWrappedTab(allActivities, options = {}) {
       'Hike': '🥾',
       'Workout': '💪',
       'WeightTraining': '🏋️',
-      'Yoga': '🧘'
+      'Yoga': '🧘',
+      'Rowing': '🚣',
+      'Elliptical': '🚴‍♂️',
+      'Ski': '🎿',
+      'Snowboard': '🏂',
+      'Other': '🎯',
     };
 
     // Filtrar solo deportes con al menos 5h
