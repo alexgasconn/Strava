@@ -55,20 +55,20 @@ export async function renderWrappedTab(allActivities, options = {}) {
     },
     // Simple helper to get English country name, might not be exhaustive
     getEnglishCountryName: (countryName) => {
-        const countryMap = {
-            'España': 'Spain',
-            'Francia': 'France',
-            'Alemania': 'Germany',
-            'Italia': 'Italy',
-            'Reino Unido': 'United Kingdom',
-            'Estados Unidos': 'United States',
-            'Canadá': 'Canada',
-            'Australia': 'Australia',
-            'Suiza': 'Switzerland',
-            'Japón': 'Japan',
-            // Add more as needed
-        };
-        return countryMap[countryName] || countryName;
+      const countryMap = {
+        'España': 'Spain',
+        'Francia': 'France',
+        'Alemania': 'Germany',
+        'Italia': 'Italy',
+        'Reino Unido': 'United Kingdom',
+        'Estados Unidos': 'United States',
+        'Canadá': 'Canada',
+        'Australia': 'Australia',
+        'Suiza': 'Switzerland',
+        'Japón': 'Japan',
+        // Add more as needed
+      };
+      return countryMap[countryName] || countryName;
     }
   };
 
@@ -636,7 +636,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
     const hasHighlights = pbs.longest || pbs.mostElevation || pbs.fastest;
 
     if (!hasRunningPBs && !hasSwimmingPBs && !hasRidingPBs && !hasHighlights) {
-        return '<div class="empty-state">No personal bests recorded for this year.</div>';
+      return '<div class="empty-state">No personal bests recorded for this year.</div>';
     }
 
     return `
@@ -722,37 +722,48 @@ export async function renderWrappedTab(allActivities, options = {}) {
     `;
   }
 
-  // Gear and countries (countries now in English)
+
   function renderExtras(gears, countries) {
     const hasGears = gears.length > 0;
     const hasCountries = countries.length > 0;
 
     if (!hasGears && !hasCountries) {
-        return '<div class="empty-state">No additional data for equipment or locations this year.</div>';
+      return '<div class="empty-state">No additional data for equipment or locations this year.</div>';
     }
+
+    // Crear datos del heatmap basados en los gears
+    const heatmapData = hasGears ? createHeatmapFromGears(gears) : [];
 
     return `
   <div class="extras-grid">
     ${hasGears ? `
       <div class="extra-section fade-in-up" style="animation-delay: 0.1s">
         <div class="section-header">
-          <h3>⚙️ Equipment</h3>
-          <p class="section-subtitle">Most used gear</p>
+          <h3>⚙️ Equipment Heatmap</h3>
+          <p class="section-subtitle">Usage intensity visualization</p>
         </div>
-        <div class="gear-list">
-          ${gears.map((g, idx) => {
-      const maxHours = gears[0].hours;
-      const width = (maxHours > 0) ? (g.hours / maxHours) * 100 : 0;
-      return `
-              <div class="gear-item">
-                <div class="gear-name">${g.gear}</div>
-                <div class="gear-bar-container">
-                  <div class="gear-bar" style="width: ${width}%"></div>
-                </div>
-                <div class="gear-hours">${g.hours.toFixed(1)}h</div>
-              </div>
-            `;
-    }).join('')}
+        <div class="heatmap-container">
+          <svg viewBox="0 0 400 300" class="heatmap-svg">
+            ${heatmapData.map((cell, idx) => `
+              <rect
+                x="${cell.x}"
+                y="${cell.y}"
+                width="${cell.width}"
+                height="${cell.height}"
+                fill="${cell.color}"
+                class="heatmap-cell"
+                data-gear="${cell.gear}"
+                data-hours="${cell.hours}"
+              >
+                <title>${cell.gear}: ${cell.hours.toFixed(1)}h</title>
+              </rect>
+            `).join('')}
+          </svg>
+          <div class="heatmap-legend">
+            <span class="legend-label">Less</span>
+            <div class="legend-gradient"></div>
+            <span class="legend-label">More</span>
+          </div>
         </div>
       </div>
     ` : ''}
@@ -765,22 +776,22 @@ export async function renderWrappedTab(allActivities, options = {}) {
         </div>
         <div class="country-list">
           ${(() => {
-            const total = countries.reduce((sum, c) => sum + c.count, 0);
-            const maxCount = countries[0].count;
-            return countries.map((c) => {
-              const width = (maxCount > 0) ? (c.count / maxCount) * 100 : 0;
-              const percent = ((c.count / total) * 100).toFixed(1);
-              return `
-                  <div class="country-item">
-                    <div class="country-name">${c.country}</div>
-                    <div class="country-bar-container">
-                      <div class="country-bar" style="width: ${width}%"></div>
-                    </div>
-                    <div class="country-count">${percent}%</div>
+          const total = countries.reduce((sum, c) => sum + c.count, 0);
+          const maxCount = countries[0].count;
+          return countries.map((c) => {
+            const width = (maxCount > 0) ? (c.count / maxCount) * 100 : 0;
+            const percent = ((c.count / total) * 100).toFixed(1);
+            return `
+                <div class="country-item">
+                  <div class="country-name">${c.country}</div>
+                  <div class="country-bar-container">
+                    <div class="country-bar" style="width: ${width}%"></div>
                   </div>
-                `;
-            }).join('');
-          })()}
+                  <div class="country-count">${percent}%</div>
+                </div>
+              `;
+          }).join('');
+        })()}
         </div>
       </div>
     ` : ''}
@@ -788,95 +799,68 @@ export async function renderWrappedTab(allActivities, options = {}) {
   `;
   }
 
-  // Global Heatmap using Polylines
-  let globalMap; // Use a distinct variable for the global map
+  function createHeatmapFromGears(gears) {
+    const maxHours = Math.max(...gears.map(g => g.hours));
+    const minHours = Math.min(...gears.map(g => g.hours));
 
-  function renderGlobalHeatmap(activities) {
-    const containerId = cfg.containerIds.heatmap;
-    const mapContainer = document.getElementById(containerId);
-    if (!mapContainer) return;
-    if (!mapContainer.offsetHeight) mapContainer.style.height = '500px';
+    // Calcular grid dimensions (intentamos hacer un cuadrado aproximado)
+    const cols = Math.ceil(Math.sqrt(gears.length));
+    const rows = Math.ceil(gears.length / cols);
 
-    const activitiesWithPolyline = activities.filter(a => a.polyline);
+    const cellWidth = 380 / cols;
+    const cellHeight = 280 / rows;
+    const padding = 2;
 
-    if (!activitiesWithPolyline.length) {
-      mapContainer.innerHTML = '<div style="text-align:center;padding:2rem;color:#666;">No GPS data with polylines available for global heatmap</div>';
-      if (globalMap) {
-        globalMap.remove();
-        globalMap = null;
-      }
-      return;
-    }
+    return gears.map((gear, idx) => {
+      const col = idx % cols;
+      const row = Math.floor(idx / cols);
 
-    // Remove previous map if exists
-    if (globalMap) {
-      globalMap.remove();
-    }
+      // Normalizar el valor entre 0 y 1
+      const normalized = maxHours > minHours
+        ? (gear.hours - minHours) / (maxHours - minHours)
+        : 0.5;
 
-    // Default view: calculate centroid of all polylines for initial view
-    let allLatLngs = [];
-    activitiesWithPolyline.forEach(a => {
-      try {
-        const decoded = L.Polyline.fromEncoded(a.polyline).getLatLngs();
-        allLatLngs = allLatLngs.concat(decoded);
-      } catch (e) {
-        console.warn("Error decoding polyline for activity:", a.id, e);
-      }
+      // Generar color (de azul claro a rojo intenso)
+      const color = getHeatColor(normalized);
+
+      return {
+        x: col * cellWidth + padding + 10,
+        y: row * cellHeight + padding + 10,
+        width: cellWidth - padding * 2,
+        height: cellHeight - padding * 2,
+        color: color,
+        gear: gear.gear,
+        hours: gear.hours
+      };
     });
-
-    let initialCenter = [0, 0];
-    let initialZoom = 2; // World view
-
-    if (allLatLngs.length > 0) {
-      const bounds = L.latLngBounds(allLatLngs);
-      initialCenter = bounds.getCenter();
-      // Adjust zoom to fit bounds if there are enough points for a meaningful fit
-      // otherwise, keep world view
-      if (bounds.isValid()) {
-        globalMap = L.map(containerId).fitBounds(bounds, { padding: [20, 20] });
-      } else {
-         globalMap = L.map(containerId).setView(initialCenter, initialZoom);
-      }
-    } else {
-      // Fallback if no valid polylines found
-      globalMap = L.map(containerId).setView(initialCenter, initialZoom);
-    }
-    
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(globalMap);
-
-    // Render polylines
-    activitiesWithPolyline.forEach(a => {
-      try {
-        const coords = L.Polyline.fromEncoded(a.polyline).getLatLngs();
-        L.polyline(coords, {
-          color: 'rgba(239, 68, 68, 0.7)', // Red with transparency
-          weight: 2,
-          opacity: 0.7,
-          lineCap: 'round',
-          lineJoin: 'round'
-        }).addTo(globalMap);
-      } catch (e) {
-        console.warn("Error decoding polyline for activity:", a.id, e);
-      }
-    });
-
-    // Add a title to the heatmap container
-    mapContainer.insertAdjacentHTML('afterbegin', `
-      <div class="section-header heatmap-header">
-        <h3>🌎 Your Global Activity Map</h3>
-        <p class="section-subtitle">All your tracked routes for ${displayYear}</p>
-      </div>
-    `);
   }
+
+  function getHeatColor(value) {
+    // Paleta de colores: azul -> verde -> amarillo -> naranja -> rojo
+    if (value < 0.2) {
+      return `rgb(${Math.round(value * 5 * 100)}, ${Math.round(100 + value * 5 * 155)}, 255)`;
+    } else if (value < 0.4) {
+      const v = (value - 0.2) * 5;
+      return `rgb(${Math.round(20 + v * 80)}, ${Math.round(255 - v * 155)}, ${Math.round(255 - v * 155)})`;
+    } else if (value < 0.6) {
+      const v = (value - 0.4) * 5;
+      return `rgb(${Math.round(100 + v * 155)}, ${Math.round(100 + v * 155)}, ${Math.round(100 - v * 100)})`;
+    } else if (value < 0.8) {
+      const v = (value - 0.6) * 5;
+      return `rgb(255, ${Math.round(255 - v * 155)}, 0)`;
+    } else {
+      const v = (value - 0.8) * 5;
+      return `rgb(255, ${Math.round(100 - v * 100)}, 0)`;
+    }
+  }
+
 
   // Activities table
   function renderActivitiesTable(activities) {
     const sorted = activities.slice().sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
 
     if (!sorted.length) {
-        return `
+      return `
             <div class="section-header">
                 <h3>📋 All Activities</h3>
                 <p class="section-subtitle">No activities recorded for ${displayYear}.</p>
@@ -948,7 +932,5 @@ export async function renderWrappedTab(allActivities, options = {}) {
   document.getElementById(cfg.containerIds.personalBests).innerHTML = renderPersonalBests(pbs);
   document.getElementById(cfg.containerIds.extremeStats).innerHTML = renderExtras(topGears, countries);
   document.getElementById(cfg.containerIds.allActivities).innerHTML = renderActivitiesTable(currentActs);
-  
-  // Render the global heatmap LAST to ensure other elements are in place
-  renderGlobalHeatmap(currentActs);
+
 }

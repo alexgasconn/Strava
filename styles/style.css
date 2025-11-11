@@ -3460,3 +3460,54 @@ main {
     border-radius: 8px;
     margin-bottom: 2rem;
 }
+
+.heatmap-container {
+  position: relative;
+  width: 100%;
+  padding: 1rem;
+}
+
+.heatmap-svg {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.heatmap-cell {
+  transition: opacity 0.2s;
+  cursor: pointer;
+}
+
+.heatmap-cell:hover {
+  opacity: 0.8;
+  stroke: white;
+  stroke-width: 2;
+}
+
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.legend-gradient {
+  width: 200px;
+  height: 20px;
+  background: linear-gradient(
+    to right,
+    rgb(20, 100, 255),
+    rgb(100, 255, 100),
+    rgb(255, 255, 0),
+    rgb(255, 100, 0),
+    rgb(255, 0, 0)
+  );
+  border-radius: 4px;
+}
+
+.legend-label {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+}
