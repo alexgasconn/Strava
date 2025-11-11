@@ -35,7 +35,7 @@
 🔴🩹heatmap general com strava (que tardi una bona estona, pillar streams de coords de cada activitat...)
 🔴🩹activity -> poder elegir el rolling mean dels streams!
 🟡🩹DASHBOARD -> objectius personalitzables (hores, # activities, km...)
-🔴🚧TLB ACT FRM.... que conti TOTES les activitats, no nomes running
+🟡🚧TLB ACT FRM.... que conti TOTES les activitats, no nomes running
 🔴🌈versio mobil
 🔴🌈fer gear_{id} amb mapes i mes stats de cada gear
 🟡🚧carregar zonas, profile, gear, weather api... al iniciar app

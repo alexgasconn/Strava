@@ -471,39 +471,59 @@
 
                 <div id="wrapped-tab" class="tab-content">
                     <h2>🎁 Your Year in Sport</h2>
+
+                    <!-- Selector d’any -->
                     <div id="wrapped-year-selector" style="margin-bottom:1rem;">
                         <label for="wrapped-year">Select Year: </label>
                         <select id="wrapped-year"></select>
                     </div>
 
+                    <!-- Botó d’exportació del resum -->
+                    <div style="margin-bottom:1rem;">
+                        <button id="btn-export" class="btn btn-primary">📸 Exportar captura</button>
+                    </div>
 
-                    <div id="wrapped-summary"></div>
-                    <div id="wrapped-personal-bests"></div>
+                    <!-- Bloc principal del resum -->
+                    <div id="wrapped-summary" class="wrapped-section"></div>
 
-                    <!-- Comparativa entre deportes (ordenado por tiempo, con % variación anual) -->
-                    <div id="wrapped-sport-comparison"></div>
+                    <!-- Millors marques -->
+                    <div id="wrapped-personal-bests" class="wrapped-section"></div>
 
-                    <!-- Progreso temporal: meses, días, horas -->
-                    <div id="wrapped-temporal-stats"></div>
+                    <!-- Comparativa entre esports -->
+                    <div id="wrapped-sport-comparison" class="wrapped-section"></div>
 
-                    <!-- Top 5 actividades por esfuerzo -->
-                    <div id="wrapped-top-activities"></div>
+                    <!-- Estadístiques temporals -->
+                    <div id="wrapped-temporal-stats" class="wrapped-section"></div>
 
-                    <div id="wrapped-map"></div>
+                    <!-- Top 5 activitats -->
+                    <div id="wrapped-top-activities" class="wrapped-section"></div>
 
-                    <!-- Uso de dispositivos y material -->
-                    <div id="wrapped-gear"></div>
+                    <!-- Heatmap general (polylines com Strava) -->
+                    <h3 style="margin-top:2rem;">🌍 Global Heatmap</h3>
+                    <div id="wrapped-heatmap"
+                        style="height:500px; border-radius:12px; overflow:hidden; margin-bottom:2rem;"></div>
 
-                    <!-- Estadísticas sociales -->
-                    <div id="wrapped-social-activity"></div>
+                    <!-- Ús de dispositius i material -->
+                    <div id="wrapped-gear" class="wrapped-section"></div>
 
-                    <!-- Países visitados (a partir de coordenadas) -->
-                    <div id="wrapped-geography"></div>
+                    <!-- Estadístiques socials -->
+                    <div id="wrapped-social-activity" class="wrapped-section"></div>
 
-                    <div id="wrapped-motivation"></div>
-                    <div id="wrapped-extreme-stats"></div>
-                    <div id="wrapped-all-activities"></div>
+                    <!-- Geografia / països -->
+                    <div id="wrapped-geography" class="wrapped-section"></div>
+
+                    <!-- Frases de motivació -->
+                    <div id="wrapped-motivation" class="wrapped-section"></div>
+
+                    <!-- Estadístiques extremes -->
+                    <div id="wrapped-extreme-stats" class="wrapped-section"></div>
+
+                    <!-- Llista d’activitats -->
+                    <div id="wrapped-all-activities" class="wrapped-section"></div>
                 </div>
+
+                <!-- Llibreria per exportar captura -->
+                <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
 
 
