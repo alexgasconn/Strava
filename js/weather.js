@@ -360,7 +360,7 @@ function renderMonthlyMulti(ctx, data) {
     const byMonth = {};
     data.forEach((w) => {
         const m = new Date(w.run.start_date_local).getMonth();
-        if (!byMonth[m]) byMonth[m] = { temp: [], rain: [], wind: [], humidity: [] };
+        if (!byMonth[m]) byMonth[m] = { temp: [], rain: [], wind: [], humidity: [], pressure: [], cloudcover: [] };
         byMonth[m].temp.push(w.temperature);
         byMonth[m].rain.push(w.precipitation);
         byMonth[m].wind.push(w.wind_speed);
