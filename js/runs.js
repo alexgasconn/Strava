@@ -128,6 +128,8 @@ export function renderRunsTab(allActivities) {
 
         // Aquí filtramos las actividades donde workout_type es 1 para identificar carreras
         const races = allRuns.filter(act => act.workout_type === 1);
+        console.log(`Found ${races.length} races.`);
+        console.log(races);
         if (races.length === 0) {
             container.innerHTML = "<tbody><tr><td colspan='6'>No races found in this period.</td></tr></tbody>";
             return;
@@ -155,6 +157,7 @@ export function renderRunsTab(allActivities) {
 
     // Tu función original para renderizar la tabla de todas las carreras
     function renderAllRunsTable(allRuns) {
+        console.log(allRuns);
         const container = document.getElementById('all-runs-table');
         if (!container) return;
 
