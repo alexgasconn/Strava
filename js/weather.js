@@ -178,7 +178,7 @@ export async function renderWeatherTab(allActivities) {
     // Matriz de Correlación
     const corrMatrixDiv = document.getElementById("corr-matrix");
     if (corrMatrixDiv) {
-        renderCorrelationMatrix(corrMatrixDiv, { temps, rains, winds, humidities, paces, distances }); // Incluir humidities
+        renderCorrelationMatrix(corrMatrixDiv, { temps, rains, winds, humidities, paces, distances, pressures, cloudcovers }); // Incluir humidities
     } else {
         console.warn("#corr-matrix div not found.");
     }
@@ -189,14 +189,16 @@ export async function renderWeatherTab(allActivities) {
     const topWindiestDiv = document.getElementById("top-windy");
     const topRainyDiv = document.getElementById("top-rainy");
     const topPressureDiv = document.getElementById("top-pressure");
+    const topCloudyDiv = document.getElementById("top-cloudy");
 
-    if (topHotDiv && topColdDiv && topWindiestDiv && topRainyDiv && topPressureDiv) {
+
+    if (topHotDiv && topColdDiv && topWindiestDiv && topRainyDiv && topPressureDiv && topCloudyDiv) {
         renderTopRuns(
-            { hot: topHotDiv, cold: topColdDiv, windy: topWindiestDiv, rainy: topRainyDiv },
+            { hot: topHotDiv, cold: topColdDiv, windy: topWindiestDiv, rainy: topRainyDiv, pressure: topPressureDiv, cloudy: topCloudyDiv },
             weatherResults
         );
     } else {
-        console.warn("One or more top runs containers (top-hot, top-cold, top-windy, top-rainy, top-pressure) not found.");
+        console.warn("One or more top runs containers (top-hot, top-cold, top-windy, top-rainy, top-pressure, top-cloudy) not found.");
     }
 
     // Listado completo de runs
