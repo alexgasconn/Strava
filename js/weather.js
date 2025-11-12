@@ -108,6 +108,7 @@ export async function renderWeatherTab(allActivities) {
     const pressures = combinedWeatherData.map((r) => r.pressure);
     const cloudcovers = combinedWeatherData.map((r) => r.cloudcover);
     const conditions = combinedWeatherData.map((r) => r.weather_text);
+    const windDirections = combinedWeatherData.map((r) => r.wind_direction);
     const paces = combinedWeatherData.map((r) => r.pace); // Ahora ya está en combinedWeatherData
     const distances = combinedWeatherData.map((r) => r.distance); // Ahora ya está en combinedWeatherData
 
