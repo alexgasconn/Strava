@@ -31,7 +31,7 @@ export async function renderWeatherTab(allActivities) {
 
     // Mostrar un mensaje de carga inicial en el contenedor de resumen
     if (summaryCardsContainer) {
-        summaryCardsContainer.innerHTML = `<div class="wa-card"><h4>Cargando...</h4><div class="wa-val">Analizando datos meteorológicos...</div></div>`;
+        summaryCardsContainer.innerHTML = `<div class="wa-card"><h4>Cargando...</h4><div class="wa-val">Getting weather data...</div></div>`;
     }
 
     // Fetch weather data
