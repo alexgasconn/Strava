@@ -378,6 +378,8 @@
                             <option value="rain">Rainfall</option>
                             <option value="wind">Wind Speed</option>
                             <option value="humidity">Humidity</option>
+                            <option value="clouds">Cloud Cover</option>
+                            <option value="pressure">Pressure</option>
                         </select>
                     </div>
 
@@ -400,7 +402,6 @@
                         <div class="chart-container">
                             <h3>Temperature vs Distance</h3>
                             <canvas id="temp-vs-dist"></canvas>
-                            <!-- Puedes mantener este o reemplazarlo por el de pace si no necesitas ambos -->
                         </div>
 
                         <div class="chart-container">
@@ -426,6 +427,7 @@
                                     <th>Avg Rain (mm)</th>
                                     <th>Avg Humidity (%)</th>
                                     <th>Avg Cloud Cover (%)</th>
+                                    <th>Avg Pressure (hPa)</th>
                                 </tr>
                             </thead>
                             <tbody></tbody> <!-- Contenido a ser llenado por JS -->
@@ -441,6 +443,8 @@
                             <div class="top-section" id="top-cold"></div>
                             <div class="top-section" id="top-windy"></div>
                             <div class="top-section" id="top-rainy"></div>
+                            <div class="top-section" id="top-cloudy"></div>
+                            <div class="top-section" id="top-pressure"></div>
                         </div>
                     </div>
 

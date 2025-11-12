@@ -34,12 +34,12 @@ export async function renderWeatherTab(allActivities) {
         summaryCardsContainer.innerHTML = `<div class="wa-card"><h4>Cargando...</h4><div class="wa-val">Analizando datos meteorológicos...</div></div>`;
     }
 
-    // // Fetch weather data
-    const CONCURRENCY = 10;
+    // Fetch weather data
+  
 
     async function fetchWeatherForRuns(runs) {
         const results = [];
-        const batches = 5;
+        const batches = 10;
         for (let i = 0; i < runs.length; i += batches) {
             const batch = runs.slice(i, i + batches);
             const batchResults = await Promise.all(batch.map(async run => {
@@ -50,11 +50,10 @@ export async function renderWeatherTab(allActivities) {
                     console.error(e);
                     return null;
                 }
-                sleep(20);
             }));
             results.push(...batchResults.filter(Boolean));
             console.log(`Processed ${results.length}/${runs.length}`);
-            sleep(20);
+            sleep(5);
         }
         return results;
     }
