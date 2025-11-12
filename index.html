@@ -367,24 +367,24 @@
                     <!-- Contenedor principal para el resumen y otros elementos generados dinámicamente -->
                     <div id="weather-summary-content">
                         <!-- Aquí se llenará el resumen de tarjetas (Avg Temp, Avg Wind, etc.) -->
-                        <div id="wa-stats-row" class="wa-stats-row">Cargando resumen...</div>
+                        <div id="wa-stats-row" class="wa-stats-row"></div>
                     </div>
 
-                    <!-- Selector de histograma (¡Este ya existe y JS lo usará directamente!) -->
-                    <div class="histogram-selector">
-                        <label for="histogram-select">Select histogram:</label>
-                        <select id="histogram-select">
-                            <option value="temp">Temperature</option>
-                            <option value="rain">Rainfall</option>
-                            <option value="wind">Wind Speed</option>
-                            <option value="humidity">Humidity</option>
-                            <option value="clouds">Cloud Cover</option>
-                            <option value="pressure">Pressure</option>
-                        </select>
-                    </div>
+
 
                     <div class="chart-grid">
                         <div class="chart-container wide">
+                            <div class="histogram-selector">
+                                <label for="histogram-select">Select histogram:</label>
+                                <select id="histogram-select">
+                                    <option value="temp">Temperature</option>
+                                    <option value="rain">Rainfall</option>
+                                    <option value="wind">Wind Speed</option>
+                                    <option value="humidity">Humidity</option>
+                                    <option value="clouds">Cloud Cover</option>
+                                    <option value="pressure">Pressure</option>
+                                </select>
+                            </div>
                             <h3 id="histogram-title">Temperature Histogram</h3>
                             <canvas id="weather-histogram"></canvas>
                         </div>
@@ -398,7 +398,7 @@
                             <canvas id="monthly-weather">
                         </div>
 
-                        
+
 
                         <div class="chart-container full-width">
                             <h3>Custom Scatter Plot</h3>
