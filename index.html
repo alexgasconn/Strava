@@ -386,20 +386,21 @@
                     <div class="chart-grid">
                         <div class="chart-container wide">
                             <h3 id="histogram-title">Temperature Histogram</h3>
-                            <canvas id="weather-histogram"></canvas> <!-- JS dibujará aquí -->
+                            <canvas id="weather-histogram"></canvas>
                         </div>
-
-                        <div class="chart-container wide">
-                            <h3>Monthly Weather Overview</h3>
-                            <canvas id="monthly-weather"></canvas> <!-- JS dibujará aquí -->
-                        </div>
-
                         <div class="chart-container">
                             <h3>Weather Type Distribution</h3>
-                            <canvas id="condition-pie"></canvas> <!-- JS dibujará aquí -->
+                            <canvas id="condition-pie"></canvas>
                         </div>
 
-                        <div class="chart-container">
+                        <div class="chart-container full-width">
+                            <h3>Monthly Weather Overview</h3>
+                            <canvas id="monthly-weather">
+                        </div>
+
+                        
+
+                        <div class="chart-container full-width">
                             <h3>Custom Scatter Plot</h3>
                             <div class="scatter-controls">
                                 <label for="scatter-x-select">X-Axis:</label>
@@ -470,18 +471,18 @@
                             <table id="runs-table">
                                 <thead>
                                     <tr>
+                                        <th>Title</th>
                                         <th>Date</th>
                                         <th>Distance (km)</th>
-                                        <th>Time</th>
+                                        <!-- <th>Time</th> -->
                                         <th>Pace (min/km)</th>
                                         <th>Temp (°C)</th>
+                                        <th>Humidity</th>
                                         <th>Wind (km/h)</th>
                                         <th>Rain (mm)</th>
-                                        <th>Condition</th>
-                                        <!-- You might also want to add headers for Humidity, Pressure, Cloud Cover if your JS renders them -->
-                                        <th>Humidity (%)</th>
                                         <th>Pressure (hPa)</th>
                                         <th>Cloud Cover (%)</th>
+                                        <th>Condition</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
