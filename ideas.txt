@@ -13,7 +13,7 @@
 🔴⚠️logout no funciona (sen recorda) 
 🟢⚠️consistency map no es fiable, li falten/sobren dies?... 
 🟢🚨Botons de filtre de Last days no es veuen 
-🔴🚨wrapped no pot canviar de any 
+🟢🚨wrapped no pot canviar de any 
 🔴🚨No es veu Monday a una matrix de Athlete 
 🟢🚨error a vegades al Heatmap calendar = (consistencymap) 
 (ui.js:30 Could not initialize the app ReferenceError: CalHeatmap is not defined
@@ -37,7 +37,7 @@
 🟡🩹DASHBOARD -> objectius personalitzables (hores, # activities, km...)
 🟡🚧TLB ACT FRM.... que conti TOTES les activitats, no nomes running
 🔴🌈versio mobil
-🔴🌈fer gear_{id} amb mapes i mes stats de cada gear
+🔴🌈fer gear.html amb mapes i mes stats de cada gear
 🟡🚧carregar zonas, profile, gear, weather api... al iniciar app
 🟡⚠️GEARS separate bikes and shoes
 🟢🩹bike gears frame type!

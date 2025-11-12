@@ -77,6 +77,9 @@ export async function renderWeatherTab(allActivities) {
     const temps = weatherResults.map((r) => r.temperature);
     const rains = weatherResults.map((r) => r.precipitation);
     const winds = weatherResults.map((r) => r.wind_speed);
+    const windDirections = weatherResults.map((r) => r.wind_direction);
+    const pressures = weatherResults.map((r) => r.pressure);
+    const cloudcovers = weatherResults.map((r) => r.cloudcover);
     const humidities = weatherResults.map((r) => r.humidity); // Nueva
     const conditions = weatherResults.map((r) => r.weather_text);
     const paces = weatherResults.map((r) => runPaceMinPerKm(r.run));
@@ -91,6 +94,8 @@ export async function renderWeatherTab(allActivities) {
         <div class="wa-card"><h4>💧 Avg Humidity</h4><div class="wa-val">${mean(humidities).toFixed(1)}%</div></div>
         <div class="wa-card"><h4>🌧️ Total Rain</h4><div class="wa-val">${sum(rains).toFixed(1)} mm</div></div>
         <div class="wa-card"><h4>☁️ Common</h4><div class="wa-val">${mode(conditions)}</div></div>
+        <div class="wa-card"><h4>🌬️ Common Wind Dir</h4><div class="wa-val">${mode(windDirections)}°</div></div>
+        <div class="wa-card"><h4>🧭 Pressure Avg</h4><div class="wa-val">${mean(pressures).toFixed(1)} hPa</div></div>
     `;
     }
 
@@ -115,6 +120,8 @@ export async function renderWeatherTab(allActivities) {
             else if (v === "rain") { dataToRender = rains; labelText = "Rainfall (mm)"; }
             else if (v === "wind") { dataToRender = winds; labelText = "Wind Speed (km/h)"; }
             else if (v === "humidity") { dataToRender = humidities; labelText = "Humidity (%)"; }
+            else if (v === "cloudcover") { dataToRender = cloudcovers; labelText = "Cloud Cover (%)"; }
+            else if (v === "pressure") { dataToRender = pressures; labelText = "Pressure (hPa)"; }
             else {
                 console.warn(`Unknown histogram type selected: ${v}`);
                 histogramTitle.innerText = "Histogram (Invalid Type)";
@@ -181,14 +188,15 @@ export async function renderWeatherTab(allActivities) {
     const topColdDiv = document.getElementById("top-cold");
     const topWindiestDiv = document.getElementById("top-windy");
     const topRainyDiv = document.getElementById("top-rainy");
+    const topPressureDiv = document.getElementById("top-pressure");
 
-    if (topHotDiv && topColdDiv && topWindiestDiv && topRainyDiv) {
+    if (topHotDiv && topColdDiv && topWindiestDiv && topRainyDiv && topPressureDiv) {
         renderTopRuns(
             { hot: topHotDiv, cold: topColdDiv, windy: topWindiestDiv, rainy: topRainyDiv },
             weatherResults
         );
     } else {
-        console.warn("One or more top runs containers (top-hot, top-cold, top-windy, top-rainy) not found.");
+        console.warn("One or more top runs containers (top-hot, top-cold, top-windy, top-rainy, top-pressure) not found.");
     }
 
     // Listado completo de runs
@@ -214,7 +222,7 @@ async function getWeatherForRun(run) {
     const dateStr = start.toISOString().split("T")[0];
 
     // Ahora solicitamos también la humedad relativa
-    const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m,weathercode,relativehumidity_2m&start_date=${dateStr}&end_date=${dateStr}&timezone=auto`;
+    const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m,wind_direction_10m,weathercode,cloudcover,surface_pressure,relativehumidity_2m&start_date=${dateStr}&end_date=${dateStr}&timezone=auto`;
 
     try {
         const res = await fetch(url);
@@ -240,9 +248,12 @@ async function getWeatherForRun(run) {
             temperature: numericSafe(data.hourly.temperature_2m[idx]),
             precipitation: numericSafe(data.hourly.precipitation[idx]),
             wind_speed: numericSafe(data.hourly.wind_speed_10m[idx]),
+            wind_direction: numericSafe(data.hourly.wind_direction_10m[idx]),
             weather_code: data.hourly.weathercode ? data.hourly.weathercode[idx] : null,
             weather_text: weatherCodeToText(data.hourly.weathercode ? data.hourly.weathercode[idx] : null),
-            humidity: numericSafe(data.hourly.relativehumidity_2m ? data.hourly.relativehumidity_2m[idx] : null)
+            humidity: numericSafe(data.hourly.relativehumidity_2m ? data.hourly.relativehumidity_2m[idx] : null),
+            cloudcover: numericSafe(data.hourly.cloudcover ? data.hourly.cloudcover[idx] : null),
+            pressure: numericSafe(data.hourly.surface_pressure ? data.hourly.surface_pressure[idx] : null),
         };
 
     } catch (err) {
@@ -354,6 +365,8 @@ function renderMonthlyMulti(ctx, data) {
         byMonth[m].rain.push(w.precipitation);
         byMonth[m].wind.push(w.wind_speed);
         byMonth[m].humidity.push(w.humidity);
+        byMonth[m].pressure.push(w.pressure);
+        byMonth[m].cloudcover.push(w.cloudcover);
     });
     const months = Object.keys(byMonth).sort((a, b) => a - b);
     const labels = months.map((m) => monthName(+m));
@@ -361,6 +374,8 @@ function renderMonthlyMulti(ctx, data) {
     const totalRain = months.map((m) => sum(byMonth[m].rain));
     const avgWind = months.map((m) => mean(byMonth[m].wind));
     const avgHumidity = months.map((m) => mean(byMonth[m].humidity));
+    const avgPressure = months.map((m) => mean(byMonth[m].pressure));
+    const avgCloudcover = months.map((m) => mean(byMonth[m].cloudcover));
 
     new Chart(ctx, {
         type: "bar",
@@ -371,6 +386,8 @@ function renderMonthlyMulti(ctx, data) {
                 { label: "Rain (mm)", data: totalRain, backgroundColor: "rgba(0,0,255,0.3)", yAxisID: "y" },
                 { type: "line", label: "Wind (km/h)", data: avgWind, borderColor: "green", backgroundColor: "rgba(75, 192, 192, 0.2)", fill: false, yAxisID: "y2" },
                 { type: "line", label: "Humidity (%)", data: avgHumidity, borderColor: "purple", backgroundColor: "rgba(153, 102, 255, 0.2)", fill: false, yAxisID: "y3" },
+                { type: "line", label: "Pressure (hPa)", data: avgPressure, borderColor: "orange", backgroundColor: "rgba(255, 159, 64, 0.2)", fill: false, yAxisID: "y4" },
+                { type: "line", label: "Cloud Cover (%)", data: avgCloudcover, borderColor: "blue", backgroundColor: "rgba(54, 162, 235, 0.2)", fill: false, yAxisID: "y5" },
             ],
         },
         options: {
@@ -383,6 +400,8 @@ function renderMonthlyMulti(ctx, data) {
                 y1: { type: "linear", position: "right", grid: { drawOnChartArea: false }, title: { text: "Temp (°C)", display: true }, beginAtZero: false },
                 y2: { type: "linear", position: "right", grid: { drawOnChartArea: false }, title: { text: "Wind (km/h)", display: true }, beginAtZero: true },
                 y3: { type: "linear", position: "left", grid: { drawOnChartArea: false }, title: { text: "Humidity (%)", display: true }, beginAtZero: true, max: 100 },
+                y4: { type: "linear", position: "right", grid: { drawOnChartArea: false }, title: { text: "Pressure (hPa)", display: true }, beginAtZero: false },
+                y5: { type: "linear", position: "left", grid: { drawOnChartArea: false }, title: { text: "Cloud Cover (%)", display: true }, beginAtZero: true, max: 100 },
             },
         },
     });
@@ -460,6 +479,8 @@ function renderMonthlyStatsTable(tbodyElement, data) {
         const avgWind = mean(arr.map((a) => a.wind_speed)).toFixed(1);
         const totalRain = sum(arr.map((a) => a.precipitation)).toFixed(1);
         const avgHumidity = mean(arr.map((a) => a.humidity)).toFixed(1);
+        const avgPressure = mean(arr.map((a) => a.pressure)).toFixed(1);
+        const avgCloudcover = mean(arr.map((a) => a.cloudcover)).toFixed(1);
 
         const row = tbodyElement.insertRow();
         row.insertCell().textContent = monthName(+m);
@@ -467,6 +488,8 @@ function renderMonthlyStatsTable(tbodyElement, data) {
         row.insertCell().textContent = avgWind;
         row.insertCell().textContent = totalRain;
         row.insertCell().textContent = avgHumidity;
+        row.insertCell().textContent = avgPressure;
+        row.insertCell().textContent = avgCloudcover;
     });
 }
 
@@ -491,11 +514,18 @@ function renderTopRuns(containers, data) {
     const coldest = [...data].sort((a, b) => a.temperature - b.temperature).slice(0, 5);
     const windiest = [...data].sort((a, b) => b.wind_speed - a.wind_speed).slice(0, 5);
     const rainy = [...data].sort((a, b) => b.precipitation - a.precipitation).slice(0, 5);
+    const pressuriest = [...data].sort((a, b) => b.pressure - a.pressure).slice(0, 5);
+    const depressuriest = [...data].sort((a, b) => a.pressure - b.pressure).slice(0, 5);
+    const cloudiest = [...data].sort((a, b) => b.cloudcover - a.cloudcover).slice(0, 5);
+    const clearest = [...data].sort((a, b) => a.cloudcover - b.cloudcover).slice(0, 5);
 
     if (containers.hot) containers.hot.innerHTML = `<h4>Top 5 Hottest</h4>${listRuns(hottest, 'temperature', '°C')}`;
     if (containers.cold) containers.cold.innerHTML = `<h4>Top 5 Coldest</h4>${listRuns(coldest, 'temperature', '°C')}`;
     if (containers.windy) containers.windy.innerHTML = `<h4>Top 5 Windiest</h4>${listRuns(windiest, 'wind_speed', ' km/h')}`;
     if (containers.rainy) containers.rainy.innerHTML = `<h4>Top 5 Rainy</h4>${listRuns(rainy, 'precipitation', ' mm')}`;
+    if (containers.pressure) containers.pressure.innerHTML = `<h4>Top 5 Highest Pressure</h4>${listRuns(pressuriest, 'pressure', ' hPa')}<h4>Top 5 Lowest Pressure</h4>${listRuns(depressuriest, 'pressure', ' hPa')}`;
+    if (containers.cloudy) containers.cloudy.innerHTML = `<h4>Top 5 Cloudiest</h4>${listRuns(cloudiest, 'cloudcover', ' %')}<h4>Top 5 Clearest</h4>${listRuns(clearest, 'cloudcover', ' %')}`;
+
 }
 
 function renderRunsList(tbodyElement, data) {
@@ -510,6 +540,9 @@ function renderRunsList(tbodyElement, data) {
         row.insertCell().textContent = w.wind_speed.toFixed(1) + " km/h";
         row.insertCell().textContent = w.precipitation.toFixed(1) + " mm";
         row.insertCell().textContent = w.weather_text;
+        row.insertCell().textContent = w.pressure.toFixed(1) + " hPa";
+        row.insertCell().textContent = w.humidity.toFixed(1) + " %";
+        
     });
 }
 
