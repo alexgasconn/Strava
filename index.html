@@ -425,6 +425,7 @@
                                     <th>Avg Wind (km/h)</th>
                                     <th>Avg Rain (mm)</th>
                                     <th>Avg Humidity (%)</th>
+                                    <th>Avg Cloud Cover (%)</th>
                                 </tr>
                             </thead>
                             <tbody></tbody> <!-- Contenido a ser llenado por JS -->
@@ -443,29 +444,22 @@
                         </div>
                     </div>
 
-                    <!-- Listado completo de runs -->
-                    <div id="runs-list" class="runs-list">
-                        <h3>📋 All Runs (click to expand)</h3>
-                        <button id="toggle-runs">Show/Hide Runs</button>
-                        <div id="runs-table-container" class="hidden">
-                            <table id="runs-table"> <!-- JS rellenará el tbody de esta tabla -->
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Distance (km)</th>
-                                        <th>Time</th>
-                                        <th>Pace (min/km)</th>
-                                        <th>Temp (°C)</th>
-                                        <th>Wind (km/h)</th>
-                                        <th>Rain (mm)</th>
-                                        <th>Condition</th>
-                                    </tr>
-                                </thead>
-                            </table>
-                        </div>
-                    </div>
+                    <table id="runs-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Distance (km)</th>
+                                <th>Time</th>
+                                <th>Pace (min/km)</th>
+                                <th>Temp (°C)</th>
+                                <th>Wind (km/h)</th>
+                                <th>Rain (mm)</th>
+                                <th>Condition</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
                 </div>
-
 
 
 

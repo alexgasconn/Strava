@@ -530,23 +530,27 @@ function renderTopRuns(containers, data) {
 
 }
 
-function renderRunsList(tbodyElement, data) {
+function renderRunsList(tbodyElement, weatherResults) {
     tbodyElement.innerHTML = "";
-    data.forEach((w) => {
-        const run = w.run;
-        const row = tbodyElement.insertRow();
-        row.insertCell().textContent = new Date(run.start_date_local).toLocaleDateString();
-        row.insertCell().textContent = (run.distance / 1000).toFixed(1) + " km";
-        row.insertCell().textContent = runPaceMinPerKm(run).toFixed(1) + " min/km";
-        row.insertCell().textContent = w.temperature.toFixed(1) + "°C";
-        row.insertCell().textContent = w.wind_speed.toFixed(1) + " km/h";
-        row.insertCell().textContent = w.precipitation.toFixed(1) + " mm";
-        row.insertCell().textContent = w.weather_text;
-        row.insertCell().textContent = w.pressure.toFixed(1) + " hPa";
-        row.insertCell().textContent = w.humidity.toFixed(1) + " %";
 
+    weatherResults.forEach((item) => {
+        const { run, temperature, precipitation, wind_speed, humidity, pressure, cloudcover, weather_text } = item;
+
+        const row = tbodyElement.insertRow();
+        row.insertCell().textContent = run.name || "Unnamed";
+        row.insertCell().textContent = new Date(run.start_date_local).toLocaleDateString();
+        row.insertCell().textContent = ((run.distance || 0) / 1000).toFixed(2);
+        row.insertCell().textContent = runPaceMinPerKm(run).toFixed(2);
+        row.insertCell().textContent = `${temperature?.toFixed(1) ?? "–"}°C`;
+        row.insertCell().textContent = `${humidity?.toFixed(0) ?? "–"}%`;
+        row.insertCell().textContent = `${wind_speed?.toFixed(1) ?? "–"} km/h`;
+        row.insertCell().textContent = `${precipitation?.toFixed(1) ?? "–"} mm`;
+        row.insertCell().textContent = `${pressure?.toFixed(0) ?? "–"} hPa`;
+        row.insertCell().textContent = `${cloudcover?.toFixed(0) ?? "–"}%`;
+        row.insertCell().textContent = weather_text || "–";
     });
 }
+
 
 function listRuns(arr, prop, unit) {
     if (!arr || arr.length === 0) return '<ul><li>No runs found.</li></ul>';
