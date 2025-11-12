@@ -426,8 +426,8 @@
                                     <th>Avg Wind (km/h)</th>
                                     <th>Avg Rain (mm)</th>
                                     <th>Avg Humidity (%)</th>
-                                    <th>Avg Cloud Cover (%)</th>
                                     <th>Avg Pressure (hPa)</th>
+                                    <th>Avg Cloud Cover (%)</th>
                                 </tr>
                             </thead>
                             <tbody></tbody> <!-- Contenido a ser llenado por JS -->
@@ -448,21 +448,36 @@
                         </div>
                     </div>
 
-                    <table id="runs-table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Distance (km)</th>
-                                <th>Time</th>
-                                <th>Pace (min/km)</th>
-                                <th>Temp (°C)</th>
-                                <th>Wind (km/h)</th>
-                                <th>Rain (mm)</th>
-                                <th>Condition</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
+                    <section id="runs-list-section"> <!-- Optional: a section to group related elements -->
+                        <h3>All Runs with Weather Details</h3> <!-- You can add a title here -->
+
+                        <!-- This is the button your JS is looking for -->
+                        <button id="toggle-runs">Show/Hide Runs</button>
+
+                        <!-- This is the container your JS is looking for -->
+                        <div id="runs-table-container" class="hidden">
+                            <!-- Your existing table goes inside this div -->
+                            <table id="runs-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Distance (km)</th>
+                                        <th>Time</th>
+                                        <th>Pace (min/km)</th>
+                                        <th>Temp (°C)</th>
+                                        <th>Wind (km/h)</th>
+                                        <th>Rain (mm)</th>
+                                        <th>Condition</th>
+                                        <!-- You might also want to add headers for Humidity, Pressure, Cloud Cover if your JS renders them -->
+                                        <th>Humidity (%)</th>
+                                        <th>Pressure (hPa)</th>
+                                        <th>Cloud Cover (%)</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </section>
                 </div>
 
 
