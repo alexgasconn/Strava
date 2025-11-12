@@ -381,7 +381,6 @@ function renderPMCChart(runs) {
     const ctx = canvas.getContext('2d');
     if (window.pmcChart) window.pmcChart.destroy();
 
-    // Extract time series from preprocessed runs
     const sorted = runs
         .filter(r => r.atl != null && r.ctl != null && r.tsb != null && r.injuryRisk != null)
         .sort((a, b) => new Date(a.start_date_local) - new Date(b.start_date_local));
@@ -402,8 +401,8 @@ function renderPMCChart(runs) {
     const ctl = sorted.map(r => r.ctl);
     const atl = sorted.map(r => r.atl);
     const tsb = sorted.map(r => r.tsb);
-    const injuryRisk = sorted.map(r => r.injuryRisk * 100); // %
-    const vo2max = sorted.map(r => r.vo2max || null);
+    const injuryRisk = sorted.map(r => r.injuryRisk * 100);
+    const vo2max = sorted.map(r => r.vo2max ?? null);
 
     window.pmcChart = new Chart(ctx, {
         type: 'line',
@@ -417,7 +416,8 @@ function renderPMCChart(runs) {
                     backgroundColor: 'rgba(0, 116, 217, 0.1)',
                     tension: 0.3,
                     yAxisID: 'y',
-                    pointRadius: 0
+                    pointRadius: 0,
+                    hidden: true // 🔹 Oculto por defecto
                 },
                 {
                     label: 'ATL (Acute)',
@@ -426,7 +426,8 @@ function renderPMCChart(runs) {
                     backgroundColor: 'rgba(255, 65, 54, 0.1)',
                     tension: 0.3,
                     yAxisID: 'y',
-                    pointRadius: 0
+                    pointRadius: 0,
+                    hidden: true // 🔹 Oculto por defecto
                 },
                 {
                     label: 'TSB (Balance)',
@@ -435,7 +436,8 @@ function renderPMCChart(runs) {
                     backgroundColor: 'rgba(46, 204, 64, 0.1)',
                     tension: 0.3,
                     yAxisID: 'y1',
-                    pointRadius: 0
+                    pointRadius: 0,
+                    hidden: true // 🔹 Oculto por defecto
                 },
                 {
                     label: 'Injury Risk %',
@@ -445,7 +447,8 @@ function renderPMCChart(runs) {
                     tension: 0.3,
                     yAxisID: 'y2',
                     pointRadius: 0,
-                    borderWidth: 2
+                    borderWidth: 2,
+                    hidden: false // 🔹 Visible al inicio
                 },
                 {
                     label: 'VO₂max (ml/kg/min)',
@@ -454,9 +457,11 @@ function renderPMCChart(runs) {
                     backgroundColor: 'rgba(155, 89, 182, 0.1)',
                     tension: 0.3,
                     yAxisID: 'y3',
-                    pointRadius: 3,
+                    pointRadius: 2, // 🔹 Más pequeños
                     pointBackgroundColor: '#9B59B6',
-                    borderDash: [5, 5]
+                    borderDash: [5, 5], // 🔹 Línea discontinua
+                    spanGaps: true, // 🔹 Une puntos aunque haya huecos
+                    hidden: false // 🔹 Visible al inicio
                 }
             ]
         },
@@ -492,8 +497,7 @@ function renderPMCChart(runs) {
                     title: { display: true, text: 'Risk %' },
                     grid: { drawOnChartArea: false },
                     min: 0,
-                    max: 100,
-                    display: false
+                    max: 100
                 },
                 y3: {
                     type: 'linear',
@@ -501,13 +505,13 @@ function renderPMCChart(runs) {
                     title: { display: true, text: 'VO₂max' },
                     grid: { drawOnChartArea: false },
                     min: 20,
-                    max: 80,
-                    display: false
+                    max: 80
                 }
             }
         }
     });
 }
+
 
 
 
@@ -1118,7 +1122,7 @@ function groupTSSByPeriod(activities, rangeType, startDate, endDate) {
         }
         if (isWeekly) {
             const d = new Date(key);
-            return `Sem ${getWeekNumber(d)}`;
+            return `Week ${getWeekNumber(d)}`;
         }
         if (isMonthly) {
             const [y, m] = key.split('-');
