@@ -542,7 +542,7 @@ function renderRunsList(tbodyElement, data) {
         row.insertCell().textContent = w.weather_text;
         row.insertCell().textContent = w.pressure.toFixed(1) + " hPa";
         row.insertCell().textContent = w.humidity.toFixed(1) + " %";
-        
+
     });
 }
 
