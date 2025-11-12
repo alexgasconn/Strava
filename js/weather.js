@@ -39,7 +39,7 @@ export async function renderWeatherTab(allActivities) {
 
     async function fetchWeatherForRuns(runs) {
         const results = [];
-        const batches = 10;
+        const batches = 5;
         for (let i = 0; i < runs.length; i += batches) {
             const batch = runs.slice(i, i + batches);
             const batchResults = await Promise.all(batch.map(async run => {
@@ -53,7 +53,7 @@ export async function renderWeatherTab(allActivities) {
             }));
             results.push(...batchResults.filter(Boolean));
             console.log(`Processed ${results.length}/${runs.length}`);
-            sleep(5);
+            sleep(10);
         }
         return results;
     }
