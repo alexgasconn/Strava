@@ -72,17 +72,56 @@ export async function renderWeatherTab(allActivities) {
         return;
     }
 
+    // --- IMPORTANTE: Crear combinedWeatherData con TODAS las variables ---
+    // Asegúrate de que todas las variables estén disponibles en cada objeto para el scatter
+    const combinedWeatherData = weatherResults.map((wr, index) => {
+        const run = wr.run; // Acceder al objeto run directamente
+        return {
+            // Datos meteorológicos directos de weatherResults
+            temperature: wr.temperature,
+            precipitation: wr.precipitation,
+            wind_speed: wr.wind_speed,
+            wind_direction: wr.wind_direction,
+            weather_code: wr.weather_code,
+            weather_text: wr.weather_text,
+            humidity: wr.humidity,
+            cloudcover: wr.cloudcover,
+            pressure: wr.pressure,
+
+            // Datos de la carrera, incluyendo los calculados
+            run_name: run.name || 'Unnamed Run', // Nombre de la carrera
+            run_date: run.start_date_local,    // Fecha de la carrera
+            distance: (run.distance || 0) / 1000, // Distancia en km
+            pace: runPaceMinPerKm(run),        // Pace en min/km
+            moving_time: (run.moving_time || 0) / 60, // Tiempo en minutos
+            // Puedes añadir aquí otras propiedades de 'run' si las necesitas en el scatter
+        };
+    });
+    // --- FIN combinedWeatherData ---
+
+
+    // Arrays para el análisis (usando combinedWeatherData para consistencia si es posible)
+    const temps = combinedWeatherData.map((r) => r.temperature);
+    const rains = combinedWeatherData.map((r) => r.precipitation);
+    const winds = combinedWeatherData.map((r) => r.wind_speed);
+    const humidities = combinedWeatherData.map((r) => r.humidity);
+    const pressures = combinedWeatherData.map((r) => r.pressure);
+    const cloudcovers = combinedWeatherData.map((r) => r.cloudcover);
+    const conditions = combinedWeatherData.map((r) => r.weather_text);
+    const paces = combinedWeatherData.map((r) => r.pace); // Ahora ya está en combinedWeatherData
+    const distances = combinedWeatherData.map((r) => r.distance); // Ahora ya está en combinedWeatherData
+
     // Arrays para el análisis (incluyendo humedad)
-    const temps = weatherResults.map((r) => r.temperature);
-    const rains = weatherResults.map((r) => r.precipitation);
-    const winds = weatherResults.map((r) => r.wind_speed);
-    const windDirections = weatherResults.map((r) => r.wind_direction);
-    const pressures = weatherResults.map((r) => r.pressure);
-    const cloudcovers = weatherResults.map((r) => r.cloudcover);
-    const humidities = weatherResults.map((r) => r.humidity); // Nueva
-    const conditions = weatherResults.map((r) => r.weather_text);
-    const paces = weatherResults.map((r) => runPaceMinPerKm(r.run));
-    const distances = weatherResults.map((r) => (r.run.distance || 0) / 1000);
+    // const temps = weatherResults.map((r) => r.temperature);
+    // const rains = weatherResults.map((r) => r.precipitation);
+    // const winds = weatherResults.map((r) => r.wind_speed);
+    // const windDirections = weatherResults.map((r) => r.wind_direction);
+    // const pressures = weatherResults.map((r) => r.pressure);
+    // const cloudcovers = weatherResults.map((r) => r.cloudcover);
+    // const humidities = weatherResults.map((r) => r.humidity); // Nueva
+    // const conditions = weatherResults.map((r) => r.weather_text);
+    // const paces = weatherResults.map((r) => runPaceMinPerKm(r.run));
+    // const distances = weatherResults.map((r) => (r.run.distance || 0) / 1000);
 
 
     // 1. Summary cards (rellenar el div #wa-stats-row existente)
@@ -214,6 +253,90 @@ export async function renderWeatherTab(allActivities) {
     } else {
         console.warn("Runs list elements (runs-table tbody, toggle-runs button, runs-table-container) not found.");
     }
+
+    // --- NUEVA SECCIÓN: Interactive Scatter Plot ---
+    const customScatterCtx = document.getElementById("custom-scatter-chart");
+    const scatterXSelect = document.getElementById("scatter-x-select");
+    const scatterYSelect = document.getElementById("scatter-y-select");
+    const scatterSizeInput = document.getElementById("scatter-size-input");
+    const scatterColorSelect = document.getElementById("scatter-color-select");
+
+    if (customScatterCtx && scatterXSelect && scatterYSelect && scatterSizeInput && scatterColorSelect) {
+        const scatterVariables = [
+            { value: 'temperature', text: 'Temperature (°C)' },
+            { value: 'precipitation', text: 'Rainfall (mm)' },
+            { value: 'wind_speed', text: 'Wind Speed (km/h)' },
+            { value: 'wind_direction', text: 'Wind Direction (°)' }, // Ahora disponible
+            { value: 'humidity', text: 'Humidity (%)' },
+            { value: 'cloudcover', text: 'Cloud Cover (%)' },
+            { value: 'pressure', text: 'Pressure (hPa)' },
+            { value: 'pace', text: 'Pace (min/km)' },
+            { value: 'distance', text: 'Distance (km)' },
+            { value: 'moving_time', text: 'Time (min)' },
+            // Añade aquí cualquier otra variable numérica que hayas incluido en combinedWeatherData
+        ];
+
+        // Llenar los selectores de los ejes X e Y
+        scatterVariables.forEach(v => {
+            const optX = document.createElement('option');
+            optX.value = v.value;
+            optX.textContent = v.text;
+            scatterXSelect.appendChild(optX);
+
+            const optY = document.createElement('option');
+            optY.value = v.value;
+            optY.textContent = v.text;
+            scatterYSelect.appendChild(optY);
+        });
+
+        // Opciones de color adicionales
+        const colorOptions = [
+            { value: 'temp_gradient', text: 'Temperature Gradient' },
+            { value: 'pace_gradient', text: 'Pace Gradient' },
+            { value: 'fixed_red', text: 'Fixed Red' },
+            { value: 'fixed_blue', text: 'Fixed Blue' },
+            { value: 'fixed_green', text: 'Fixed Green' },
+            // Puedes añadir más si lo deseas
+        ];
+        colorOptions.forEach(opt => {
+            const option = document.createElement('option');
+            option.value = opt.value;
+            option.textContent = opt.text;
+            scatterColorSelect.appendChild(option);
+        });
+
+
+        // Establecer valores iniciales
+        scatterXSelect.value = 'temperature';
+        scatterYSelect.value = 'pace';
+        scatterSizeInput.value = '5';
+        scatterColorSelect.value = 'temp_gradient';
+
+
+        // Función para renderizar el gráfico interactivo
+        const updateScatterChart = () => {
+            const xVar = scatterXSelect.value;
+            const yVar = scatterYSelect.value;
+            const pointSize = parseInt(scatterSizeInput.value, 10);
+            const colorScheme = scatterColorSelect.value;
+
+            // Pasa combinedWeatherData a la función
+            renderCustomScatter(customScatterCtx, combinedWeatherData, xVar, yVar, pointSize, colorScheme);
+        };
+
+        // Escuchadores de eventos
+        scatterXSelect.addEventListener('change', updateScatterChart);
+        scatterYSelect.addEventListener('change', updateScatterChart);
+        scatterSizeInput.addEventListener('input', updateScatterChart); // Usa 'input' para actualización en tiempo real al arrastrar
+        scatterColorSelect.addEventListener('change', updateScatterChart);
+
+        // Renderizar el gráfico inicial
+        updateScatterChart();
+
+    } else {
+        console.warn("Interactive Scatter Plot elements (canvas custom-scatter-chart, selects, inputs) not found.");
+    }
+    // --- FIN NUEVA SECCIÓN ---
 }
 
 // ---------------- FETCH WEATHER ----------------
@@ -408,24 +531,158 @@ function renderMonthlyMulti(ctx, data) {
     });
 }
 
-function renderScatter(ctx, x, y, xlabel, ylabel) {
+// Asegúrate de que estas funciones de utilidad estén presentes en tu archivo weather.js
+// --- UTILITIES FOR SCATTER ---
+function getGradientColor(value, min, max, type = 'temp') {
+    let r, g, b;
+    const ratio = (value - min) / (max - min);
+
+    if (type === 'temp') {
+        // Frío (azul) a cálido (rojo)
+        r = Math.floor(255 * ratio);
+        g = 0;
+        b = Math.floor(255 * (1 - ratio));
+    } else if (type === 'pace') {
+        // Más rápido (verde) a más lento (rojo)
+        r = Math.floor(255 * ratio); // Aumenta el rojo con mayor pace (más lento)
+        g = Math.floor(255 * (1 - ratio)); // Disminuye el verde
+        b = 0;
+    } else {
+        // Por defecto, un simple gradiente
+        r = Math.floor(255 * ratio);
+        g = Math.floor(255 * (1 - ratio));
+        b = 100;
+    }
+    return `rgb(${r}, ${g}, ${b}, 0.8)`;
+}
+
+function getMinMax(dataArray, prop) {
+    if (!dataArray || dataArray.length === 0) return { min: 0, max: 1 };
+    const values = dataArray.map(item => item[prop]).filter(v => typeof v === 'number' && !isNaN(v));
+    if (values.length === 0) return { min: 0, max: 1 };
+    return { min: Math.min(...values), max: Math.max(...values) };
+}
+// --- END UTILITIES FOR SCATTER ---
+
+
+function renderCustomScatter(ctx, data, xVar, yVar, pointSize, colorScheme) {
     const existingChart = Chart.getChart(ctx);
     if (existingChart) existingChart.destroy();
 
-    new Chart(ctx, {
+    if (!data || data.length === 0 || !xVar || !yVar) {
+        console.warn(`No data or variables for custom scatter plot: ${xVar} vs ${yVar}`);
+        const chart = new Chart(ctx, { type: "scatter", data: { datasets: [] } });
+        const ctx2d = ctx.getContext('2d');
+        if (ctx2d) {
+            ctx2d.font = "18px Arial";
+            ctx2d.textAlign = "center";
+            ctx2d.fillStyle = "#888";
+            ctx2d.clearRect(0, 0, ctx.width, ctx.height);
+            ctx2d.fillText("No data or selection available", ctx.width / 2, ctx.height / 2);
+        }
+        return chart;
+    }
+
+    // Etiquetas para los ejes (¡actualizadas con todas las variables!)
+    const labelsMap = {
+        'temperature': 'Temperature (°C)',
+        'precipitation': 'Rainfall (mm)',
+        'wind_speed': 'Wind Speed (km/h)',
+        'humidity': 'Humidity (%)',
+        'cloudcover': 'Cloud Cover (%)',
+        'pressure': 'Pressure (hPa)',
+        'pace': 'Pace (min/km)',
+        'distance': 'Distance (km)',
+        'moving_time': 'Time (min)',
+        'wind_direction': 'Wind Direction (°)',
+        // Agrega aquí cualquier otra propiedad que quieras que se muestre con un texto bonito
+    };
+
+    // Fallback más elegante para etiquetas si no están en labelsMap
+    const getAxisLabel = (variable) => labelsMap[variable] || variable.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    const xlabel = getAxisLabel(xVar);
+    const ylabel = getAxisLabel(yVar);
+
+    // Calcular el color de los puntos
+    let pointBackgroundColors = 'rgba(255, 99, 132, 0.6)'; // Color por defecto
+    if (colorScheme === 'temp_gradient') {
+        const { min, max } = getMinMax(data, 'temperature');
+        pointBackgroundColors = data.map(item => getGradientColor(item.temperature, min, max, 'temp'));
+    } else if (colorScheme === 'pace_gradient') {
+        const { min, max } = getMinMax(data, 'pace');
+        pointBackgroundColors = data.map(item => getGradientColor(item.pace, min, max, 'pace'));
+    } else if (colorScheme === 'fixed_red') {
+        pointBackgroundColors = 'rgba(255, 0, 0, 0.6)';
+    } else if (colorScheme === 'fixed_blue') {
+        pointBackgroundColors = 'rgba(0, 0, 255, 0.6)';
+    } else if (colorScheme === 'fixed_green') {
+        pointBackgroundColors = 'rgba(0, 255, 0, 0.6)';
+    }
+
+
+    return new Chart(ctx, {
         type: "scatter",
         data: {
             datasets: [
-                { label: `${xlabel} vs ${ylabel}`, data: x.map((v, i) => ({ x: v, y: y[i] })), backgroundColor: 'rgba(255, 99, 132, 0.6)' },
+                {
+                    label: `${xlabel} vs ${ylabel}`,
+                    data: data.map((item) => ({
+                        x: item[xVar],
+                        y: item[yVar]
+                    })),
+                    backgroundColor: pointBackgroundColors,
+                    pointRadius: pointSize, // Aplicar el tamaño de los puntos
+                    pointHoverRadius: pointSize + 2,
+                },
             ],
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             scales: {
-                x: { title: { text: xlabel, display: true } },
-                y: { title: { text: ylabel, display: true } },
+                x: {
+                    title: { text: xlabel, display: true },
+                    beginAtZero: false // Por si las temperaturas o paces no empiezan en 0
+                },
+                y: {
+                    title: { text: ylabel, display: true },
+                    beginAtZero: false
+                },
             },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const item = data[context.dataIndex]; // Usa 'data' directamente
+                            if (item) {
+                                const tooltipLines = [
+                                    `${item.run_name || 'Unnamed Run'}`,
+                                    `Date: ${new Date(item.run_date).toLocaleDateString()}`,
+                                    `${xlabel}: ${item[xVar]?.toFixed(item[xVar] < 10 ? 2 : 1) ?? 'N/A'}`, // Formato dinámico
+                                    `${ylabel}: ${item[yVar]?.toFixed(item[yVar] < 10 ? 2 : 1) ?? 'N/A'}`, // Formato dinámico
+                                    `Pace: ${item.pace?.toFixed(2) ?? 'N/A'} min/km`,
+                                    `Distance: ${item.distance?.toFixed(2) ?? 'N/A'} km`,
+                                    `Time: ${item.moving_time?.toFixed(0) ?? 'N/A'} min`,
+                                    `Temp: ${item.temperature?.toFixed(1) ?? 'N/A'}°C`,
+                                    `Humidity: ${item.humidity?.toFixed(0) ?? 'N/A'}%`,
+                                    `Wind: ${item.wind_speed?.toFixed(1) ?? 'N/A'} km/h`,
+                                    `Rain: ${item.precipitation?.toFixed(1) ?? 'N/A'} mm`,
+                                    `Pressure: ${item.pressure?.toFixed(0) ?? 'N/A'} hPa`,
+                                    `Cloud Cover: ${item.cloudcover?.toFixed(0) ?? 'N/A'}%`,
+                                    `Condition: ${item.weather_text ?? 'N/A'}`
+                                ];
+                                return tooltipLines.filter(line => !line.includes('N/A')); // Filtra líneas si el dato no está disponible
+                            }
+                            return `${xlabel}: ${context.raw.x}, ${ylabel}: ${context.raw.y}`;
+                        }
+                    }
+                }
+            },
+            // Añadir animación para un mejor UX al cambiar los datos
+            animation: {
+                duration: 500,
+                easing: 'easeOutQuart'
+            }
         },
     });
 }

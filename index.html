@@ -400,13 +400,23 @@
                         </div>
 
                         <div class="chart-container">
-                            <h3>Temperature vs Distance</h3>
-                            <canvas id="temp-vs-dist"></canvas>
-                        </div>
+                            <h3>Custom Scatter Plot</h3>
+                            <div class="scatter-controls">
+                                <label for="scatter-x-select">X-Axis:</label>
+                                <select id="scatter-x-select" class="scatter-select"></select>
 
-                        <div class="chart-container">
-                            <h3>Temperature vs Pace</h3>
-                            <canvas id="temp-vs-pace"></canvas> <!-- JS dibujará aquí -->
+                                <label for="scatter-y-select">Y-Axis:</label>
+                                <select id="scatter-y-select" class="scatter-select"></select>
+
+                                <label for="scatter-size-input">Point Size:</label>
+                                <input type="range" id="scatter-size-input" min="1" max="15" value="5">
+
+                                <label for="scatter-color-select">Point Color:</label>
+                                <select id="scatter-color-select" class="scatter-select-color">
+                                    <!-- Options will be dynamically populated by JavaScript -->
+                                </select>
+                            </div>
+                            <canvas id="custom-scatter-chart"></canvas>
                         </div>
 
                         <div class="chart-container wide">
@@ -512,7 +522,8 @@
                     <div id="wrapped-top-activities" class="wrapped-section"></div>
 
                     <div id="wrapped-heatmap"
-                        style="height:500px; border-radius:12px; overflow:hidden; margin-bottom:2rem;"></div>
+                        style="height:500px; border-radius:12px; overflow:hidden; margin-bottom:2rem;">
+                    </div>
 
                     <!-- Ús de dispositius i material -->
                     <div id="wrapped-gear" class="wrapped-section"></div>
