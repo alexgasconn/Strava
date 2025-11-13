@@ -31,7 +31,7 @@ async function getTokensFromCode(code) {
         localStorage.setItem('strava_tokens', JSON.stringify({
             access_token: data.access_token,
             refresh_token: data.refresh_token,
-            expires_at: data.expires_at // timestamp en segundos
+            expires_at: data.expires_at
         }));
 
         window.history.replaceState({}, '', window.location.pathname);
@@ -41,7 +41,6 @@ async function getTokensFromCode(code) {
     }
 }
 
-// handleAuth solo llama a onAuthenticated si hay token válido y no expirado
 export async function handleAuth(onAuthenticated) {
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
@@ -57,16 +56,14 @@ export async function handleAuth(onAuthenticated) {
         const now = Math.floor(Date.now() / 1000);
 
         if (tokenData.access_token && tokenData.expires_at > now) {
-            // Token válido, llamamos a initializeApp
             await onAuthenticated(tokenData);
             return;
         } else {
-            // Token inválido o expirado: borramos todo
             localStorage.removeItem('strava_tokens');
             localStorage.removeItem('strava_athlete_data');
             localStorage.removeItem('strava_training_zones');
         }
     }
 
-    hideLoading(); // si no hay token válido, mostramos login
+    hideLoading(); 
 }
