@@ -28,7 +28,7 @@
 🟢🚨avergae pace no surt a Dashboard?? 
 🔴🩹wrapped -> exportar captura pels fans 
 🔴🚧text de alerta si no hi ha dades de HR 
-🔴⚠️arreglar "gears" del wrapped! (mapejar i eliminar "sources" com Hevy) 
+🟢⚠️arreglar "gears" del wrapped! (mapejar i eliminar "sources" com Hevy) 
 🔴🩹weather api fer servir per predictions 
 🔴🩹weather data -> % de "difficultat ambiental" 
 🔴🩹coords streams in activity -> veure cap a on va el vent -> % de vent a favor, en contra, de costat...
@@ -41,6 +41,7 @@
 🟡🚧carregar zonas, profile, gear, weather api... al iniciar app
 🟡⚠️GEARS separate bikes and shoes
 🟢🩹bike gears frame type!
+🟢🩹botó config
 🔴🩹trail/road shoes in gears
 🟢🚨data xx/xx/xxxx en lastuse i firstuse
 🟡⚠️totes les dates mateix format

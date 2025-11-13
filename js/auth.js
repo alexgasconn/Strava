@@ -13,9 +13,16 @@ export function redirectToStrava() {
 }
 
 export function logout() {
-    localStorage.clear();
+    localStorage.removeItem('strava_access_token');
+    localStorage.removeItem('strava_refresh_token');
+    localStorage.removeItem('strava_tokens');
+    
+    // localStorage.removeItem('strava_athlete_data');
+    // localStorage.removeItem('strava_training_zones');
+
     window.location.reload();
 }
+
 
 async function getTokensFromCode(code) {
     try {
