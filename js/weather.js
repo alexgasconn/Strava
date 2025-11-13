@@ -22,7 +22,7 @@ export async function renderWeatherTab(allActivities) {
         }
         return;
     }
-  
+
 
     async function fetchWeatherForRuns(runs) {
         const results = [];
@@ -46,10 +46,8 @@ export async function renderWeatherTab(allActivities) {
     }
 
 
-    // Uso:
     const weatherResults = await fetchWeatherForRuns(runs);
 
-    // --- IMPORTANTE: Crear combinedWeatherData con TODAS las variables ---
     const combinedWeatherData = weatherResults.map((wr, index) => {
         const run = wr.run; // Acceder al objeto run directamente
         return {
@@ -252,6 +250,12 @@ export async function renderWeatherTab(allActivities) {
             // Pasa combinedWeatherData a la función
             renderCustomScatter(customScatterCtx, combinedWeatherData, xVar, yVar, pointSize, colorScheme);
         };
+
+        // actualizar al cambiar la selección
+        document.getElementById("metric-select").addEventListener("change", () => renderRunsByMetric(weatherResults));
+
+        // también puedes llamar al cargar la página
+        renderRunsByMetric(weatherResults);
 
         // Escuchadores de eventos
         scatterXSelect.addEventListener('change', updateScatterChart);
@@ -603,7 +607,7 @@ function renderCustomScatter(ctx, data, xVar, yVar, pointSize, colorScheme) {
             plugins: {
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             const item = data[context.dataIndex]; // Usa 'data' directamente
                             if (item) {
                                 const tooltipLines = [
@@ -736,7 +740,7 @@ function capitalize(str) {
 }
 
 function getUnit(metric) {
-    switch(metric) {
+    switch (metric) {
         case "temperature": return "°C";
         case "wind_speed": return " km/h";
         case "precipitation": return " mm";
@@ -746,11 +750,7 @@ function getUnit(metric) {
     }
 }
 
-// actualizar al cambiar la selección
-document.getElementById("metric-select").addEventListener("change", () => renderRunsByMetric(weatherResults));
 
-// también puedes llamar al cargar la página
-renderRunsByMetric(weatherResults);
 
 
 function renderRunsList(tbodyElement, weatherResults) {
