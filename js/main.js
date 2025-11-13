@@ -1,6 +1,6 @@
 // js/main.js
 import { redirectToStrava, logout, handleAuth } from './auth.js';
-import { setupDashboard, showLoading, hideLoading, handleError,  } from './ui.js';
+import { setupDashboard, showLoading, hideLoading, handleError, } from './ui.js';
 import { renderAnalysisTab } from './analysis.js';
 import { renderDashboardTab } from './dashboard.js';
 import { renderAthleteTab } from './athlete.js';
@@ -37,6 +37,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const refreshButton = document.getElementById('refresh-button');
     const applyFilterButton = document.getElementById('apply-date-filter');
     const resetFilterButton = document.getElementById('reset-date-filter');
+    const settingsButton = document.getElementById("settings-button");
+    const settingsPanel = document.getElementById("settings-panel");
+    const closeSettings = document.getElementById("close-settings");
+
+    if (settingsButton && settingsPanel && closeSettings) {
+        settingsButton.addEventListener("click", () => {
+            settingsPanel.style.display = settingsPanel.style.display === "none" ? "block" : "none";
+        });
+
+        closeSettings.addEventListener("click", () => {
+            settingsPanel.style.display = "none";
+        });
+    }
+
     console.log("DOM references obtained.");
 
 
@@ -50,20 +64,20 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log(`Tab link clicked: ${link.getAttribute('data-tab')}`);
             const tabId = link.getAttribute('data-tab');
 
-        // Estado previo
-        console.log("Current state:", {
-            allActivitiesLoaded: allActivities.length > 0,
-            tabAlreadyRendered: {
-                dashboardTabRendered,
-                plannerTabRendered,
-                athleteTabRendered,
-                analysisTabRendered,
-                gearTabRendered,
-                runsTabRendered,
-                weatherTabRendered,
-                wrappedTabRendered
-            }
-        });
+            // Estado previo
+            console.log("Current state:", {
+                allActivitiesLoaded: allActivities.length > 0,
+                tabAlreadyRendered: {
+                    dashboardTabRendered,
+                    plannerTabRendered,
+                    athleteTabRendered,
+                    analysisTabRendered,
+                    gearTabRendered,
+                    runsTabRendered,
+                    weatherTabRendered,
+                    wrappedTabRendered
+                }
+            });
 
             tabLinks.forEach(item => item.classList.remove('active'));
             tabContents.forEach(item => item.classList.remove('active'));
