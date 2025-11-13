@@ -72,9 +72,9 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem("dashboard_settings", JSON.stringify(settings));
     }
 
-    unitSelect.addEventListener("change", saveSettings);
-    hrMaxInput.addEventListener("input", saveSettings);
-    ageInput.addEventListener("input", saveSettings);
+    // unitSelect.addEventListener("change", saveSettings);
+    // hrMaxInput.addEventListener("input", saveSettings);
+    // ageInput.addEventListener("input", saveSettings);
 
 
 
