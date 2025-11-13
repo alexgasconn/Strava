@@ -17,8 +17,8 @@ export function logout() {
     localStorage.removeItem('strava_refresh_token');
     localStorage.removeItem('strava_tokens');
     
-    // localStorage.removeItem('strava_athlete_data');
-    // localStorage.removeItem('strava_training_zones');
+    localStorage.removeItem('strava_athlete_data');
+    localStorage.removeItem('strava_training_zones');
 
     window.location.reload();
 }
