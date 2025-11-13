@@ -48,10 +48,37 @@
             <header>
                 <h1 id="athlete-name"></h1>
                 <nav>
+                    <button id="settings-button">⚙️</button>
                     <button id="refresh-button">Refresh Activities</button>
                     <button id="logout-button">Log Out</button>
                 </nav>
             </header>
+
+            <div id="settings-panel" class="settings-panel"
+                style="display:none; position:absolute; top:60px; left:10px; background:white; border:1px solid #ccc; padding:1rem; z-index:1000; box-shadow:0 2px 8px rgba(0,0,0,0.2);">
+                <h4>Settings</h4>
+                <br>
+                <label>
+                    Units:
+                    <select id="units">
+                        <option value="metric">Metric</option>
+                        <option value="imperial">Imperial</option>
+                    </select>
+                </label>
+                <br>
+                <label>
+                    Age:
+                    <input type="number" id="age" min="0" value="25">
+                </label>
+                <br>
+                <label>
+                    Max HR:
+                    <input type="number" id="hr-max" min="0" value="190">
+                </label>
+                <br>
+                <button id="close-settings">Close</button>
+            </div>
+
 
             <!-- BARRA DE NAVEGACIÓN DE PESTAÑAS -->
             <button class="tab-link" data-tab="dashboard-tab">📈 Dashboard</button>
@@ -463,7 +490,7 @@
 
 
                     <section id="runs-list-section">
-                        <h3>All Runs with Weather Details</h3> 
+                        <h3>All Runs with Weather Details</h3>
                         <button id="toggle-runs">Show/Hide Runs</button>
                         <div id="runs-table-container" class="hidden">
                             <table id="runs-table">
