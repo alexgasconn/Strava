@@ -1,6 +1,5 @@
 // js/auth.js
-import { showLoading, handleError, hideLoading } from './ui.js'; // Añadimos hideLoading
-// YA NO importamos initializeApp desde main.js
+import { showLoading, handleError, hideLoading } from './ui.js';
 
 const STRAVA_CLIENT_ID = '143540';
 const REDIRECT_URI = window.location.origin + window.location.pathname;
@@ -13,16 +12,11 @@ export function redirectToStrava() {
 }
 
 export function logout() {
-    localStorage.removeItem('strava_access_token');
-    localStorage.removeItem('strava_refresh_token');
     localStorage.removeItem('strava_tokens');
-    
     localStorage.removeItem('strava_athlete_data');
     localStorage.removeItem('strava_training_zones');
-
     window.location.reload();
 }
-
 
 async function getTokensFromCode(code) {
     try {
@@ -33,13 +27,13 @@ async function getTokensFromCode(code) {
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Authentication failed');
-        
+
         localStorage.setItem('strava_tokens', JSON.stringify({
             access_token: data.access_token,
             refresh_token: data.refresh_token,
-            expires_at: data.expires_at
+            expires_at: data.expires_at // timestamp en segundos
         }));
-        
+
         window.history.replaceState({}, '', window.location.pathname);
     } catch (error) {
         handleError('Authentication failed', error);
@@ -47,7 +41,7 @@ async function getTokensFromCode(code) {
     }
 }
 
-// Ahora handleAuth acepta una función como argumento
+// handleAuth solo llama a onAuthenticated si hay token válido y no expirado
 export async function handleAuth(onAuthenticated) {
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
@@ -57,12 +51,22 @@ export async function handleAuth(onAuthenticated) {
         await getTokensFromCode(code);
     }
 
-    const tokenData = localStorage.getItem('strava_tokens');
-    if (tokenData) {
-        // Si estamos autenticados, llamamos a la función que nos pasaron
-        await onAuthenticated(tokenData);
-    } else {
-        // Si no estamos autenticados, nos aseguramos de que la pantalla de carga se oculte
-        hideLoading();
+    const tokenDataRaw = localStorage.getItem('strava_tokens');
+    if (tokenDataRaw) {
+        const tokenData = JSON.parse(tokenDataRaw);
+        const now = Math.floor(Date.now() / 1000);
+
+        if (tokenData.access_token && tokenData.expires_at > now) {
+            // Token válido, llamamos a initializeApp
+            await onAuthenticated(tokenData);
+            return;
+        } else {
+            // Token inválido o expirado: borramos todo
+            localStorage.removeItem('strava_tokens');
+            localStorage.removeItem('strava_athlete_data');
+            localStorage.removeItem('strava_training_zones');
+        }
     }
+
+    hideLoading(); // si no hay token válido, mostramos login
 }
