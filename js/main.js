@@ -41,6 +41,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsPanel = document.getElementById("settings-panel");
     const closeSettings = document.getElementById("close-settings");
 
+    const unitSelect = document.getElementById("unit-select");
+    const hrMaxInput = document.getElementById("hr-max-input");
+    const ageInput = document.getElementById("age-input");
+
     if (settingsButton && settingsPanel && closeSettings) {
         settingsButton.addEventListener("click", () => {
             settingsPanel.style.display = settingsPanel.style.display === "none" ? "block" : "none";
@@ -50,6 +54,29 @@ document.addEventListener('DOMContentLoaded', () => {
             settingsPanel.style.display = "none";
         });
     }
+    function loadSettings() {
+        const saved = JSON.parse(localStorage.getItem("dashboard_settings") || "{}");
+        if (saved.units) unitSelect.value = saved.units;
+        if (saved.hrMax) hrMaxInput.value = saved.hrMax;
+        if (saved.age) ageInput.value = saved.age;
+    }
+
+    loadSettings();
+
+    function saveSettings() {
+        const settings = {
+            units: unitSelect.value,
+            hrMax: hrMaxInput.value,
+            age: ageInput.value
+        };
+        localStorage.setItem("dashboard_settings", JSON.stringify(settings));
+    }
+
+    unitSelect.addEventListener("change", saveSettings);
+    hrMaxInput.addEventListener("input", saveSettings);
+    ageInput.addEventListener("input", saveSettings);
+
+
 
     console.log("DOM references obtained.");
 
