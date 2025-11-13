@@ -473,7 +473,6 @@ export async function renderWrappedTab(allActivities, options = {}) {
   }
 
   // Temporal stats - Combined and more compact
-  // Temporal stats - Combined and more compact
   function renderHistograms(monthlyHours, weekdayHours, hourCounts) {
     const peakMonth = monthlyHours.length ?
       monthlyHours.reduce((a, b) => a.hours > b.hours ? a : b) : null;
