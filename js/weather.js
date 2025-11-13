@@ -1,5 +1,4 @@
 // weather-analytics.js
-// Versión ajustada para usar la estructura HTML existente
 
 export async function renderWeatherTab(allActivities) {
     console.log("Initializing Weather Analytics — received", allActivities.length, "activities");
@@ -11,12 +10,7 @@ export async function renderWeatherTab(allActivities) {
     if (!weatherTabContainer) {
         return console.error("weather-tab container not found. Ensure the main container has this ID.");
     }
-    if (!summaryCardsContainer) {
-        console.warn("wa-stats-row container not found. Summary cards might not render.");
-        // Podríamos intentar crearla o buscar otro lugar si es crítico
-    }
 
-    // Si no hay actividades de carrera, mostramos un mensaje y salimos
     const runs = allActivities.filter(
         (a) => a.type?.toLowerCase().includes("run") && a.start_latlng && a.start_date_local
     );
@@ -28,13 +22,6 @@ export async function renderWeatherTab(allActivities) {
         }
         return;
     }
-
-    // Mostrar un mensaje de carga inicial en el contenedor de resumen
-    // if (summaryCardsContainer) {
-    //     summaryCardsContainer.innerHTML = `<div class="wa-card"><h4>Cargando...</h4><div class="wa-val">Getting weather data...</div></div>`;
-    // }
-
-    // Fetch weather data
   
 
     async function fetchWeatherForRuns(runs) {
@@ -62,22 +49,10 @@ export async function renderWeatherTab(allActivities) {
     // Uso:
     const weatherResults = await fetchWeatherForRuns(runs);
 
-
-    if (!weatherResults.length) {
-        if (summaryCardsContainer) {
-            summaryCardsContainer.innerHTML = "<p>No weather data retrieved for any runs.</p>";
-        } else {
-            weatherTabContainer.innerHTML = "<p>No weather data retrieved.</p>";
-        }
-        return;
-    }
-
     // --- IMPORTANTE: Crear combinedWeatherData con TODAS las variables ---
-    // Asegúrate de que todas las variables estén disponibles en cada objeto para el scatter
     const combinedWeatherData = weatherResults.map((wr, index) => {
         const run = wr.run; // Acceder al objeto run directamente
         return {
-            // Datos meteorológicos directos de weatherResults
             temperature: wr.temperature,
             precipitation: wr.precipitation,
             wind_speed: wr.wind_speed,
@@ -88,16 +63,13 @@ export async function renderWeatherTab(allActivities) {
             cloudcover: wr.cloudcover,
             pressure: wr.pressure,
 
-            // Datos de la carrera, incluyendo los calculados
             run_name: run.name || 'Unnamed Run', // Nombre de la carrera
             run_date: run.start_date_local,    // Fecha de la carrera
             distance: (run.distance || 0) / 1000, // Distancia en km
             pace: runPaceMinPerKm(run),        // Pace en min/km
             moving_time: (run.moving_time || 0) / 60, // Tiempo en minutos
-            // Puedes añadir aquí otras propiedades de 'run' si las necesitas en el scatter
         };
     });
-    // --- FIN combinedWeatherData ---
 
 
     // Arrays para el análisis (usando combinedWeatherData para consistencia si es posible)
@@ -109,20 +81,9 @@ export async function renderWeatherTab(allActivities) {
     const cloudcovers = combinedWeatherData.map((r) => r.cloudcover);
     const conditions = combinedWeatherData.map((r) => r.weather_text);
     const windDirections = combinedWeatherData.map((r) => r.wind_direction);
-    const paces = combinedWeatherData.map((r) => r.pace); // Ahora ya está en combinedWeatherData
-    const distances = combinedWeatherData.map((r) => r.distance); // Ahora ya está en combinedWeatherData
+    const paces = combinedWeatherData.map((r) => r.pace);
+    const distances = combinedWeatherData.map((r) => r.distance);
 
-    // Arrays para el análisis (incluyendo humedad)
-    // const temps = weatherResults.map((r) => r.temperature);
-    // const rains = weatherResults.map((r) => r.precipitation);
-    // const winds = weatherResults.map((r) => r.wind_speed);
-    // const windDirections = weatherResults.map((r) => r.wind_direction);
-    // const pressures = weatherResults.map((r) => r.pressure);
-    // const cloudcovers = weatherResults.map((r) => r.cloudcover);
-    // const humidities = weatherResults.map((r) => r.humidity); // Nueva
-    // const conditions = weatherResults.map((r) => r.weather_text);
-    // const paces = weatherResults.map((r) => runPaceMinPerKm(r.run));
-    // const distances = weatherResults.map((r) => (r.run.distance || 0) / 1000);
 
 
     // 1. Summary cards (rellenar el div #wa-stats-row existente)
@@ -139,10 +100,9 @@ export async function renderWeatherTab(allActivities) {
     }
 
 
-    // 2. Selector de Histograma (¡Ya existe en HTML, solo adjuntamos el evento!)
     const histogramSelect = document.getElementById("histogram-select");
     const histogramTitle = document.getElementById("histogram-title");
-    const ctxHist = document.getElementById("weather-histogram"); // Usar el ID del HTML
+    const ctxHist = document.getElementById("weather-histogram")
     let histChart;
 
     if (ctxHist && histogramSelect && histogramTitle) {
@@ -177,18 +137,11 @@ export async function renderWeatherTab(allActivities) {
     // Gráfico Monthly Weather Overview
     const monthlyWeatherCtx = document.getElementById("monthly-weather");
     if (monthlyWeatherCtx) {
-        renderMonthlyMulti(monthlyWeatherCtx, weatherResults); // Pasar el contexto directamente
+        renderMonthlyMulti(monthlyWeatherCtx, weatherResults);
     } else {
         console.warn("#monthly-weather canvas not found.");
     }
 
-    // Gráfico Temp vs Pace
-    const tempVsPaceCtx = document.getElementById("temp-vs-pace");
-    if (tempVsPaceCtx) {
-        renderScatter(tempVsPaceCtx, temps, paces, "Temp (°C)", "Pace (min/km)");
-    } else {
-        console.warn("#temp-vs-pace canvas not found.");
-    }
 
     // Gráfico Weather Type Distribution
     const conditionPieCtx = document.getElementById("condition-pie");
@@ -198,18 +151,10 @@ export async function renderWeatherTab(allActivities) {
         console.warn("#condition-pie canvas not found.");
     }
 
-    // Gráfico Temp vs Distance (si lo quieres usar, asegúrate de que exista el canvas en HTML)
-    const tempVsDistCtx = document.getElementById("temp-vs-dist");
-    if (tempVsDistCtx) {
-        renderScatter(tempVsDistCtx, temps, distances, "Temp (°C)", "Distance (km)");
-    } else {
-        console.warn("#temp-vs-dist canvas not found.");
-    }
-
     // Tabla de Estadísticas Mensuales
     const monthlyTableBody = document.getElementById("monthly-table")?.querySelector("tbody");
     if (monthlyTableBody) {
-        renderMonthlyStatsTable(monthlyTableBody, weatherResults); // Pasar el tbody
+        renderMonthlyStatsTable(monthlyTableBody, weatherResults);
     } else {
         console.warn("#monthly-table tbody not found.");
     }
@@ -217,28 +162,11 @@ export async function renderWeatherTab(allActivities) {
     // Matriz de Correlación
     const corrMatrixDiv = document.getElementById("corr-matrix");
     if (corrMatrixDiv) {
-        renderCorrelationMatrix(corrMatrixDiv, { temps, rains, winds, humidities, paces, distances, pressures, cloudcovers }); // Incluir humidities
+        renderCorrelationMatrix(corrMatrixDiv, { temps, rains, winds, humidities, paces, distances, pressures, cloudcovers });
     } else {
         console.warn("#corr-matrix div not found.");
     }
 
-    // Top Runs
-    const topHotDiv = document.getElementById("top-hot");
-    const topColdDiv = document.getElementById("top-cold");
-    const topWindiestDiv = document.getElementById("top-windy");
-    const topRainyDiv = document.getElementById("top-rainy");
-    const topPressureDiv = document.getElementById("top-pressure");
-    const topCloudyDiv = document.getElementById("top-cloudy");
-
-
-    if (topHotDiv && topColdDiv && topWindiestDiv && topRainyDiv && topPressureDiv && topCloudyDiv) {
-        renderTopRuns(
-            { hot: topHotDiv, cold: topColdDiv, windy: topWindiestDiv, rainy: topRainyDiv, pressure: topPressureDiv, cloudy: topCloudyDiv },
-            weatherResults
-        );
-    } else {
-        console.warn("One or more top runs containers (top-hot, top-cold, top-windy, top-rainy, top-pressure, top-cloudy) not found.");
-    }
 
     // Listado completo de runs
     const runsTableBody = document.getElementById("runs-table")?.querySelector("tbody");
@@ -342,11 +270,15 @@ export async function renderWeatherTab(allActivities) {
 
 // ---------------- FETCH WEATHER ----------------
 async function getWeatherForRun(run) {
+    if (!run.start_latlng || run.start_latlng.length < 2) {
+        console.warn(`Run ${run.name} does not have valid start latitude/longitude.`);
+        return null;
+    }
+
     const [lat, lon] = run.start_latlng;
     const start = new Date(run.start_date_local);
     const dateStr = start.toISOString().split("T")[0];
 
-    // Ahora solicitamos también la humedad relativa
     const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m,wind_direction_10m,weathercode,cloudcover,surface_pressure,relativehumidity_2m&start_date=${dateStr}&end_date=${dateStr}&timezone=auto`;
 
     try {
@@ -360,11 +292,9 @@ async function getWeatherForRun(run) {
         }
 
         const hour = start.getHours();
-        // Intentar encontrar el índice exacto de la hora de inicio de la carrera
         let idx = data.hourly.time.findIndex(t => new Date(t).getHours() === hour);
 
         if (idx === -1) {
-            // Si no se encuentra la hora exacta, usar el Math.min(hour, length-1) como fallback
             console.warn(`Exact hour ${hour} not found for ${dateStr}. Using closest available index.`);
             idx = Math.min(hour, data.hourly.time.length - 1);
         }
@@ -386,6 +316,7 @@ async function getWeatherForRun(run) {
         return null;
     }
 }
+
 
 
 function weatherCodeToText(code, general = true) {
@@ -783,24 +714,44 @@ function renderCorrelationMatrix(divElement, data) {
     divElement.innerHTML = html;
 }
 
-function renderTopRuns(containers, data) {
-    const hottest = [...data].sort((a, b) => b.temperature - a.temperature).slice(0, 5);
-    const coldest = [...data].sort((a, b) => a.temperature - b.temperature).slice(0, 5);
-    const windiest = [...data].sort((a, b) => b.wind_speed - a.wind_speed).slice(0, 5);
-    const rainy = [...data].sort((a, b) => b.precipitation - a.precipitation).slice(0, 5);
-    const pressuriest = [...data].sort((a, b) => b.pressure - a.pressure).slice(0, 5);
-    const depressuriest = [...data].sort((a, b) => a.pressure - b.pressure).slice(0, 5);
-    const cloudiest = [...data].sort((a, b) => b.cloudcover - a.cloudcover).slice(0, 5);
-    const clearest = [...data].sort((a, b) => a.cloudcover - b.cloudcover).slice(0, 5);
 
-    if (containers.hot) containers.hot.innerHTML = `<h4>Top 5 Hottest</h4>${listRuns(hottest, 'temperature', '°C')}`;
-    if (containers.cold) containers.cold.innerHTML = `<h4>Top 5 Coldest</h4>${listRuns(coldest, 'temperature', '°C')}`;
-    if (containers.windy) containers.windy.innerHTML = `<h4>Top 5 Windiest</h4>${listRuns(windiest, 'wind_speed', ' km/h')}`;
-    if (containers.rainy) containers.rainy.innerHTML = `<h4>Top 5 Rainy</h4>${listRuns(rainy, 'precipitation', ' mm')}`;
-    if (containers.pressure) containers.pressure.innerHTML = `<h4>Top 5 Highest Pressure</h4>${listRuns(pressuriest, 'pressure', ' hPa')}<h4>Top 5 Lowest Pressure</h4>${listRuns(depressuriest, 'pressure', ' hPa')}`;
-    if (containers.cloudy) containers.cloudy.innerHTML = `<h4>Top 5 Cloudiest</h4>${listRuns(cloudiest, 'cloudcover', ' %')}<h4>Top 5 Clearest</h4>${listRuns(clearest, 'cloudcover', ' %')}`;
+function renderRunsByMetric(data) {
+    const metric = document.getElementById("metric-select").value;
+    const container = document.getElementById("runs-container");
+    if (!container) return;
 
+    const sorted = [...data].sort((a, b) => (b[metric] ?? -Infinity) - (a[metric] ?? -Infinity));
+    const top5 = sorted.slice(0, 5);
+    const bottom5 = sorted.slice(-5).reverse(); // últimos 5 en orden ascendente
+
+    container.innerHTML = `
+        <h4>Top 5 ${capitalize(metric)}</h4>${listRuns(top5, metric, getUnit(metric))}
+        <h4>Bottom 5 ${capitalize(metric)}</h4>${listRuns(bottom5, metric, getUnit(metric))}
+    `;
 }
+
+// helpers
+function capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function getUnit(metric) {
+    switch(metric) {
+        case "temperature": return "°C";
+        case "wind_speed": return " km/h";
+        case "precipitation": return " mm";
+        case "pressure": return " hPa";
+        case "cloudcover": return " %";
+        default: return "";
+    }
+}
+
+// actualizar al cambiar la selección
+document.getElementById("metric-select").addEventListener("change", () => renderRunsByMetric(weatherResults));
+
+// también puedes llamar al cargar la página
+renderRunsByMetric(weatherResults);
+
 
 function renderRunsList(tbodyElement, weatherResults) {
     tbodyElement.innerHTML = "";

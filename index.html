@@ -448,33 +448,30 @@
                     <!-- Top runs -->
                     <div id="top-runs" class="top-runs">
                         <h3>🏆 Top Runs</h3>
-                        <div class="top-list">
-                            <!-- JS rellenará estas secciones con listas de carreras -->
-                            <div class="top-section" id="top-hot"></div>
-                            <div class="top-section" id="top-cold"></div>
-                            <div class="top-section" id="top-windy"></div>
-                            <div class="top-section" id="top-rainy"></div>
-                            <div class="top-section" id="top-cloudy"></div>
-                            <div class="top-section" id="top-pressure"></div>
+                        <div class="top-controls">
+                            <label for="metric-select">Select metric:</label>
+                            <select id="metric-select">
+                                <option value="temperature">Temperature</option>
+                                <option value="wind_speed">Wind</option>
+                                <option value="precipitation">Precipitation</option>
+                                <option value="pressure">Pressure</option>
+                                <option value="cloudcover">Cloud Cover</option>
+                            </select>
                         </div>
+                        <div id="runs-container" class="top-list"></div>
                     </div>
 
-                    <section id="runs-list-section"> <!-- Optional: a section to group related elements -->
-                        <h3>All Runs with Weather Details</h3> <!-- You can add a title here -->
 
-                        <!-- This is the button your JS is looking for -->
+                    <section id="runs-list-section">
+                        <h3>All Runs with Weather Details</h3> 
                         <button id="toggle-runs">Show/Hide Runs</button>
-
-                        <!-- This is the container your JS is looking for -->
                         <div id="runs-table-container" class="hidden">
-                            <!-- Your existing table goes inside this div -->
                             <table id="runs-table">
                                 <thead>
                                     <tr>
                                         <th>Title</th>
                                         <th>Date</th>
                                         <th>Distance (km)</th>
-                                        <!-- <th>Time</th> -->
                                         <th>Pace (min/km)</th>
                                         <th>Temp (°C)</th>
                                         <th>Humidity</th>
