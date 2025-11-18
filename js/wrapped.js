@@ -361,6 +361,14 @@ export async function renderWrappedTab(allActivities, options = {}) {
   const soloLabelX = clampLabelX(soloPctNum);
   const groupLabelX = clampLabelX(groupPctNum);
 
+  // Additional Solo vs Group metrics (average distance/time)
+  const soloActs = currentActs.filter(a => Number(a.athlete_count) === 1);
+  const groupActs = currentActs.filter(a => Number(a.athlete_count) !== 1);
+  const soloAvgDist = soloActs.length ? utils.formatDistance(utils.sum(soloActs, 'distance') / soloActs.length) : '—';
+  const soloAvgTime = soloActs.length ? utils.formatTime(Math.round(utils.sum(soloActs, 'moving_time') / soloActs.length)) : '—';
+  const groupAvgDist = groupActs.length ? utils.formatDistance(utils.sum(groupActs, 'distance') / groupActs.length) : '—';
+  const groupAvgTime = groupActs.length ? utils.formatTime(Math.round(utils.sum(groupActs, 'moving_time') / groupActs.length)) : '—';
+
   // === Streak calculation (current streak and longest streak) ===
   function computeStreaks(acts) {
     if (!acts || !acts.length) return { current: 0, longest: 0 };
@@ -471,6 +479,10 @@ export async function renderWrappedTab(allActivities, options = {}) {
           <div>Solo: <strong style="color:var(--text-dark)">${soloCount}</strong></div>
           <div>Group: <strong style="color:var(--text-dark)">${groupCount}</strong></div>
         </div>
+          <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:0.85rem;color:var(--muted);gap:1rem">
+            <div style="flex:1">Avg Solo: <strong style="color:var(--text-dark)">${soloAvgDist}</strong> • ${soloAvgTime}</div>
+            <div style="flex:1;text-align:right">Avg Group: <strong style="color:var(--text-dark)">${groupAvgDist}</strong> • ${groupAvgTime}</div>
+          </div>
       </div>
     </div>
   `;
@@ -687,27 +699,25 @@ export async function renderWrappedTab(allActivities, options = {}) {
   }
 
 
-  // Top efforts — compact preview (top 3) with expandable full list
+  // Top efforts — show top 5 (compact, no toggle)
   function renderTopEfforts(topEfforts) {
-    if (!topEfforts || !topEfforts.length) {
-      return '';
-    }
+    if (!topEfforts || !topEfforts.length) return '';
 
-    const preview = topEfforts.slice(0, 3);
+    const list = topEfforts.slice(0, 5);
     const maxScore = topEfforts[0]._score || 1;
 
     return `
       <div class="section-header">
         <h3>🔥 Hardest Workouts</h3>
-        <p class="section-subtitle">Top efforts — quick preview of your toughest sessions</p>
+        <p class="section-subtitle">Top 5 hardest sessions</p>
       </div>
 
-      <div class="efforts-preview">
-        ${preview.map((a, idx) => {
+      <div class="efforts-list efforts-list-compact">
+        ${list.map((a, idx) => {
       const score = a._score || 0;
       const scoreWidth = (maxScore > 0) ? (score / maxScore) * 100 : 0;
       return `
-            <div class="effort-card effort-card-compact fade-in-up" style="animation-delay: ${0.05 * idx}s">
+            <div class="effort-card effort-card-compact fade-in-up" style="animation-delay: ${0.03 * idx}s">
               <div class="effort-rank">#${idx + 1}</div>
               <div class="effort-content-compact">
                 <h4 class="effort-title-compact">${a.name || 'Untitled'}</h4>
@@ -719,41 +729,6 @@ export async function renderWrappedTab(allActivities, options = {}) {
           `;
     }).join('')}
       </div>
-
-      <div id="efforts-full-container" class="efforts-list efforts-list-compact efforts-full hidden" aria-hidden="true">
-        ${topEfforts.map((a, idx) => {
-      const score = a._score || 0;
-      const scoreWidth = (maxScore > 0) ? (score / maxScore) * 100 : 0;
-      return `
-            <div class="effort-card effort-card-compact" style="animation-delay: ${0.02 * idx}s">
-              <div class="effort-rank">#${idx + 1}</div>
-              <div class="effort-content-compact">
-                <h4 class="effort-title-compact">${a.name || 'Untitled'}</h4>
-                <div class="effort-meta-compact">${a.type || a.sport} • ${utils.formatTime(Number(a.moving_time) || 0)}</div>
-                <div class="effort-score-bar-compact"><div class="effort-score-fill-compact" style="width: ${scoreWidth}%"></div></div>
-              </div>
-              <div class="effort-score-compact">${Math.round(score)}</div>
-            </div>
-          `;
-    }).join('')}
-      </div>
-
-      <div style="margin-top:8px">
-        <button id="toggle-efforts-btn" class="btn-small">Show all (${topEfforts.length})</button>
-      </div>
-
-      <script>
-        (function(){
-          const btn = document.getElementById('toggle-efforts-btn');
-          const full = document.getElementById('efforts-full-container');
-          if (!btn || !full) return;
-          btn.addEventListener('click', function(){
-            const opened = full.classList.toggle('hidden') === false;
-            full.setAttribute('aria-hidden', String(!opened));
-            btn.textContent = opened ? 'Show less' : 'Show all (${topEfforts.length})';
-          });
-        })();
-      </script>
     `;
   }
 
