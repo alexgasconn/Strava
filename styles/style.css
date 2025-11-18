@@ -3474,6 +3474,37 @@ body {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
+/* Compact preview + toggle helpers for Hardest Workouts */
+.efforts-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    margin-bottom: 0.5rem;
+}
+
+.efforts-full {
+    margin-top: 0.6rem;
+    max-height: 420px;
+    overflow: auto;
+    padding-right: 6px;
+}
+
+.btn-small {
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 100%);
+    color: #fff;
+    border: none;
+    padding: 0.45rem 0.8rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(79, 70, 229, 0.12);
+}
+
+.btn-small:hover {
+    transform: translateY(-1px);
+}
+
 .effort-rank {
     font-size: 1.1rem;
     font-weight: 700;

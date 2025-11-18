@@ -361,6 +361,52 @@ export async function renderWrappedTab(allActivities, options = {}) {
   const soloLabelX = clampLabelX(soloPctNum);
   const groupLabelX = clampLabelX(groupPctNum);
 
+  // === Streak calculation (current streak and longest streak) ===
+  function computeStreaks(acts) {
+    if (!acts || !acts.length) return { current: 0, longest: 0 };
+    // extract unique dates (local date) sorted ascending
+    const dates = Array.from(new Set(acts.map(a => new Date(a.start_date).toISOString().slice(0, 10)))).sort();
+    let longest = 0;
+    let current = 0;
+    let prev = null;
+    let running = 0;
+    for (let i = 0; i < dates.length; i++) {
+      const d = new Date(dates[i]);
+      if (prev) {
+        const diff = (d - prev) / (1000 * 60 * 60 * 24);
+        if (diff === 1) {
+          running += 1;
+        } else if (diff === 0) {
+          // same day (already deduped) - ignore
+        } else {
+          running = 1;
+        }
+      } else {
+        running = 1;
+      }
+      if (running > longest) longest = running;
+      prev = d;
+    }
+
+    // current streak: count backwards from most recent day
+    const today = new Date(dates[dates.length - 1]);
+    let cur = 0;
+    for (let i = dates.length - 1; i >= 0; i--) {
+      const d = new Date(dates[i]);
+      const diff = (today - d) / (1000 * 60 * 60 * 24);
+      if (diff === cur) {
+        cur += 1;
+      } else if (diff > cur) {
+        // gap found
+        break;
+      }
+    }
+
+    return { current: cur, longest };
+  }
+
+  const streaks = computeStreaks(currentActs);
+
   const summaryHtml = `
     <div class="stats-year-header">
       <h2>${displayYear} Wrapped</h2>
@@ -391,37 +437,35 @@ export async function renderWrappedTab(allActivities, options = {}) {
         <div class="stat-value">${utils.formatDistance(summaryTotals.elevation)}</div>
         <div class="stat-label">Elevation Gain</div>
       </div>
+      <div class="stat-card fade-in-up" style="animation-delay: 0.45s">
+        <div class="stat-icon">🔥</div>
+        <div class="stat-value">${streaks.longest}d</div>
+        <div class="stat-label">Longest Streak</div>
+      </div>
     </div>
 
     
-    <div class="solo-group-compare fade-in-up" style="animation-delay: 0.5s">
+    <div class="solo-group-compare fade-in-up" style="animation-delay: 0.5s" aria-hidden="false">
       <div class="compare-label" style="font-weight:600;color:#666;margin-bottom:6px">Solo vs Group</div>
       <div class="solo-group-svg">
-        <!-- compact SVG: reduced height for a tighter header footprint -->
-        <svg class="solo-svg" viewBox="0 0 100 22" preserveAspectRatio="none" role="img" tabindex="0" aria-labelledby="soloGroupTitle soloGroupDesc">
-          <title id="soloGroupTitle">Solo vs Group</title>
-          <desc id="soloGroupDesc">${soloPct}% solo (${soloCount} activities) versus ${groupPct}% group (${groupCount} activities).</desc>
-          <defs>
-            <linearGradient id="gradSolo" x1="0%" x2="100%">
-              <stop offset="0%" stop-color="#1976d2" />
-              <stop offset="100%" stop-color="#03a9f4" />
-            </linearGradient>
-            <linearGradient id="gradGroup" x1="0%" x2="100%">
-              <stop offset="0%" stop-color="#10b981" />
-              <stop offset="100%" stop-color="#059669" />
-            </linearGradient>
-          </defs>
-
-          <!-- Solo bar (smaller) -->
-          <rect x="0" y="2" width="100" height="8" rx="4" fill="#eef2ff"></rect>
-          <rect x="0" y="2" width="${soloWidth}" height="8" rx="4" fill="url(#gradSolo)"></rect>
-          <text x="${soloLabelX}" y="7" font-size="5" fill="#fff" font-weight="700">${soloPct}%</text>
-
-          <!-- Group bar (smaller) -->
-          <rect x="0" y="12" width="100" height="8" rx="4" fill="#ecfbf2"></rect>
-          <rect x="0" y="12" width="${groupWidth}" height="8" rx="4" fill="url(#gradGroup)"></rect>
-          <text x="${groupLabelX}" y="17" font-size="5" fill="#fff" font-weight="700">${groupPct}%</text>
-        </svg>
+        <!-- Redesigned Solo vs Group: clearer percentages + mini bars -->
+        <div class="solo-compare-card" role="group" aria-labelledby="soloGroupTitle" aria-describedby="soloGroupDesc">
+          <div style="display:flex;align-items:center;gap:0.75rem">
+            <div style="font-weight:800;font-size:1.1rem;color:var(--text-dark)">${soloPct}%</div>
+            <div style="flex:1">
+              <div class="mini-bar" aria-hidden="true"><div class="mini-bar-fill solo" style="width:${soloWidth}%"></div></div>
+              <div class="mini-bar-label" id="soloGroupTitle">Solo · ${soloCount}</div>
+            </div>
+          </div>
+          <div style="height:6px"></div>
+          <div style="display:flex;align-items:center;gap:0.75rem">
+            <div style="font-weight:700;font-size:1.0rem;color:var(--text-dark)">${groupPct}%</div>
+            <div style="flex:1">
+              <div class="mini-bar" aria-hidden="true"><div class="mini-bar-fill group" style="width:${groupWidth}%"></div></div>
+              <div class="mini-bar-label" id="soloGroupDesc">Group · ${groupCount}</div>
+            </div>
+          </div>
+        </div>
 
         <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:0.9rem;color:var(--muted)">
           <div>Solo: <strong style="color:var(--text-dark)">${soloCount}</strong></div>
@@ -643,42 +687,73 @@ export async function renderWrappedTab(allActivities, options = {}) {
   }
 
 
-  // Top efforts (more compact cards for 10 items)
+  // Top efforts — compact preview (top 3) with expandable full list
   function renderTopEfforts(topEfforts) {
     if (!topEfforts || !topEfforts.length) {
-      // don't render an empty placeholder — simply return empty string
       return '';
     }
+
+    const preview = topEfforts.slice(0, 3);
+    const maxScore = topEfforts[0]._score || 1;
 
     return `
       <div class="section-header">
         <h3>🔥 Hardest Workouts</h3>
-        <p class="section-subtitle">Your 10 most intense sessions</p>
+        <p class="section-subtitle">Top efforts — quick preview of your toughest sessions</p>
       </div>
-      
-      <div class="efforts-list efforts-list-compact">
-        ${topEfforts.map((a, idx) => {
-      const score = a._score;
-      const maxScore = topEfforts[0]._score;
-      const scoreWidth = (maxScore > 0) ? (score / maxScore) * 100 : 0;
 
+      <div class="efforts-preview">
+        ${preview.map((a, idx) => {
+      const score = a._score || 0;
+      const scoreWidth = (maxScore > 0) ? (score / maxScore) * 100 : 0;
       return `
             <div class="effort-card effort-card-compact fade-in-up" style="animation-delay: ${0.05 * idx}s">
               <div class="effort-rank">#${idx + 1}</div>
               <div class="effort-content-compact">
                 <h4 class="effort-title-compact">${a.name || 'Untitled'}</h4>
-                <div class="effort-meta-compact">
-                  ${a.type || a.sport} • ${utils.formatTime(Number(a.moving_time) || 0)}
-                </div>
-                <div class="effort-score-bar-compact">
-                  <div class="effort-score-fill-compact" style="width: ${scoreWidth}%"></div>
-                </div>
+                <div class="effort-meta-compact">${a.type || a.sport} • ${utils.formatTime(Number(a.moving_time) || 0)}</div>
+                <div class="effort-score-bar-compact"><div class="effort-score-fill-compact" style="width: ${scoreWidth}%"></div></div>
               </div>
               <div class="effort-score-compact">${Math.round(score)}</div>
             </div>
           `;
     }).join('')}
       </div>
+
+      <div id="efforts-full-container" class="efforts-list efforts-list-compact efforts-full hidden" aria-hidden="true">
+        ${topEfforts.map((a, idx) => {
+      const score = a._score || 0;
+      const scoreWidth = (maxScore > 0) ? (score / maxScore) * 100 : 0;
+      return `
+            <div class="effort-card effort-card-compact" style="animation-delay: ${0.02 * idx}s">
+              <div class="effort-rank">#${idx + 1}</div>
+              <div class="effort-content-compact">
+                <h4 class="effort-title-compact">${a.name || 'Untitled'}</h4>
+                <div class="effort-meta-compact">${a.type || a.sport} • ${utils.formatTime(Number(a.moving_time) || 0)}</div>
+                <div class="effort-score-bar-compact"><div class="effort-score-fill-compact" style="width: ${scoreWidth}%"></div></div>
+              </div>
+              <div class="effort-score-compact">${Math.round(score)}</div>
+            </div>
+          `;
+    }).join('')}
+      </div>
+
+      <div style="margin-top:8px">
+        <button id="toggle-efforts-btn" class="btn-small">Show all (${topEfforts.length})</button>
+      </div>
+
+      <script>
+        (function(){
+          const btn = document.getElementById('toggle-efforts-btn');
+          const full = document.getElementById('efforts-full-container');
+          if (!btn || !full) return;
+          btn.addEventListener('click', function(){
+            const opened = full.classList.toggle('hidden') === false;
+            full.setAttribute('aria-hidden', String(!opened));
+            btn.textContent = opened ? 'Show less' : 'Show all (${topEfforts.length})';
+          });
+        })();
+      </script>
     `;
   }
 
