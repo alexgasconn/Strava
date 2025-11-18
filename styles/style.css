@@ -7,6 +7,11 @@
     --text-dark: #232323;
     --text-medium: #595959;
     --text-light: #8c8c8c;
+    --accent: #4f46e5;
+    --accent-2: #06b6d4;
+    --muted: #6b7280;
+    --bg-page: #f8fafc;
+    --card-bg: #ffffff;
     --bg-main: #f7f7f7;
     --bg-card: #ffffff;
     --border-color: #e8e8e8;
@@ -1423,6 +1428,176 @@ main {
     animation: pulse 2s ease-in-out infinite;
 }
 
+/* Professional theme refinements */
+body {
+    background: var(--bg-page);
+    color: var(--text-dark);
+    font-family: Inter, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.stat-card {
+    background: var(--card-bg);
+    border-top: none;
+    padding: 1.1rem 1.25rem;
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(16, 24, 40, 0.06);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.stat-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: white;
+    font-size: 1.4rem;
+    box-shadow: 0 6px 18px rgba(79, 70, 229, 0.12);
+}
+
+.stat-value {
+    font-size: 1.6rem;
+    color: var(--text-dark);
+    font-weight: 800;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: var(--muted);
+    text-transform: none;
+}
+
+.quick-stats {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.quick-stat-item {
+    background: var(--card-bg);
+    border: 1px solid rgba(15, 23, 42, 0.03);
+    padding: 0.6rem 0.9rem;
+    border-radius: 10px;
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+}
+
+/* Solo vs Group: clean progress bars with fills */
+.solo-group-compare {
+    margin-top: 0.6rem;
+}
+
+.solo-group-compare .compare-bars {
+    display: flex;
+    gap: 0.8rem;
+}
+
+.solo-group-compare .compare-item {
+    flex: 1;
+    background: var(--card-bg);
+    padding: 0.8rem;
+    border-radius: 10px;
+    border: 1px solid rgba(15, 23, 42, 0.04);
+}
+
+.solo-group-compare .compare-name {
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 6px
+}
+
+.solo-group-compare .compare-bar {
+    height: 18px;
+    background: #eef2ff;
+    border-radius: 999px;
+    position: relative;
+    overflow: hidden
+}
+
+.solo-group-compare .compare-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0%;
+    border-radius: 999px;
+}
+
+.solo-group-compare .solo .compare-fill {
+    background: linear-gradient(90deg, #1976d2, #03a9f4);
+}
+
+.solo-group-compare .group .compare-fill {
+    background: linear-gradient(90deg, #10b981, #059669);
+}
+
+.solo-group-compare .compare-bar-label {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.95);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35)
+}
+
+.solo-group-compare .compare-value {
+    margin-top: 8px;
+    text-align: right;
+    color: var(--muted);
+    font-weight: 600
+}
+
+/* Highlights polish */
+.pb-category {
+    padding: 1rem;
+}
+
+.pb-highlights {
+    display: flex;
+    gap: 1rem;
+    align-items: stretch;
+    padding: 0.75rem;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.95));
+    border-radius: 12px;
+}
+
+.pb-highlight {
+    background: var(--card-bg);
+    border-radius: 10px;
+    padding: 0.9rem;
+    box-shadow: 0 6px 16px rgba(2, 6, 23, 0.04);
+    min-width: 220px
+}
+
+.pb-highlight-label {
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 6px
+}
+
+.pb-activity-link {
+    display: block;
+    color: inherit;
+    text-decoration: none
+}
+
+.pb-activity-link:hover {
+    background: rgba(250, 250, 250, 0.9)
+}
+
+@media (max-width:900px) {
+    .solo-group-compare .compare-bar-label {
+        font-size: 0.78rem;
+        left: 8px
+    }
+}
+
 .stats-year-header p {
     color: #666;
     font-size: 1.1rem;
@@ -2072,7 +2247,7 @@ main {
 }
 
 .pb-highlight:last-child {
-    /* no special border when in row layout */
+    margin-right: 0;
 }
 
 .pb-highlight-label {
