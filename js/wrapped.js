@@ -393,23 +393,12 @@ export async function renderWrappedTab(allActivities, options = {}) {
       </div>
     </div>
 
-    <div class="quick-stats fade-in-up" style="animation-delay: 0.5s">
-      <div class="quick-stat-item">
-        <span class="quick-stat-label">Solo workouts</span>
-        <span class="quick-stat-value">${soloPct}%</span>
-      </div>
-      ${avgPace ? `
-        <div class="quick-stat-item">
-          <span class="quick-stat-label">Avg pace (runs)</span>
-          <span class="quick-stat-value">${avgPace}</span>
-        </div>
-      ` : ''}
-    </div>
     
-    <div class="solo-group-compare fade-in-up" style="animation-delay: 0.6s">
+    <div class="solo-group-compare fade-in-up" style="animation-delay: 0.5s">
       <div class="compare-label" style="font-weight:600;color:#666;margin-bottom:6px">Solo vs Group</div>
       <div class="solo-group-svg">
-        <svg class="solo-svg" viewBox="0 0 100 28" preserveAspectRatio="none" role="img" tabindex="0" aria-labelledby="soloGroupTitle soloGroupDesc">
+        <!-- compact SVG: reduced height for a tighter header footprint -->
+        <svg class="solo-svg" viewBox="0 0 100 22" preserveAspectRatio="none" role="img" tabindex="0" aria-labelledby="soloGroupTitle soloGroupDesc">
           <title id="soloGroupTitle">Solo vs Group</title>
           <desc id="soloGroupDesc">${soloPct}% solo (${soloCount} activities) versus ${groupPct}% group (${groupCount} activities).</desc>
           <defs>
@@ -423,15 +412,15 @@ export async function renderWrappedTab(allActivities, options = {}) {
             </linearGradient>
           </defs>
 
-          <!-- Solo bar -->
-          <rect x="0" y="2" width="100" height="10" rx="5" fill="#eef2ff"></rect>
-          <rect x="0" y="2" width="${soloWidth}" height="10" rx="5" fill="url(#gradSolo)"></rect>
-          <text x="${soloLabelX}" y="9" font-size="6" fill="#fff" font-weight="700">${soloPct}%</text>
+          <!-- Solo bar (smaller) -->
+          <rect x="0" y="2" width="100" height="8" rx="4" fill="#eef2ff"></rect>
+          <rect x="0" y="2" width="${soloWidth}" height="8" rx="4" fill="url(#gradSolo)"></rect>
+          <text x="${soloLabelX}" y="7" font-size="5" fill="#fff" font-weight="700">${soloPct}%</text>
 
-          <!-- Group bar -->
-          <rect x="0" y="16" width="100" height="10" rx="5" fill="#ecfbf2"></rect>
-          <rect x="0" y="16" width="${groupWidth}" height="10" rx="5" fill="url(#gradGroup)"></rect>
-          <text x="${groupLabelX}" y="23" font-size="6" fill="#fff" font-weight="700">${groupPct}%</text>
+          <!-- Group bar (smaller) -->
+          <rect x="0" y="12" width="100" height="8" rx="4" fill="#ecfbf2"></rect>
+          <rect x="0" y="12" width="${groupWidth}" height="8" rx="4" fill="url(#gradGroup)"></rect>
+          <text x="${groupLabelX}" y="17" font-size="5" fill="#fff" font-weight="700">${groupPct}%</text>
         </svg>
 
         <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:0.9rem;color:var(--muted)">

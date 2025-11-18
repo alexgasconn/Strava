@@ -702,6 +702,25 @@ main {
     outline-offset: 3px;
 }
 
+/* Compact Solo vs Group: keep it tight in the header */
+.solo-group-compare {
+    font-size: 0.9rem;
+}
+
+.solo-group-compare .solo-group-svg {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.solo-group-compare .solo-svg {
+    width: 160px;
+    /* compact width */
+    height: 22px;
+    /* matches the SVG viewBox */
+    display: block;
+}
+
 #update-predictions-btn {
     padding: 0.5em 1em;
     background-color: #FC5200;
@@ -1859,10 +1878,11 @@ body {
 
 .metric {
     text-align: center;
-    padding: 0.75rem;
+    padding: 0.6rem;
     background: #f8f9fa;
     border-radius: 8px;
-    transition: background 0.2s ease;
+    transition: background 0.15s ease;
+    font-size: 0.88rem;
 }
 
 .metric:hover {
@@ -1870,7 +1890,7 @@ body {
 }
 
 .metric-label {
-    font-size: 0.85rem;
+    font-size: 0.78rem;
     color: #666;
     margin-bottom: 0.25rem;
     text-transform: uppercase;
@@ -1878,7 +1898,7 @@ body {
 }
 
 .metric-value {
-    font-size: 1.2rem;
+    font-size: 0.98rem;
     font-weight: 700;
     color: #1a1a1a;
 }
