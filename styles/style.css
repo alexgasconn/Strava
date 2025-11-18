@@ -1647,6 +1647,7 @@ main {
     gap: 1rem;
     margin-bottom: 1rem;
 }
+
 @media (max-width: 900px) {
     .sport-breakdown {
         grid-template-columns: repeat(2, 1fr);
@@ -2050,18 +2051,28 @@ main {
 }
 
 .pb-highlights {
-    grid-column: 1 / -1;
+    /* Make highlights sit side-by-side instead of spanning full grid */
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: stretch;
     background: linear-gradient(135deg, #fff5e6 0%, #ffe8cc 100%);
     border: 2px solid #ffd699;
+    padding: 0.75rem;
 }
 
 .pb-highlight {
-    padding: 1rem 0;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 0.75rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    flex: 1 1 220px;
+    /* allow them to shrink/grow and create columns */
+    min-width: 220px;
 }
 
 .pb-highlight:last-child {
-    border-bottom: none;
+    /* no special border when in row layout */
 }
 
 .pb-highlight-label {
@@ -2231,7 +2242,8 @@ main {
 
 #wrapped-map {
     width: 100%;
-    height: 400px; /* o lo que quieras */
+    height: 400px;
+    /* o lo que quieras */
 }
 
 
@@ -2245,7 +2257,7 @@ main {
     background: white;
     border-radius: 8px;
     padding: 1.5rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     text-align: center;
 }
 
@@ -2260,7 +2272,7 @@ main {
     border-radius: 8px;
     padding: 1.5rem;
     margin-bottom: 1rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .chart-container h3 {
@@ -2280,17 +2292,18 @@ main {
 
 
 .range-btn {
-  padding: 0.4rem 0.8rem;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  background: #f7f7f7;
-  cursor: pointer;
-  color: #0b0b0b;
+    padding: 0.4rem 0.8rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: #f7f7f7;
+    cursor: pointer;
+    color: #0b0b0b;
 }
+
 .range-btn.active {
-  background: #007bff;
-  color:#0b0b0b;
-  border-color: #007bff;
+    background: #007bff;
+    color: #0b0b0b;
+    border-color: #007bff;
 }
 
 
@@ -2412,8 +2425,15 @@ main {
 }
 
 @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
 }
 
 /* Card Header */
@@ -2501,18 +2521,21 @@ main {
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.3),
-        transparent
-    );
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(255, 255, 255, 0.3),
+            transparent);
     animation: shimmer 2s infinite;
 }
 
 @keyframes shimmer {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
+    0% {
+        transform: translateX(-100%);
+    }
+
+    100% {
+        transform: translateX(100%);
+    }
 }
 
 .durability-text {
@@ -2575,8 +2598,15 @@ main {
 }
 
 @keyframes alertPulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.02); }
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.02);
+    }
 }
 
 /* Edit Section */
@@ -2667,8 +2697,15 @@ main {
 }
 
 @keyframes loadingPulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
 }
 
 /* Notification System */
@@ -2763,7 +2800,11 @@ main {
 }
 
 @media (max-width: 768px) {
-    .stats-grid, .sport-breakdown, .pb-grid, .extras-grid {
+
+    .stats-grid,
+    .sport-breakdown,
+    .pb-grid,
+    .extras-grid {
         grid-template-columns: 1fr;
     }
 }
@@ -2773,7 +2814,7 @@ main {
     text-align: center;
     margin-bottom: 2rem;
     padding: 1rem 0;
-    border-bottom: 1px solid rgba(0,0,0,0.1);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .section-header h3 {
@@ -2792,14 +2833,14 @@ main {
     background-color: #fff;
     padding: 1.5rem;
     border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
     text-align: center;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .stat-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
 }
 
 .stat-icon {
@@ -2831,7 +2872,7 @@ main {
     background-color: #f8f9fa;
     padding: 1.5rem;
     border-radius: 12px;
-    box-shadow: inset 0 2px 8px rgba(0,0,0,0.05);
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .quick-stat-item {
@@ -2858,7 +2899,7 @@ main {
     background-color: #fff;
     padding: 1.5rem;
     border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
     display: flex;
     flex-direction: column;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -2866,7 +2907,7 @@ main {
 
 .sport-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
 }
 
 .sport-card-header {
@@ -2900,7 +2941,8 @@ main {
 .sport-share {
     font-size: 1.2rem;
     font-weight: 600;
-    color: #007bff; /* Example accent color */
+    color: #007bff;
+    /* Example accent color */
 }
 
 .sport-metrics {
@@ -2942,7 +2984,8 @@ main {
 
 .sport-progress-bar {
     height: 100%;
-    background-color: #007bff; /* Example accent color */
+    background-color: #007bff;
+    /* Example accent color */
     border-radius: 4px;
 }
 
@@ -2958,7 +3001,7 @@ main {
     background-color: #fff;
     padding: 1.5rem;
     border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
     display: flex;
     align-items: center;
 }
@@ -2988,7 +3031,8 @@ main {
 /* Temporal Charts Combined */
 .temporal-charts-combined {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Adjust minmax as needed */
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    /* Adjust minmax as needed */
     gap: 1.5rem;
     margin-top: 2rem;
     margin-bottom: 3rem;
@@ -2998,7 +3042,7 @@ main {
     background-color: #fff;
     padding: 1.5rem;
     border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
 }
 
 .chart-title-sm {
@@ -3014,9 +3058,12 @@ main {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    max-height: 250px; /* Limit height for monthly/weekly bars */
-    overflow-y: auto; /* Scroll if too many months/days */
-    padding-right: 5px; /* Space for scrollbar */
+    max-height: 250px;
+    /* Limit height for monthly/weekly bars */
+    overflow-y: auto;
+    /* Scroll if too many months/days */
+    padding-right: 5px;
+    /* Space for scrollbar */
 }
 
 .chart-row {
@@ -3026,7 +3073,8 @@ main {
 }
 
 .chart-label-sm {
-    width: 60px; /* Adjust width for labels */
+    width: 60px;
+    /* Adjust width for labels */
     flex-shrink: 0;
     color: #555;
     text-align: right;
@@ -3050,11 +3098,13 @@ main {
 }
 
 .chart-bar-secondary {
-    background-color: #28a745; /* Green for weekly */
+    background-color: #28a745;
+    /* Green for weekly */
 }
 
 .chart-value-sm {
-    width: 50px; /* Adjust width for values */
+    width: 50px;
+    /* Adjust width for values */
     flex-shrink: 0;
     color: #333;
     font-weight: 500;
@@ -3066,16 +3116,20 @@ main {
 .hour-chart-compact {
     display: flex;
     justify-content: space-between;
-    align-items: flex-end; /* Bars start from bottom */
-    height: 120px; /* Fixed height for the hour chart */
+    align-items: flex-end;
+    /* Bars start from bottom */
+    height: 120px;
+    /* Fixed height for the hour chart */
     margin-top: 1rem;
     padding: 0 5px;
-    overflow-x: auto; /* Allow scrolling for many hours */
+    overflow-x: auto;
+    /* Allow scrolling for many hours */
 }
 
 .hour-bar-compact {
     flex-shrink: 0;
-    width: 15px; /* Fixed width for each hour bar */
+    width: 15px;
+    /* Fixed width for each hour bar */
     margin: 0 1px;
     display: flex;
     flex-direction: column;
@@ -3086,7 +3140,8 @@ main {
 
 .hour-bar-fill-compact {
     width: 100%;
-    background-color: #fd7e14; /* Orange for hourly */
+    background-color: #fd7e14;
+    /* Orange for hourly */
     border-radius: 3px 3px 0 0;
     transition: height 0.5s ease-out;
 }
@@ -3095,24 +3150,28 @@ main {
     font-size: 0.7rem;
     color: #777;
     margin-top: 5px;
-    transform: rotate(-45deg); /* Rotate labels for compactness */
+    transform: rotate(-45deg);
+    /* Rotate labels for compactness */
     white-space: nowrap;
     position: absolute;
-    bottom: -20px; /* Adjust as needed */
+    bottom: -20px;
+    /* Adjust as needed */
 }
 
 /* --- Hardest Workouts (compact version) --- */
 .efforts-list-compact {
     display: flex;
     flex-direction: column;
-    gap: 0.8rem; /* Smaller gap */
+    gap: 0.8rem;
+    /* Smaller gap */
 }
 
 .effort-card-compact {
     background-color: #fff;
-    padding: 0.8rem 1.2rem; /* Reduced padding */
+    padding: 0.8rem 1.2rem;
+    /* Reduced padding */
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     display: flex;
     align-items: center;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -3120,7 +3179,7 @@ main {
 
 .effort-card-compact:hover {
     transform: translateX(5px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .effort-rank {
@@ -3152,7 +3211,8 @@ main {
 }
 
 .effort-score-bar-compact {
-    height: 6px; /* Smaller bar */
+    height: 6px;
+    /* Smaller bar */
     background-color: #eee;
     border-radius: 3px;
     overflow: hidden;
@@ -3160,7 +3220,8 @@ main {
 
 .effort-score-fill-compact {
     height: 100%;
-    background-color: #dc3545; /* Red accent */
+    background-color: #dc3545;
+    /* Red accent */
     border-radius: 3px;
     transition: width 0.4s ease-out;
 }
@@ -3179,7 +3240,7 @@ main {
     background-color: #fff;
     padding: 1.5rem;
     border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
 }
 
 .pb-category-header {
@@ -3232,11 +3293,17 @@ main {
 }
 
 .pb-highlights .pb-highlight {
-    padding: 0.8rem 0;
-    border-bottom: 1px dotted #f0f0f0;
-}
-.pb-highlights .pb-highlight:last-child {
+    padding: 0.6rem;
     border-bottom: none;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    flex: 1 1 220px;
+    min-width: 220px;
+}
+
+.pb-highlights .pb-highlight:last-child {
+    /* no-op: keep consistent card layout */
 }
 
 .pb-highlight-label {
@@ -3254,7 +3321,8 @@ main {
     text-overflow: ellipsis;
 }
 
-.pb-details, .pb-date {
+.pb-details,
+.pb-date {
     font-size: 0.75rem;
     color: #777;
 }
@@ -3264,24 +3332,28 @@ main {
     background-color: #fff;
     padding: 1.5rem;
     border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
 }
 
-.gear-list, .country-list {
+.gear-list,
+.country-list {
     display: flex;
     flex-direction: column;
     gap: 0.6rem;
 }
 
-.gear-item, .country-item {
+.gear-item,
+.country-item {
     display: flex;
     align-items: center;
     font-size: 0.9rem;
     padding: 0.3rem 0;
 }
 
-.gear-name, .country-name {
-    flex-basis: 100px; /* Fixed width for names */
+.gear-name,
+.country-name {
+    flex-basis: 100px;
+    /* Fixed width for names */
     flex-shrink: 0;
     color: #444;
     white-space: nowrap;
@@ -3289,7 +3361,8 @@ main {
     text-overflow: ellipsis;
 }
 
-.gear-bar-container, .country-bar-container {
+.gear-bar-container,
+.country-bar-container {
     flex-grow: 1;
     height: 8px;
     background-color: #e9ecef;
@@ -3300,13 +3373,16 @@ main {
 
 .gear-bar {
     height: 100%;
-    background-color: #ffc107; /* Yellow accent */
+    background-color: #ffc107;
+    /* Yellow accent */
     border-radius: 4px;
     transition: width 0.5s ease-out;
 }
 
-.gear-hours, .country-count {
-    width: 50px; /* Fixed width for values */
+.gear-hours,
+.country-count {
+    width: 50px;
+    /* Fixed width for values */
     text-align: right;
     font-weight: 500;
     color: #555;
@@ -3314,25 +3390,30 @@ main {
 
 .country-bar {
     height: 100%;
-    background-color: #17a2b8; /* Cyan accent */
+    background-color: #17a2b8;
+    /* Cyan accent */
     border-radius: 4px;
     transition: width 0.5s ease-out;
 }
 
 /* --- Global Heatmap --- */
 #wrapped-heatmap {
-    height: 500px; /* Ensure map has a height */
+    height: 500px;
+    /* Ensure map has a height */
     width: 100%;
     margin-top: 2rem;
     margin-bottom: 3rem;
     border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-    overflow: hidden; /* Important for map corners */
-    position: relative; /* For header positioning */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    /* Important for map corners */
+    position: relative;
+    /* For header positioning */
 }
 
 #wrapped-heatmap .leaflet-pane {
-    z-index: 10; /* Ensure map content is above other page elements if needed */
+    z-index: 10;
+    /* Ensure map content is above other page elements if needed */
 }
 
 .heatmap-header {
@@ -3340,21 +3421,26 @@ main {
     top: 20px;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 1000; /* Ensure header is above the map */
+    z-index: 1000;
+    /* Ensure header is above the map */
     background: rgba(255, 255, 255, 0.85);
     padding: 0.8rem 1.5rem;
     border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     backdrop-filter: blur(5px);
     -webkit-backdrop-filter: blur(5px);
-    width: auto; /* Adjust width based on content */
-    border-bottom: none; /* Remove border-bottom from general header */
+    width: auto;
+    /* Adjust width based on content */
+    border-bottom: none;
+    /* Remove border-bottom from general header */
 }
+
 .heatmap-header h3 {
     margin: 0;
     font-size: 1.4rem;
     color: #333;
 }
+
 .heatmap-header .section-subtitle {
     margin-top: 0.3rem;
     font-size: 0.85rem;
@@ -3368,16 +3454,18 @@ main {
     margin-bottom: 3rem;
     background-color: #fff;
     border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
 }
 
 .activities-table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 700px; /* Ensure table doesn't get too cramped */
+    min-width: 700px;
+    /* Ensure table doesn't get too cramped */
 }
 
-.activities-table th, .activities-table td {
+.activities-table th,
+.activities-table td {
     padding: 1rem 1.2rem;
     text-align: left;
     border-bottom: 1px solid #eee;
@@ -3392,7 +3480,8 @@ main {
     letter-spacing: 0.5px;
     position: sticky;
     top: 0;
-    z-index: 2; /* Keep header visible on scroll */
+    z-index: 2;
+    /* Keep header visible on scroll */
 }
 
 .activities-table tbody tr:last-child td {
@@ -3414,11 +3503,13 @@ main {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 250px; /* Limit width */
+    max-width: 250px;
+    /* Limit width */
 }
 
 .type-badge {
-    background-color: #e0f2f7; /* Light blue */
+    background-color: #e0f2f7;
+    /* Light blue */
     color: #007bff;
     padding: 0.3em 0.7em;
     border-radius: 15px;
@@ -3426,7 +3517,8 @@ main {
     font-weight: 500;
 }
 
-.table-distance, .table-time {
+.table-distance,
+.table-time {
     color: #555;
     font-size: 0.9rem;
 }
@@ -3472,7 +3564,3 @@ main {
     border-radius: 8px;
     margin-bottom: 2rem;
 }
-
-
-
-

@@ -223,7 +223,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // --- INITIALIZATION ---
-    // Movemos la función initializeApp DENTRO del listener también
     async function initializeApp(tokenData) {
         showLoading('Loading activities...');
         try {
@@ -233,7 +232,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 fetchAthleteData(),
                 fetchTrainingZones()
             ]);
-            console.log("3timestamp:", new Date().toISOString());
             console.log(`Fetched ${activities.length} activities.`);
             console.log('Fetched athlete data:', athlete);
             console.log('Fetched training zones:', zones);
@@ -241,7 +239,6 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Preprocessing activities...');
             const preprocessed = preprocessActivities(activities);
             allActivities = preprocessed;
-            console.log("4timestamp:", new Date().toISOString());
             console.log(`Preprocessed ${allActivities.length} activities.`);
             console.log(`Preprocessed activities:`, allActivities);
             localStorage.setItem('strava_athlete_data', JSON.stringify(athlete));

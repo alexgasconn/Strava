@@ -530,12 +530,16 @@ export async function renderWrappedTab(allActivities, options = {}) {
 
     const maxMoment = Math.max(...momentCounts.map(m => m.count));
 
-    const momentBars = momentCounts.map(m => {
-      const height = maxMoment > 0 ? (m.count / maxMoment) * 60 : 0;
+    // Build horizontal bars (like monthly/weekly) instead of vertical compact bars
+    const momentBars = momentCounts.map((m, i) => {
+      const pct = maxMoment ? (m.count / maxMoment) * 100 : 0;
       return `
-      <div class="hour-bar-compact" title="${m.label}: ${m.count} activities">
-        <div class="hour-bar-fill-compact" style="height: ${height}px"></div>
-        <div class="hour-label-compact">${m.label}</div>
+      <div class="chart-row fade-in-up" style="animation-delay: ${0.03 * i}s; align-items: center;">
+        <div class="chart-label-sm" style="width:100px;text-align:left;padding-right:8px">${m.label}</div>
+        <div class="chart-bar-container chart-bar-container-sm" style="flex:1;display:flex;align-items:center">
+          <div class="chart-bar" style="width: ${pct}%;height:14px;border-radius:8px"></div>
+        </div>
+        <span class="chart-value-sm" style="width:54px;text-align:right;margin-left:8px">${m.count}</span>
       </div>
     `;
     }).join('');
@@ -591,7 +595,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
 
       <div class="chart-section chart-section-hourly">
         <h4 class="chart-title-sm">Time of Day Distribution</h4>
-        <div class="hour-chart-compact">${momentBars}</div>
+        <div class="chart-container-compact">${momentBars}</div>
       </div>
     </div>
   `;
@@ -825,25 +829,26 @@ export async function renderWrappedTab(allActivities, options = {}) {
 
       // Preparar datos para el heatmap
       const maxIntensity = Math.max(...points.map(p => p.intensity));
+      // Boost intensity so hotspots are more visible; cap to avoid oversaturation
       const heatmapData = points.map(p => [
         p.lat,
         p.lng,
-        p.intensity / maxIntensity // Normalizar intensidad
+        Math.min(1.6, (p.intensity / (maxIntensity || 1)) * 1.4) // normalize & amplify
       ]);
 
-      // Añadir capa de heatmap
+      // Añadir capa de heatmap con parámetros más agresivos y gradiente más llamativo
       L.heatLayer(heatmapData, {
-        radius: 50,
-        blur: 35,
+        radius: 70,
+        blur: 25,
         maxZoom: 10,
-        max: 1.0,
+        max: 1.6,
         gradient: {
-          0.0: 'blue',
-          0.2: 'cyan',
-          0.4: 'lime',
-          0.6: 'yellow',
-          0.8: 'orange',
-          1.0: 'red'
+          0.0: '#0d47a1',
+          0.2: '#1976d2',
+          0.4: '#03a9f4',
+          0.6: '#00e676',
+          0.8: '#ffeb3b',
+          1.0: '#ff3d00'
         }
       }).addTo(map);
 
