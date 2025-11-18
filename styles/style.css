@@ -696,6 +696,12 @@ main {
     width: 100%;
 }
 
+/* Make inline SVG focusable visible for keyboard users */
+.solo-svg:focus {
+    outline: 3px solid rgba(3, 169, 244, 0.18);
+    outline-offset: 3px;
+}
+
 #update-predictions-btn {
     padding: 0.5em 1em;
     background-color: #FC5200;

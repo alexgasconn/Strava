@@ -347,6 +347,20 @@ export async function renderWrappedTab(allActivities, options = {}) {
   const groupCount = currentActs.length - soloCount;
   const groupPct = (100 - parseFloat(soloPct)).toFixed(1);
 
+  // Prepare numeric values and clamped label positions for the Solo vs Group SVG
+  const soloPctNum = parseFloat(soloPct) || 0;
+  const groupPctNum = parseFloat(groupPct) || 0;
+
+  const clampLabelX = (pct) => {
+    const x = Number(pct) - 6;
+    return Math.max(2, Math.min(92, isNaN(x) ? 2 : x));
+  };
+
+  const soloWidth = Math.max(0, Math.min(100, soloPctNum));
+  const groupWidth = Math.max(0, Math.min(100, groupPctNum));
+  const soloLabelX = clampLabelX(soloPctNum);
+  const groupLabelX = clampLabelX(groupPctNum);
+
   const summaryHtml = `
     <div class="stats-year-header">
       <h2>${displayYear} Wrapped</h2>
@@ -396,6 +410,8 @@ export async function renderWrappedTab(allActivities, options = {}) {
       <div class="compare-label" style="font-weight:600;color:#666;margin-bottom:6px">Solo vs Group</div>
       <div class="solo-group-svg">
         <svg class="solo-svg" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="false" role="img">
+          <title id="soloGroupTitle">Solo vs Group</title>
+          <desc id="soloGroupDesc">${soloPct}% solo (${soloCount} activities) versus ${groupPct}% group (${groupCount} activities).</desc>
           <defs>
             <linearGradient id="gradSolo" x1="0%" x2="100%">
               <stop offset="0%" stop-color="#1976d2" />
@@ -409,13 +425,13 @@ export async function renderWrappedTab(allActivities, options = {}) {
 
           <!-- Solo bar -->
           <rect x="0" y="2" width="100" height="10" rx="5" fill="#eef2ff"></rect>
-          <rect x="0" y="2" width="${parseFloat(soloPct)}" height="10" rx="5" fill="url(#gradSolo)"></rect>
-          <text x="${Math.max(2, Math.min(92, parseFloat(soloPct) - 6))}" y="9" font-size="6" fill="#fff" font-weight="700">${soloPct}%</text>
+          <rect x="0" y="2" width="${soloWidth}" height="10" rx="5" fill="url(#gradSolo)"></rect>
+          <text x="${soloLabelX}" y="9" font-size="6" fill="#fff" font-weight="700">${soloPct}%</text>
 
           <!-- Group bar -->
           <rect x="0" y="16" width="100" height="10" rx="5" fill="#ecfbf2"></rect>
-          <rect x="0" y="16" width="${parseFloat(groupPct)}" height="10" rx="5" fill="url(#gradGroup)"></rect>
-          <text x="${Math.max(2, Math.min(92, parseFloat(groupPct) - 6))}" y="23" font-size="6" fill="#fff" font-weight="700">${groupPct}%</text>
+          <rect x="0" y="16" width="${groupWidth}" height="10" rx="5" fill="url(#gradGroup)"></rect>
+          <text x="${groupLabelX}" y="23" font-size="6" fill="#fff" font-weight="700">${groupPct}%</text>
         </svg>
 
         <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:0.9rem;color:var(--muted)">
