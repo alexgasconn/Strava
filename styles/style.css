@@ -245,6 +245,22 @@ main {
 @media (max-width: 900px) {
     .charts-grid {
         grid-template-columns: 1fr;
+
+        /* SVG chart container tweaks */
+        .solo-group-svg {
+            width: 100%;
+        }
+
+        .solo-svg {
+            width: 100%;
+            height: 48px;
+            display: block;
+        }
+
+        .solo-svg text {
+            font-family: Inter, 'Segoe UI', Roboto, Arial;
+        }
+
         gap: 1.2rem;
     }
 }
