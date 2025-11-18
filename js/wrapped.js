@@ -409,7 +409,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
     <div class="solo-group-compare fade-in-up" style="animation-delay: 0.6s">
       <div class="compare-label" style="font-weight:600;color:#666;margin-bottom:6px">Solo vs Group</div>
       <div class="solo-group-svg">
-        <svg class="solo-svg" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="false" role="img">
+        <svg class="solo-svg" viewBox="0 0 100 28" preserveAspectRatio="none" role="img" tabindex="0" aria-labelledby="soloGroupTitle soloGroupDesc">
           <title id="soloGroupTitle">Solo vs Group</title>
           <desc id="soloGroupDesc">${soloPct}% solo (${soloCount} activities) versus ${groupPct}% group (${groupCount} activities).</desc>
           <defs>

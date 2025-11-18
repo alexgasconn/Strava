@@ -34,7 +34,7 @@
         <div id="login-section">
             <h1>Your Performance, Analyzed!</h1>
             <p>Connect your Strava account to visualize your progress and discover new insights.</p>
-            <button id="login-button">Connect with Strava</button>
+            <button id="login-button" aria-label="Connect with Strava">Connect with Strava</button>
             <div class="privacy-policy" style="margin-top:1em; font-size:0.95em; color:#555;">
                 <strong>Privacy Notice:</strong> Your Strava data is processed instantly each time you load the page.
                 There is <b>no database</b> and nothing is stored—everything runs in the on your browser and is
@@ -48,9 +48,9 @@
             <header>
                 <h1 id="athlete-name"></h1>
                 <nav>
-                    <button id="settings-button">⚙️</button>
-                    <button id="refresh-button">Refresh Activities</button>
-                    <button id="logout-button">Log Out</button>
+                    <button id="settings-button" aria-label="Open settings">⚙️</button>
+                    <button id="refresh-button" aria-label="Refresh activities">Refresh Activities</button>
+                    <button id="logout-button" aria-label="Log out">Log Out</button>
                 </nav>
             </header>
 
@@ -76,19 +76,26 @@
                     <input type="number" id="hr-max" min="0" value="190">
                 </label>
                 <br>
-                <button id="close-settings">Close</button>
+                <button id="close-settings" aria-label="Close settings">Close</button>
             </div>
 
 
             <!-- BARRA DE NAVEGACIÓN DE PESTAÑAS -->
-            <button class="tab-link" data-tab="dashboard-tab">📈 Dashboard</button>
-            <button class="tab-link active" data-tab="analysis-tab">📊 Analysis</button>
-            <button class="tab-link" data-tab="athlete-tab">👤 Athlete</button>
-            <button class="tab-link" data-tab="planner-tab">📅 Planner & Tools</button>
-            <button class="tab-link" data-tab="gear-tab">👟 Gear</button>
-            <button class="tab-link" data-tab="runs-races-tab">🏃‍♂️ Runs & Races</button>
-            <button class="tab-link" data-tab="weather-tab">🌤 Weather</button>
-            <button class="tab-link" data-tab="wrapped-tab">🎁 Wrapped</button>
+            <button class="tab-link" data-tab="dashboard-tab" aria-controls="dashboard-tab" aria-label="Dashboard">📈
+                Dashboard</button>
+            <button class="tab-link active" data-tab="analysis-tab" aria-controls="analysis-tab"
+                aria-label="Analysis">📊 Analysis</button>
+            <button class="tab-link" data-tab="athlete-tab" aria-controls="athlete-tab" aria-label="Athlete">👤
+                Athlete</button>
+            <button class="tab-link" data-tab="planner-tab" aria-controls="planner-tab"
+                aria-label="Planner and Tools">📅 Planner & Tools</button>
+            <button class="tab-link" data-tab="gear-tab" aria-controls="gear-tab" aria-label="Gear">👟 Gear</button>
+            <button class="tab-link" data-tab="runs-races-tab" aria-controls="runs-races-tab"
+                aria-label="Runs and Races">🏃‍♂️ Runs & Races</button>
+            <button class="tab-link" data-tab="weather-tab" aria-controls="weather-tab" aria-label="Weather">🌤
+                Weather</button>
+            <button class="tab-link" data-tab="wrapped-tab" aria-controls="wrapped-tab"
+                aria-label="Wrapped - Your year in sport">🎁 Wrapped</button>
 
 
 
@@ -102,6 +109,7 @@
                             <button id="apply-date-filter">Apply</button>
                             <button id="reset-date-filter">Reset</button>
                         </div>
+
 
                         <div id="year-filter-buttons" class="filter-group year-buttons">
                         </div>
@@ -159,8 +167,8 @@
                     </div>
 
                     <div id="export-buttons" style="display:flex; gap:1em; margin: 1.5em 0;">
-                        <button id="download-csv-btn">⬇️ Descargar CSV</button>
-                        <button id="download-pdf-btn">⬇️ Descargar PDF</button>
+                        <button id="download-csv-btn" aria-label="Download CSV">⬇️ Descargar CSV</button>
+                        <button id="download-pdf-btn" aria-label="Download PDF">⬇️ Descargar PDF</button>
                     </div>
                 </div>
 
@@ -520,49 +528,18 @@
                 <div id="wrapped-tab" class="tab-content">
                     <h2>🎁 Your Year in Sport</h2>
 
-                    <!-- Selector d’any -->
-                    <div id="wrapped-year-selector" style="margin-bottom:1rem;">
-                        <label for="wrapped-year">Select Year: </label>
-                        <select id="wrapped-year"></select>
-                    </div>
+                    <!-- Year selector (populated by JS) -->
+                    <div id="wrapped-year-selector" style="margin-bottom:1rem;"></div>
 
-                    <!-- <div style="margin-bottom:1rem;">
-                        <button id="btn-export" class="btn btn-primary">📸 Exportar captura</button>
-                    </div> -->
-
-                    <!-- Bloc principal del resum -->
+                    <!-- Main wrapped containers (kept minimal and matched to `wrapped.js`) -->
                     <div id="wrapped-summary" class="wrapped-section"></div>
-
-                    <!-- Millors marques -->
                     <div id="wrapped-personal-bests" class="wrapped-section"></div>
-
-                    <!-- Comparativa entre esports -->
                     <div id="wrapped-sport-comparison" class="wrapped-section"></div>
-
-                    <!-- Estadístiques temporals -->
                     <div id="wrapped-temporal-stats" class="wrapped-section"></div>
-
-                    <!-- Top 5 activitats -->
-                    <div id="wrapped-top-activities" class="wrapped-section"></div>
-
-                    <!-- Ús de dispositius i material -->
-                    <div id="wrapped-gear" class="wrapped-section"></div>
-                    <div id="wrapped-map" class="wrapped-section"></div>
-
-                    <!-- Estadístiques socials -->
-                    <div id="wrapped-social-activity" class="wrapped-section"></div>
-
-                    <!-- Geografia / països -->
-                    <div id="wrapped-geography" class="wrapped-section"></div>
-
-                    <!-- Frases de motivació -->
                     <div id="wrapped-motivation" class="wrapped-section"></div>
-
-                    <!-- Estadístiques extremes -->
                     <div id="wrapped-extreme-stats" class="wrapped-section"></div>
-
-                    <!-- Llista d’activitats -->
                     <div id="wrapped-all-activities" class="wrapped-section"></div>
+                    <div id="wrapped-heatmap" class="wrapped-section"></div>
                 </div>
 
                 <!-- Llibreria per exportar captura -->
