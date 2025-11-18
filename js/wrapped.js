@@ -425,30 +425,25 @@ export async function renderWrappedTab(allActivities, options = {}) {
     
     <div class="stats-grid">
       <div class="stat-card fade-in-up" style="animation-delay: 0.1s">
-        <div class="stat-icon" aria-hidden="true"></div>
         <div class="stat-value">${summaryTotals.total}</div>
         <div class="stat-label">Activities</div>
       </div>
       
       <div class="stat-card fade-in-up" style="animation-delay: 0.2s">
-        <div class="stat-icon" aria-hidden="true"></div>
         <div class="stat-value">${utils.formatDistance(summaryTotals.distance)}</div>
         <div class="stat-label">Total Distance</div>
       </div>
       
       <div class="stat-card fade-in-up" style="animation-delay: 0.3s">
-        <div class="stat-icon" aria-hidden="true"></div>
         <div class="stat-value">${utils.formatTime(summaryTotals.time)}</div>
         <div class="stat-label">Total Time</div>
       </div>
       
       <div class="stat-card fade-in-up" style="animation-delay: 0.4s">
-        <div class="stat-icon" aria-hidden="true"></div>
         <div class="stat-value">${utils.formatDistance(summaryTotals.elevation)}</div>
         <div class="stat-label">Elevation Gain</div>
       </div>
       <div class="stat-card fade-in-up" style="animation-delay: 0.45s">
-        <div class="stat-icon" aria-hidden="true"></div>
         <div class="stat-value">${streaks.longest}d</div>
         <div class="stat-label">Longest Streak</div>
       </div>
