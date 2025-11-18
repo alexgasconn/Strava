@@ -2090,7 +2090,11 @@ main {
     width: 100%;
 }
 
-/* Solo vs Group comparison styles */
+/* Solo vs Group comparison styles (more contrast and larger bars) */
+.solo-group-compare {
+    margin-top: 0.5rem;
+}
+
 .solo-group-compare .compare-bars {
     display: flex;
     gap: 0.75rem;
@@ -2099,31 +2103,60 @@ main {
 
 .solo-group-compare .compare-item {
     flex: 1 1 0;
-    background: rgba(255, 255, 255, 0.04);
-    padding: 0.5rem;
-    border-radius: 8px;
+    background: #fff;
+    padding: 0.75rem;
+    border-radius: 10px;
     display: flex;
     flex-direction: column;
     align-items: stretch;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
 .solo-group-compare .compare-name {
-    font-size: 0.9rem;
-    color: #ddd;
-    margin-bottom: 0.35rem;
+    font-size: 0.95rem;
+    color: #333;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
 }
 
 .solo-group-compare .compare-bar {
-    height: 10px;
-    border-radius: 6px;
-    background: linear-gradient(90deg, #1976d2, #03a9f4);
-    margin-bottom: 0.4rem;
+    height: 18px;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 0.5rem;
+    background: #f1f5f9;
+}
+
+.solo-group-compare .compare-bar-label {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: white;
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 .solo-group-compare .compare-value {
-    font-size: 0.85rem;
-    color: #bbb;
+    font-size: 0.95rem;
+    color: #444;
     text-align: right;
+    font-weight: 600;
+}
+
+/* Styles for pb activity links inside highlights */
+.pb-activity-link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+}
+
+.pb-activity-link:hover {
+    text-decoration: none;
+    background: rgba(246, 246, 246, 0.9);
 }
 
 .pb-activity strong {
@@ -3345,7 +3378,7 @@ main {
 }
 
 .pb-highlights .pb-highlight:last-child {
-    /* no-op: keep consistent card layout */
+    margin-right: 0;
 }
 
 .pb-highlight-label {

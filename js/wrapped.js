@@ -397,12 +397,16 @@ export async function renderWrappedTab(allActivities, options = {}) {
       <div class="compare-bars">
         <div class="compare-item">
           <div class="compare-name">Solo</div>
-          <div class="compare-bar" style="width: ${soloPct}%; background: linear-gradient(90deg,#1976d2,#03a9f4)"></div>
+          <div class="compare-bar" style="width: ${soloPct}%; background: linear-gradient(90deg,#1976d2,#03a9f4)">
+            <span class="compare-bar-label">${soloPct}%</span>
+          </div>
           <div class="compare-value">${soloCount} (${soloPct}%)</div>
         </div>
         <div class="compare-item">
           <div class="compare-name">Group</div>
-          <div class="compare-bar" style="width: ${groupPct}%; background: linear-gradient(90deg,#10b981,#059669)"></div>
+          <div class="compare-bar" style="width: ${groupPct}%; background: linear-gradient(90deg,#10b981,#059669)">
+            <span class="compare-bar-label">${groupPct}%</span>
+          </div>
           <div class="compare-value">${groupCount} (${groupPct}%)</div>
         </div>
       </div>
@@ -666,13 +670,15 @@ export async function renderWrappedTab(allActivities, options = {}) {
       if (!a) return 'N/A';
       const date = new Date(a.start_date).toLocaleDateString();
       return `
-        <div class="pb-activity">
-          <strong>${a.name || 'Untitled'}</strong>
-          <div class="pb-details">
-            ${utils.formatTime(Number(a.moving_time) || 0)} • ${utils.formatDistance(Number(a.distance) || 0)}
+        <a class="pb-activity-link" href="html/activity.html?id=${a.id}" target="_blank">
+          <div class="pb-activity">
+            <strong>${a.name || 'Untitled'}</strong>
+            <div class="pb-details">
+              ${utils.formatTime(Number(a.moving_time) || 0)} • ${utils.formatDistance(Number(a.distance) || 0)}
+            </div>
+            <div class="pb-date">${date}</div>
           </div>
-          <div class="pb-date">${date}</div>
-        </div>
+        </a>
       `;
     }
 
