@@ -3898,3 +3898,82 @@ body {
     border-radius: 8px;
     margin-bottom: 2rem;
 }
+
+/* ------------------------------------------------------------------
+   Overrides & modern tweaks (final layer)
+   Ensures stat values fit inside cards and modern Solo vs Group look
+------------------------------------------------------------------ */
+
+/* Force stat values to be compact and wrap where needed */
+.stats-grid .stat-card .stat-value,
+.stat-card .stat-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    line-height: 1.05;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+/* Ensure monthly/compact charts show all rows without overflow */
+.chart-container-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: none;
+}
+
+.chart-container-compact .chart-row {
+    padding: 0.28rem 0;
+}
+
+.chart-container-compact .chart-label {
+    width: 78px;
+    font-size: 0.78rem;
+}
+
+.chart-container-compact .chart-bar {
+    height: 9px;
+}
+
+/* Modern Solo vs Group widget (final polish) */
+.solo-compare-card {
+    display: block;
+    width: 100%;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfbff 100%);
+    border-radius: 12px;
+    padding: 0.85rem;
+    box-shadow: 0 6px 24px rgba(15, 23, 42, 0.04);
+    border: 1px solid rgba(15, 23, 42, 0.04);
+}
+
+.mini-bar {
+    background: #f1f5f9;
+    height: 9px;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.mini-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.5s ease;
+}
+
+.mini-bar-fill.solo {
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+}
+
+.mini-bar-fill.group {
+    background: linear-gradient(90deg, #06b6d4 0%, #00b894 100%);
+}
+
+@media (max-width: 700px) {
+    .stats-grid .stat-card .stat-value {
+        font-size: 1rem;
+    }
+
+    .chart-container-compact .chart-label {
+        width: 60px;
+        font-size: 0.72rem;
+    }
+}
