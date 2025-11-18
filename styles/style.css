@@ -3977,3 +3977,57 @@ body {
         font-size: 0.72rem;
     }
 }
+
+/* ------------------------------------------------------------------
+   Unified card styling for a consistent, professional look
+------------------------------------------------------------------ */
+.stat-card,
+.sport-card,
+.pb-category,
+.effort-card,
+.effort-card-compact,
+.extra-section,
+.chart-container {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid rgba(15, 23, 42, 0.04);
+    box-shadow: 0 8px 26px rgba(15, 23, 42, 0.04);
+}
+
+/* Make stat icons purely decorative (no emoji) and consistent */
+.stat-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    color: #fff;
+    box-shadow: 0 6px 14px rgba(79, 70, 229, 0.08);
+}
+
+/* Sport breakdown responsive: 3 cols desktop, 2 tablet, 1 mobile */
+.sport-breakdown {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+}
+
+@media (max-width: 1000px) {
+    .sport-breakdown {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .sport-breakdown {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Slight padding/tone unification for sport-card header */
+.sport-card-header {
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}

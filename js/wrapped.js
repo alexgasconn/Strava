@@ -362,8 +362,10 @@ export async function renderWrappedTab(allActivities, options = {}) {
   const groupLabelX = clampLabelX(groupPctNum);
 
   // Additional Solo vs Group metrics (average distance/time)
-  const soloActs = currentActs.filter(a => Number(a.athlete_count) === 1);
-  const groupActs = currentActs.filter(a => Number(a.athlete_count) !== 1);
+  // Only consider running activities for Solo vs Group averages
+  const runningActs = currentActs.filter(a => (a.type || a.sport || '').toLowerCase().includes('run'));
+  const soloActs = runningActs.filter(a => Number(a.athlete_count) === 1);
+  const groupActs = runningActs.filter(a => Number(a.athlete_count) !== 1);
   const soloAvgDist = soloActs.length ? utils.formatDistance(utils.sum(soloActs, 'distance') / soloActs.length) : '—';
   const soloAvgTime = soloActs.length ? utils.formatTime(Math.round(utils.sum(soloActs, 'moving_time') / soloActs.length)) : '—';
   const groupAvgDist = groupActs.length ? utils.formatDistance(utils.sum(groupActs, 'distance') / groupActs.length) : '—';
@@ -423,30 +425,30 @@ export async function renderWrappedTab(allActivities, options = {}) {
     
     <div class="stats-grid">
       <div class="stat-card fade-in-up" style="animation-delay: 0.1s">
-        <div class="stat-icon">🎯</div>
+        <div class="stat-icon" aria-hidden="true"></div>
         <div class="stat-value">${summaryTotals.total}</div>
         <div class="stat-label">Activities</div>
       </div>
       
       <div class="stat-card fade-in-up" style="animation-delay: 0.2s">
-        <div class="stat-icon">📍</div>
+        <div class="stat-icon" aria-hidden="true"></div>
         <div class="stat-value">${utils.formatDistance(summaryTotals.distance)}</div>
         <div class="stat-label">Total Distance</div>
       </div>
       
       <div class="stat-card fade-in-up" style="animation-delay: 0.3s">
-        <div class="stat-icon">⏱️</div>
+        <div class="stat-icon" aria-hidden="true"></div>
         <div class="stat-value">${utils.formatTime(summaryTotals.time)}</div>
         <div class="stat-label">Total Time</div>
       </div>
       
       <div class="stat-card fade-in-up" style="animation-delay: 0.4s">
-        <div class="stat-icon">⛰️</div>
+        <div class="stat-icon" aria-hidden="true"></div>
         <div class="stat-value">${utils.formatDistance(summaryTotals.elevation)}</div>
         <div class="stat-label">Elevation Gain</div>
       </div>
       <div class="stat-card fade-in-up" style="animation-delay: 0.45s">
-        <div class="stat-icon">🔥</div>
+        <div class="stat-icon" aria-hidden="true"></div>
         <div class="stat-value">${streaks.longest}d</div>
         <div class="stat-label">Longest Streak</div>
       </div>
