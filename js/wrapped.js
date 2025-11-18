@@ -344,6 +344,9 @@ export async function renderWrappedTab(allActivities, options = {}) {
     elevation: utils.sum(currentActs, 'total_elevation_gain')
   };
 
+  const groupCount = currentActs.length - soloCount;
+  const groupPct = (100 - parseFloat(soloPct)).toFixed(1);
+
   const summaryHtml = `
     <div class="stats-year-header">
       <h2>${displayYear} Wrapped</h2>
@@ -387,6 +390,22 @@ export async function renderWrappedTab(allActivities, options = {}) {
           <span class="quick-stat-value">${avgPace}</span>
         </div>
       ` : ''}
+    </div>
+    
+    <div class="solo-group-compare fade-in-up" style="animation-delay: 0.6s">
+      <div class="compare-label" style="font-weight:600;color:#666;margin-bottom:6px">Solo vs Group</div>
+      <div class="compare-bars">
+        <div class="compare-item">
+          <div class="compare-name">Solo</div>
+          <div class="compare-bar" style="width: ${soloPct}%; background: linear-gradient(90deg,#1976d2,#03a9f4)"></div>
+          <div class="compare-value">${soloCount} (${soloPct}%)</div>
+        </div>
+        <div class="compare-item">
+          <div class="compare-name">Group</div>
+          <div class="compare-bar" style="width: ${groupPct}%; background: linear-gradient(90deg,#10b981,#059669)"></div>
+          <div class="compare-value">${groupCount} (${groupPct}%)</div>
+        </div>
+      </div>
     </div>
   `;
 
@@ -605,7 +624,8 @@ export async function renderWrappedTab(allActivities, options = {}) {
   // Top efforts (more compact cards for 10 items)
   function renderTopEfforts(topEfforts) {
     if (!topEfforts || !topEfforts.length) {
-      return '<div class="empty-state">No effort data available</div>';
+      // don't render an empty placeholder — simply return empty string
+      return '';
     }
 
     return `
@@ -802,12 +822,37 @@ export async function renderWrappedTab(allActivities, options = {}) {
       const container = document.getElementById('heatmap-container');
       if (!container) return;
 
-      // Obtener coordenadas de los países con su intensidad
-      const points = countries.map(c => ({
-        lat: getCountryLatLng(c.country).lat,
-        lng: getCountryLatLng(c.country).lng,
-        intensity: c.count
-      }));
+      // Prefer using actual activity coordinates to build a much denser heatmap.
+      // Fallback to country-centers if no activity coordinates are available.
+      const coordCounts = {};
+      const addPoint = (lat, lng) => {
+        // group by ~0.01 degree (~1km) to aggregate nearby activities
+        const latR = Math.round(lat * 100) / 100;
+        const lngR = Math.round(lng * 100) / 100;
+        const key = `${latR},${lngR}`;
+        coordCounts[key] = (coordCounts[key] || 0) + 1;
+      };
+
+      // Use currentActs (activities for the displayed year) for denser points
+      (currentActs || []).forEach(a => {
+        const coords = (a.start_latlng && a.start_latlng.length === 2) ? a.start_latlng : ((a.end_latlng && a.end_latlng.length === 2) ? a.end_latlng : null);
+        if (coords) addPoint(coords[0], coords[1]);
+      });
+
+      let points = [];
+      if (Object.keys(coordCounts).length > 0) {
+        points = Object.entries(coordCounts).map(([k, count]) => {
+          const [lat, lng] = k.split(',').map(Number);
+          return { lat, lng, intensity: count };
+        });
+      } else {
+        // Fallback to country centroids (less dense)
+        points = countries.map(c => ({
+          lat: getCountryLatLng(c.country).lat,
+          lng: getCountryLatLng(c.country).lng,
+          intensity: c.count
+        }));
+      }
 
       // Calcular centro del mapa
       const avgLat = points.reduce((sum, p) => sum + p.lat, 0) / points.length;
@@ -827,21 +872,18 @@ export async function renderWrappedTab(allActivities, options = {}) {
         maxZoom: 18
       }).addTo(map);
 
-      // Preparar datos para el heatmap
+      // Preparar datos para el heatmap: use aggregated counts as weight
       const maxIntensity = Math.max(...points.map(p => p.intensity));
-      // Boost intensity so hotspots are more visible; cap to avoid oversaturation
-      const heatmapData = points.map(p => [
-        p.lat,
-        p.lng,
-        Math.min(1.6, (p.intensity / (maxIntensity || 1)) * 1.4) // normalize & amplify
-      ]);
+      const heatmapData = points.map(p => [p.lat, p.lng, p.intensity]);
 
-      // Añadir capa de heatmap con parámetros más agresivos y gradiente más llamativo
+      // Añadir capa de heatmap con parámetros ajustados para mayor densidad
+      // Use smaller radius and blur for denser clusters; set minOpacity so low-density areas are visible
       L.heatLayer(heatmapData, {
-        radius: 70,
-        blur: 25,
+        radius: 25,
+        blur: 15,
         maxZoom: 10,
-        max: 1.6,
+        max: Math.max(1, maxIntensity),
+        minOpacity: 0.25,
         gradient: {
           0.0: '#0d47a1',
           0.2: '#1976d2',
