@@ -59,7 +59,7 @@ function renderRecordStats(runs) {
     const newestRun = [...runs].sort((a, b) => new Date(b.start_date_local) - new Date(a.start_date_local))[0];
     const timeDiffMs = new Date(newestRun.start_date_local) - new Date(oldestRun.start_date_local);
     const timeDiffDays = Math.floor(timeDiffMs / (1000 * 60 * 60 * 24));
-   
+
     const hourCounts = Array(24).fill(0);
     runs.forEach(run => {
         let hour = new Date(run.start_date_local).getHours();
@@ -92,6 +92,12 @@ function renderRecordStats(runs) {
         ? `${Math.floor(avgPaceMin)}:${Math.round((avgPaceMin % 1) * 60).toString().padStart(2, '0')}`
         : '-';
 
+    // Solo vs Group workouts
+    const soloCount = runs.filter(r => Number(r.athlete_count) === 1).length;
+    const groupCount = runs.length - soloCount;
+    const soloPct = runs.length ? ((soloCount / runs.length) * 100).toFixed(1) : 0;
+    const groupPct = runs.length ? ((groupCount / runs.length) * 100).toFixed(1) : 0;
+
     container.innerHTML = `
             <ul style="list-style: none; padding-left: 0; line-height: 1.8;">
                 <li><strong>Longest Run:</strong> ${(longestRun.distance / 1000).toFixed(2)} km (<a href="html/activity.html?id=${longestRun.id}" target="_blank">View</a>)</li>
@@ -102,6 +108,8 @@ function renderRecordStats(runs) {
                 <li><strong>Favourite Day:</strong> ${favDay}</li>
                 <li><strong>Average Distance:</strong> ${avgDist} km</li>
                 <li><strong>Average Pace:</strong> ${avgPaceStr} /km</li>
+                <li><strong>Solo Workouts:</strong> ${soloCount} (${soloPct}%)</li>
+                <li><strong>Group Workouts:</strong> ${groupCount} (${groupPct}%)</li>
             </ul>
         `;
 }
