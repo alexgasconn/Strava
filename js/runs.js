@@ -129,7 +129,38 @@ export function renderRunsTab(allActivities) {
             return `<tr>${cells}<td><a href="html/activity.html?id=${act.id}" target="_blank"><button>View</button></a></td></tr>`;
         }).join('');
 
-        container.innerHTML = tableHeader + `<tbody>${tableBody}</tbody>`;
+        // Build full table HTML and wrap in a horizontally scrollable container with hover-scroll controls
+        const tableHtml = `
+            <div class="table-scroll-wrapper" style="position:relative;">
+                <div style="overflow:auto; width:100%;">
+                    <table style="border-collapse:collapse; table-layout:auto; width:100%;">
+                        ${tableHeader}
+                        <tbody>${tableBody}</tbody>
+                    </table>
+                </div>
+                <div class="scroll-controls" style="position:absolute; top:6px; right:6px; display:flex; flex-direction:column; gap:6px;">
+                    <div class="scroll-left" style="background:rgba(0,0,0,0.06); padding:6px; border-radius:4px; cursor:pointer;">◀</div>
+                    <div class="scroll-right" style="background:rgba(0,0,0,0.06); padding:6px; border-radius:4px; cursor:pointer;">▶</div>
+                </div>
+            </div>`;
+
+        container.innerHTML = tableHtml;
+        // Attach hover/click scroll behavior
+        const wrapper = container.querySelector('.table-scroll-wrapper > div');
+        const btnLeft = container.querySelector('.scroll-left');
+        const btnRight = container.querySelector('.scroll-right');
+        let scrollInterval = null;
+        function startScroll(dir) {
+            stopScroll();
+            scrollInterval = setInterval(() => { wrapper.scrollLeft += dir * 40; }, 40);
+        }
+        function stopScroll() { if (scrollInterval) { clearInterval(scrollInterval); scrollInterval = null; } }
+        btnLeft.addEventListener('mouseenter', () => startScroll(-1));
+        btnLeft.addEventListener('mouseleave', stopScroll);
+        btnRight.addEventListener('mouseenter', () => startScroll(1));
+        btnRight.addEventListener('mouseleave', stopScroll);
+        btnLeft.addEventListener('click', () => { wrapper.scrollLeft -= 300; });
+        btnRight.addEventListener('click', () => { wrapper.scrollLeft += 300; });
     }
 
     function renderPersonalBests(container, runs) {
@@ -230,7 +261,7 @@ export function renderRunsTab(allActivities) {
 
         // Columns requested by the user
         const columns = [
-            'name', 'start_date_local', 'distance', 'moving_time', 'moving_ratio', 'average_speed', 'average_heartrate', 'max_heartrate', 'vo2max', 'tss', 'tss_method', 'atl', 'ctl', 'tsb', 'injuryRisk', 'suffer_score', 'total_elevation_gain', 'elev_high', 'elev_low', 'average_cadence', 'average_temp', 'device_name', 'gear_id', 'achievement_count', 'kudos_count', 'comment_count', 'pr_count', 'workout_type', 'workout_type_classified', 'athlete_count', 'timezone'
+            'name', 'start_date_local', 'distance', 'moving_time', 'moving_ratio', 'average_speed', 'average_heartrate', 'max_heartrate', 'vo2max', 'tss', 'atl', 'ctl', 'tsb', 'injuryRisk', 'suffer_score', 'total_elevation_gain', 'elev_high', 'elev_low', 'average_cadence', 'average_temp', 'device_name', 'gear_id', 'achievement_count', 'kudos_count', 'comment_count', 'pr_count', 'workout_type_classified', 'athlete_count',
         ];
 
         // Ordenamos las carreras de más reciente a más antigua para la tabla
@@ -257,11 +288,14 @@ export function renderRunsTab(allActivities) {
                 if ((col === 'moving_time' || col === 'elapsed_time') && typeof val === 'number') val = new Date(val * 1000).toISOString().substr(11, 8);
                 if (col === 'start_date_local' && typeof val === 'string') val = val.substring(0, 19).replace('T', ' ');
                 if (col === 'average_speed' && typeof val === 'number') val = (val).toFixed(3) + ' m/s';
-                return `<td style="max-width:260px; overflow-wrap:anywhere;">${formatVal(val)}</td>`;
+                // Make the 'name' column slightly narrower with ellipsis, allow others to size naturally
+                if (col === 'name') {
+                    return `<td style="max-width:320px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${formatVal(val)}</td>`;
+                }
+                return `<td style="overflow-wrap:anywhere;">${formatVal(val)}</td>`;
             }).join('');
             return `<tr>${cells}<td><a href="html/activity.html?id=${act.id}" target="_blank"><button>View</button></a></td></tr>`;
         }).join('');
-
         let toggleBtn = '';
         if (sortedRuns.length > 10) {
             toggleBtn = `
@@ -273,7 +307,41 @@ export function renderRunsTab(allActivities) {
             `;
         }
 
-        container.innerHTML = toggleBtn + tableHeader + `<tbody>${tableBody}</tbody>`;
+        // Wrap table in scroll wrapper with hover controls
+        const tableHtml = `
+            <div class="table-scroll-wrapper" style="position:relative;">
+                ${toggleBtn}
+                <div style="overflow:auto; width:100%;">
+                    <table style="border-collapse:collapse; table-layout:auto; width:100%;">
+                        ${tableHeader}
+                        <tbody>${tableBody}</tbody>
+                    </table>
+                </div>
+                <div class="scroll-controls" style="position:absolute; top:6px; right:6px; display:flex; flex-direction:column; gap:6px;">
+                    <div class="scroll-left" style="background:rgba(0,0,0,0.06); padding:6px; border-radius:4px; cursor:pointer;">◀</div>
+                    <div class="scroll-right" style="background:rgba(0,0,0,0.06); padding:6px; border-radius:4px; cursor:pointer;">▶</div>
+                </div>
+            </div>`;
+
+        container.innerHTML = tableHtml;
+        // Attach hover/click scroll behavior
+        const wrapper = container.querySelector('.table-scroll-wrapper > div');
+        const btnLeft = container.querySelector('.scroll-left');
+        const btnRight = container.querySelector('.scroll-right');
+        let scrollInterval = null;
+        function startScroll(dir) {
+            stopScroll();
+            scrollInterval = setInterval(() => { wrapper.scrollLeft += dir * 40; }, 40);
+        }
+        function stopScroll() { if (scrollInterval) { clearInterval(scrollInterval); scrollInterval = null; } }
+        if (btnLeft && btnRight && wrapper) {
+            btnLeft.addEventListener('mouseenter', () => startScroll(-1));
+            btnLeft.addEventListener('mouseleave', stopScroll);
+            btnRight.addEventListener('mouseenter', () => startScroll(1));
+            btnRight.addEventListener('mouseleave', stopScroll);
+            btnLeft.addEventListener('click', () => { wrapper.scrollLeft -= 300; });
+            btnRight.addEventListener('click', () => { wrapper.scrollLeft += 300; });
+        }
 
         if (sortedRuns.length > 10) {
             document.getElementById('toggle-all-runs-btn').onclick = () => {
