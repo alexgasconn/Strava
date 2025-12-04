@@ -89,24 +89,70 @@ export function renderRunsTab(allActivities) {
         return String(v);
     }
 
+    // Sorting helper: returns a sorted copy of activities by `col` and `dir` ('asc'|'desc')
+    function sortActivities(acts, col, dir) {
+        if (!col) return acts.slice();
+        const factor = dir === 'desc' ? -1 : 1;
+        function valueFor(act) {
+            if (col === 'moving_ratio') {
+                const mt = getNested(act, 'moving_time');
+                const et = getNested(act, 'elapsed_time');
+                if (typeof mt === 'number' && typeof et === 'number' && et > 0) return mt / et;
+                return -Infinity;
+            }
+            const v = getNested(act, col);
+            if (v == null) return '';
+            // Date-like
+            if (col === 'start_date_local' && typeof v === 'string') {
+                const t = Date.parse(v);
+                return isNaN(t) ? String(v).toLowerCase() : t;
+            }
+            if (typeof v === 'number') return v;
+            // moving_time/elapsed_time as numbers
+            if ((col === 'moving_time' || col === 'elapsed_time') && typeof v === 'number') return v;
+            // distance in meters -> numeric
+            if (col === 'distance' && typeof v === 'number') return v;
+            return String(v).toLowerCase();
+        }
+        return acts.slice().sort((a, b) => {
+            const va = valueFor(a);
+            const vb = valueFor(b);
+            const na = typeof va === 'number';
+            const nb = typeof vb === 'number';
+            if (na && nb) {
+                if (va === vb) return 0;
+                return (va - vb) * factor;
+            }
+            // Fallback to string compare
+            const sa = String(va || '');
+            const sb = String(vb || '');
+            return sa.localeCompare(sb) * factor;
+        });
+    }
+
     // Render the races table (filtered workout_type === 1)
     function renderRaceList(allRuns) {
         const container = document.getElementById('race-list');
         if (!container) return;
         const races = allRuns.filter(act => act.workout_type === 1);
+        // provide default sort state on container
+        if (!container.dataset.sortCol) { container.dataset.sortCol = 'start_date_local'; container.dataset.sortDir = 'desc'; }
+        const sortCol = container.dataset.sortCol;
+        const sortDir = container.dataset.sortDir || 'desc';
+        const sortedRaces = sortActivities(races, sortCol, sortDir);
         if (races.length === 0) {
             container.innerHTML = "<tbody><tr><td colspan='4'>No races found in this period.</td></tr></tbody>";
             return;
         }
 
         const columns = [
-            'name', 'start_date_local', 'distance', 'moving_time', 'moving_ratio', 'average_speed', 'average_heartrate', 'max_heartrate', 'vo2max', 'tss', 'tss_method', 'atl', 'ctl', 'tsb', 'injuryRisk', 'suffer_score',
+            'name', 'start_date_local', 'distance', 'moving_time', 'moving_ratio', 'average_speed', 'average_heartrate', 'max_heartrate', 'vo2max', 'tss', 'atl', 'ctl', 'tsb', 'injuryRisk', 'suffer_score',
             'total_elevation_gain', 'elev_high', 'elev_low', 'average_cadence', 'average_temp', 'device_name', 'gear_id',
-            'achievement_count', 'kudos_count', 'comment_count', 'pr_count', 'workout_type', 'workout_type_classified', 'athlete_count', 'timezone'
+            'achievement_count', 'kudos_count', 'comment_count', 'pr_count', 'workout_type_classified', 'athlete_count'
         ];
 
-        const tableHeader = `<thead><tr>${columns.map(c => `<th style="white-space:nowrap;">${c}</th>`).join('')}<th>Details</th></tr></thead>`;
-        const tableBody = races.map(act => {
+        const tableHeader = `<thead><tr>${columns.map(c => `<th class="sortable" data-col="${c}" style="white-space:nowrap; cursor:pointer;">${c} <span class="sort-indicator"></span></th>`).join('')}<th>Details</th></tr></thead>`;
+        const tableBody = sortedRaces.map(act => {
             const cells = columns.map(col => {
                 let val;
                 if (col === 'moving_ratio') {
@@ -161,6 +207,23 @@ export function renderRunsTab(allActivities) {
         btnRight.addEventListener('mouseleave', stopScroll);
         btnLeft.addEventListener('click', () => { wrapper.scrollLeft -= 300; });
         btnRight.addEventListener('click', () => { wrapper.scrollLeft += 300; });
+        // Attach sorting click handlers for headers
+        container.querySelectorAll('th.sortable').forEach(th => {
+            th.addEventListener('click', () => {
+                const col = th.dataset.col;
+                let dir = 'desc';
+                if (container.dataset.sortCol === col) dir = container.dataset.sortDir === 'desc' ? 'asc' : 'desc';
+                container.dataset.sortCol = col;
+                container.dataset.sortDir = dir;
+                renderRaceList(allRuns);
+            });
+            const ind = th.querySelector('.sort-indicator');
+            if (container.dataset.sortCol === th.dataset.col) {
+                ind.textContent = container.dataset.sortDir === 'desc' ? '▼' : '▲';
+            } else {
+                ind.textContent = '';
+            }
+        });
     }
 
     function renderPersonalBests(container, runs) {
@@ -264,12 +327,15 @@ export function renderRunsTab(allActivities) {
             'name', 'start_date_local', 'distance', 'moving_time', 'moving_ratio', 'average_speed', 'average_heartrate', 'max_heartrate', 'vo2max', 'tss', 'atl', 'ctl', 'tsb', 'injuryRisk', 'suffer_score', 'total_elevation_gain', 'elev_high', 'elev_low', 'average_cadence', 'average_temp', 'device_name', 'gear_id', 'achievement_count', 'kudos_count', 'comment_count', 'pr_count', 'workout_type_classified', 'athlete_count',
         ];
 
-        // Ordenamos las carreras de más reciente a más antigua para la tabla
-        const sortedRuns = [...allRuns].sort((a, b) => new Date(b.start_date_local) - new Date(a.start_date_local));
+        // Use container dataset to persist sort choice
+        if (!container.dataset.sortCol) { container.dataset.sortCol = 'start_date_local'; container.dataset.sortDir = 'desc'; }
+        const sortCol = container.dataset.sortCol;
+        const sortDir = container.dataset.sortDir || 'desc';
+        const sortedRuns = sortActivities(allRuns, sortCol, sortDir);
         let showAll = container.getAttribute('data-show-all') === 'true';
         const runsToShow = showAll ? sortedRuns : sortedRuns.slice(0, 10);
 
-        const tableHeader = `<thead><tr>${columns.map(c => `<th style="white-space:nowrap;">${c}</th>`).join('')}<th>Details</th></tr></thead>`;
+        const tableHeader = `<thead><tr>${columns.map(c => `<th class="sortable" data-col="${c}" style="white-space:nowrap; cursor:pointer;">${c} <span class="sort-indicator"></span></th>`).join('')}<th>Details</th></tr></thead>`;
         const tableBody = runsToShow.map(act => {
             const cells = columns.map(col => {
                 let val;
@@ -342,6 +408,24 @@ export function renderRunsTab(allActivities) {
             btnLeft.addEventListener('click', () => { wrapper.scrollLeft -= 300; });
             btnRight.addEventListener('click', () => { wrapper.scrollLeft += 300; });
         }
+
+        // Attach sorting click handlers for headers
+        container.querySelectorAll('th.sortable').forEach(th => {
+            th.addEventListener('click', () => {
+                const col = th.dataset.col;
+                let dir = 'desc';
+                if (container.dataset.sortCol === col) dir = container.dataset.sortDir === 'desc' ? 'asc' : 'desc';
+                container.dataset.sortCol = col;
+                container.dataset.sortDir = dir;
+                renderAllRunsTable(allRuns);
+            });
+            const ind = th.querySelector('.sort-indicator');
+            if (container.dataset.sortCol === th.dataset.col) {
+                ind.textContent = container.dataset.sortDir === 'desc' ? '▼' : '▲';
+            } else {
+                ind.textContent = '';
+            }
+        });
 
         if (sortedRuns.length > 10) {
             document.getElementById('toggle-all-runs-btn').onclick = () => {
