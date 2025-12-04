@@ -62,6 +62,67 @@ export function renderRunsTab(allActivities) {
 
     renderAllRunsTable(runs);
 
+    // Shared helpers for table rendering (used by both race and all-runs)
+    function getNested(obj, path) {
+        if (!obj || !path) return undefined;
+        const parts = path.split('.');
+        let cur = obj;
+        for (const p of parts) {
+            if (cur == null) return undefined;
+            cur = cur[p];
+        }
+        return cur;
+    }
+
+    function formatVal(v) {
+        if (v === null || v === undefined) return '';
+        if (Array.isArray(v)) return v.join(', ');
+        if (typeof v === 'object') {
+            if (v.summary_polyline) {
+                const s = String(v.summary_polyline);
+                return `${v.id || ''} | poly: ${s.length > 120 ? s.substring(0, 120) + '...' : s}`;
+            }
+            if (v.id) return `${v.id}${v.resource_state ? ' (rs:' + v.resource_state + ')' : ''}`;
+            try { return JSON.stringify(v); } catch (e) { return String(v); }
+        }
+        if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+        return String(v);
+    }
+
+    // Render the races table (filtered workout_type === 1)
+    function renderRaceList(allRuns) {
+        const container = document.getElementById('race-list');
+        if (!container) return;
+        const races = allRuns.filter(act => act.workout_type === 1);
+        if (races.length === 0) {
+            container.innerHTML = "<tbody><tr><td colspan='4'>No races found in this period.</td></tr></tbody>";
+            return;
+        }
+
+        const columns = [
+            'id', 'name', 'start_date_local', 'distance', 'moving_time', 'elapsed_time', 'average_speed', 'max_speed',
+            'average_heartrate', 'max_heartrate', 'vo2max', 'tss', 'tss_method', 'atl', 'ctl', 'tsb', 'injuryRisk', 'suffer_score',
+            'total_elevation_gain', 'elev_high', 'elev_low', 'average_cadence', 'average_temp', 'device_name', 'gear_id',
+            'achievement_count', 'kudos_count', 'comment_count', 'pr_count', 'photo_count', 'visibility', 'private', 'commute',
+            'trainer', 'sport_type', 'workout_type', 'workout_type_classified', 'athlete_count', 'athlete.id', 'map.id', 'map.summary_polyline', 'external_id', 'upload_id_str', 'timezone'
+        ];
+
+        const tableHeader = `<thead><tr>${columns.map(c => `<th style="white-space:nowrap;">${c}</th>`).join('')}<th>Details</th></tr></thead>`;
+        const tableBody = races.map(act => {
+            const cells = columns.map(col => {
+                let val = getNested(act, col);
+                if (col === 'distance' && typeof val === 'number') val = (val / 1000).toFixed(2) + ' km';
+                if ((col === 'moving_time' || col === 'elapsed_time') && typeof val === 'number') val = new Date(val * 1000).toISOString().substr(11, 8);
+                if (col === 'start_date_local' && typeof val === 'string') val = val.substring(0, 19).replace('T', ' ');
+                if (col === 'average_speed' && typeof val === 'number') val = (val).toFixed(3) + ' m/s';
+                return `<td style="max-width:260px; overflow-wrap:anywhere;">${formatVal(val)}</td>`;
+            }).join('');
+            return `<tr>${cells}<td><a href="html/activity.html?id=${act.id}" target="_blank"><button>View</button></a></td></tr>`;
+        }).join('');
+
+        container.innerHTML = tableHeader + `<tbody>${tableBody}</tbody>`;
+    }
+
     function renderPersonalBests(container, runs) {
         // --- Helpers local to PBs ---
         function formatTime(sec) {
