@@ -120,38 +120,100 @@ export function renderRunsTab(allActivities) {
     }
 
 
+    const runFields = [
+        // Key info
+        "start_date_local", "name", "distance", "moving_time", "elapsed_time", "average_speed",
+        "average_cadence", "average_heartrate", "max_heartrate", "average_temp",
+
+        // Training metrics
+        "vo2max", "tss", "atl", "ctl", "tsb", "suffer_score", "injuryRisk",
+
+        // Metadata
+        "device_name", "workout_type_classified", "sport_type",
+        "elev_high", "elev_low", "total_elevation_gain",
+        "achievement_count", "pr_count", "kudos_count", "comment_count",
+
+        // Flags
+        "commute", "manual", "private", "flagged",
+
+        // IDs & misc (last)
+        "id", "upload_id", "external_id", "gear_id",
+        "start_latlng", "end_latlng", "map"
+    ];
+
+
+
 
     // Tu función original para renderizar la lista de carreras
     function renderRaceList(allRuns) {
         const container = document.getElementById('race-list');
         if (!container) return;
-
         // Aquí filtramos las actividades donde workout_type es 1 para identificar carreras
         const races = allRuns.filter(act => act.workout_type === 1);
         console.log(`Found ${races.length} races.`);
-        console.log(races);
         if (races.length === 0) {
-            container.innerHTML = "<tbody><tr><td colspan='6'>No races found in this period.</td></tr></tbody>";
+            container.innerHTML = "<tbody><tr><td colspan='4'>No races found in this period.</td></tr></tbody>";
             return;
         }
 
-        const tableHeader = `<thead><tr><th>Date</th><th>Name</th><th>Distance</th><th>Time</th><th>Pace</th><th>Details</th></tr></thead>`;
+        // Columns to display (ordered)
+        const columns = [
+            'id', 'name', 'start_date_local', 'distance', 'moving_time', 'elapsed_time', 'average_speed', 'max_speed',
+            'average_heartrate', 'max_heartrate', 'vo2max', 'tss', 'tss_method', 'atl', 'ctl', 'tsb', 'injuryRisk', 'suffer_score',
+            'total_elevation_gain', 'elev_high', 'elev_low', 'average_cadence', 'average_temp', 'device_name', 'gear_id',
+            'achievement_count', 'kudos_count', 'comment_count', 'pr_count', 'photo_count', 'visibility', 'private', 'commute',
+            'trainer', 'sport_type', 'workout_type', 'workout_type_classified', 'athlete_count', 'athlete.id', 'map.id', 'map.summary_polyline', 'external_id', 'upload_id_str', 'timezone'
+        ];
+
+        function getNested(obj, path) {
+            if (!obj || !path) return undefined;
+            const parts = path.split('.');
+            let cur = obj;
+            for (const p of parts) {
+                if (cur == null) return undefined;
+                cur = cur[p];
+            }
+            return cur;
+        }
+
+        function formatVal(v) {
+            if (v === null || v === undefined) return '';
+            if (Array.isArray(v)) return v.join(', ');
+            if (typeof v === 'object') {
+                // Special-case map.summary_polyline truncation
+                if (typeof v === 'string') return v;
+                // For small objects, show key:val pairs
+                const keys = Object.keys(v);
+                if (keys.length === 0) return '';
+                if (v.summary_polyline) {
+                    const s = String(v.summary_polyline);
+                    return `${v.id || ''} | poly: ${s.length > 120 ? s.substring(0, 120) + '...' : s}`;
+                }
+                // If object has id, return id and resource_state
+                if (v.id) return `${v.id}${v.resource_state ? ' (rs:' + v.resource_state + ')' : ''}`;
+                try { return JSON.stringify(v); } catch (e) { return String(v); }
+            }
+            if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+            // Numbers that look like ms seconds for moving_time/elapsed_time were handled elsewhere; format moving_time specially if needed
+            return String(v);
+        }
+
+        const tableHeader = `<thead><tr>${columns.map(c => `<th style="white-space:nowrap;">${c}</th>`).join('')}</tr></thead>`;
         const tableBody = races.map(act => {
-            const distKm = (act.distance / 1000).toFixed(2);
-            // Tu lógica de formato de tiempo para raceList
-            const timeStr = new Date(act.moving_time * 1000).toISOString().substr(11, 8);
-            const paceMin = act.distance > 0 ? (act.moving_time / 60) / (act.distance / 1000) : 0;
-            // Tu lógica de formato de ritmo para raceList
-            const paceStr = paceMin > 0 ? `${Math.floor(paceMin)}:${Math.round((paceMin % 1) * 60).toString().padStart(2, '0')}` : '-';
-            return `<tr>
-                <td>${act.start_date_local.substring(0, 10)}</td>
-                <td>${act.name}</td>
-                <td>${distKm} km</td>
-                <td>${timeStr}</td>
-                <td>${paceStr} /km</td>
-                <td><a href="html/activity.html?id=${act.id}" target="_blank"><button>View</button></a></td>
-            </tr>`;
+            const cells = columns.map(col => {
+                let val = getNested(act, col);
+                // format some known fields
+                if (col === 'distance' && typeof val === 'number') val = (val / 1000).toFixed(2) + ' km';
+                if ((col === 'moving_time' || col === 'elapsed_time') && typeof val === 'number') val = new Date(val * 1000).toISOString().substr(11, 8);
+                if (col === 'start_date_local' && typeof val === 'string') val = val.substring(0, 19).replace('T', ' ');
+                if (col === 'average_speed' && typeof val === 'number') val = (val).toFixed(3) + ' m/s';
+                if ((col === 'average_heartrate' || col === 'max_heartrate' || col === 'average_cadence' || col === 'average_temp' || col === 'vo2max' || col === 'tss' || col === 'atl' || col === 'ctl' || col === 'tsb' || col === 'injuryRisk' || col === 'suffer_score') && typeof val === 'number') val = String(val);
+                return `<td style="max-width:260px; overflow-wrap:anywhere;">${formatVal(val)}</td>`;
+            }).join('');
+            // add quick View button as last column
+            return `<tr>${cells}<td><a href="html/activity.html?id=${act.id}" target="_blank"><button>View</button></a></td></tr>`;
         }).join('');
+
         container.innerHTML = tableHeader + `<tbody>${tableBody}</tbody>`;
     }
 
@@ -162,8 +224,43 @@ export function renderRunsTab(allActivities) {
         if (!container) return;
 
         if (allRuns.length === 0) {
-            container.innerHTML = "<tbody><tr><td colspan='6'>No runs found in this period.</td></tr></tbody>";
+            container.innerHTML = "<tbody><tr><td colspan='4'>No runs found in this period.</td></tr></tbody>";
             return;
+        }
+
+        // Use same columns as race list for comprehensive view
+        const columns = [
+            'id', 'name', 'start_date_local', 'distance', 'moving_time', 'elapsed_time', 'average_speed', 'max_speed',
+            'average_heartrate', 'max_heartrate', 'vo2max', 'tss', 'tss_method', 'atl', 'ctl', 'tsb', 'injuryRisk', 'suffer_score',
+            'total_elevation_gain', 'elev_high', 'elev_low', 'average_cadence', 'average_temp', 'device_name', 'gear_id',
+            'achievement_count', 'kudos_count', 'comment_count', 'pr_count', 'photo_count', 'visibility', 'private', 'commute',
+            'trainer', 'sport_type', 'workout_type', 'workout_type_classified', 'athlete_count', 'athlete.id', 'map.id', 'map.summary_polyline', 'external_id', 'upload_id_str', 'timezone'
+        ];
+
+        function getNested(obj, path) {
+            if (!obj || !path) return undefined;
+            const parts = path.split('.');
+            let cur = obj;
+            for (const p of parts) {
+                if (cur == null) return undefined;
+                cur = cur[p];
+            }
+            return cur;
+        }
+
+        function formatVal(v) {
+            if (v === null || v === undefined) return '';
+            if (Array.isArray(v)) return v.join(', ');
+            if (typeof v === 'object') {
+                if (v.summary_polyline) {
+                    const s = String(v.summary_polyline);
+                    return `${v.id || ''} | poly: ${s.length > 120 ? s.substring(0, 120) + '...' : s}`;
+                }
+                if (v.id) return `${v.id}${v.resource_state ? ' (rs:' + v.resource_state + ')' : ''}`;
+                try { return JSON.stringify(v); } catch (e) { return String(v); }
+            }
+            if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+            return String(v);
         }
 
         // Ordenamos las carreras de más reciente a más antigua para la tabla
@@ -171,22 +268,17 @@ export function renderRunsTab(allActivities) {
         let showAll = container.getAttribute('data-show-all') === 'true';
         const runsToShow = showAll ? sortedRuns : sortedRuns.slice(0, 10);
 
-        const tableHeader = `<thead><tr><th>Date</th><th>Name</th><th>Distance</th><th>Time</th><th>Pace</th><th>Details</th></tr></thead>`;
+        const tableHeader = `<thead><tr>${columns.map(c => `<th style="white-space:nowrap;">${c}</th>`).join('')}<th>Details</th></tr></thead>`;
         const tableBody = runsToShow.map(act => {
-            const distKm = (act.distance / 1000).toFixed(2);
-            // Tu lógica de formato de tiempo para allRunsTable
-            const timeStr = new Date(act.moving_time * 1000).toISOString().substr(11, 8);
-            const paceMin = act.distance > 0 ? (act.moving_time / 60) / (act.distance / 1000) : 0;
-            // Tu lógica de formato de ritmo para allRunsTable
-            const paceStr = paceMin > 0 ? `${Math.floor(paceMin)}:${Math.round((paceMin % 1) * 60).toString().padStart(2, '0')}` : '-';
-            return `<tr>
-                <td>${act.start_date_local.substring(0, 10)}</td>
-                <td>${act.name}</td>
-                <td>${distKm} km</td>
-                <td>${timeStr}</td>
-                <td>${paceStr} /km</td>
-                <td><a href="html/activity.html?id=${act.id}" target="_blank"><button>View</button></a></td>
-            </tr>`;
+            const cells = columns.map(col => {
+                let val = getNested(act, col);
+                if (col === 'distance' && typeof val === 'number') val = (val / 1000).toFixed(2) + ' km';
+                if ((col === 'moving_time' || col === 'elapsed_time') && typeof val === 'number') val = new Date(val * 1000).toISOString().substr(11, 8);
+                if (col === 'start_date_local' && typeof val === 'string') val = val.substring(0, 19).replace('T', ' ');
+                if (col === 'average_speed' && typeof val === 'number') val = (val).toFixed(3) + ' m/s';
+                return `<td style="max-width:260px; overflow-wrap:anywhere;">${formatVal(val)}</td>`;
+            }).join('');
+            return `<tr>${cells}<td><a href="html/activity.html?id=${act.id}" target="_blank"><button>View</button></a></td></tr>`;
         }).join('');
 
         let toggleBtn = '';
