@@ -119,6 +119,173 @@ export function renderRunsTab(allActivities) {
     `;
     }
 
+    // --- Table helpers: sortable, hideable, responsive wrapper with hover-scroll ---
+    function getNested(obj, path) {
+        if (!obj || !path) return undefined;
+        const parts = path.split('.');
+        let cur = obj;
+        for (const p of parts) {
+            if (cur == null) return undefined;
+            cur = cur[p];
+        }
+        return cur;
+    }
+
+    function formatVal(v) {
+        if (v === null || v === undefined) return '';
+        if (Array.isArray(v)) return v.join(', ');
+        if (typeof v === 'object') {
+            if (v.summary_polyline) {
+                const s = String(v.summary_polyline);
+                return `${v.id || ''} | poly: ${s.length > 120 ? s.substring(0, 120) + '...' : s}`;
+            }
+            if (v.id) return `${v.id}${v.resource_state ? ' (rs:' + v.resource_state + ')' : ''}`;
+            try { return JSON.stringify(v); } catch (e) { return String(v); }
+        }
+        if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+        return String(v);
+    }
+
+    function makeTableControls(container, rows, columns, opts = {}) {
+        // container: DOM element where table will be rendered
+        // rows: array of objects
+        // columns: array of property paths
+        // opts: { showToggle: boolean }
+
+        // read persisted state from container.dataset
+        const ds = container.dataset;
+        let visible = ds.visibleColumns ? JSON.parse(ds.visibleColumns) : columns.slice();
+        let sortCol = ds.sortCol || null;
+        let sortDir = ds.sortDir ? Number(ds.sortDir) : 1; // 1 asc, -1 desc
+
+        function saveState() {
+            ds.visibleColumns = JSON.stringify(visible);
+            ds.sortCol = sortCol || '';
+            ds.sortDir = String(sortDir);
+        }
+
+        function renderTableData(rowsToRender) {
+            // build header
+            const headerCells = visible.map(c => `
+                <th data-col="${c}" class="col-header" style="white-space:nowrap;">${c}
+                    <button class="hide-col" data-col="${c}" title="Hide column" style="margin-left:6px;">✕</button>
+                </th>`).join('');
+
+            // build rows
+            const bodyRows = rowsToRender.map(act => {
+                const tds = visible.map(col => {
+                    let val = getNested(act, col);
+                    if (col === 'distance' && typeof val === 'number') val = (val / 1000).toFixed(2) + ' km';
+                    if ((col === 'moving_time' || col === 'elapsed_time') && typeof val === 'number') val = new Date(val * 1000).toISOString().substr(11, 8);
+                    if (col === 'start_date_local' && typeof val === 'string') val = val.substring(0, 19).replace('T', ' ');
+                    if (col === 'average_speed' && typeof val === 'number') val = (val).toFixed(3) + ' m/s';
+                    return `<td style="overflow-wrap:anywhere; max-width:400px;">${formatVal(val)}</td>`;
+                }).join('');
+                return `<tr>${tds}<td><a href="html/activity.html?id=${act.id}" target="_blank"><button>View</button></a></td></tr>`;
+            }).join('');
+
+            // compose full table
+            const tableHTML = `
+                <div class="wide-table-wrapper" style="position:relative;">
+                    <table class="wide-table" style="border-collapse:collapse; table-layout:auto; width:100%;">
+                        <thead><tr>${headerCells}<th>Details</th></tr></thead>
+                        <tbody>${bodyRows}</tbody>
+                    </table>
+                    <div class="scroll-hints" style="position:absolute; top:0; right:0; height:100%; display:flex; flex-direction:column; justify-content:center; gap:8px; pointer-events:none;">
+                        <div class="scroll-btn scroll-left" style="pointer-events:auto; background:rgba(0,0,0,0.05); padding:6px; border-radius:4px; cursor:pointer;">◀</div>
+                        <div class="scroll-btn scroll-right" style="pointer-events:auto; background:rgba(0,0,0,0.05); padding:6px; border-radius:4px; cursor:pointer;">▶</div>
+                    </div>
+                </div>`;
+
+            // wrap table in overflow container
+            const wrapper = document.createElement('div');
+            wrapper.className = 'table-overflow';
+            wrapper.style.overflow = 'auto';
+            wrapper.style.width = '100%';
+            wrapper.innerHTML = tableHTML;
+
+            // replace container contents
+            container.innerHTML = '';
+            container.appendChild(wrapper);
+
+            // attach event listeners
+            // header sort
+            container.querySelectorAll('.col-header').forEach(th => {
+                th.style.cursor = 'pointer';
+                th.addEventListener('click', (e) => {
+                    const col = th.getAttribute('data-col');
+                    // toggle sort
+                    if (sortCol === col) sortDir = -sortDir; else sortDir = 1;
+                    sortCol = col;
+                    saveState();
+                    render();
+                });
+            });
+
+            // hide column
+            container.querySelectorAll('.hide-col').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const col = btn.getAttribute('data-col');
+                    visible = visible.filter(c => c !== col);
+                    saveState();
+                    render();
+                });
+            });
+
+            // scroll hints
+            const overflowEl = wrapper;
+            const btnLeft = container.querySelector('.scroll-left');
+            const btnRight = container.querySelector('.scroll-right');
+            let scrollInterval = null;
+            function startScroll(dir) {
+                stopScroll();
+                scrollInterval = setInterval(() => { overflowEl.scrollLeft += dir * 40; }, 40);
+            }
+            function stopScroll() { if (scrollInterval) { clearInterval(scrollInterval); scrollInterval = null; } }
+            btnLeft.addEventListener('mouseenter', () => startScroll(-1));
+            btnLeft.addEventListener('mouseleave', stopScroll);
+            btnRight.addEventListener('mouseenter', () => startScroll(1));
+            btnRight.addEventListener('mouseleave', stopScroll);
+            btnLeft.addEventListener('click', () => { overflowEl.scrollLeft -= 200; });
+            btnRight.addEventListener('click', () => { overflowEl.scrollLeft += 200; });
+        }
+
+        function render() {
+            // compute rowsToRender with sorting
+            let rowsCopy = rows.slice();
+            if (sortCol) {
+                rowsCopy.sort((a, b) => {
+                    const av = getNested(a, sortCol);
+                    const bv = getNested(b, sortCol);
+                    // try numeric compare
+                    const an = Number(av);
+                    const bn = Number(bv);
+                    if (!isNaN(an) && !isNaN(bn)) return (an - bn) * sortDir;
+                    // date compare
+                    if (typeof av === 'string' && Date.parse(av) && typeof bv === 'string' && Date.parse(bv)) return (new Date(av) - new Date(bv)) * sortDir;
+                    const as = String(av || '').toLowerCase();
+                    const bs = String(bv || '').toLowerCase();
+                    if (as < bs) return -1 * sortDir; if (as > bs) return 1 * sortDir; return 0;
+                });
+            }
+            // apply showAll handling if provided
+            let rowsToRender = rowsCopy;
+            if (opts.showToggle) {
+                const showAll = container.getAttribute('data-show-all') === 'true';
+                if (!showAll) rowsToRender = rowsCopy.slice(0, 10);
+            }
+            renderTableData(rowsToRender);
+        }
+
+        // expose a small API on container for external toggles
+        container._tableReRender = render;
+        // initialize saved visible columns if not present
+        if (!ds.visibleColumns) saveState();
+        render();
+    }
+
+
 
     const runFields = [
         // Key info
