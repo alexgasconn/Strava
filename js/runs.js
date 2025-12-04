@@ -170,7 +170,10 @@ export function renderRunsTab(allActivities) {
                 if ((col === 'moving_time' || col === 'elapsed_time') && typeof val === 'number') val = new Date(val * 1000).toISOString().substr(11, 8);
                 if (col === 'start_date_local' && typeof val === 'string') val = val.substring(0, 19).replace('T', ' ');
                 if (col === 'average_speed' && typeof val === 'number') val = (val).toFixed(3) + ' m/s';
-                return `<td style="max-width:260px; overflow-wrap:anywhere;">${formatVal(val)}</td>`;
+                if (col === 'name') {
+                    return `<td style="max-width:320px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${formatVal(val)}</td>`;
+                }
+                return `<td style="overflow-wrap:anywhere;">${formatVal(val)}</td>`;
             }).join('');
             return `<tr>${cells}<td><a href="html/activity.html?id=${act.id}" target="_blank"><button>View</button></a></td></tr>`;
         }).join('');
