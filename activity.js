@@ -970,7 +970,7 @@ function renderHrMinMaxAreaChartHr(streams) {
 
 
 function renderHrMinMaxAreaChartPace(streams) {
-    const canvas = document.getElementById('pace-minmax-area-chart');
+    const canvas = document.getElementById('pace-min-max-area-chart');
     const section = document.getElementById('pace-min-max-area-section');
 
     if (!canvas || !section || !streams.distance || !streams.pace) return;
