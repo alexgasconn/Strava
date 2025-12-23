@@ -175,53 +175,57 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.chartInstance = null;
     }
 
-    // Construir barras flotantes con distancia real
+    // Labels por lap (1, 2, 3...)
+    const labels = laps.map((_, i) => `Lap ${i + 1}`);
+
+    // Barras flotantes con ancho real
     let cumulativeKm = 0;
-    const bars = laps.map(lap => {
-        const startKm = cumulativeKm;
+    const data = laps.map(lap => {
+        const start = cumulativeKm;
         const lapKm = lap.distance / 1000;
-        const endKm = startKm + lapKm;
-        cumulativeKm = endKm;
+        cumulativeKm += lapKm;
 
         return {
-            x: [startKm, endKm],        // ancho real del lap
-            y: 1000 / lap.average_speed // pace
+            x: [start, cumulativeKm],
+            pace: 1000 / lap.average_speed
         };
     });
 
     canvas.chartInstance = new Chart(canvas, {
         type: 'bar',
         data: {
+            labels,
             datasets: [{
                 label: 'Pace (min/km)',
-                data: bars,
+                data,
                 backgroundColor: '#FC5200',
                 borderColor: '#E64A19',
                 borderWidth: 2,
-                parsing: false
+                parsing: {
+                    xAxisKey: 'x',
+                    yAxisKey: null
+                }
             }]
         },
         options: {
             responsive: true,
-            indexAxis: 'y', // 🔑 CLAVE
+            indexAxis: 'y',
             scales: {
                 x: {
                     type: 'linear',
                     title: {
                         display: true,
-                        text: 'Distance! (km)'
+                        text: 'Distance (km)'
                     }
                 },
                 y: {
-                    reverse: true,
                     title: {
                         display: true,
-                        text: 'Pace (min/km)'
+                        text: 'Lap'
                     }
                 }
             },
             plugins: {
-                legend: { display: true },
                 tooltip: {
                     callbacks: {
                         title: ctx => {
@@ -246,6 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 }
+
 
 
 
