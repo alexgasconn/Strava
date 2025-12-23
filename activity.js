@@ -421,6 +421,14 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // --- CONFIGURACIÓN DE WINDOW SIZE POR STREAM ---
+        const windowSizes = {
+            altitude: 50,
+            pace: 100,
+            heartrate: 80,
+            cadence: 60
+        };
+
         // Limpia los gráficos previos si los hay
         ['chart-altitude', 'chart-pace-distance', 'chart-heart-distance', 'chart-cadence-distance'].forEach(id => {
             const canvas = document.getElementById(id);
@@ -435,9 +443,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Helper para crear gráficos bonitos y limpios
         function createStreamChart(canvasId, label, data, color, yAxisReverse = false) {
-            const ctx = document.getElementById(canvasId).getContext('2d');
-            if (ctx.canvas.chartInstance) ctx.canvas.chartInstance.destroy();
-            ctx.canvas.chartInstance = new Chart(ctx, {
+            const ctx = document.getElementById(canvasId);
+            if (!ctx) {
+                console.warn(`Canvas element not found: ${canvasId}`);
+                return;
+            }
+            if (ctx.chartInstance) ctx.chartInstance.destroy();
+            ctx.chartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: distLabels,
@@ -466,7 +478,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 1. Altitud vs Distance
         if (altitude && altitude.data) {
-            createStreamChart('chart-altitude', 'Altitud (m)', altitude.data, '#888');
+            const smoothAltitude = rollingMean(altitude.data, windowSizes.altitude);
+            createStreamChart('chart-altitude', 'Altitud (m)', smoothAltitude, '#888');
+        } else {
+            const altCanvas = document.getElementById('chart-altitude');
+            if (altCanvas) altCanvas.parentElement.innerHTML = '<p>⚠️ Altitude data not available</p>';
         }
 
         // 2. Ritmo vs Distance (Cálculo corregido)
@@ -483,47 +499,61 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             // Aplica rolling mean al ritmo calculado
-            const windowSize = 100; // Usa el mismo windowSize que para los streams
-            const smoothPaceStreamData = rollingMean(paceStreamData, windowSize);
+            const smoothPaceStreamData = rollingMean(paceStreamData, windowSizes.pace);
 
             const paceLabels = distLabels.slice(1);
-            const ctx = document.getElementById('chart-pace-distance').getContext('2d');
-            if (ctx.canvas.chartInstance) ctx.canvas.chartInstance.destroy();
-            ctx.canvas.chartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: paceLabels,
-                    datasets: [{
-                        label: 'Ritmo (min/km)',
-                        data: smoothPaceStreamData,
-                        borderColor: '#FC5200',
-                        backgroundColor: 'rgba(252, 82, 0, 0.07)',
-                        fill: false,
-                        pointRadius: 0,
-                        borderWidth: 2,
-                        tension: 0.3
-                    }]
-                },
-                options: {
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { title: { display: true, text: 'Distance (km)' } },
-                        y: { reverse: true, title: { display: true, text: 'Ritmo (min/km)' } }
+            const ctx = document.getElementById('chart-pace-distance');
+            if (!ctx) {
+                console.warn('Canvas element not found: chart-pace-distance');
+            } else {
+                if (ctx.chartInstance) ctx.chartInstance.destroy();
+                ctx.chartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: paceLabels,
+                        datasets: [{
+                            label: 'Ritmo (min/km)',
+                            data: smoothPaceStreamData,
+                            borderColor: '#FC5200',
+                            backgroundColor: 'rgba(252, 82, 0, 0.07)',
+                            fill: false,
+                            pointRadius: 0,
+                            borderWidth: 2,
+                            tension: 0.3
+                        }]
+                    },
+                    options: {
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { title: { display: true, text: 'Distance (km)' } },
+                            y: { reverse: true, title: { display: true, text: 'Ritmo (min/km)' } }
+                        }
                     }
-                }
-            });
+                });
+            }
+        } else {
+            const paceCanvas = document.getElementById('chart-pace-distance');
+            if (paceCanvas) paceCanvas.parentElement.innerHTML = '<p>⚠️ Pace data not available</p>';
         }
 
         // 3. Frecuencia Cardíaca vs Distance
         if (heartrate && heartrate.data) {
-            createStreamChart('chart-heart-distance', 'FC (bpm)', heartrate.data, 'red');
+            const smoothHeartrate = rollingMean(heartrate.data, windowSizes.heartrate);
+            createStreamChart('chart-heart-distance', 'FC (bpm)', smoothHeartrate, 'red');
+        } else {
+            const hrCanvas = document.getElementById('chart-heart-distance');
+            if (hrCanvas) hrCanvas.parentElement.innerHTML = '<p>⚠️ Heart rate data not available</p>';
         }
 
         // 4. Cadencia vs Distance
         if (cadence && cadence.data) {
             // La cadencia de carrera se multiplica por 2 (es por pierna)
             const cadenceData = act.type === 'Run' ? cadence.data.map(c => c * 2) : cadence.data;
-            createStreamChart('chart-cadence-distance', 'Cadencia (spm)', cadenceData, '#0074D9');
+            const smoothCadence = rollingMean(cadenceData, windowSizes.cadence);
+            createStreamChart('chart-cadence-distance', 'Cadencia (spm)', smoothCadence, '#0074D9');
+        } else {
+            const cadenceCanvas = document.getElementById('chart-cadence-distance');
+            if (cadenceCanvas) cadenceCanvas.parentElement.innerHTML = '<p>⚠️ Cadence data not available</p>';
         }
     }
 
