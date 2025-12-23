@@ -170,13 +170,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         section.classList.remove('hidden');
 
-        // Calculate cumulative distances
+        // Calculate cumulative distances and lap distances in km
         let cumulativeDistance = 0;
         const cumulativeDistances = laps.map(lap => {
             cumulativeDistance += lap.distance / 1000;
             return cumulativeDistance.toFixed(2);
         });
 
+        const lapDistancesKm = laps.map(lap => lap.distance / 1000);
         const paces = laps.map(lap => 1000 / lap.average_speed);
 
         if (canvas.chartInstance) {
@@ -221,14 +222,27 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 },
                 scales: {
-                    x: { title: { display: true, text: 'Distance (km)' } },
+                    x: { 
+                        title: { display: true, text: 'Distance (km)' },
+                        barPercentage: 1.0,
+                        categoryPercentage: 'auto'
+                    },
                     y: { 
                         reverse: true,
                         title: { display: true, text: 'Pace (min/km)' },
                         beginAtZero: false
                     }
                 }
-            }
+            },
+            plugins: [{
+                afterDatasetsDraw(chart) {
+                    const totalDistance = lapDistancesKm.reduce((a, b) => a + b, 0);
+                    chart.getDatasetMeta(0).data.forEach((datapoint, index) => {
+                        const barWidth = (lapDistancesKm[index] / totalDistance) * 100;
+                        datapoint.width = barWidth;
+                    });
+                }
+            }]
         });
     }
 
