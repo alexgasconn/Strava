@@ -660,7 +660,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const classificationResults = classifyRun(activityData, streamData);
             renderClassifierResults(classificationResults);
-            renderHrMinMaxAreaChart(streamData);
+            renderHrMinMaxAreaChartHr(streamData);
+            renderHrMinMaxAreaChartPace(streamData);
             renderHrZoneDistributionChart(streamData);
 
             streamChartsDiv.style.display = '';
@@ -868,7 +869,7 @@ function renderHrZoneDistributionChart(streams) {
 }
 
 
-function renderHrMinMaxAreaChart(streams) {
+function renderHrMinMaxAreaChartHr(streams) {
     const canvas = document.getElementById('hr-minmax-area-chart');
     const section = document.getElementById('hr-min-max-area-section');
 
@@ -962,6 +963,106 @@ function renderHrMinMaxAreaChart(streams) {
             scales: {
                 x: { title: { display: true, text: 'Distance (km)' } },
                 y: { title: { display: true, text: 'Heart Rate (bpm)' }, beginAtZero: false }
+            }
+        }
+    });
+}
+
+
+function renderHrMinMaxAreaChartPace(streams) {
+    const canvas = document.getElementById('pace-minmax-area-chart');
+    const section = document.getElementById('pace-min-max-area-section');
+
+    if (!canvas || !section || !streams.distance || !streams.pace) return;
+
+    const pace = streams.pace.data;
+    const dist = streams.distance.data;
+    if (!Array.isArray(pace) || !Array.isArray(dist) || pace.length !== dist.length || pace.length < 2) return;
+
+    section.classList.remove('hidden');
+
+    const N_SEGMENTS = 40;
+    const totalDist = dist[dist.length - 1];
+    const segmentLength = totalDist / N_SEGMENTS;
+
+    const minArr = [], maxArr = [], avgArr = [], labels = [];
+    let segStart = 0, segEnd = segmentLength, i = 0;
+
+    for (let s = 0; s < N_SEGMENTS; s++) {
+        const paceVals = [];
+        while (i < dist.length && dist[i] < segEnd) {
+            if (pace[i] !== null && pace[i] !== undefined) paceVals.push(pace[i]);
+            i++;
+        }
+
+        if (paceVals.length === 0) {
+            minArr.push(minArr.length ? minArr[minArr.length - 1] : null);
+            maxArr.push(maxArr.length ? maxArr[maxArr.length - 1] : null);
+            avgArr.push(avgArr.length ? avgArr[avgArr.length - 1] : null);
+        } else {
+            minArr.push(Math.min(...paceVals));
+            maxArr.push(Math.max(...paceVals));
+            avgArr.push(paceVals.reduce((a, b) => a + b, 0) / paceVals.length);
+        }
+
+        labels.push((segEnd / 1000).toFixed(2));
+        segStart = segEnd;
+        segEnd += segmentLength;
+    }
+
+    if (canvas.chartInstance) {
+        canvas.chartInstance.destroy();
+        canvas.chartInstance = null;
+    }
+
+    canvas.chartInstance = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Pace Min',
+                    data: minArr,
+                    fill: '+1',
+                    backgroundColor: 'rgba(0, 123, 255, 0.3)',
+                    borderColor: 'rgba(0, 123, 255, 0.6)',
+                    pointRadius: 0,
+                    order: 1
+                },
+                {
+                    label: 'Pace Max',
+                    data: maxArr,
+                    fill: '-1',
+                    backgroundColor: 'rgba(0, 123, 255, 0.3)',
+                    borderColor: 'rgba(0, 123, 255, 0.6)',
+                    pointRadius: 0,
+                    order: 1
+                },
+                {
+                    label: 'Pace Avg',
+                    data: avgArr,
+                    fill: false,
+                    borderColor: '#007BFF',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    order: 2
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: true },
+                tooltip: {
+                    callbacks: {
+                        label: context =>
+                            `${context.dataset.label}: ${Math.round(context.parsed.y)} min/km`
+                    }
+                }
+            },
+            scales: {
+                x: { title: { display: true, text: 'Distance (km)' } },
+                y: { title: { display: true, text: 'Pace (min/km)' }, beginAtZero: false }
             }
         }
     });
