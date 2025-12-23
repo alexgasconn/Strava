@@ -175,10 +175,10 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.chartInstance = null;
     }
 
-    // Labels por lap (1, 2, 3...)
+    // Labels por lap
     const labels = laps.map((_, i) => `Lap ${i + 1}`);
 
-    // Barras flotantes con ancho real
+    // Barras flotantes (distancia real)
     let cumulativeKm = 0;
     const data = laps.map(lap => {
         const start = cumulativeKm;
@@ -186,8 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cumulativeKm += lapKm;
 
         return {
-            x: [start, cumulativeKm],
-            pace: 1000 / lap.average_speed
+            x: [start, cumulativeKm]
         };
     });
 
@@ -202,8 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 borderColor: '#E64A19',
                 borderWidth: 2,
                 parsing: {
-                    xAxisKey: 'x',
-                    yAxisKey: null
+                    xAxisKey: 'x'
                 }
             }]
         },
@@ -229,8 +227,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 tooltip: {
                     callbacks: {
                         title: ctx => {
-                            const lap = ctx[0].raw;
-                            return `${lap.x[0].toFixed(2)} – ${lap.x[1].toFixed(2)} km`;
+                            const raw = ctx[0].raw;
+                            return `${raw.x[0].toFixed(2)} – ${raw.x[1].toFixed(2)} km`;
                         },
                         label: ctx => {
                             const lap = laps[ctx.dataIndex];
@@ -250,8 +248,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 }
-
-
 
 
 
