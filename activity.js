@@ -209,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     type: 'linear',
                     title: {
                         display: true,
-                        text: 'Distance (km)'
+                        text: 'Distance! (km)'
                     }
                 },
                 y: {
