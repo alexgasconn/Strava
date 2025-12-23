@@ -175,35 +175,38 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.chartInstance = null;
     }
 
-    // Cumulative distance in km
-    let cumulativeKm = 0;
-    const data = laps.map(lap => {
-        cumulativeKm += lap.distance / 1000;
-        return {
-            x: cumulativeKm,
-            y: 1000 / lap.average_speed
-        };
+    // Lap labels and data
+    const labels = laps.map((_, i) => `Lap ${i + 1}`);
+    const paces = laps.map(lap => 1000 / lap.average_speed);
+
+    // Color bars by pace (faster = darker)
+    const minPace = Math.min(...paces);
+    const maxPace = Math.max(...paces);
+
+    const colors = paces.map(pace => {
+        const t = (pace - minPace) / (maxPace - minPace || 1);
+        const lightness = 35 + t * 35;
+        return `hsl(15, 90%, ${lightness}%)`;
     });
 
     canvas.chartInstance = new Chart(canvas, {
         type: 'bar',
         data: {
+            labels,
             datasets: [{
                 label: 'Pace (min/km)',
-                data,
-                backgroundColor: '#FC5200',
-                borderColor: '#E64A19',
-                borderWidth: 2
+                data: paces,
+                backgroundColor: colors,
+                borderRadius: 4
             }]
         },
         options: {
             responsive: true,
             scales: {
                 x: {
-                    type: 'linear',
                     title: {
                         display: true,
-                        text: 'Distance (km)'
+                        text: 'Lap'
                     }
                 },
                 y: {
@@ -216,9 +219,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             },
             plugins: {
+                legend: { display: false },
                 tooltip: {
                     callbacks: {
-                        title: ctx => `${ctx[0].raw.x.toFixed(2)} km`,
+                        title: ctx => labels[ctx[0].dataIndex],
                         label: ctx => {
                             const lap = laps[ctx.dataIndex];
                             return `Pace: ${formatPace(lap.average_speed)}`;
@@ -226,6 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         afterLabel: ctx => {
                             const lap = laps[ctx.dataIndex];
                             return [
+                                `Distance: ${(lap.distance / 1000).toFixed(2)} km`,
                                 `Time: ${formatTime(lap.moving_time)}`,
                                 `Elevation: ${Math.round(lap.total_elevation_gain)} m`,
                                 `Avg HR: ${lap.average_heartrate ? Math.round(lap.average_heartrate) : '-'} bpm`
@@ -237,6 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 }
+
 
 
 
