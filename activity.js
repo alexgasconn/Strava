@@ -175,39 +175,40 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.chartInstance = null;
     }
 
-    // Labels por lap
-    const labels = laps.map((_, i) => `Lap ${i + 1}`);
-
-    // Barras flotantes (distancia real)
+    // Build cumulative distance (km)
     let cumulativeKm = 0;
-    const data = laps.map(lap => {
-        const start = cumulativeKm;
+    const points = laps.map(lap => {
         const lapKm = lap.distance / 1000;
+        const centerX = cumulativeKm + lapKm / 2;
         cumulativeKm += lapKm;
 
         return {
-            x: [start, cumulativeKm]
+            x: centerX,
+            y: 1000 / lap.average_speed,
+            lapKm
         };
     });
+
+    // Convert km → pixels for bar width
+    const totalKm = points.reduce((a, p) => a + p.lapKm, 0);
+    const chartWidthPx = canvas.clientWidth || 600;
+    const pxPerKm = chartWidthPx / totalKm;
 
     canvas.chartInstance = new Chart(canvas, {
         type: 'bar',
         data: {
-            labels,
             datasets: [{
                 label: 'Pace (min/km)',
-                data,
+                data: points,
                 backgroundColor: '#FC5200',
                 borderColor: '#E64A19',
                 borderWidth: 2,
-                parsing: {
-                    xAxisKey: 'x'
-                }
+                parsing: false,
+                barThickness: ctx => ctx.raw.lapKm * pxPerKm
             }]
         },
         options: {
             responsive: true,
-            indexAxis: 'y',
             scales: {
                 x: {
                     type: 'linear',
@@ -217,9 +218,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 },
                 y: {
+                    reverse: true,
+                    beginAtZero: false,
                     title: {
                         display: true,
-                        text: 'Lap'
+                        text: 'Pace (min/km)'
                     }
                 }
             },
@@ -227,8 +230,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 tooltip: {
                     callbacks: {
                         title: ctx => {
-                            const raw = ctx[0].raw;
-                            return `${raw.x[0].toFixed(2)} – ${raw.x[1].toFixed(2)} km`;
+                            const p = ctx[0].raw;
+                            const start = p.x - p.lapKm / 2;
+                            const end = p.x + p.lapKm / 2;
+                            return `${start.toFixed(2)} – ${end.toFixed(2)} km`;
                         },
                         label: ctx => {
                             const lap = laps[ctx.dataIndex];
@@ -248,6 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 }
+
 
 
 
