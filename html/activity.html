@@ -87,36 +87,43 @@
       </div>
     </div>
 
-    <div id="best-efforts-section" class="data-section hidden">
-      <h3>🏆 Best Efforts</h3>
-      <p>Your fastest times recorded during this activity for standard distances.</p>
-      <div class="table-container">
-        <table id="best-efforts-table" class="df-table"></table>
+    <div class="side-by-side-container">
+      <div id="laps-section" class="data-section hidden">
+        <h3>🔄 Laps</h3>
+        <p>Data for each lap, either auto-laps (e.g., every 1km) or manual laps you recorded.</p>
+        <div class="table-container">
+          <table id="laps-table" class="df-table"></table>
+        </div>
+      </div>
+
+      <div id="laps-chart-section" class="data-section hidden">
+        <h3>📊 Laps Chart</h3>
+        <div class="chart-container">
+          <canvas id="laps-chart"></canvas>
+        </div>
       </div>
     </div>
 
-    <div id="laps-section" class="data-section hidden">
-      <h3>🔄 Laps</h3>
-      <p>Data for each lap, either auto-laps (e.g., every 1km) or manual laps you recorded.</p>
-      <div class="table-container">
-        <table id="laps-table" class="df-table"></table>
+
+
+    <div class="side-by-side-container">
+      <div id="best-efforts-section" class="data-section hidden">
+        <h3>🏆 Best Efforts</h3>
+        <p>Your fastest times recorded during this activity for standard distances.</p>
+        <div class="table-container">
+          <table id="best-efforts-table" class="df-table"></table>
+        </div>
+      </div>
+
+      <div id="segments-section" class="data-section hidden">
+        <h3>⛰️ Segment Efforts</h3>
+        <p>Your performance on Strava segments during this activity.</p>
+        <div class="table-container">
+          <table id="segments-table" class="df-table"></table>
+        </div>
       </div>
     </div>
 
-    <div id="laps-chart-section" class="data-section hidden">
-      <h3>📊 Laps Chart</h3>
-      <div class="chart-container">
-        <canvas id="laps-chart"></canvas>
-      </div>
-    </div>
-
-    <div id="segments-section" class="data-section hidden">
-      <h3>⛰️ Segment Efforts</h3>
-      <p>Your performance on Strava segments during this activity.</p>
-      <div class="table-container">
-        <table id="segments-table" class="df-table"></table>
-      </div>
-    </div>
 
 
 
@@ -124,9 +131,7 @@
   </div>
 
   <script src="../classifyRun.js"></script>
-  <!-- <script src="../js/activity.js"></script> -->
   <script src="../activity.js"></script>
-   <!-- <script src="js/activity.js" type="module"></script> -->
 
 
 
