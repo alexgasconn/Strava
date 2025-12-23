@@ -170,14 +170,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         section.classList.remove('hidden');
 
-        const lapNumbers = laps.map((_, i) => `Lap ${i + 1}`);
         const distances = laps.map(lap => (lap.distance / 1000).toFixed(2));
-        const paces = laps.map(lap => {
-            const paceInSecPerKm = 1000 / lap.average_speed;
-            const min = Math.floor(paceInSecPerKm / 60);
-            const sec = Math.round(paceInSecPerKm % 60);
-            return paceInSecPerKm;
-        });
+        const paces = laps.map(lap => 1000 / lap.average_speed);
 
         if (canvas.chartInstance) {
             canvas.chartInstance.destroy();
@@ -187,7 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.chartInstance = new Chart(canvas, {
             type: 'bar',
             data: {
-                labels: lapNumbers,
+                labels: distances,
                 datasets: [{
                     label: 'Pace (min/km)',
                     data: paces,
@@ -197,26 +191,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 }]
             },
             options: {
-                indexAxis: 'x',
                 responsive: true,
                 plugins: {
                     legend: { display: true },
                     tooltip: {
                         callbacks: {
-                            title: (context) => `${context[0].label}`,
+                            title: (context) => `${context[0].label} km`,
                             label: (context) => {
                                 const lapIndex = context.dataIndex;
                                 const lap = laps[lapIndex];
-                                const paceInSecPerKm = 1000 / lap.average_speed;
-                                const min = Math.floor(paceInSecPerKm / 60);
-                                const sec = Math.round(paceInSecPerKm % 60);
-                                return `Pace: ${min}:${sec.toString().padStart(2, '0')} min/km`;
+                                return `Pace: ${formatPace(lap.average_speed)}`;
                             },
                             afterLabel: (context) => {
                                 const lapIndex = context.dataIndex;
                                 const lap = laps[lapIndex];
                                 return [
-                                    `Distance: ${(lap.distance / 1000).toFixed(2)} km`,
                                     `Time: ${formatTime(lap.moving_time)}`,
                                     `Elevation: ${Math.round(lap.total_elevation_gain)} m`,
                                     `Avg HR: ${lap.average_heartrate ? Math.round(lap.average_heartrate) : '-'} bpm`
@@ -226,7 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 },
                 scales: {
-                    x: { title: { display: true, text: 'Laps' } },
+                    x: { title: { display: true, text: 'Distance (km)' } },
                     y: { 
                         reverse: true,
                         title: { display: true, text: 'Pace (min/km)' },
