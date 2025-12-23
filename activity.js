@@ -164,87 +164,88 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     function renderLapsChart(laps) {
-        const canvas = document.getElementById('laps-chart');
-        const section = document.getElementById('laps-chart-section');
-        if (!canvas || !section || !laps || laps.length === 0) return;
+    const canvas = document.getElementById('laps-chart');
+    const section = document.getElementById('laps-chart-section');
+    if (!canvas || !section || !laps || laps.length === 0) return;
 
-        section.classList.remove('hidden');
+    section.classList.remove('hidden');
 
-        // Calculate cumulative distances and lap distances in km
-        let cumulativeDistance = 0;
-        const cumulativeDistances = laps.map(lap => {
-            cumulativeDistance += lap.distance / 1000;
-            return cumulativeDistance.toFixed(2);
-        });
+    if (canvas.chartInstance) {
+        canvas.chartInstance.destroy();
+        canvas.chartInstance = null;
+    }
 
-        const lapDistancesKm = laps.map(lap => lap.distance / 1000);
-        const paces = laps.map(lap => 1000 / lap.average_speed);
+    // Construir barras con ancho real (km)
+    let cumulativeKm = 0;
+    const bars = laps.map(lap => {
+        const startKm = cumulativeKm;
+        const lapKm = lap.distance / 1000;
+        const endKm = startKm + lapKm;
+        cumulativeKm = endKm;
 
-        if (canvas.chartInstance) {
-            canvas.chartInstance.destroy();
-            canvas.chartInstance = null;
-        }
+        return {
+            x: [startKm, endKm],              // ancho proporcional a distancia
+            y: 1000 / lap.average_speed       // pace (min/km)
+        };
+    });
 
-        canvas.chartInstance = new Chart(canvas, {
-            type: 'bar',
-            data: {
-                labels: cumulativeDistances,
-                datasets: [{
-                    label: 'Pace (min/km)',
-                    data: paces,
-                    backgroundColor: '#FC5200',
-                    borderColor: '#E64A19',
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { display: true },
-                    tooltip: {
-                        callbacks: {
-                            title: (context) => `${context[0].label} km`,
-                            label: (context) => {
-                                const lapIndex = context.dataIndex;
-                                const lap = laps[lapIndex];
-                                return `Pace: ${formatPace(lap.average_speed)}`;
-                            },
-                            afterLabel: (context) => {
-                                const lapIndex = context.dataIndex;
-                                const lap = laps[lapIndex];
-                                return [
-                                    `Time: ${formatTime(lap.moving_time)}`,
-                                    `Elevation: ${Math.round(lap.total_elevation_gain)} m`,
-                                    `Avg HR: ${lap.average_heartrate ? Math.round(lap.average_heartrate) : '-'} bpm`
-                                ];
-                            }
-                        }
+    canvas.chartInstance = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            datasets: [{
+                label: 'Pace (min/km)',
+                data: bars,
+                backgroundColor: '#FC5200',
+                borderColor: '#E64A19',
+                borderWidth: 2,
+                parsing: false
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    type: 'linear',
+                    title: {
+                        display: true,
+                        text: 'Distance (km)'
                     }
                 },
-                scales: {
-                    x: { 
-                        title: { display: true, text: 'Distance (km)' },
-                        barPercentage: 1.0,
-                        categoryPercentage: 'auto'
-                    },
-                    y: { 
-                        reverse: true,
-                        title: { display: true, text: 'Pace (min/km)' },
-                        beginAtZero: false
+                y: {
+                    reverse: true,
+                    beginAtZero: false,
+                    title: {
+                        display: true,
+                        text: 'Pace (min/km)'
                     }
                 }
             },
-            plugins: [{
-                afterDatasetsDraw(chart) {
-                    const totalDistance = lapDistancesKm.reduce((a, b) => a + b, 0);
-                    chart.getDatasetMeta(0).data.forEach((datapoint, index) => {
-                        const barWidth = (lapDistancesKm[index] / totalDistance) * 100;
-                        datapoint.width = barWidth;
-                    });
+            plugins: {
+                legend: { display: true },
+                tooltip: {
+                    callbacks: {
+                        title: ctx => {
+                            const bar = ctx[0].raw;
+                            return `${bar.x[0].toFixed(2)} – ${bar.x[1].toFixed(2)} km`;
+                        },
+                        label: ctx => {
+                            const lap = laps[ctx.dataIndex];
+                            return `Pace: ${formatPace(lap.average_speed)}`;
+                        },
+                        afterLabel: ctx => {
+                            const lap = laps[ctx.dataIndex];
+                            return [
+                                `Time: ${formatTime(lap.moving_time)}`,
+                                `Elevation: ${Math.round(lap.total_elevation_gain)} m`,
+                                `Avg HR: ${lap.average_heartrate ? Math.round(lap.average_heartrate) : '-'} bpm`
+                            ];
+                        }
+                    }
                 }
-            }]
-        });
-    }
+            }
+        }
+    });
+}
 
 
 
