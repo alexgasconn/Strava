@@ -424,7 +424,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- CONFIGURACIÓN DE WINDOW SIZE POR STREAM ---
         const windowSizes = {
             altitude: 50,
-            pace: 100,
+            pace: 200,
             heartrate: 80,
             cadence: 60
         };
