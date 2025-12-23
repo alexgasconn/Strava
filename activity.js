@@ -175,36 +175,25 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.chartInstance = null;
     }
 
-    // Build cumulative distance (km)
+    // Cumulative distance in km
     let cumulativeKm = 0;
-    const points = laps.map(lap => {
-        const lapKm = lap.distance / 1000;
-        const centerX = cumulativeKm + lapKm / 2;
-        cumulativeKm += lapKm;
-
+    const data = laps.map(lap => {
+        cumulativeKm += lap.distance / 1000;
         return {
-            x: centerX,
-            y: 1000 / lap.average_speed,
-            lapKm
+            x: cumulativeKm,
+            y: 1000 / lap.average_speed
         };
     });
-
-    // Convert km → pixels for bar width
-    const totalKm = points.reduce((a, p) => a + p.lapKm, 0);
-    const chartWidthPx = canvas.clientWidth || 600;
-    const pxPerKm = chartWidthPx / totalKm;
 
     canvas.chartInstance = new Chart(canvas, {
         type: 'bar',
         data: {
             datasets: [{
                 label: 'Pace (min/km)',
-                data: points,
+                data,
                 backgroundColor: '#FC5200',
                 borderColor: '#E64A19',
-                borderWidth: 2,
-                parsing: false,
-                barThickness: ctx => ctx.raw.lapKm * pxPerKm
+                borderWidth: 2
             }]
         },
         options: {
@@ -229,12 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
             plugins: {
                 tooltip: {
                     callbacks: {
-                        title: ctx => {
-                            const p = ctx[0].raw;
-                            const start = p.x - p.lapKm / 2;
-                            const end = p.x + p.lapKm / 2;
-                            return `${start.toFixed(2)} – ${end.toFixed(2)} km`;
-                        },
+                        title: ctx => `${ctx[0].raw.x.toFixed(2)} km`,
                         label: ctx => {
                             const lap = laps[ctx.dataIndex];
                             return `Pace: ${formatPace(lap.average_speed)}`;
@@ -253,6 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 }
+
 
 
 
