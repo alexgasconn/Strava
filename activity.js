@@ -975,9 +975,9 @@ function renderHrMinMaxAreaChartPace(streams) {
 
     if (!canvas || !section || !streams.distance || !streams.pace) return;
 
-    const pace = streams.pace.data;
+    const paceRaw = streams.pace.data;      // sec / meter
     const dist = streams.distance.data;
-    if (!Array.isArray(pace) || !Array.isArray(dist) || pace.length !== dist.length || pace.length < 2) return;
+    if (!Array.isArray(paceRaw) || !Array.isArray(dist) || paceRaw.length !== dist.length || paceRaw.length < 2) return;
 
     section.classList.remove('hidden');
 
@@ -986,19 +986,24 @@ function renderHrMinMaxAreaChartPace(streams) {
     const segmentLength = totalDist / N_SEGMENTS;
 
     const minArr = [], maxArr = [], avgArr = [], labels = [];
-    let segStart = 0, segEnd = segmentLength, i = 0;
+    let segEnd = segmentLength;
+    let i = 0;
 
     for (let s = 0; s < N_SEGMENTS; s++) {
         const paceVals = [];
+
         while (i < dist.length && dist[i] < segEnd) {
-            if (pace[i] !== null && pace[i] !== undefined) paceVals.push(pace[i]);
+            if (paceRaw[i] != null) {
+                // sec/m → min/km
+                paceVals.push(paceRaw[i] * 1000 / 60);
+            }
             i++;
         }
 
         if (paceVals.length === 0) {
-            minArr.push(minArr.length ? minArr[minArr.length - 1] : null);
-            maxArr.push(maxArr.length ? maxArr[maxArr.length - 1] : null);
-            avgArr.push(avgArr.length ? avgArr[avgArr.length - 1] : null);
+            minArr.push(null);
+            maxArr.push(null);
+            avgArr.push(null);
         } else {
             minArr.push(Math.min(...paceVals));
             maxArr.push(Math.max(...paceVals));
@@ -1006,7 +1011,6 @@ function renderHrMinMaxAreaChartPace(streams) {
         }
 
         labels.push((segEnd / 1000).toFixed(2));
-        segStart = segEnd;
         segEnd += segmentLength;
     }
 
@@ -1018,25 +1022,23 @@ function renderHrMinMaxAreaChartPace(streams) {
     canvas.chartInstance = new Chart(canvas, {
         type: 'line',
         data: {
-            labels: labels,
+            labels,
             datasets: [
                 {
                     label: 'Pace Min',
                     data: minArr,
                     fill: '+1',
-                    backgroundColor: 'rgba(0, 123, 255, 0.3)',
-                    borderColor: 'rgba(0, 123, 255, 0.6)',
-                    pointRadius: 0,
-                    order: 1
+                    backgroundColor: 'rgba(0, 123, 255, 0.25)',
+                    borderColor: 'rgba(0, 123, 255, 0.5)',
+                    pointRadius: 0
                 },
                 {
                     label: 'Pace Max',
                     data: maxArr,
                     fill: '-1',
-                    backgroundColor: 'rgba(0, 123, 255, 0.3)',
-                    borderColor: 'rgba(0, 123, 255, 0.6)',
-                    pointRadius: 0,
-                    order: 1
+                    backgroundColor: 'rgba(0, 123, 255, 0.25)',
+                    borderColor: 'rgba(0, 123, 255, 0.5)',
+                    pointRadius: 0
                 },
                 {
                     label: 'Pace Avg',
@@ -1044,8 +1046,7 @@ function renderHrMinMaxAreaChartPace(streams) {
                     fill: false,
                     borderColor: '#007BFF',
                     borderWidth: 2,
-                    pointRadius: 0,
-                    order: 2
+                    pointRadius: 0
                 }
             ]
         },
@@ -1055,14 +1056,20 @@ function renderHrMinMaxAreaChartPace(streams) {
                 legend: { display: true },
                 tooltip: {
                     callbacks: {
-                        label: context =>
-                            `${context.dataset.label}: ${Math.round(context.parsed.y)} min/km`
+                        label: ctx =>
+                            `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)} min/km`
                     }
                 }
             },
             scales: {
-                x: { title: { display: true, text: 'Distance (km)' } },
-                y: { title: { display: true, text: 'Pace (min/km)' }, beginAtZero: false }
+                x: {
+                    title: { display: true, text: 'Distance (km)' }
+                },
+                y: {
+                    reverse: true,
+                    beginAtZero: false,
+                    title: { display: true, text: 'Pace (min/km)' }
+                }
             }
         }
     });
