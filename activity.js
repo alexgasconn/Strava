@@ -170,7 +170,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         section.classList.remove('hidden');
 
-        const distances = laps.map(lap => (lap.distance / 1000).toFixed(2));
+        // Calculate cumulative distances
+        let cumulativeDistance = 0;
+        const cumulativeDistances = laps.map(lap => {
+            cumulativeDistance += lap.distance / 1000;
+            return cumulativeDistance.toFixed(2);
+        });
+
         const paces = laps.map(lap => 1000 / lap.average_speed);
 
         if (canvas.chartInstance) {
@@ -181,7 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.chartInstance = new Chart(canvas, {
             type: 'bar',
             data: {
-                labels: distances,
+                labels: cumulativeDistances,
                 datasets: [{
                     label: 'Pace (min/km)',
                     data: paces,
