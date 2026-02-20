@@ -13,7 +13,7 @@ let gearGanttChartInstance = null;
 export function renderGearTab(allActivities) {
     console.log("🎽 Initializing Gear Tab...");
 
-    const runs = allActivities.filter(a => 
+    const runs = allActivities.filter(a =>
         a.type && a.gear_id && a.gear_id.trim() !== ''
     );
 
@@ -37,10 +37,44 @@ export function renderGearTab(allActivities) {
         return;
     }
 
+    // Add filter buttons
+    addGearFilters(elements.section, runs);
+
     showElements(elements);
-    renderGearSection(runs);
-    renderGearChart(runs);
-    renderGearGanttChart(runs);
+    renderGearSection(runs, 'all');
+    renderGearChart(runs, 'all');
+    renderGearGanttChart(runs, 'all');
+}
+
+// ============================================================================
+// GEAR FILTERS
+// ============================================================================
+
+function addGearFilters(container, runs) {
+    const filterDiv = document.createElement('div');
+    filterDiv.id = 'gear-filters';
+    filterDiv.innerHTML = `
+        <button class="gear-filter-btn active" data-filter="all">All Gear</button>
+        <button class="gear-filter-btn" data-filter="shoe">👟 Shoes</button>
+        <button class="gear-filter-btn" data-filter="bike">🚴 Bikes</button>
+    `;
+    container.insertBefore(filterDiv, container.firstChild);
+
+    // Add event listeners
+    filterDiv.addEventListener('click', (e) => {
+        if (e.target.classList.contains('gear-filter-btn')) {
+            const filter = e.target.dataset.filter;
+            document.querySelectorAll('.gear-filter-btn').forEach(btn => btn.classList.remove('active'));
+            e.target.classList.add('active');
+            updateGearDisplay(runs, filter);
+        }
+    });
+}
+
+function updateGearDisplay(runs, filter) {
+    renderGearSection(runs, filter);
+    renderGearChart(runs, filter);
+    renderGearGanttChart(runs, filter);
 }
 
 // ============================================================================
@@ -80,18 +114,18 @@ function calculateGearMetrics(runs) {
 
     // Calculate averages
     gearMetrics.forEach(metrics => {
-        metrics.avgDistancePerUse = metrics.numUses > 0 
-            ? metrics.totalDistance / metrics.numUses 
+        metrics.avgDistancePerUse = metrics.numUses > 0
+            ? metrics.totalDistance / metrics.numUses
             : 0;
-        
+
         metrics.avgPace = (metrics.totalMovingTime > 0 && metrics.totalDistance > 0)
             ? metrics.totalMovingTime / (metrics.totalDistance / 1000)
             : 0;
-        
+
         metrics.avgElevationGainPerUse = metrics.numUses > 0
             ? metrics.totalElevationGain / metrics.numUses
             : 0;
-        
+
         metrics.numRuns = metrics.runs.length;
     });
 
@@ -102,17 +136,17 @@ function calculateGearMetrics(runs) {
 // GEAR SECTION RENDERING
 // ============================================================================
 
-async function renderGearSection(runs) {
+async function renderGearSection(runs, filter = 'all') {
     const container = document.getElementById('gear-info-section');
     const listContainer = document.getElementById('gear-info-list');
-    
+
     if (!container || !listContainer) {
         console.error("❌ Gear containers not found");
         return;
     }
 
     const gearMetrics = calculateGearMetrics(runs);
-    const gearIds = Array.from(gearMetrics.keys());
+    let gearIds = Array.from(gearMetrics.keys());
 
     if (gearIds.length === 0) {
         listContainer.innerHTML = '<p class="empty-state">No gear used in this period.</p>';
@@ -125,13 +159,18 @@ async function renderGearSection(runs) {
         const results = await Promise.all(gearIds.map(id => fetchGearById(id)));
         const gearDetailsMap = processGearDetails(results);
 
-        const combinedGearData = Array.from(gearDetailsMap.values()).map(gear => ({
+        let combinedGearData = Array.from(gearDetailsMap.values()).map(gear => ({
             gear: {
                 ...gear,
                 distance: gearMetrics.get(gear.id)?.totalDistance || 0
             },
             metrics: gearMetrics.get(gear.id) || {}
         }));
+
+        // Filter by type
+        if (filter !== 'all') {
+            combinedGearData = combinedGearData.filter(item => item.gear.type === filter);
+        }
 
         renderGearCards(combinedGearData);
     } catch (error) {
@@ -146,7 +185,7 @@ async function renderGearSection(runs) {
 
 function processGearDetails(results) {
     const gearDetailsMap = new Map();
-    
+
     const frameTypeMap = {
         1: 'MTB',
         2: 'CROSS',
@@ -215,7 +254,7 @@ function createGearCard(data, isEditMode) {
     const { gear, metrics } = data;
     const defaults = getDefaultValues(gear.type || 'unknown');
     const customData = getCustomData(gear.id);
-    
+
     const price = customData.price ?? defaults.price;
     const durationKm = customData.durationKm ?? defaults.durationKm;
     const totalKm = gear.distance / 1000;
@@ -248,8 +287,8 @@ function createGearCard(data, isEditMode) {
             
             ${stats}
             
-            ${needsReplacement && !gear.retired ? 
-                '<div class="replacement-alert">⚠️ Replacement Needed!</div>' : ''}
+            ${needsReplacement && !gear.retired ?
+            '<div class="replacement-alert">⚠️ Replacement Needed!</div>' : ''}
             
             ${editSection}
         </div>
@@ -358,7 +397,7 @@ function handleSaveGear(btn, combinedGearData) {
     const gearId = btn.getAttribute('data-gearid');
     const priceInput = document.getElementById(`price-${gearId}`);
     const durationInput = document.getElementById(`duration-${gearId}`);
-    
+
     const price = parseFloat(priceInput.value);
     const durationKm = parseInt(durationInput.value, 10);
 
@@ -370,7 +409,7 @@ function handleSaveGear(btn, combinedGearData) {
     localStorage.setItem(`gear-custom-${gearId}`, JSON.stringify({ price, durationKm }));
     btn.textContent = '✅';
     btn.classList.add('saved');
-    
+
     setTimeout(() => renderGearCards(combinedGearData), 600);
     showNotification('Gear updated successfully!', 'success');
 }
@@ -400,7 +439,7 @@ function showNotification(message, type = 'info') {
     notification.className = `notification notification-${type}`;
     notification.textContent = message;
     document.body.appendChild(notification);
-    
+
     setTimeout(() => notification.classList.add('show'), 10);
     setTimeout(() => {
         notification.classList.remove('show');
@@ -415,7 +454,7 @@ function showNotification(message, type = 'info') {
 function validateElements(elements) {
     const required = ['section', 'list', 'chartContainer', 'chartCanvas', 'ganttContainer', 'ganttCanvas'];
     const missing = required.filter(key => !elements[key]);
-    
+
     if (missing.length > 0) {
         console.error(`❌ Missing elements: ${missing.join(', ')}`);
         return false;
@@ -431,7 +470,7 @@ function showError(container, message) {
 
 function showEmptyState(elements) {
     elements.list.innerHTML = '<div class="empty-state">📭 No gear data available</div>';
-    
+
     if (gearChartInstance) {
         gearChartInstance.destroy();
         gearChartInstance = null;
@@ -440,7 +479,7 @@ function showEmptyState(elements) {
         gearGanttChartInstance.destroy();
         gearGanttChartInstance = null;
     }
-    
+
     if (elements.chartContainer) elements.chartContainer.style.display = 'none';
     if (elements.ganttContainer) elements.ganttContainer.style.display = 'none';
 }
@@ -452,7 +491,7 @@ function showElements(elements) {
 
 
 // Función mejorada para renderizar el gráfico de uso de equipo (Gráfico de líneas)
-async function renderGearChart(runs) {
+async function renderGearChart(runs, filter = 'all') {
     const canvas = document.getElementById('gearChart');
     const container = document.getElementById('gear-chart-container');
     if (!canvas) {
@@ -461,8 +500,28 @@ async function renderGearChart(runs) {
         return;
     }
 
+    // Filter runs by gear type
+    let filteredRuns = runs;
+    if (filter !== 'all') {
+        // Need to fetch gear details to know type
+        const gearIds = Array.from(new Set(runs.map(a => a.gear_id).filter(Boolean)));
+        if (gearIds.length > 0) {
+            try {
+                const results = await Promise.all(gearIds.map(id => fetchGearById(id)));
+                const gearDetailsMap = processGearDetails(results);
+                const validGearIds = Array.from(gearDetailsMap.values())
+                    .filter(gear => gear.type === filter)
+                    .map(gear => gear.id);
+                filteredRuns = runs.filter(run => validGearIds.includes(run.gear_id));
+            } catch (error) {
+                console.error("Failed to fetch gear details for chart filter:", error);
+                filteredRuns = runs; // fallback
+            }
+        }
+    }
+
     // Si no hay runs, esconder y destruir gráfico previo
-    if (!runs || runs.length === 0) {
+    if (!filteredRuns || filteredRuns.length === 0) {
         if (gearChartInstance) { gearChartInstance.destroy(); gearChartInstance = null; }
         if (container) container.style.display = 'none';
         return;
@@ -476,6 +535,10 @@ async function renderGearChart(runs) {
         gearChartInstance = null;
     }
 
+    // Update title
+    const title = filter === 'all' ? 'Distance per Gear' : filter === 'shoe' ? 'Distance per Shoe' : 'Distance per Bike';
+    container.querySelector('h4').textContent = title;
+
     // Helper: hex -> rgba
     const hexToRgba = (hex, alpha = 1) => {
         const h = hex.replace('#', '');
@@ -488,7 +551,7 @@ async function renderGearChart(runs) {
 
     // Agrupar por fecha (YYYY-MM-DD) y gear
     const gearUsageByDate = new Map();
-    for (const run of runs) {
+    for (const run of filteredRuns) {
         if (!run || !run.start_date_local || !run.gear_id) continue;
         const date = new Date(run.start_date_local);
         if (isNaN(date.getTime())) continue;
@@ -523,33 +586,26 @@ async function renderGearChart(runs) {
         }
     }
 
-    // Construir datasets (km por fecha)
+    // Construir datasets (km acumulado por fecha)
     const colors = ['#007bff', '#28a745', '#ffc107', '#dc3545', '#6c757d', '#17a2b8', '#fd7e14', '#e83e8c'];
     const datasets = [];
     uniqueGearIds.forEach((gearId, idx) => {
         const color = colors[idx % colors.length];
+        let cumulative = 0;
         const data = allDates.map(dateStr => {
             const daily = gearUsageByDate.get(dateStr);
             const meters = daily && daily.has(gearId) ? daily.get(gearId) : 0;
-            return +(meters / 1000).toFixed(3); // km, número
+            cumulative += meters;
+            return +(cumulative / 1000).toFixed(1); // km acumulado
         });
 
-        // Evita series completamente nulas (opcionales: las puedes mostrar igualmente)
-        const hasNonZero = data.some(v => v > 0);
-        if (!hasNonZero) {
-            // Si quieres mostrar igualmente series vacías, deja pasar; ahora las salto para claridad
-            return;
-        }
-
         datasets.push({
-            label: gearIdToName.get(gearId) || `Gear ID: ${gearId}`,
+            label: gearIdToName.get(gearId) || `Gear ${gearId.slice(-6)}`,
             data,
             borderColor: color,
-            backgroundColor: hexToRgba(color, 0.18),
-            fill: true,
-            tension: 0.3,
-            borderWidth: 2,
-            pointRadius: 0
+            backgroundColor: hexToRgba(color, 0.1),
+            fill: false,
+            tension: 0.1
         });
     });
 
@@ -570,7 +626,7 @@ async function renderGearChart(runs) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                title: { display: true, text: 'Distance per Gear Over Time' },
+                title: { display: true, text: 'Cumulative Distance Over Time' },
                 tooltip: {
                     mode: 'index',
                     intersect: false,
@@ -606,7 +662,7 @@ async function renderGearChart(runs) {
 
 
 
-export async function renderGearGanttChart(runs) {
+export async function renderGearGanttChart(runs, filter = 'all') {
     const ctx = document.getElementById('gear-gantt-chart');
     if (!ctx) {
         console.error("Canvas element 'gear-gantt-chart' not found for renderGearGanttChart.");
@@ -617,7 +673,7 @@ export async function renderGearGanttChart(runs) {
         gearGanttChartInstance.destroy();
     }
 
-    const gearIds = Array.from(new Set(runs.map(a => a.gear_id).filter(Boolean)));
+    let gearIds = Array.from(new Set(runs.map(a => a.gear_id).filter(Boolean)));
 
     if (gearIds.length === 0) {
         return;
@@ -626,18 +682,27 @@ export async function renderGearGanttChart(runs) {
     let gearIdToName = new Map(); // Usar Map en lugar de objeto para mayor flexibilidad con IDs
     try {
         const results = await Promise.all(gearIds.map(id => fetchGearById(id)));
-        results.forEach(result => {
-            const gear = result.gear;
-            if (gear) {
-                gearIdToName.set(gear.id, gear.name || [gear.brand_name, gear.model_name].filter(Boolean).join(' '));
-            }
+        const gearDetailsMap = processGearDetails(results);
+
+        // Filter gears by type
+        let filteredGears = Array.from(gearDetailsMap.values());
+        if (filter !== 'all') {
+            filteredGears = filteredGears.filter(gear => gear.type === filter);
+        }
+        gearIds = filteredGears.map(gear => gear.id);
+
+        filteredGears.forEach(gear => {
+            gearIdToName.set(gear.id, gear.name || [gear.brand_name, gear.model_name].filter(Boolean).join(' '));
         });
     } catch (error) {
         console.error("Failed to fetch gear details for Gantt chart:", error);
         return;
     }
 
-    const gearMonthKm = runs.reduce((acc, a) => {
+    // Filter runs by gearIds
+    const filteredRuns = runs.filter(run => gearIds.includes(run.gear_id));
+
+    const gearMonthKm = filteredRuns.reduce((acc, a) => {
         if (!a.gear_id || !a.start_date_local) return acc;
         const gearKey = a.gear_id;
         const month = a.start_date_local.substring(0, 7);
@@ -645,6 +710,10 @@ export async function renderGearGanttChart(runs) {
         acc[month][gearKey] = (acc[month][gearKey] || 0) + a.distance / 1000;
         return acc;
     }, {});
+
+    // Update title
+    const ganttTitle = filter === 'all' ? 'Gear Timeline' : filter === 'shoe' ? 'Shoes Timeline' : 'Bikes Timeline';
+    document.querySelector('#gear-gantt-chart-container h4').textContent = ganttTitle;
 
     const monthsWithData = Object.keys(gearMonthKm);
     if (monthsWithData.length === 0) {

@@ -76,6 +76,11 @@ button:hover {
     background: #d84300;
 }
 
+button:focus {
+    outline: 2px solid #fc4c02;
+    outline-offset: 2px;
+}
+
 .hidden {
     display: none !important;
 }
@@ -119,14 +124,10 @@ main {
 }
 
 /* --- COMPONENTES --- */
-.summary-grid,
-.charts-grid {
+.summary-grid {
     display: grid;
     gap: 1.5rem;
     margin-bottom: 2.5rem;
-}
-
-.summary-grid {
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 
@@ -154,26 +155,13 @@ main {
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    transition: box-shadow 0.2s;
+    transition: box-shadow 0.2s, transform 0.2s;
 }
 
-.card h3 {
-    margin: 0 0 0.25rem 0;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--text-light);
-    text-transform: uppercase;
-}
-
-.card p {
-    margin: 0;
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: var(--text-dark);
-}
-
+.card:hover,
 .chart-container:hover {
     box-shadow: 0 8px 32px rgba(252, 76, 2, 0.16), 0 2px 8px rgba(0, 0, 0, 0.07);
+    transform: translateY(-2px);
 }
 
 .chart-container h3 {
@@ -505,6 +493,34 @@ main {
 
 .gear-edit-fields button.save-gear-btn:hover {
     background-color: #218838;
+}
+
+/* --- GEAR FILTERS --- */
+#gear-filters {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.gear-filter-btn {
+    background: #f0f0f0;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    font-size: 0.9rem;
+}
+
+.gear-filter-btn:hover {
+    background: #e0e0e0;
+}
+
+.gear-filter-btn.active {
+    background: var(--strava-orange);
+    color: white;
+    border-color: var(--strava-orange);
 }
 
 /* --- ESTILOS DE activity.html (que se habían perdido) --- */

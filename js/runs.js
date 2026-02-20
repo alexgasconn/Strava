@@ -141,39 +141,40 @@ export function renderRunsTab(allActivities) {
         const sortDir = container.dataset.sortDir || 'desc';
         const sortedRaces = sortActivities(races, sortCol, sortDir);
         if (races.length === 0) {
-            container.innerHTML = "<tbody><tr><td colspan='4'>No races found in this period.</td></tr></tbody>";
+            container.innerHTML = `<tbody><tr><td colspan='${columns.length + 1}'>No races found in this period.</td></tr></tbody>`;
             return;
         }
 
         const columns = [
-            'name', 'start_date_local', 'distance', 'moving_time', 'moving_ratio', 'average_speed', 'average_heartrate', 'max_heartrate', 'vo2max', 'tss', 'atl', 'ctl', 'tsb', 'injuryRisk', 'suffer_score',
-            'total_elevation_gain', 'elev_high', 'elev_low', 'average_cadence', 'average_temp', 'device_name', 'gear_id',
-            'achievement_count', 'kudos_count', 'comment_count', 'pr_count', 'workout_type_classified', 'athlete_count'
+            { key: 'start_date_local', label: 'Date', format: (val) => val ? new Date(val).toLocaleDateString() : '' },
+            { key: 'name', label: 'Race Name', format: (val) => val || '' },
+            { key: 'distance', label: 'Distance', format: (val) => typeof val === 'number' ? (val / 1000).toFixed(2) + ' km' : '' },
+            { key: 'moving_time', label: 'Time', format: (val) => typeof val === 'number' ? new Date(val * 1000).toISOString().substr(11, 8) : '' },
+            {
+                key: 'pace', label: 'Pace', format: (val, act) => {
+                    if (act.distance && act.moving_time) {
+                        const paceSec = act.moving_time / (act.distance / 1000);
+                        const min = Math.floor(paceSec / 60);
+                        const sec = Math.round(paceSec % 60);
+                        return `${min}:${sec.toString().padStart(2, '0')}/km`;
+                    }
+                    return '';
+                }
+            },
+            { key: 'average_heartrate', label: 'Avg HR', format: (val) => typeof val === 'number' ? Math.round(val) + ' bpm' : '' },
+            { key: 'total_elevation_gain', label: 'Elevation', format: (val) => typeof val === 'number' ? val.toFixed(0) + ' m' : '' },
+            { key: 'achievement_count', label: 'Achievements', format: (val) => val || 0 }
         ];
 
-        const tableHeader = `<thead><tr>${columns.map(c => `<th class="sortable" data-col="${c}" style="white-space:nowrap; cursor:pointer;">${c} <span class="sort-indicator"></span></th>`).join('')}<th>Details</th></tr></thead>`;
+        const tableHeader = `<thead><tr>${columns.map(c => `<th class="sortable" data-col="${c.key}" style="white-space:nowrap; cursor:pointer;">${c.label} <span class="sort-indicator"></span></th>`).join('')}<th>Details</th></tr></thead>`;
         const tableBody = sortedRaces.map(act => {
             const cells = columns.map(col => {
-                let val;
-                if (col === 'moving_ratio') {
-                    const mt = getNested(act, 'moving_time');
-                    const et = getNested(act, 'elapsed_time');
-                    if (typeof mt === 'number' && typeof et === 'number' && et > 0) {
-                        val = ((mt / et) * 100).toFixed(1) + '%';
-                    } else {
-                        val = '';
-                    }
-                } else {
-                    val = getNested(act, col);
+                const val = getNested(act, col.key);
+                const formatted = col.format(val, act);
+                if (col.key === 'name') {
+                    return `<td style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${formatted}</td>`;
                 }
-                if (col === 'distance' && typeof val === 'number') val = (val / 1000).toFixed(2) + ' km';
-                if ((col === 'moving_time' || col === 'elapsed_time') && typeof val === 'number') val = new Date(val * 1000).toISOString().substr(11, 8);
-                if (col === 'start_date_local' && typeof val === 'string') val = val.substring(0, 19).replace('T', ' ');
-                if (col === 'average_speed' && typeof val === 'number') val = (val).toFixed(3) + ' m/s';
-                if (col === 'name') {
-                    return `<td style="max-width:320px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${formatVal(val)}</td>`;
-                }
-                return `<td style="overflow-wrap:anywhere;">${formatVal(val)}</td>`;
+                return `<td>${formatted}</td>`;
             }).join('');
             return `<tr>${cells}<td><a href="html/activity.html?id=${act.id}" target="_blank"><button>View</button></a></td></tr>`;
         }).join('');
@@ -321,13 +322,30 @@ export function renderRunsTab(allActivities) {
         if (!container) return;
 
         if (allRuns.length === 0) {
-            container.innerHTML = "<tbody><tr><td colspan='4'>No runs found in this period.</td></tr></tbody>";
+            container.innerHTML = `<tbody><tr><td colspan='${columns.length + 1}'>No runs found in this period.</td></tr></tbody>`;
             return;
         }
 
-        // Columns requested by the user
+        // Improved columns for better readability
         const columns = [
-            'name', 'start_date_local', 'distance', 'moving_time', 'moving_ratio', 'average_speed', 'average_heartrate', 'max_heartrate', 'vo2max', 'tss', 'atl', 'ctl', 'tsb', 'injuryRisk', 'suffer_score', 'total_elevation_gain', 'elev_high', 'elev_low', 'average_cadence', 'average_temp', 'device_name', 'gear_id', 'achievement_count', 'kudos_count', 'comment_count', 'pr_count', 'workout_type_classified', 'athlete_count',
+            { key: 'start_date_local', label: 'Date', format: (val) => val ? new Date(val).toLocaleDateString() : '' },
+            { key: 'name', label: 'Name', format: (val) => val || '' },
+            { key: 'distance', label: 'Distance', format: (val) => typeof val === 'number' ? (val / 1000).toFixed(2) + ' km' : '' },
+            { key: 'moving_time', label: 'Time', format: (val) => typeof val === 'number' ? new Date(val * 1000).toISOString().substr(11, 8) : '' },
+            {
+                key: 'pace', label: 'Pace', format: (val, act) => {
+                    if (act.distance && act.moving_time) {
+                        const paceSec = act.moving_time / (act.distance / 1000);
+                        const min = Math.floor(paceSec / 60);
+                        const sec = Math.round(paceSec % 60);
+                        return `${min}:${sec.toString().padStart(2, '0')}/km`;
+                    }
+                    return '';
+                }
+            },
+            { key: 'average_heartrate', label: 'Avg HR', format: (val) => typeof val === 'number' ? Math.round(val) + ' bpm' : '' },
+            { key: 'total_elevation_gain', label: 'Elevation', format: (val) => typeof val === 'number' ? val.toFixed(0) + ' m' : '' },
+            { key: 'gear_name', label: 'Gear', format: (val) => val || '' }
         ];
 
         // Use container dataset to persist sort choice
@@ -338,30 +356,15 @@ export function renderRunsTab(allActivities) {
         let showAll = container.getAttribute('data-show-all') === 'true';
         const runsToShow = showAll ? sortedRuns : sortedRuns.slice(0, 10);
 
-        const tableHeader = `<thead><tr>${columns.map(c => `<th class="sortable" data-col="${c}" style="white-space:nowrap; cursor:pointer;">${c} <span class="sort-indicator"></span></th>`).join('')}<th>Details</th></tr></thead>`;
+        const tableHeader = `<thead><tr>${columns.map(c => `<th class="sortable" data-col="${c.key}" style="white-space:nowrap; cursor:pointer;">${c.label} <span class="sort-indicator"></span></th>`).join('')}<th>Details</th></tr></thead>`;
         const tableBody = runsToShow.map(act => {
             const cells = columns.map(col => {
-                let val;
-                if (col === 'moving_ratio') {
-                    const mt = getNested(act, 'moving_time');
-                    const et = getNested(act, 'elapsed_time');
-                    if (typeof mt === 'number' && typeof et === 'number' && et > 0) {
-                        val = ((mt / et) * 100).toFixed(1) + '%';
-                    } else {
-                        val = '';
-                    }
-                } else {
-                    val = getNested(act, col);
+                const val = getNested(act, col.key);
+                const formatted = col.format(val, act);
+                if (col.key === 'name') {
+                    return `<td style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${formatted}</td>`;
                 }
-                if (col === 'distance' && typeof val === 'number') val = (val / 1000).toFixed(2) + ' km';
-                if ((col === 'moving_time' || col === 'elapsed_time') && typeof val === 'number') val = new Date(val * 1000).toISOString().substr(11, 8);
-                if (col === 'start_date_local' && typeof val === 'string') val = val.substring(0, 19).replace('T', ' ');
-                if (col === 'average_speed' && typeof val === 'number') val = (val).toFixed(3) + ' m/s';
-                // Make the 'name' column slightly narrower with ellipsis, allow others to size naturally
-                if (col === 'name') {
-                    return `<td style="max-width:320px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${formatVal(val)}</td>`;
-                }
-                return `<td style="overflow-wrap:anywhere;">${formatVal(val)}</td>`;
+                return `<td>${formatted}</td>`;
             }).join('');
             return `<tr>${cells}<td><a href="html/activity.html?id=${act.id}" target="_blank"><button>View</button></a></td></tr>`;
         }).join('');

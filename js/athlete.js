@@ -688,8 +688,8 @@ function renderMonthWeekdayMatrix(runs) {
                 },
                 y: {
                     type: 'linear',
-                    min: 0 - 0.5,
-                    max: 7,
+                    min: 0,
+                    max: 6,
                     ticks: {
                         stepSize: 1,
                         callback: val => dayLabels[val] || '',

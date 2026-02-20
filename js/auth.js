@@ -11,7 +11,19 @@ export function redirectToStrava() {
     window.location.href = authUrl;
 }
 
-export function logout() {
+export async function logout() {
+    const tokenDataRaw = localStorage.getItem('strava_tokens');
+    if (tokenDataRaw) {
+        const tokenData = JSON.parse(tokenDataRaw);
+        try {
+            await fetch('https://www.strava.com/oauth/deauthorize', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${tokenData.access_token}` }
+            });
+        } catch (error) {
+            console.warn('Failed to deauthorize token:', error);
+        }
+    }
     localStorage.removeItem('strava_tokens');
     localStorage.removeItem('strava_athlete_data');
     localStorage.removeItem('strava_training_zones');
@@ -65,5 +77,5 @@ export async function handleAuth(onAuthenticated) {
         }
     }
 
-    hideLoading(); 
+    hideLoading();
 }

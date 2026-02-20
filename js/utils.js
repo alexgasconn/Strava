@@ -85,6 +85,14 @@ export function formatPace(seconds, km) {
     return `${min}:${secRest.toString().padStart(2, '0')} /km`;
 }
 
+export function formatPaceFromSpeed(speedInMps) {
+    if (!speedInMps || speedInMps === 0) return '-';
+    const paceInSecPerKm = 1000 / speedInMps;
+    const min = Math.floor(paceInSecPerKm / 60);
+    const sec = Math.round(paceInSecPerKm % 60);
+    return `${min}:${sec.toString().padStart(2, '0')}`;
+}
+
 export function formatDate(date) {
     if (!(date instanceof Date)) date = new Date(date);
     const day = String(date.getDate()).padStart(2, '0');
