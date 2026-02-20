@@ -847,12 +847,12 @@ function runPaceMinPerKm(run) {
     return pace;
 }
 
-function renderWeatherPredictor(weatherData, currentWeatherData) {
+function renderWeatherPredictorWithChart(weatherData, currentWeatherData) {
     const btn = document.getElementById('predict-weather-btn');
     const dateInput = document.getElementById('predictor-date');
     const resultDiv = document.getElementById('prediction-result');
-
-    if (!btn || !dateInput || !resultDiv) return;
+    const ctx = document.getElementById('weatherChart').getContext('2d');
+    let chartInstance;
 
     btn.addEventListener('click', () => {
         const dateStr = dateInput.value;
@@ -871,18 +871,15 @@ function renderWeatherPredictor(weatherData, currentWeatherData) {
             return Math.abs((d1Yearless - d2Yearless) / (1000 * 60 * 60 * 24));
         }
 
-        // Datos históricos ±10 días de otros años
         const historical = weatherData.filter(d => {
             const runDate = new Date(d.run_date);
             return runDate.getFullYear() !== targetDate.getFullYear() &&
                    dayDifference(runDate, targetDate) <= 10;
         });
 
-        // Si la fecha está cerca de hoy, considerar tendencia actual de los últimos 7 días
         let combinedData = historical;
         if (Math.abs(daysDiff) <= 7 && currentWeatherData && currentWeatherData.length > 0) {
-            const recentTrend = currentWeatherData.slice(-7); // últimos 7 días
-            // Dar más peso a la tendencia reciente
+            const recentTrend = currentWeatherData.slice(-7);
             combinedData = historical.concat(recentTrend.map(d => ({
                 temperature: d.temperature * 1.5,
                 precipitation: d.precipitation * 1.5,
@@ -899,27 +896,58 @@ function renderWeatherPredictor(weatherData, currentWeatherData) {
 
         const avgTemp = mean(combinedData.map(d => d.temperature));
         const avgRain = mean(combinedData.map(d => d.precipitation));
-        const avgWind = mean(combinedData.map(d => d.wind_speed));
-        const avgHumidity = mean(combinedData.map(d => d.humidity));
         const commonCondition = mode(combinedData.map(d => d.weather_text));
 
-        let prediction = `
+        resultDiv.innerHTML = `
             <h4>Predicted Weather for ${targetDate.toLocaleDateString()}</h4>
-            <p>Based on ${combinedData.length} historical & recent data points.</p>
-            <ul>
-                <li>Temperature: ${avgTemp.toFixed(1)}°C</li>
-                <li>Rainfall: ${avgRain.toFixed(1)} mm</li>
-                <li>Wind Speed: ${avgWind.toFixed(1)} km/h</li>
-                <li>Humidity: ${avgHumidity.toFixed(1)}%</li>
-                <li>Common Condition: ${commonCondition}</li>
-            </ul>
+            <p>Temperature: ${avgTemp.toFixed(1)}°C, Rainfall: ${mean(combinedData.map(d => d.precipitation)).toFixed(1)} mm</p>
+            <p>Common Condition: ${commonCondition}</p>
         `;
 
-        if (Math.abs(daysDiff) <= 7) {
-            prediction += '<p><em>Recent weather trends have a strong influence for this date.</em></p>';
-        }
+        // Datos para la gráfica
+        const labels = combinedData.map((d, i) => `Data ${i+1}`);
+        const temps = combinedData.map(d => d.temperature);
+        const rains = combinedData.map(d => d.precipitation);
 
-        resultDiv.innerHTML = prediction;
+        if (chartInstance) chartInstance.destroy();
+
+        chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Temperature (°C)',
+                        data: temps,
+                        borderColor: 'orange',
+                        fill: false,
+                        yAxisID: 'yTemp'
+                    },
+                    {
+                        label: 'Precipitation (mm)',
+                        data: rains,
+                        borderColor: 'blue',
+                        fill: false,
+                        yAxisID: 'yRain'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    yTemp: {
+                        type: 'linear',
+                        position: 'left',
+                        title: { display: true, text: 'Temperature (°C)' }
+                    },
+                    yRain: {
+                        type: 'linear',
+                        position: 'right',
+                        title: { display: true, text: 'Precipitation (mm)' }
+                    }
+                }
+            }
+        });
     });
 }
 
