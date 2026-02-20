@@ -847,7 +847,7 @@ function runPaceMinPerKm(run) {
     return pace;
 }
 
-function renderWeatherPredictorWithChart(weatherData, currentWeatherData) {
+function renderWeatherPredictor(weatherData, currentWeatherData) {
     const btn = document.getElementById('predict-weather-btn');
     const dateInput = document.getElementById('predictor-date');
     const resultDiv = document.getElementById('prediction-result');
