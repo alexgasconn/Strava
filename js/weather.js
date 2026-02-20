@@ -847,7 +847,7 @@ function runPaceMinPerKm(run) {
     return pace;
 }
 
-function renderWeatherPredictor(weatherData) {
+function renderWeatherPredictor(weatherData, currentWeatherData) {
     const btn = document.getElementById('predict-weather-btn');
     const dateInput = document.getElementById('predictor-date');
     const resultDiv = document.getElementById('prediction-result');
@@ -865,35 +865,47 @@ function renderWeatherPredictor(weatherData) {
         const now = new Date();
         const daysDiff = (targetDate - now) / (1000 * 60 * 60 * 24);
 
-        // Función para calcular diferencia en días ignorando el año
         function dayDifference(d1, d2) {
             const d1Yearless = new Date(2000, d1.getMonth(), d1.getDate());
             const d2Yearless = new Date(2000, d2.getMonth(), d2.getDate());
             return Math.abs((d1Yearless - d2Yearless) / (1000 * 60 * 60 * 24));
         }
 
-        // Filtrar días similares dentro de ±10 días
-        const similarDays = weatherData.filter(d => {
+        // Datos históricos ±10 días de otros años
+        const historical = weatherData.filter(d => {
             const runDate = new Date(d.run_date);
             return runDate.getFullYear() !== targetDate.getFullYear() &&
                    dayDifference(runDate, targetDate) <= 10;
         });
 
-        if (similarDays.length === 0) {
-            resultDiv.innerHTML = '<p>No historical data for this date range.</p>';
+        // Si la fecha está cerca de hoy, considerar tendencia actual de los últimos 7 días
+        let combinedData = historical;
+        if (Math.abs(daysDiff) <= 7 && currentWeatherData && currentWeatherData.length > 0) {
+            const recentTrend = currentWeatherData.slice(-7); // últimos 7 días
+            // Dar más peso a la tendencia reciente
+            combinedData = historical.concat(recentTrend.map(d => ({
+                temperature: d.temperature * 1.5,
+                precipitation: d.precipitation * 1.5,
+                wind_speed: d.wind_speed * 1.5,
+                humidity: d.humidity * 1.5,
+                weather_text: d.weather_text
+            })));
+        }
+
+        if (combinedData.length === 0) {
+            resultDiv.innerHTML = '<p>No data available for prediction.</p>';
             return;
         }
 
-        // Promedios
-        const avgTemp = mean(similarDays.map(d => d.temperature));
-        const avgRain = mean(similarDays.map(d => d.precipitation));
-        const avgWind = mean(similarDays.map(d => d.wind_speed));
-        const avgHumidity = mean(similarDays.map(d => d.humidity));
-        const commonCondition = mode(similarDays.map(d => d.weather_text));
+        const avgTemp = mean(combinedData.map(d => d.temperature));
+        const avgRain = mean(combinedData.map(d => d.precipitation));
+        const avgWind = mean(combinedData.map(d => d.wind_speed));
+        const avgHumidity = mean(combinedData.map(d => d.humidity));
+        const commonCondition = mode(combinedData.map(d => d.weather_text));
 
         let prediction = `
             <h4>Predicted Weather for ${targetDate.toLocaleDateString()}</h4>
-            <p>Based on ${similarDays.length} similar days from past years (±10 days).</p>
+            <p>Based on ${combinedData.length} historical & recent data points.</p>
             <ul>
                 <li>Temperature: ${avgTemp.toFixed(1)}°C</li>
                 <li>Rainfall: ${avgRain.toFixed(1)} mm</li>
@@ -904,7 +916,7 @@ function renderWeatherPredictor(weatherData) {
         `;
 
         if (Math.abs(daysDiff) <= 7) {
-            prediction += '<p><em>Note: This date is close to today, actual weather may vary based on current trends.</em></p>';
+            prediction += '<p><em>Recent weather trends have a strong influence for this date.</em></p>';
         }
 
         resultDiv.innerHTML = prediction;
