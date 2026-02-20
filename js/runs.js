@@ -1,5 +1,6 @@
 // js/runs.js
 
+import * as utils from './utils.js';
 
 export function renderRunsTab(allActivities) {
     console.log("Initializing Runs Tab...");
@@ -232,22 +233,6 @@ export function renderRunsTab(allActivities) {
 
     function renderPersonalBests(container, runs) {
         // --- Helpers local to PBs ---
-        function formatTime(sec) {
-            if (!isFinite(sec) || sec <= 0) return 'N/A';
-            sec = Math.round(sec);
-            const h = Math.floor(sec / 3600);
-            const m = Math.floor((sec % 3600) / 60);
-            const s = sec % 60;
-            return (h > 0 ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}` : `${m}:${s.toString().padStart(2, '0')}`);
-        }
-
-        function formatPace(seconds, km) {
-            if (!isFinite(seconds) || !isFinite(km) || km <= 0) return '-';
-            const pace = seconds / km;
-            const min = Math.floor(pace / 60);
-            const secRest = Math.round(pace % 60);
-            return `${min}:${secRest.toString().padStart(2, '0')} /km`;
-        }
 
         const targetDistances = [
             { name: '1 Mile', km: 1.609 },
@@ -299,10 +284,10 @@ export function renderRunsTab(allActivities) {
                     ${topRuns.map((run, idx) => `
                         <div style="text-align:center; margin-bottom:0.6em; border-top: ${idx > 0 ? '1px dashed #ccc' : 'none'}; padding-top: ${idx > 0 ? '0.6em' : '0'};">
                             <p style="font-size:1.2em; font-weight:bold; margin:0;">
-                                ${medalEmojis[idx] || ''} ${formatTime(run.time_at_target)}
+                                ${medalEmojis[idx] || ''} ${utils.formatTime(run.time_at_target)}
                             </p>
                             <p style="font-size:1em; color:#333; margin:0;">Distance: ${run.actual_run_km.toFixed(2)} km</p>
-                            <p style="font-size:0.9em; color:#555; margin:0;">Pace: ${formatPace(run.time_at_target, run.actual_run_km)}</p>
+                            <p style="font-size:0.9em; color:#555; margin:0;">Pace: ${utils.formatPace(run.time_at_target, run.actual_run_km)}</p>
                             <p style="font-size:0.8em; color:#777; margin:0.2em 0;">${new Date(run.start_date_local || run.start_date).toLocaleDateString()}</p>
                             <a href="html/activity.html?id=${run.id}" target="_blank" style="font-size:0.8em; color:#0077cc; text-decoration:none;">
                                 View activity →

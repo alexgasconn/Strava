@@ -97,6 +97,11 @@ export async function renderWeatherTab(allActivities) {
     `;
     }
 
+    // Weather Predictor
+    renderWeatherPredictor(combinedWeatherData);
+
+    const histogramSelect = document.getElementById("histogram-select");
+
 
     const histogramSelect = document.getElementById("histogram-select");
     const histogramTitle = document.getElementById("histogram-title");
@@ -843,6 +848,65 @@ function runPaceMinPerKm(run) {
     if (!run.distance || run.distance === 0 || !run.moving_time || run.moving_time === 0) return 0;
     const pace = run.moving_time / (run.distance / 1000) / 60;
     return pace;
+}
+
+function renderWeatherPredictor(weatherData) {
+    const btn = document.getElementById('predict-weather-btn');
+    const dateInput = document.getElementById('predictor-date');
+    const resultDiv = document.getElementById('prediction-result');
+
+    if (!btn || !dateInput || !resultDiv) return;
+
+    btn.addEventListener('click', () => {
+        const dateStr = dateInput.value;
+        if (!dateStr) {
+            resultDiv.innerHTML = '<p>Please select a date.</p>';
+            return;
+        }
+
+        const targetDate = new Date(dateStr);
+        const now = new Date();
+        const daysDiff = (targetDate - now) / (1000 * 60 * 60 * 24);
+
+        // Find similar days: same month and day, different years
+        const similarDays = weatherData.filter(d => {
+            const runDate = new Date(d.run_date);
+            return runDate.getMonth() === targetDate.getMonth() &&
+                runDate.getDate() === targetDate.getDate() &&
+                runDate.getFullYear() !== targetDate.getFullYear();
+        });
+
+        if (similarDays.length === 0) {
+            resultDiv.innerHTML = '<p>No historical data for this date.</p>';
+            return;
+        }
+
+        // Average weather
+        const avgTemp = mean(similarDays.map(d => d.temperature));
+        const avgRain = mean(similarDays.map(d => d.precipitation));
+        const avgWind = mean(similarDays.map(d => d.wind_speed));
+        const avgHumidity = mean(similarDays.map(d => d.humidity));
+        const commonCondition = mode(similarDays.map(d => d.weather_text));
+
+        let prediction = `
+            <h4>Predicted Weather for ${targetDate.toLocaleDateString()}</h4>
+            <p>Based on ${similarDays.length} similar days from past years.</p>
+            <ul>
+                <li>Temperature: ${avgTemp.toFixed(1)}°C</li>
+                <li>Rainfall: ${avgRain.toFixed(1)} mm</li>
+                <li>Wind Speed: ${avgWind.toFixed(1)} km/h</li>
+                <li>Humidity: ${avgHumidity.toFixed(1)}%</li>
+                <li>Common Condition: ${commonCondition}</li>
+            </ul>
+        `;
+
+        // If close to current date, note current trend
+        if (Math.abs(daysDiff) <= 7) {
+            prediction += '<p><em>Note: This date is close to today, actual weather may vary based on current trends.</em></p>';
+        }
+
+        resultDiv.innerHTML = prediction;
+    });
 }
 
 function numericSafe(v) {

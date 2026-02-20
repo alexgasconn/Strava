@@ -1,9 +1,11 @@
 // js/planner.js
 
+import * as utils from './utils.js';
+
 // Este archivo es un módulo que exporta la función principal para la pestaña del planner.
 export function renderPlannerTab(allActivities) {
     console.log("Initializing Planner Tab...");
-    
+
     // --- Referencias a los controles de la UI ---
     const riegelWeightSlider = document.getElementById('riegel-weight');
     const mlWeightSlider = document.getElementById('ml-weight');
@@ -30,7 +32,7 @@ export function renderPlannerTab(allActivities) {
         updateBtn.addEventListener('click', updateUI);
         moodRadios.forEach(radio => radio.addEventListener('change', updateUI));
     }
-    
+
     // --- Llama a la función de predicción por primera vez al cargar la pestaña ---
     updateUI();
 }
@@ -63,7 +65,7 @@ function updatePredictions(runs) {
     const bests = getBestPerformances(runs);
     const model = trainPersonalizedModel(bests);
     const finalPredictions = calculateAllPredictions(bests, model, { mood, weights });
-    
+
     // Renderizar la tabla y el gráfico con los nuevos resultados
     renderResultsTableAndChart(container, finalPredictions);
 }
@@ -89,21 +91,21 @@ function calculateAllPredictions(bestPerformances, model, settings) {
 
     return targetDistances.map(target => {
         let allPredictions = [];
-        
+
         Object.values(bestPerformances).flat().forEach(perf => {
             if (Math.abs(perf.km - target.km) < 0.1) return;
             const predSec = perf.seconds * (target.km / perf.km) ** 1.06;
             allPredictions.push({ time: predSec, weight: settings.weights.riegel / 10 });
         });
-        
+
         if (model) {
             const logKm = Math.log(target.km);
             const mlTime = model.a + model.b * logKm + model.c * logKm ** 2;
             if (isFinite(mlTime) && mlTime > 0) {
-               allPredictions.push({ time: mlTime, weight: settings.weights.ml / 10 });
+                allPredictions.push({ time: mlTime, weight: settings.weights.ml / 10 });
             }
         }
-        
+
         if (bestPerformances[target.km]) {
             bestPerformances[target.km].forEach(perf => {
                 allPredictions.push({ time: perf.seconds, weight: settings.weights.pb / 10 });
@@ -121,11 +123,11 @@ function calculateAllPredictions(bestPerformances, model, settings) {
 
         const totalWeight = trimmed.reduce((sum, p) => sum + p.weight, 0);
         if (totalWeight === 0) return { ...target, combined: null, confidence: 0, low: null, high: null };
-        
+
         const combinedTime = trimmed.reduce((sum, p) => sum + p.time * p.weight, 0) / totalWeight;
         const lowTime = trimmed[0].time;
         const highTime = trimmed[trimmed.length - 1].time;
-        
+
         let confidence = 0;
         const actualBest = bestPerformances[target.km] ? bestPerformances[target.km][0].seconds : null;
 
@@ -145,9 +147,9 @@ function calculateAllPredictions(bestPerformances, model, settings) {
             confidence = Math.min(85, 20 + sourceCount * 5);
         }
 
-        return { 
-            ...target, 
-            combined: combinedTime, 
+        return {
+            ...target,
+            combined: combinedTime,
             confidence: Math.round(confidence),
             low: lowTime,
             high: highTime
@@ -164,8 +166,8 @@ function renderResultsTableAndChart(container, predictions) {
         const confidenceColor = p.confidence >= 85 ? '#28a745' : p.confidence >= 60 ? '#ffc107' : '#dc3545';
         return `<tr>
             <td>${p.name}</td>
-            <td>${formatTime(p.combined)}</td>
-            <td>${formatPace(p.combined, p.km)}</td>
+            <td>${utils.formatTime(p.combined)}</td>
+            <td>${utils.formatPace(p.combined, p.km)}</td>
             <td style="color: ${confidenceColor}; font-weight: bold;">${p.confidence}%</td>
         </tr>`;
     }).join('');
@@ -195,26 +197,9 @@ function renderResultsTableAndChart(container, predictions) {
 }
 
 // --- FUNCIONES DE AYUDA (SIN CAMBIOS) ---
-function formatTime(sec) {
-    if (!isFinite(sec) || sec <= 0) return 'N/A';
-    sec = Math.round(sec);
-    const h = Math.floor(sec / 3600);
-    const m = Math.floor((sec % 3600) / 60);
-    const s = sec % 60;
-    return (h > 0 ? h + ':' : '') + m.toString().padStart(h > 0 ? 2 : 1, '0') + ':' + s.toString().padStart(2, '0');
-}
-
-function formatPace(sec, km) {
-    if (!isFinite(sec) || !isFinite(km) || km <= 0) return '-';
-    const pace = sec / km;
-    const min = Math.floor(pace / 60);
-    const secRest = Math.round(pace % 60);
-    return `${min}:${secRest.toString().padStart(2, '0')} /km`;
-}
-
 function solve3x3(A, B) {
-    const det = A[0][0]*(A[1][1]*A[2][2]-A[2][1]*A[1][2])-A[0][1]*(A[1][0]*A[2][2]-A[1][2]*A[2][0])+A[0][2]*(A[1][0]*A[2][1]-A[1][1]*A[2][0]);
-    if(det===0)return null;const invDet=1/det;const adj=[[A[1][1]*A[2][2]-A[2][1]*A[1][2],A[0][2]*A[2][1]-A[0][1]*A[2][2],A[0][1]*A[1][2]-A[0][2]*A[1][1]],[A[1][2]*A[2][0]-A[1][0]*A[2][2],A[0][0]*A[2][2]-A[0][2]*A[2][0],A[0][2]*A[1][0]-A[0][0]*A[1][2]],[A[1][0]*A[2][1]-A[2][0]*A[1][1],A[2][0]*A[0][1]-A[0][0]*A[2][1],A[0][0]*A[1][1]-A[1][0]*A[0][1]]];return[invDet*(adj[0][0]*B[0]+adj[0][1]*B[1]+adj[0][2]*B[2]),invDet*(adj[1][0]*B[0]+adj[1][1]*B[1]+adj[1][2]*B[2]),invDet*(adj[2][0]*B[0]+adj[2][1]*B[1]+adj[2][2]*B[2])];
+    const det = A[0][0] * (A[1][1] * A[2][2] - A[2][1] * A[1][2]) - A[0][1] * (A[1][0] * A[2][2] - A[1][2] * A[2][0]) + A[0][2] * (A[1][0] * A[2][1] - A[1][1] * A[2][0]);
+    if (det === 0) return null; const invDet = 1 / det; const adj = [[A[1][1] * A[2][2] - A[2][1] * A[1][2], A[0][2] * A[2][1] - A[0][1] * A[2][2], A[0][1] * A[1][2] - A[0][2] * A[1][1]], [A[1][2] * A[2][0] - A[1][0] * A[2][2], A[0][0] * A[2][2] - A[0][2] * A[2][0], A[0][2] * A[1][0] - A[0][0] * A[1][2]], [A[1][0] * A[2][1] - A[2][0] * A[1][1], A[2][0] * A[0][1] - A[0][0] * A[2][1], A[0][0] * A[1][1] - A[1][0] * A[0][1]]]; return [invDet * (adj[0][0] * B[0] + adj[0][1] * B[1] + adj[0][2] * B[2]), invDet * (adj[1][0] * B[0] + adj[1][1] * B[1] + adj[1][2] * B[2]), invDet * (adj[2][0] * B[0] + adj[2][1] * B[1] + adj[2][2] * B[2])];
 }
 
 function getBestPerformances(allRuns) {
@@ -241,12 +226,12 @@ function trainPersonalizedModel(bestPerformances) {
     if (flatBests.length < 3) return null;
     const X = flatBests.map(r => Math.log(r.km));
     const Y = flatBests.map(r => r.seconds);
-    let sumX=0, sumX2=0, sumX3=0, sumX4=0, sumY=0, sumXY=0, sumX2Y=0;
+    let sumX = 0, sumX2 = 0, sumX3 = 0, sumX4 = 0, sumY = 0, sumXY = 0, sumX2Y = 0;
     const n = X.length;
     for (let i = 0; i < n; i++) {
-        const x = X[i], x2 = x*x, y = Y[i];
-        sumX += x; sumX2 += x2; sumX3 += x2*x; sumX4 += x2*x2;
-        sumY += y; sumXY += x*y; sumX2Y += x2*y;
+        const x = X[i], x2 = x * x, y = Y[i];
+        sumX += x; sumX2 += x2; sumX3 += x2 * x; sumX4 += x2 * x2;
+        sumY += y; sumXY += x * y; sumX2Y += x2 * y;
     }
     const A = [[n, sumX, sumX2], [sumX, sumX2, sumX3], [sumX2, sumX3, sumX4]];
     const B = [sumY, sumXY, sumX2Y];
@@ -261,10 +246,10 @@ function renderPaceChart(predictions) {
     if (!chartContainer) return;
     const ctx = chartContainer.getContext('2d');
     if (paceChartInstance) paceChartInstance.destroy();
-    
+
     const validPredictions = predictions.filter(p => p.combined && p.low && p.high);
-    if(validPredictions.length === 0) return; // No hay datos para graficar
-    
+    if (validPredictions.length === 0) return; // No hay datos para graficar
+
     const toPace = (time, km) => (time / km) / 60;
     const mainPaces = validPredictions.map(p => ({ x: p.km, y: toPace(p.combined, p.km) }));
     const lowerPaces = validPredictions.map(p => ({ x: p.km, y: toPace(p.low, p.km) }));
@@ -290,7 +275,7 @@ function renderPaceChart(predictions) {
                 title: { display: true, text: 'Predicted Pace vs. Distance' },
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             const paceDecimal = context.parsed.y;
                             const minutes = Math.floor(paceDecimal);
                             const seconds = Math.round((paceDecimal - minutes) * 60);

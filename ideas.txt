@@ -9,45 +9,55 @@
 🌈 Algun dia...
 
 
-
-🔴⚠️logout no funciona (sen recorda) 
-🟢⚠️consistency map no es fiable, li falten/sobren dies?... 
-🟢🚨Botons de filtre de Last days no es veuen 
-🟢🚨wrapped no pot canviar de any 
-🔴🚨No es veu Monday a una matrix de Athlete 
-🟢?🚨error a vegades al Heatmap calendar = (consistencymap) 
-(ui.js:30 Could not initialize the app ReferenceError: CalHeatmap is not defined
-    at renderConsistencyChart (analysis.js:84:17)
-    at renderAnalysisTab (analysis.js:20:5)
-    at initializeApp (main.js:212:13)
-    at async handleAuth (auth.js:56:9)))
+IN PROGRESS
 🟡🚧esborrar codi inutil 
 🟡🚧fer servir lo de utils.js sempre, no repetir codi formatPace, formatTime...
 🟡🚧tot english 
-🟡🚧molts mes logs (a cada grafica?) 
-🟢🚨avergae pace no surt a Dashboard?? 
-🔴🩹wrapped -> exportar captura pels fans 
-🔴🚧text de alerta si no hi ha dades de HR 
-🟢⚠️arreglar "gears" del wrapped! (mapejar i eliminar "sources" com Hevy) 
+🟡🚧molts mes logs (a cada grafica?)
+🟡🩹DASHBOARD -> objectius personalitzables (hores, # activities, km...)
+🟡🚧TLB ACT FRM.... que conti TOTES les activitats, no nomes running 
+🟡🚧carregar zonas, profile, gear, weather api... al iniciar app
+🟡⚠️totes les dates mateix format
+🟡⚠️zonas (Z2) del dashboard de la ma amb las zoonas del perfil strava
+
+
+
+TO DO
 🔴🩹weather api fer servir per predictions 
 🔴🩹weather data -> % de "difficultat ambiental" 
 🔴🩹coords streams in activity -> veure cap a on va el vent -> % de vent a favor, en contra, de costat...
 🔴🩹heatmap general com strava (que tardi una bona estona, pillar streams de coords de cada activitat...)
 🔴🩹activity -> poder elegir el rolling mean dels streams!
-🟡🩹DASHBOARD -> objectius personalitzables (hores, # activities, km...)
-🟡🚧TLB ACT FRM.... que conti TOTES les activitats, no nomes running
+🔴🚨No es veu Monday a una matrix de Athlete
+🔴🩹wrapped -> exportar captura pels fans 
+🔴🚧text de alerta si no hi ha dades de HR
 🔴🌈versio mobil
 🔴🌈fer gear.html amb mapes i mes stats de cada gear
-🟡🚧carregar zonas, profile, gear, weather api... al iniciar app
-🟡⚠️GEARS separate bikes and shoes
-🟢🩹bike gears frame type!
-🟢🩹botó config
-🔴🩹trail/road shoes in gears
-🟢🚨data xx/xx/xxxx en lastuse i firstuse
-🟡⚠️totes les dates mateix format
 🔴🚧time zones???
 🔴🚧miles or km...
 🔴🌈idiomes
 🔴⚠️format del pace decimals-> time amb utils.paceDecimalToTime(pace)
+🔴🩹trail/road shoes in gears
+
+
+
+DONE
+🟢⚠️logout no funciona (sen recorda) 
+🟢⚠️consistency map no es fiable, li falten/sobren dies?... 
+🟢🚨Botons de filtre de Last days no es veuen 
+🟢🚨wrapped no pot canviar de any 
+🟢?🚨error a vegades al Heatmap calendar = (consistencymap) 
+🟢🚨avergae pace no surt a Dashboard?? 
+🟢⚠️arreglar "gears" del wrapped! (mapejar i eliminar "sources" com Hevy)
 🟢⚠️DASHBOARD-> juntar "Recent Runs with Maps and VO₂max" i "Last 5 activities"
-🟡⚠️zonas (Z2) del dashboard de la ma amb las zoonas del perfil strava
+🟢🩹bike gears frame type!
+🟢🩹botó config
+🟢🚨data xx/xx/xxxx en lastuse i firstuse
+🟢⚠️GEARS separate bikes and shoes
+
+
+
+
+
+
+

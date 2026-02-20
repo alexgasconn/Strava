@@ -1,5 +1,7 @@
 // wrapped-stats-pro.js
 
+import * as utils from './utils.js';
+
 export async function renderWrappedTab(allActivities, options = {}) {
   const fullActivities = options.fullActivities || allActivities; // lista completa
 
@@ -30,26 +32,8 @@ export async function renderWrappedTab(allActivities, options = {}) {
   }
 
   // === UTILITIES ===
-  const utils = {
+  const localUtils = {
     secToH(sec) { return sec / 3600; },
-    formatTime(sec) {
-      if (!isFinite(sec) || sec <= 0) return 'N/A';
-      sec = Math.round(sec);
-      const h = Math.floor(sec / 3600);
-      const m = Math.floor((sec % 3600) / 60);
-      const s = sec % 60;
-      return h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m ${s}s` : `${s}s`;
-    },
-    formatDistance(m) {
-      return m >= 1000 ? `${(m / 1000).toFixed(2)} km` : `${Math.round(m)} m`;
-    },
-    formatPace(seconds, km) {
-      if (!isFinite(seconds) || !isFinite(km) || km <= 0) return 'N/A';
-      const pace = seconds / km;
-      const min = Math.floor(pace / 60);
-      const sec = Math.round(pace % 60);
-      return `${min}:${String(sec).padStart(2, '0')} /km`;
-    },
     sum(arr, key) {
       return arr.reduce((s, a) => s + (Number(a[key]) || 0), 0);
     },
@@ -132,7 +116,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
       const d = new Date(a.start_date);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       if (!map[key]) map[key] = 0;
-      map[key] += utils.secToH(Number(a.moving_time) || 0);
+      map[key] += localUtils.secToH(Number(a.moving_time) || 0);
     });
     return Object.entries(map)
       .map(([month, hours]) => ({ month, hours }))
@@ -143,7 +127,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
     const hours = [0, 0, 0, 0, 0, 0, 0];
     acts.forEach(a => {
       const d = new Date(a.start_date);
-      hours[d.getDay()] += utils.secToH(Number(a.moving_time) || 0);
+      hours[d.getDay()] += localUtils.secToH(Number(a.moving_time) || 0);
     });
     return hours;
   }
@@ -240,8 +224,8 @@ export async function renderWrappedTab(allActivities, options = {}) {
       Number(a.moving_time) > 0
     );
     if (!runs.length) return null;
-    const totalSec = utils.sum(runs, 'moving_time');
-    const totalKm = utils.sum(runs, 'distance') / 1000;
+    const totalSec = localUtils.sum(runs, 'moving_time');
+    const totalKm = localUtils.sum(runs, 'distance') / 1000;
     return totalKm > 0 ? utils.formatPace(totalSec, totalKm) : null;
   })();
 
@@ -251,7 +235,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
     acts.forEach(a => {
       const gear = a.gear_id || (a.device_name ? a.device_name : 'Unknown');
       if (!byGear[gear]) byGear[gear] = 0;
-      byGear[gear] += utils.secToH(Number(a.moving_time) || 0);
+      byGear[gear] += localUtils.secToH(Number(a.moving_time) || 0);
     });
     return Object.entries(byGear)
       .map(([gear, hours]) => ({ gear, hours }))
@@ -315,7 +299,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
             if (res.ok) {
               const data = await res.json();
               country = data.address?.country || 'Unknown';
-              country = utils.getEnglishCountryName(country); // Attempt to standardize
+              country = localUtils.getEnglishCountryName(country); // Attempt to standardize
             }
           } catch (_) {
             country = 'Unknown';
@@ -339,9 +323,9 @@ export async function renderWrappedTab(allActivities, options = {}) {
   // Summary cards
   const summaryTotals = {
     total: currentActs.length,
-    distance: utils.sum(currentActs, 'distance'),
-    time: utils.sum(currentActs, 'moving_time'),
-    elevation: utils.sum(currentActs, 'total_elevation_gain')
+    distance: localUtils.sum(currentActs, 'distance'),
+    time: localUtils.sum(currentActs, 'moving_time'),
+    elevation: localUtils.sum(currentActs, 'total_elevation_gain')
   };
 
   const groupCount = currentActs.length - soloCount;
@@ -366,10 +350,10 @@ export async function renderWrappedTab(allActivities, options = {}) {
   const runningActs = currentActs.filter(a => (a.type || a.sport || '').toLowerCase().includes('run'));
   const soloActs = runningActs.filter(a => Number(a.athlete_count) === 1);
   const groupActs = runningActs.filter(a => Number(a.athlete_count) !== 1);
-  const soloAvgDist = soloActs.length ? utils.formatDistance(utils.sum(soloActs, 'distance') / soloActs.length) : '—';
-  const soloAvgTime = soloActs.length ? utils.formatTime(Math.round(utils.sum(soloActs, 'moving_time') / soloActs.length)) : '—';
-  const groupAvgDist = groupActs.length ? utils.formatDistance(utils.sum(groupActs, 'distance') / groupActs.length) : '—';
-  const groupAvgTime = groupActs.length ? utils.formatTime(Math.round(utils.sum(groupActs, 'moving_time') / groupActs.length)) : '—';
+  const soloAvgDist = soloActs.length ? utils.formatDistance(localUtils.sum(soloActs, 'distance') / soloActs.length) : '—';
+  const soloAvgTime = soloActs.length ? utils.formatTime(Math.round(localUtils.sum(soloActs, 'moving_time') / soloActs.length)) : '—';
+  const groupAvgDist = groupActs.length ? utils.formatDistance(localUtils.sum(groupActs, 'distance') / groupActs.length) : '—';
+  const groupAvgTime = groupActs.length ? utils.formatTime(Math.round(localUtils.sum(groupActs, 'moving_time') / groupActs.length)) : '—';
 
   // === Streak calculation (current streak and longest streak) ===
   function computeStreaks(acts) {
@@ -487,7 +471,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
   // Sport comparison with minimum 5h filter
   function renderSportComparison(sportsCurr, sportsPrev) {
     const prevMap = new Map(sportsPrev.map(s => [s.sport, s]));
-    const totalTime = utils.sum(sportsCurr, 'time');
+    const totalTime = localUtils.sum(sportsCurr, 'time');
 
     const sportIcons = {
       'Run': '🏃', 'Running': '🏃', 'Ride': '🚴', 'Cycling': '🚴',

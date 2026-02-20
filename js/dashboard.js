@@ -160,7 +160,7 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
     const h = r => r.moving_time / 3600;
     const sum = (arr, fn) => arr.reduce((s, r) => s + fn(r), 0);
     const avg = arr => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
-    const calcChange = (curr, prev) => prev > 0 ? ((curr - prev) / prev * 100).toFixed(1) : 0;
+    const calcChange = (curr, prev) => prev > 0 ? ((curr - prev) / prev * 100).toFixed(1) : 'N/A';
 
     // --- Métricas actuales ---
     const totalDistance = sum(lastRuns, km);
