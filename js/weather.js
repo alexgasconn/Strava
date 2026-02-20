@@ -101,9 +101,6 @@ export async function renderWeatherTab(allActivities) {
     renderWeatherPredictor(combinedWeatherData);
 
     const histogramSelect = document.getElementById("histogram-select");
-
-
-    const histogramSelect = document.getElementById("histogram-select");
     const histogramTitle = document.getElementById("histogram-title");
     const ctxHist = document.getElementById("weather-histogram")
     let histChart;
