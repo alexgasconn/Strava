@@ -865,20 +865,26 @@ function renderWeatherPredictor(weatherData) {
         const now = new Date();
         const daysDiff = (targetDate - now) / (1000 * 60 * 60 * 24);
 
-        // Find similar days: same month and day, different years
+        // Función para calcular diferencia en días ignorando el año
+        function dayDifference(d1, d2) {
+            const d1Yearless = new Date(2000, d1.getMonth(), d1.getDate());
+            const d2Yearless = new Date(2000, d2.getMonth(), d2.getDate());
+            return Math.abs((d1Yearless - d2Yearless) / (1000 * 60 * 60 * 24));
+        }
+
+        // Filtrar días similares dentro de ±10 días
         const similarDays = weatherData.filter(d => {
             const runDate = new Date(d.run_date);
-            return runDate.getMonth() === targetDate.getMonth() &&
-                runDate.getDate() === targetDate.getDate() &&
-                runDate.getFullYear() !== targetDate.getFullYear();
+            return runDate.getFullYear() !== targetDate.getFullYear() &&
+                   dayDifference(runDate, targetDate) <= 10;
         });
 
         if (similarDays.length === 0) {
-            resultDiv.innerHTML = '<p>No historical data for this date.</p>';
+            resultDiv.innerHTML = '<p>No historical data for this date range.</p>';
             return;
         }
 
-        // Average weather
+        // Promedios
         const avgTemp = mean(similarDays.map(d => d.temperature));
         const avgRain = mean(similarDays.map(d => d.precipitation));
         const avgWind = mean(similarDays.map(d => d.wind_speed));
@@ -887,7 +893,7 @@ function renderWeatherPredictor(weatherData) {
 
         let prediction = `
             <h4>Predicted Weather for ${targetDate.toLocaleDateString()}</h4>
-            <p>Based on ${similarDays.length} similar days from past years.</p>
+            <p>Based on ${similarDays.length} similar days from past years (±10 days).</p>
             <ul>
                 <li>Temperature: ${avgTemp.toFixed(1)}°C</li>
                 <li>Rainfall: ${avgRain.toFixed(1)} mm</li>
@@ -897,7 +903,6 @@ function renderWeatherPredictor(weatherData) {
             </ul>
         `;
 
-        // If close to current date, note current trend
         if (Math.abs(daysDiff) <= 7) {
             prediction += '<p><em>Note: This date is close to today, actual weather may vary based on current trends.</em></p>';
         }
