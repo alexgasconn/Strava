@@ -851,8 +851,8 @@ function renderWeatherPredictor(weatherData, currentWeatherData) {
     const btn = document.getElementById('predict-weather-btn');
     const dateInput = document.getElementById('predictor-date');
     const resultDiv = document.getElementById('prediction-result');
-    const ctx = document.getElementById('weatherChart').getContext('2d');
-    let chartInstance;
+
+    if (!btn || !dateInput || !resultDiv) return;
 
     btn.addEventListener('click', () => {
         const dateStr = dateInput.value;
@@ -865,89 +865,58 @@ function renderWeatherPredictor(weatherData, currentWeatherData) {
         const now = new Date();
         const daysDiff = (targetDate - now) / (1000 * 60 * 60 * 24);
 
+        // Función para calcular diferencia de días ignorando el año
         function dayDifference(d1, d2) {
             const d1Yearless = new Date(2000, d1.getMonth(), d1.getDate());
             const d2Yearless = new Date(2000, d2.getMonth(), d2.getDate());
             return Math.abs((d1Yearless - d2Yearless) / (1000 * 60 * 60 * 24));
         }
 
+        // Datos históricos ±10 días de otros años
         const historical = weatherData.filter(d => {
             const runDate = new Date(d.run_date);
             return runDate.getFullYear() !== targetDate.getFullYear() &&
                    dayDifference(runDate, targetDate) <= 10;
         });
 
-        let combinedData = historical;
-        if (Math.abs(daysDiff) <= 7 && currentWeatherData && currentWeatherData.length > 0) {
-            const recentTrend = currentWeatherData.slice(-7);
-            combinedData = historical.concat(recentTrend.map(d => ({
-                temperature: d.temperature * 1.5,
-                precipitation: d.precipitation * 1.5,
-                wind_speed: d.wind_speed * 1.5,
-                humidity: d.humidity * 1.5,
-                weather_text: d.weather_text
-            })));
-        }
-
-        if (combinedData.length === 0) {
-            resultDiv.innerHTML = '<p>No data available for prediction.</p>';
+        if (historical.length === 0) {
+            resultDiv.innerHTML = '<p>No historical data for this date range.</p>';
             return;
         }
 
+        // Si la fecha está cerca de hoy, considerar tendencia reciente
+        let combinedData = historical;
+        if (Math.abs(daysDiff) <= 7 && currentWeatherData && currentWeatherData.length > 0) {
+            const recentTrend = currentWeatherData.slice(-7); // últimos 7 días
+            // Añadir tendencia reciente al histórico
+            combinedData = historical.concat(recentTrend);
+        }
+
+        // Calcular promedios y condición más común
         const avgTemp = mean(combinedData.map(d => d.temperature));
         const avgRain = mean(combinedData.map(d => d.precipitation));
+        const avgWind = mean(combinedData.map(d => d.wind_speed));
+        const avgHumidity = mean(combinedData.map(d => d.humidity));
         const commonCondition = mode(combinedData.map(d => d.weather_text));
 
-        resultDiv.innerHTML = `
+        // Construir predicción
+        let prediction = `
             <h4>Predicted Weather for ${targetDate.toLocaleDateString()}</h4>
-            <p>Temperature: ${avgTemp.toFixed(1)}°C, Rainfall: ${mean(combinedData.map(d => d.precipitation)).toFixed(1)} mm</p>
-            <p>Common Condition: ${commonCondition}</p>
+            <p>Based on ${combinedData.length} historical & recent data points (±10 days from past years).</p>
+            <ul>
+                <li>Temperature: ${avgTemp.toFixed(1)}°C</li>
+                <li>Rainfall: ${avgRain.toFixed(1)} mm</li>
+                <li>Wind Speed: ${avgWind.toFixed(1)} km/h</li>
+                <li>Humidity: ${avgHumidity.toFixed(1)}%</li>
+                <li>Common Condition: ${commonCondition}</li>
+            </ul>
         `;
 
-        // Datos para la gráfica
-        const labels = combinedData.map((d, i) => `Data ${i+1}`);
-        const temps = combinedData.map(d => d.temperature);
-        const rains = combinedData.map(d => d.precipitation);
+        if (Math.abs(daysDiff) <= 7) {
+            prediction += '<p><em>Recent weather trends are considered for this date.</em></p>';
+        }
 
-        if (chartInstance) chartInstance.destroy();
-
-        chartInstance = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Temperature (°C)',
-                        data: temps,
-                        borderColor: 'orange',
-                        fill: false,
-                        yAxisID: 'yTemp'
-                    },
-                    {
-                        label: 'Precipitation (mm)',
-                        data: rains,
-                        borderColor: 'blue',
-                        fill: false,
-                        yAxisID: 'yRain'
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    yTemp: {
-                        type: 'linear',
-                        position: 'left',
-                        title: { display: true, text: 'Temperature (°C)' }
-                    },
-                    yRain: {
-                        type: 'linear',
-                        position: 'right',
-                        title: { display: true, text: 'Precipitation (mm)' }
-                    }
-                }
-            }
-        });
+        resultDiv.innerHTML = prediction;
     });
 }
 
