@@ -482,7 +482,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
       'Crossfit': '💪', 'Kayaking': '🛶', 'MountainBikeRide': '🚵',
       'RockClimbing': '🧗', 'RollerSkating': '⛸️', 'Snowshoe': '🥾',
       'StandUpPaddling': '🏄‍♀️', 'Surfing': '🏄', 'VirtualRide': '🚴',
-      'VirtualRun': '🏃', 'Windsurf': '⛵'
+      'VirtualRun': '🏃', 'Windsurf': '⛵', 'Padel': '🎾', 'Golf': '⛳', 'Tennis': '🎾'
     };
 
     // Filter sports with at least 5h
