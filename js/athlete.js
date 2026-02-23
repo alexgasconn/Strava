@@ -48,7 +48,7 @@ renderMonthHourMatrix(runs);
 renderYearHourMatrix(runs);
 renderYearWeekdayMatrix(runs);
 renderInteractiveMatrix(runs);
-}
+
 
 
 
