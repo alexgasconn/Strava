@@ -150,6 +150,8 @@ async function renderGearSection(runs, filter = 'all') {
     }
 
     const gearMetrics = calculateGearMetrics(runs);
+    console.log("🔧 renderGearSection: gearMetrics keys:", Array.from(gearMetrics.keys()));
+
     let gearIds = Array.from(gearMetrics.keys());
 
     if (gearIds.length === 0) {
@@ -161,7 +163,25 @@ async function renderGearSection(runs, filter = 'all') {
 
     try {
         const allGears = getGears();
-        const gearDetailsMap = new Map(allGears.map(gear => [gear.id, gear]));
+        console.log("🔧 renderGearSection: allGears from localStorage:", allGears.length, allGears.map(g => ({ id: g.id, name: g.name })));
+
+        // Process gear details to ensure type is set correctly
+        const processedGears = allGears.map(gear => {
+            const processedGear = { ...gear };
+            processedGear.type = ('frame_type' in processedGear || 'weight' in processedGear) ? 'bike' : 'shoe';
+            if (processedGear.type === 'shoe') {
+                processedGear.notification_distance = processedGear.notification_distance ?? 700;
+                processedGear.durability = processedGear.notification_distance;
+            } else if (processedGear.type === 'bike') {
+                processedGear.durability = 15000000;
+                processedGear.notification_distance = null;
+            } else {
+                processedGear.durability = 1000000;
+            }
+            return processedGear;
+        });
+
+        const gearDetailsMap = new Map(processedGears.map(gear => [gear.id, gear]));
 
         let combinedGearData = Array.from(gearDetailsMap.values()).map(gear => ({
             gear: {
@@ -171,11 +191,21 @@ async function renderGearSection(runs, filter = 'all') {
             metrics: gearMetrics.get(gear.id) || {}
         }));
 
+        console.log("🔧 renderGearSection: combinedGearData before filter:", combinedGearData.length, combinedGearData.map(d => ({
+            id: d.gear.id,
+            name: d.gear.name,
+            type: d.gear.type,
+            hasMetrics: !!d.metrics.numUses,
+            distance: d.gear.distance
+        })));
+
         // Filter by type
         if (filter !== 'all') {
             combinedGearData = combinedGearData.filter(item => item.gear.type === filter);
+            console.log("🔧 renderGearSection: combinedGearData after type filter:", combinedGearData.length);
         }
 
+        console.log("🔧 renderGearSection: final combinedGearData:", combinedGearData.length);
         renderGearCards(combinedGearData);
     } catch (error) {
         console.error("❌ Failed to fetch gear details:", error);
@@ -679,7 +709,15 @@ export async function renderGearGanttChart(runs, filter = 'all') {
     let gearIdToName = new Map(); // Usar Map en lugar de objeto para mayor flexibilidad con IDs
     try {
         const allGears = getGears();
-        const gearDetailsMap = new Map(allGears.map(gear => [gear.id, gear]));
+
+        // Process gear details to ensure type is set correctly
+        const processedGears = allGears.map(gear => {
+            const processedGear = { ...gear };
+            processedGear.type = ('frame_type' in processedGear || 'weight' in processedGear) ? 'bike' : 'shoe';
+            return processedGear;
+        });
+
+        const gearDetailsMap = new Map(processedGears.map(gear => [gear.id, gear]));
 
         // Filter gears by type
         let filteredGears = Array.from(gearDetailsMap.values());

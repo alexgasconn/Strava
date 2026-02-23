@@ -1,4 +1,4 @@
-// js/athlete.js
+// js/athlete.js - Updated: 2026-02-23 to fix runs reference error
 import * as utils from './utils.js';
 
 export function renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo, sportFilter = 'all') {
