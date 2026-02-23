@@ -1047,7 +1047,7 @@ function renderGearMap(activities) {
     const mapContainer = document.getElementById('gear-map');
 
     if (activities.length === 0) {
-        mapContainer.innerHTML = '<p>No activities with maps to display.</p>';
+        mapContainer.innerHTML = '<p>No activities with location data to display.</p>';
         return;
     }
 
@@ -1058,65 +1058,37 @@ function renderGearMap(activities) {
     }).addTo(map);
 
     const bounds = [];
-    const colors = ['#FF6B35', '#FC5200', '#4CAF50', '#2196F3', '#9C27B0', '#FF9800'];
 
     activities.forEach((activity, index) => {
-        if (activity.map && activity.map.summary_polyline) {
-            try {
-                const coordinates = decodePolyline(activity.map.summary_polyline);
-                if (coordinates.length > 0) {
-                    const color = colors[index % colors.length];
+        if (activity.start_latlng && activity.start_latlng.length >= 2) {
+            const startLatLng = [activity.start_latlng[0], activity.start_latlng[1]];
+            L.circleMarker(startLatLng, {
+                radius: 6,
+                color: '#2ECC40',
+                fillColor: '#2ECC40',
+                fillOpacity: 0.8,
+                weight: 2
+            }).addTo(map).bindPopup(`<b>Start:</b> ${activity.name}<br>${new Date(activity.start_date_local).toLocaleDateString()}`);
 
-                    // Añadir polyline
-                    const polyline = L.polyline(coordinates, {
-                        color: color,
-                        weight: 3,
-                        opacity: 0.8
-                    }).addTo(map);
+            bounds.push(startLatLng);
+        }
 
-                    // Añadir marcadores de inicio y fin
-                    L.circleMarker(coordinates[0], {
-                        radius: 6,
-                        color: '#2ECC40',
-                        fillColor: '#2ECC40',
-                        fillOpacity: 0.8,
-                        weight: 2
-                    }).addTo(map).bindPopup(`<b>Start:</b> ${activity.name}`);
+        if (activity.end_latlng && activity.end_latlng.length >= 2) {
+            const endLatLng = [activity.end_latlng[0], activity.end_latlng[1]];
+            L.circleMarker(endLatLng, {
+                radius: 6,
+                color: '#FF4136',
+                fillColor: '#FF4136',
+                fillOpacity: 0.8,
+                weight: 2
+            }).addTo(map).bindPopup(`<b>Finish:</b> ${activity.name}<br>${(activity.distance / 1000).toFixed(1)} km<br>${new Date(activity.start_date_local).toLocaleDateString()}`);
 
-                    L.circleMarker(coordinates[coordinates.length - 1], {
-                        radius: 6,
-                        color: '#FF4136',
-                        fillColor: '#FF4136',
-                        fillOpacity: 0.8,
-                        weight: 2
-                    }).addTo(map).bindPopup(`<b>Finish:</b> ${activity.name}<br>${(activity.distance / 1000).toFixed(1)} km`);
-
-                    bounds.push(...coordinates);
-                }
-            } catch (error) {
-                console.error('Error decoding polyline for activity:', activity.id, error);
-            }
+            bounds.push(endLatLng);
         }
     });
 
     if (bounds.length > 0) {
         map.fitBounds(bounds, { padding: [20, 20] });
-    }
-
-    // Añadir control de capas si hay múltiples actividades
-    if (activities.length > 1) {
-        const overlays = {};
-        activities.forEach((activity, index) => {
-            if (activity.map && activity.map.summary_polyline) {
-                const color = colors[index % colors.length];
-                overlays[`${activity.name || `Activity ${index + 1}`}`] = L.polyline(
-                    decodePolyline(activity.map.summary_polyline),
-                    { color: color, weight: 3, opacity: 0.8 }
-                );
-            }
-        });
-
-        L.control.layers(null, overlays).addTo(map);
     }
 }
 
