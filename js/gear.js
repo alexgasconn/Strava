@@ -604,9 +604,10 @@ async function renderGearChart(runs, filter = 'all') {
     if (uniqueGearIds.length > 0) {
         try {
             const results = await Promise.all(uniqueGearIds.map(id => fetchGearById(id)));
-            results.forEach(res => {
-                const g = res?.gear;
-                if (g) gearIdToName.set(g.id, g.name || [g.brand_name, g.model_name].filter(Boolean).join(' '));
+            results.forEach(gear => {
+                if (gear && gear.id) {
+                    gearIdToName.set(gear.id, gear.name || [gear.brand_name, gear.model_name].filter(Boolean).join(' '));
+                }
             });
         } catch (err) {
             console.error('Error fetching gear names for GearChart:', err);
@@ -868,69 +869,430 @@ function renderGearInfo(gear, activities) {
 
 function renderGearStats(gear, activities) {
     const container = document.getElementById('gear-stats');
-    // Add more stats here
+
+    if (activities.length === 0) {
+        container.innerHTML = '<h3>Statistics</h3><p>No activities with this gear yet.</p>';
+        return;
+    }
+
+    const totalDistance = activities.reduce((sum, a) => sum + a.distance, 0) / 1000;
+    const totalTime = activities.reduce((sum, a) => sum + a.moving_time, 0) / 3600;
+    const totalElevation = activities.reduce((sum, a) => sum + (a.total_elevation_gain || 0), 0);
+    const avgDistance = totalDistance / activities.length;
+    const avgTime = totalTime / activities.length;
+    const avgElevation = totalElevation / activities.length;
+    const avgPace = totalDistance > 0 ? (totalTime * 60) / totalDistance : 0;
+
+    const firstUse = new Date(Math.min(...activities.map(a => new Date(a.start_date_local))));
+    const lastUse = new Date(Math.max(...activities.map(a => new Date(a.start_date_local))));
+    const daysUsed = Math.ceil((lastUse - firstUse) / (1000 * 60 * 60 * 24)) + 1;
+
     container.innerHTML = `
-        <h3>Statistics</h3>
-        <p>More stats coming soon...</p>
+        <h3>📊 Statistics</h3>
+        <div class="gear-stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">${activities.length}</div>
+                <div class="stat-label">Total Activities</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${totalDistance.toFixed(0)}</div>
+                <div class="stat-label">Total Distance (km)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${totalTime.toFixed(1)}</div>
+                <div class="stat-label">Total Time (hours)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${totalElevation.toFixed(0)}</div>
+                <div class="stat-label">Total Elevation (m)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${avgDistance.toFixed(1)}</div>
+                <div class="stat-label">Avg Distance (km)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${avgTime.toFixed(1)}</div>
+                <div class="stat-label">Avg Time (hours)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${avgElevation.toFixed(0)}</div>
+                <div class="stat-label">Avg Elevation (m)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${formatPace(avgPace * 60, 1000)}</div>
+                <div class="stat-label">Avg Pace</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${firstUse.toLocaleDateString()}</div>
+                <div class="stat-label">First Use</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${lastUse.toLocaleDateString()}</div>
+                <div class="stat-label">Last Use</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${daysUsed}</div>
+                <div class="stat-label">Days Used</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${(totalDistance / daysUsed).toFixed(1)}</div>
+                <div class="stat-label">Km per Day</div>
+            </div>
+        </div>
     `;
 }
 
 function renderGearAdvanced(gear, activities) {
     const container = document.getElementById('gear-advanced');
-    // Add advanced metrics
+
+    if (activities.length === 0) {
+        container.innerHTML = '<h3>🔬 Advanced Metrics</h3><p>No activities with this gear yet.</p>';
+        return;
+    }
+
+    // Análisis por día de la semana
+    const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const weekdayCounts = activities.reduce((acc, a) => {
+        const day = new Date(a.start_date_local).getDay();
+        acc[day] = (acc[day] || 0) + 1;
+        return acc;
+    }, {});
+
+    const mostUsedWeekday = weekdayNames[Object.keys(weekdayCounts).reduce((a, b) =>
+        weekdayCounts[a] > weekdayCounts[b] ? a : b)];
+
+    // Análisis por hora del día
+    const hourCounts = activities.reduce((acc, a) => {
+        const hour = new Date(a.start_date_local).getHours();
+        acc[hour] = (acc[hour] || 0) + 1;
+        return acc;
+    }, {});
+
+    const mostUsedHour = Object.keys(hourCounts).reduce((a, b) =>
+        hourCounts[a] > hourCounts[b] ? a : b);
+
+    // Análisis de rendimiento
+    const bestDistance = Math.max(...activities.map(a => a.distance)) / 1000;
+    const bestTime = Math.min(...activities.filter(a => a.moving_time > 0).map(a => a.moving_time)) / 3600;
+    const bestPace = Math.min(...activities.filter(a => a.distance > 0 && a.moving_time > 0)
+        .map(a => (a.moving_time / 60) / (a.distance / 1000)));
+
+    // Análisis de elevación
+    const activitiesWithElevation = activities.filter(a => a.total_elevation_gain > 0);
+    const avgElevationGain = activitiesWithElevation.length > 0
+        ? activitiesWithElevation.reduce((sum, a) => sum + a.total_elevation_gain, 0) / activitiesWithElevation.length
+        : 0;
+
     container.innerHTML = `
-        <h3>Advanced Metrics</h3>
-        <p>Advanced analysis coming soon...</p>
+        <h3>🔬 Advanced Metrics</h3>
+        <div class="gear-advanced-grid">
+            <div class="advanced-section">
+                <h4>📅 Usage Patterns</h4>
+                <div class="advanced-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Most Used Day:</span>
+                        <span class="stat-value">${mostUsedWeekday}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Peak Hour:</span>
+                        <span class="stat-value">${mostUsedHour}:00</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Activities with Elevation:</span>
+                        <span class="stat-value">${activitiesWithElevation.length}/${activities.length}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="advanced-section">
+                <h4>🏆 Personal Bests</h4>
+                <div class="advanced-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Best Distance:</span>
+                        <span class="stat-value">${bestDistance.toFixed(1)} km</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Best Time:</span>
+                        <span class="stat-value">${bestTime.toFixed(2)} hours</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Best Pace:</span>
+                        <span class="stat-value">${formatPace(bestPace * 60, 1000)}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="advanced-section">
+                <h4>⛰️ Elevation Analysis</h4>
+                <div class="advanced-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Avg Elevation Gain:</span>
+                        <span class="stat-value">${avgElevationGain.toFixed(0)} m</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Max Elevation Gain:</span>
+                        <span class="stat-value">${Math.max(...activities.map(a => a.total_elevation_gain || 0))} m</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Elevation Activities:</span>
+                        <span class="stat-value">${((activitiesWithElevation.length / activities.length) * 100).toFixed(1)}%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     `;
 }
 
 function renderGearMap(activities) {
     const mapContainer = document.getElementById('gear-map');
+
+    if (activities.length === 0) {
+        mapContainer.innerHTML = '<p>No activities with maps to display.</p>';
+        return;
+    }
+
     const map = L.map('gear-map').setView([40.7128, -74.0060], 10);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
     }).addTo(map);
 
-    activities.forEach(activity => {
+    const bounds = [];
+    const colors = ['#FF6B35', '#FC5200', '#4CAF50', '#2196F3', '#9C27B0', '#FF9800'];
+
+    activities.forEach((activity, index) => {
         if (activity.map && activity.map.summary_polyline) {
-            const polyline = L.polyline(activity.map.summary_polyline, { color: 'blue' }).addTo(map);
-            map.fitBounds(polyline.getBounds());
+            try {
+                const coordinates = decodePolyline(activity.map.summary_polyline);
+                if (coordinates.length > 0) {
+                    const color = colors[index % colors.length];
+
+                    // Añadir polyline
+                    const polyline = L.polyline(coordinates, {
+                        color: color,
+                        weight: 3,
+                        opacity: 0.8
+                    }).addTo(map);
+
+                    // Añadir marcadores de inicio y fin
+                    L.circleMarker(coordinates[0], {
+                        radius: 6,
+                        color: '#2ECC40',
+                        fillColor: '#2ECC40',
+                        fillOpacity: 0.8,
+                        weight: 2
+                    }).addTo(map).bindPopup(`<b>Start:</b> ${activity.name}`);
+
+                    L.circleMarker(coordinates[coordinates.length - 1], {
+                        radius: 6,
+                        color: '#FF4136',
+                        fillColor: '#FF4136',
+                        fillOpacity: 0.8,
+                        weight: 2
+                    }).addTo(map).bindPopup(`<b>Finish:</b> ${activity.name}<br>${(activity.distance / 1000).toFixed(1)} km`);
+
+                    bounds.push(...coordinates);
+                }
+            } catch (error) {
+                console.error('Error decoding polyline for activity:', activity.id, error);
+            }
         }
     });
+
+    if (bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [20, 20] });
+    }
+
+    // Añadir control de capas si hay múltiples actividades
+    if (activities.length > 1) {
+        const overlays = {};
+        activities.forEach((activity, index) => {
+            if (activity.map && activity.map.summary_polyline) {
+                const color = colors[index % colors.length];
+                overlays[`${activity.name || `Activity ${index + 1}`}`] = L.polyline(
+                    decodePolyline(activity.map.summary_polyline),
+                    { color: color, weight: 3, opacity: 0.8 }
+                );
+            }
+        });
+
+        L.control.layers(null, overlays).addTo(map);
+    }
 }
 
 function renderGearUsageChart(activities) {
     const ctx = document.getElementById('gear-usage-chart');
+
+    if (activities.length === 0) {
+        ctx.parentElement.innerHTML = '<p>No data to display.</p>';
+        return;
+    }
+
+    // Preparar datos mensuales
     const monthlyData = activities.reduce((acc, a) => {
-        const month = a.start_date_local.substring(0, 7);
-        acc[month] = (acc[month] || 0) + a.distance / 1000;
+        const month = a.start_date_local.substring(0, 7); // YYYY-MM
+        if (!acc[month]) {
+            acc[month] = {
+                distance: 0,
+                count: 0,
+                elevation: 0,
+                time: 0
+            };
+        }
+        acc[month].distance += a.distance / 1000;
+        acc[month].count += 1;
+        acc[month].elevation += a.total_elevation_gain || 0;
+        acc[month].time += a.moving_time / 3600;
         return acc;
     }, {});
 
     const labels = Object.keys(monthlyData).sort();
-    const data = labels.map(month => monthlyData[month]);
+    const distanceData = labels.map(month => monthlyData[month].distance);
+    const countData = labels.map(month => monthlyData[month].count);
+    const elevationData = labels.map(month => monthlyData[month].elevation);
+    const timeData = labels.map(month => monthlyData[month].time);
+
+    // Calcular acumulado
+    let cumulativeDistance = 0;
+    const cumulativeData = distanceData.map(d => cumulativeDistance += d);
 
     new Chart(ctx, {
         type: 'line',
         data: {
-            labels,
-            datasets: [{
-                label: 'Distance (km)',
-                data,
-                borderColor: 'blue',
-                fill: false
-            }]
+            labels: labels.map(month => {
+                const [year, monthNum] = month.split('-');
+                return `${year}-${monthNum}`;
+            }),
+            datasets: [
+                {
+                    label: 'Monthly Distance (km)',
+                    data: distanceData,
+                    borderColor: '#FC5200',
+                    backgroundColor: 'rgba(252, 82, 0, 0.1)',
+                    fill: false,
+                    yAxisID: 'y',
+                    tension: 0.4
+                },
+                {
+                    label: 'Cumulative Distance (km)',
+                    data: cumulativeData,
+                    borderColor: '#4CAF50',
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    fill: false,
+                    yAxisID: 'y',
+                    tension: 0.4,
+                    borderDash: [5, 5]
+                },
+                {
+                    label: 'Activities Count',
+                    data: countData,
+                    borderColor: '#2196F3',
+                    backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                    fill: false,
+                    yAxisID: 'y1',
+                    tension: 0.4,
+                    pointStyle: 'rect'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Distance (km)'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Activities Count'
+                    },
+                    grid: {
+                        drawOnChartArea: false,
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false
+                }
+            }
         }
     });
 }
 
 function renderGearActivitiesList(activities) {
     const container = document.getElementById('gear-activities-list');
-    container.innerHTML = activities.map(a => `
-        <div class="activity-item">
-            <h4>${a.name}</h4>
-            <p>${new Date(a.start_date_local).toLocaleDateString()} - ${(a.distance / 1000).toFixed(1)} km</p>
+
+    if (activities.length === 0) {
+        container.innerHTML = '<p>No activities found with this gear.</p>';
+        return;
+    }
+
+    // Ordenar por fecha más reciente primero
+    const sortedActivities = activities.sort((a, b) =>
+        new Date(b.start_date_local) - new Date(a.start_date_local));
+
+    container.innerHTML = `
+        <div class="activities-summary">
+            <p>Showing ${activities.length} activities with this gear</p>
         </div>
-    `).join('');
+        <div class="gear-activities-grid">
+            ${sortedActivities.map(activity => {
+        const date = new Date(activity.start_date_local);
+        const distance = (activity.distance / 1000).toFixed(1);
+        const time = formatTime(activity.moving_time);
+        const pace = activity.distance > 0 ? formatPace((activity.moving_time / 60) / (activity.distance / 1000) * 60, 1000) : 'N/A';
+        const elevation = activity.total_elevation_gain || 0;
+
+        return `
+                    <div class="gear-activity-card" onclick="window.open('activity.html?id=${activity.id}', '_blank')" style="cursor: pointer;">
+                        <div class="activity-header">
+                            <h4>${activity.name || 'Unnamed Activity'}</h4>
+                            <span class="activity-date">${date.toLocaleDateString()}</span>
+                        </div>
+                        <div class="activity-stats">
+                            <div class="activity-stat">
+                                <span class="stat-value">${distance}</span>
+                                <span class="stat-unit">km</span>
+                            </div>
+                            <div class="activity-stat">
+                                <span class="stat-value">${time}</span>
+                                <span class="stat-unit">time</span>
+                            </div>
+                            <div class="activity-stat">
+                                <span class="stat-value">${pace}</span>
+                                <span class="stat-unit">pace</span>
+                            </div>
+                            ${elevation > 0 ? `
+                                <div class="activity-stat">
+                                    <span class="stat-value">${elevation}</span>
+                                    <span class="stat-unit">m elev</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                        ${activity.achievement_count > 0 ? `
+                            <div class="achievement-badge">
+                                🏆 ${activity.achievement_count} achievement${activity.achievement_count > 1 ? 's' : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+    }).join('')}
+        </div>
+    `;
 }
