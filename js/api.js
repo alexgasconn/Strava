@@ -69,7 +69,7 @@ export async function fetchTrainingZones() {
 }
 
 export async function fetchAllGears(athlete) {
-    const gearIds = [...(athlete.shoes || []), ...(athlete.bikes || [])];
+    const gearIds = [...(athlete.shoes || []), ...(athlete.bikes || [])].map(g => typeof g === 'string' ? g : g.id);
     if (gearIds.length === 0) return [];
 
     const gearPromises = gearIds.map(id => fetchGearById(id));
