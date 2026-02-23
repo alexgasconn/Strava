@@ -39,15 +39,6 @@ export function renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo, sp
 
     console.log("🎽 renderAthleteTab: Athlete tab rendered");
 }
-renderMonthlyMixChart(runs);
-renderHourMatrix(runs);
-renderYearMonthMatrix(runs);
-renderMonthWeekdayMatrix(runs);
-renderMonthDayMatrix(runs);
-renderMonthHourMatrix(runs);
-renderYearHourMatrix(runs);
-renderYearWeekdayMatrix(runs);
-renderInteractiveMatrix(runs);
 
 
 
