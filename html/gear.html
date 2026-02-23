@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Gear Details</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="../styles/style.css">
+
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</head>
+
+<body>
+    <div class="container">
+        <h1>Gear Details</h1>
+
+        <div id="gear-details-row" class="activity-details-row">
+            <div id="gear-info" class="activity-details-col"></div>
+            <div id="gear-stats" class="activity-details-col"></div>
+            <div id="gear-advanced" class="activity-details-col"></div>
+        </div>
+
+        <div class="side-by-side-container">
+            <!-- Columna Izquierda: Mapa de actividades con este gear -->
+            <div id="gear-map-section" class="data-section">
+                <h3>Activities Map</h3>
+                <div id="gear-map" style="height: 400px;"></div>
+            </div>
+
+            <!-- Columna Derecha: Gráfico de uso por mes -->
+            <div id="gear-usage-section" class="data-section">
+                <h3>Usage Over Time</h3>
+                <div class="chart-container-inner">
+                    <canvas id="gear-usage-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- FILA 3: Lista de actividades -->
+        <div id="gear-activities-section" class="data-section">
+            <h3>Activities with this Gear</h3>
+            <div id="gear-activities-list"></div>
+        </div>
+
+    </div>
+
+    <script type="module">
+        import { renderGearDetailPage } from '../js/gear.js';
+
+        // Get gear ID from URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        const gearId = urlParams.get('id');
+
+        if (gearId) {
+            renderGearDetailPage(gearId);
+        } else {
+            document.body.innerHTML = '<p>No gear ID provided</p>';
+        }
+    </script>
+</body>
+
+</html>

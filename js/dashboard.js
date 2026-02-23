@@ -566,6 +566,8 @@ function renderRecentActivitiesPreview(runs) {
             5: '#F44336'   // Rojo - Máximo
         };
 
+        const environmentalDifficulty = utils.calculateEnvironmentalDifficulty(r);
+
         return `
             <div class="activity-card" 
                  style="background:#fff; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.08); 
@@ -644,15 +646,15 @@ function renderRecentActivitiesPreview(runs) {
 
                         <!-- Stats secundarias - más compactas y organizadas -->
                         <div style="display:flex; gap:1rem; flex-wrap:wrap;">
-                            ${r.athlete_count && r.athlete_count > 1 ? `
+                            ${r.athlete_count ? `
                                 <div style="display:flex; align-items:center; gap:0.4rem;">
-                                    <span style="font-size:1rem;">👥</span>
+                                    <span style="font-size:1rem;">${r.athlete_count === 1 ? '🏃' : r.athlete_count === 2 ? '👥' : '👥'}</span>
                                     <div>
-                                        <div style="font-weight:600; color:#9b59b6; font-size:0.9rem; line-height:1.2;">
-                                            ${r.athlete_count} athletes
+                                        <div style="font-weight:600; color:${r.athlete_count === 1 ? '#7f8c8d' : '#9b59b6'}; font-size:0.9rem; line-height:1.2;">
+                                            ${r.athlete_count === 1 ? 'Solo run' : r.athlete_count === 2 ? 'Run in pair' : 'Group run'}
                                         </div>
                                         <div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:0.3px;">
-                                            Group run
+                                            ${r.athlete_count === 1 ? 'Training' : r.athlete_count === 2 ? 'Pair' : 'Group'}
                                         </div>
                                     </div>
                                 </div>
@@ -735,6 +737,20 @@ function renderRecentActivitiesPreview(runs) {
                                         </div>
                                         <div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:0.3px;">
                                             Elevation
+                                        </div>
+                                    </div>
+                                </div>
+                            ` : ''}
+
+                            ${environmentalDifficulty > 0 ? `
+                                <div style="display:flex; align-items:center; gap:0.4rem;">
+                                    <span style="font-size:1rem;">🌡️</span>
+                                    <div>
+                                        <div style="font-weight:600; color:#f39c12; font-size:0.9rem; line-height:1.2;">
+                                            ${environmentalDifficulty}%
+                                        </div>
+                                        <div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:0.3px;">
+                                            Difficulty
                                         </div>
                                     </div>
                                 </div>

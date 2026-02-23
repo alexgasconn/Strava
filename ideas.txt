@@ -16,12 +16,18 @@ IN PROGRESS
 🟡🚧TLB ACT FRM.... que conti TOTES les activitats, no nomes running 
 🟡🚧carregar zonas, profile, gear, weather api... al iniciar app
 🟡⚠️totes les dates mateix format
-🟡⚠️zonas (Z2) del dashboard de la ma amb las zoonas del perfil strava
+🟡⚠️zonas (Z2) del dashboard de la ma amb las zonas del perfil strava
 🟡🩹weather api fer servir per predictions 
 
 
 
 TO DO
+🔴🌈MENU ocult
+🔴🚨a dashboard, surt SOLO quan athleteCount es 2 clarament
+🔴🚧corregir Pace: 3:60 /km
+🔴🌈guardar acitivitats, no fer get de totes cada cop...
+🔴🩹 pestaña Athlete, posar filtre de dates i de esport
+🔴🚧arreglar ratxes (streaks)
 🔴🩹weather data -> % de "difficultat ambiental" 
 🔴🩹coords streams in activity -> veure cap a on va el vent -> % de vent a favor, en contra, de costat...
 🔴🩹heatmap general com strava (que tardi una bona estona, pillar streams de coords de cada activitat...)

@@ -1,8 +1,15 @@
 // js/athlete.js
+import * as utils from './utils.js';
 
-export function renderAthleteTab(allActivities) {
+export function renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo, sportFilter = 'all') {
     console.log("Initializing Athlete Tab...");
-    const runs = allActivities.filter(a => a.type && a.type.includes('Run'));
+
+    // Add filters UI
+    addAthleteFilters();
+
+    // Filter activities
+    const filteredActivities = filterActivities(allActivities, dateFilterFrom, dateFilterTo, sportFilter);
+    const runs = filteredActivities.filter(a => a.type && a.type.includes('Run'));
 
     const athleteData = JSON.parse(localStorage.getItem('strava_athlete_data'));
     const zonesData = JSON.parse(localStorage.getItem('strava_training_zones'));
@@ -1305,4 +1312,68 @@ function createUiChart(canvasId, config) {
         uiCharts[canvasId].destroy();
     }
     uiCharts[canvasId] = new Chart(canvas, config);
+}
+
+function addAthleteFilters() {
+    const container = document.getElementById('athlete-tab');
+    if (!container) return;
+
+    // Check if filters already exist
+    if (document.getElementById('athlete-filters')) return;
+
+    const filterDiv = document.createElement('div');
+    filterDiv.id = 'athlete-filters';
+    filterDiv.style = 'display:flex; gap:1rem; margin-bottom:1rem; align-items:center;';
+
+    const sportSelect = document.createElement('select');
+    sportSelect.id = 'athlete-sport-filter';
+    sportSelect.innerHTML = `
+        <option value="all">All Sports</option>
+        <option value="Run">Run</option>
+        <option value="Ride">Ride</option>
+        <option value="Swim">Swim</option>
+        <option value="Walk">Walk</option>
+    `;
+
+    const dateFromInput = document.createElement('input');
+    dateFromInput.type = 'date';
+    dateFromInput.id = 'athlete-date-from';
+    dateFromInput.placeholder = 'From date';
+
+    const dateToInput = document.createElement('input');
+    dateToInput.type = 'date';
+    dateToInput.id = 'athlete-date-to';
+    dateToInput.placeholder = 'To date';
+
+    const applyButton = document.createElement('button');
+    applyButton.textContent = 'Apply Filters';
+    applyButton.onclick = () => {
+        const sport = sportSelect.value;
+        const from = dateFromInput.value;
+        const to = dateToInput.value;
+        // Re-render with filters
+        const allActivities = JSON.parse(localStorage.getItem('strava_activities') || '[]');
+        renderAthleteTab(allActivities, from, to, sport);
+    };
+
+    filterDiv.appendChild(sportSelect);
+    filterDiv.appendChild(dateFromInput);
+    filterDiv.appendChild(dateToInput);
+    filterDiv.appendChild(applyButton);
+
+    container.insertBefore(filterDiv, container.firstChild);
+}
+
+function filterActivities(allActivities, dateFilterFrom, dateFilterTo, sportFilter = 'all') {
+    let filtered = allActivities;
+
+    if (dateFilterFrom || dateFilterTo) {
+        filtered = utils.filterActivitiesByDate(filtered, dateFilterFrom, dateFilterTo);
+    }
+
+    if (sportFilter !== 'all') {
+        filtered = filtered.filter(a => a.type === sportFilter);
+    }
+
+    return filtered;
 }

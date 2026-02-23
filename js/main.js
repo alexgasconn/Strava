@@ -9,7 +9,7 @@ import { renderGearTab } from './gear.js';
 import { renderWeatherTab } from './weather.js';
 import { renderRunsTab } from './runs.js';
 import { renderWrappedTab } from './wrapped.js';
-import { fetchAllActivities, fetchAthleteData, fetchTrainingZones } from './api.js';
+import { fetchAllActivities, fetchAthleteData, fetchTrainingZones, fetchAllGears } from './api.js';
 import { preprocessActivities } from './preprocessing.js';
 
 
@@ -132,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (tabId === 'athlete-tab' && !athleteTabRendered) {
                 if (allActivities.length > 0) {
-                    renderAthleteTab(allActivities);
+                    renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo);
                     console.log("Athlete tab rendered.");
                     athleteTabRendered = true;
                 } else {
@@ -236,6 +236,10 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Fetched athlete data:', athlete);
             console.log('Fetched training zones:', zones);
 
+            console.log("Fetching gears...");
+            const gears = await fetchAllGears(athlete);
+            console.log(`Fetched ${gears.length} gears.`);
+
             console.log('Preprocessing activities...');
             const preprocessed = preprocessActivities(activities);
             allActivities = preprocessed;
@@ -243,6 +247,8 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log(`Preprocessed activities:`, allActivities);
             localStorage.setItem('strava_athlete_data', JSON.stringify(athlete));
             localStorage.setItem('strava_training_zones', JSON.stringify(zones));
+            localStorage.setItem('strava_gears', JSON.stringify(gears));
+            localStorage.setItem('strava_activities', JSON.stringify(allActivities));
 
             allActivities = activities;
 
@@ -261,6 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showLoading('Refreshing activities...');
         try {
             allActivities = await fetchAllActivities(); // La API se encarga de los tokens
+            localStorage.setItem('strava_activities', JSON.stringify(allActivities));
             renderAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
             setupYearlySelector();
 

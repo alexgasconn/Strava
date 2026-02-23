@@ -6,6 +6,10 @@ import { fetchGearById } from './api.js';
 let gearChartInstance = null;
 let gearGanttChartInstance = null;
 
+function getGears() {
+    return JSON.parse(localStorage.getItem('strava_gears') || '[]');
+}
+
 // ============================================================================
 // MAIN RENDER FUNCTION
 // ============================================================================
@@ -156,8 +160,8 @@ async function renderGearSection(runs, filter = 'all') {
     listContainer.innerHTML = '<div class="loading-state">⏳ Loading detailed gear info...</div>';
 
     try {
-        const results = await Promise.all(gearIds.map(id => fetchGearById(id)));
-        const gearDetailsMap = processGearDetails(results);
+        const allGears = getGears();
+        const gearDetailsMap = new Map(allGears.map(gear => [gear.id, gear]));
 
         let combinedGearData = Array.from(gearDetailsMap.values()).map(gear => ({
             gear: {
@@ -268,7 +272,8 @@ function createGearCard(data, isEditMode) {
     const editSection = isEditMode ? createEditSection(gear.id, price, durationKm) : '';
 
     return `
-        <div class="gear-card ${gear.retired ? 'retired' : ''} ${needsReplacement && !gear.retired ? 'needs-replacement' : ''}">
+        <div class="gear-card ${gear.retired ? 'retired' : ''} ${needsReplacement && !gear.retired ? 'needs-replacement' : ''}" 
+             onclick="window.open('html/gear.html?id=${gear.id}', '_blank')" style="cursor: pointer;">
             ${statusBadges}
             <div class="gear-card-header">
                 <div class="gear-icon">${gear.type === 'bike' ? '🚴' : '👟'}</div>
@@ -503,21 +508,13 @@ async function renderGearChart(runs, filter = 'all') {
     // Filter runs by gear type
     let filteredRuns = runs;
     if (filter !== 'all') {
-        // Need to fetch gear details to know type
-        const gearIds = Array.from(new Set(runs.map(a => a.gear_id).filter(Boolean)));
-        if (gearIds.length > 0) {
-            try {
-                const results = await Promise.all(gearIds.map(id => fetchGearById(id)));
-                const gearDetailsMap = processGearDetails(results);
-                const validGearIds = Array.from(gearDetailsMap.values())
-                    .filter(gear => gear.type === filter)
-                    .map(gear => gear.id);
-                filteredRuns = runs.filter(run => validGearIds.includes(run.gear_id));
-            } catch (error) {
-                console.error("Failed to fetch gear details for chart filter:", error);
-                filteredRuns = runs; // fallback
-            }
-        }
+        // Use cached gear details
+        const allGears = getGears();
+        const gearDetailsMap = new Map(allGears.map(gear => [gear.id, gear]));
+        const validGearIds = Array.from(gearDetailsMap.values())
+            .filter(gear => gear.type === filter)
+            .map(gear => gear.id);
+        filteredRuns = runs.filter(run => validGearIds.includes(run.gear_id));
     }
 
     // Si no hay runs, esconder y destruir gráfico previo
@@ -681,8 +678,8 @@ export async function renderGearGanttChart(runs, filter = 'all') {
 
     let gearIdToName = new Map(); // Usar Map en lugar de objeto para mayor flexibilidad con IDs
     try {
-        const results = await Promise.all(gearIds.map(id => fetchGearById(id)));
-        const gearDetailsMap = processGearDetails(results);
+        const allGears = getGears();
+        const gearDetailsMap = new Map(allGears.map(gear => [gear.id, gear]));
 
         // Filter gears by type
         let filteredGears = Array.from(gearDetailsMap.values());
@@ -793,4 +790,109 @@ export async function renderGearGanttChart(runs, filter = 'all') {
             }
         }
     });
+}
+
+export async function renderGearDetailPage(gearId) {
+    const allActivities = JSON.parse(localStorage.getItem('strava_activities') || '[]');
+    const allGears = getGears();
+    const gear = allGears.find(g => g.id === gearId);
+
+    if (!gear) {
+        document.body.innerHTML = '<p>Gear not found</p>';
+        return;
+    }
+
+    const gearActivities = allActivities.filter(a => a.gear_id === gearId);
+
+    renderGearInfo(gear, gearActivities);
+    renderGearStats(gear, gearActivities);
+    renderGearAdvanced(gear, gearActivities);
+    renderGearMap(gearActivities);
+    renderGearUsageChart(gearActivities);
+    renderGearActivitiesList(gearActivities);
+}
+
+function renderGearInfo(gear, activities) {
+    const container = document.getElementById('gear-info');
+    const totalDistance = activities.reduce((sum, a) => sum + a.distance, 0) / 1000;
+    const totalTime = activities.reduce((sum, a) => sum + a.moving_time, 0) / 3600;
+    const avgPace = totalDistance > 0 ? (totalTime * 60) / totalDistance : 0;
+
+    container.innerHTML = `
+        <h3>${gear.name || `${gear.brand_name} ${gear.model_name}`}</h3>
+        <p><strong>Type:</strong> ${gear.type}</p>
+        <p><strong>Total Activities:</strong> ${activities.length}</p>
+        <p><strong>Total Distance:</strong> ${totalDistance.toFixed(1)} km</p>
+        <p><strong>Total Time:</strong> ${totalTime.toFixed(1)} hours</p>
+        <p><strong>Average Pace:</strong> ${formatPace(avgPace * 60, 1000)}</p>
+    `;
+}
+
+function renderGearStats(gear, activities) {
+    const container = document.getElementById('gear-stats');
+    // Add more stats here
+    container.innerHTML = `
+        <h3>Statistics</h3>
+        <p>More stats coming soon...</p>
+    `;
+}
+
+function renderGearAdvanced(gear, activities) {
+    const container = document.getElementById('gear-advanced');
+    // Add advanced metrics
+    container.innerHTML = `
+        <h3>Advanced Metrics</h3>
+        <p>Advanced analysis coming soon...</p>
+    `;
+}
+
+function renderGearMap(activities) {
+    const mapContainer = document.getElementById('gear-map');
+    const map = L.map('gear-map').setView([40.7128, -74.0060], 10);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    activities.forEach(activity => {
+        if (activity.map && activity.map.summary_polyline) {
+            const polyline = L.polyline(activity.map.summary_polyline, { color: 'blue' }).addTo(map);
+            map.fitBounds(polyline.getBounds());
+        }
+    });
+}
+
+function renderGearUsageChart(activities) {
+    const ctx = document.getElementById('gear-usage-chart');
+    const monthlyData = activities.reduce((acc, a) => {
+        const month = a.start_date_local.substring(0, 7);
+        acc[month] = (acc[month] || 0) + a.distance / 1000;
+        return acc;
+    }, {});
+
+    const labels = Object.keys(monthlyData).sort();
+    const data = labels.map(month => monthlyData[month]);
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Distance (km)',
+                data,
+                borderColor: 'blue',
+                fill: false
+            }]
+        }
+    });
+}
+
+function renderGearActivitiesList(activities) {
+    const container = document.getElementById('gear-activities-list');
+    container.innerHTML = activities.map(a => `
+        <div class="activity-item">
+            <h4>${a.name}</h4>
+            <p>${new Date(a.start_date_local).toLocaleDateString()} - ${(a.distance / 1000).toFixed(1)} km</p>
+        </div>
+    `).join('');
 }

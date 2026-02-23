@@ -2,6 +2,10 @@
 import * as utils from './utils.js';
 import { calculateFitness, rollingMean as calculateRollingMean } from './utils.js';
 
+function getGears() {
+    return JSON.parse(localStorage.getItem('strava_gears') || '[]');
+}
+
 export function renderAnalysisTab(allActivities, dateFilterFrom, dateFilterTo) {
     const filteredActivities = utils.filterActivitiesByDate(allActivities, dateFilterFrom, dateFilterTo);
     const runs = filteredActivities.filter(a => a.type && a.type.includes('Run'));
@@ -398,9 +402,8 @@ export async function renderGearGanttChart(runs) {
     // 3. Traer info detallada de cada gear
     let gearIdToName = {};
     try {
-        const results = await Promise.all(gearIds.map(id => fetchGearById(id)));
-        results.forEach(result => {
-            const gear = result.gear;
+        const allGears = getGears();
+        allGears.forEach(gear => {
             gearIdToName[gear.id] = gear.name || [gear.brand_name, gear.model_name].filter(Boolean).join(' ');
         });
     } catch (error) {
@@ -676,9 +679,8 @@ function renderStreaks(runs) {
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
+
+    const referenceDate = new Date(today);
 
     // --- UTILIDADES ---
     function formatDate(dateStr) {
@@ -722,7 +724,7 @@ function renderStreaks(runs) {
     function weeksBetween(week1Str, week2Str) {
         const [y1, w1] = week1Str.split('-W').map(Number);
         const [y2, w2] = week2Str.split('-W').map(Number);
-        
+
         // Convertir a días desde época y calcular semanas
         const date1 = getDateFromWeek(y1, w1);
         const date2 = getDateFromWeek(y2, w2);
@@ -754,14 +756,14 @@ function renderStreaks(runs) {
 
         for (let i = 0; i < sorted.length; i++) {
             const item = sorted[i];
-            
+
             if (currentStreak === 0) {
                 currentStreak = 1;
                 tempStart = item;
             } else {
                 let diff = 0;
                 const prev = sorted[i - 1];
-                
+
                 if (type === 'day') {
                     diff = daysBetween(prev, item);
                 } else if (type === 'week') {
@@ -800,15 +802,15 @@ function renderStreaks(runs) {
         if (sorted.length === 0) return { value: 0, start: null, end: null };
 
         let currentStreak = 0, start = null, end = null;
-        
-        // Obtener la referencia temporal (ayer o periodo actual)
+
+        // Obtener la referencia temporal (hoy o periodo actual)
         let checkDate;
         if (type === 'day') {
-            checkDate = yesterday.toISOString().slice(0, 10);
+            checkDate = referenceDate.toISOString().slice(0, 10);
         } else if (type === 'week') {
-            checkDate = getWeekString(yesterday);
+            checkDate = getWeekString(referenceDate);
         } else if (type === 'month') {
-            checkDate = yesterday.toISOString().slice(0, 7);
+            checkDate = referenceDate.toISOString().slice(0, 7);
         }
 
         // Buscar desde el final hacia atrás
@@ -831,7 +833,7 @@ function renderStreaks(runs) {
                 }
                 currentStreak++;
                 start = item;
-                
+
                 // Actualizar checkDate para buscar el periodo anterior
                 if (type === 'day') {
                     const d = new Date(checkDate);

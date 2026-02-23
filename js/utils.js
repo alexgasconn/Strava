@@ -80,17 +80,49 @@ export function formatDistance(meters) {
 export function formatPace(seconds, km) {
     if (!isFinite(seconds) || !isFinite(km) || km <= 0) return '-';
     const pace = seconds / km; // pace in seconds per km
-    const min = Math.floor(pace / 60);
-    const secRest = Math.round(pace % 60);
+    let min = Math.floor(pace / 60);
+    let secRest = Math.round(pace % 60);
+    if (secRest === 60) {
+        min += 1;
+        secRest = 0;
+    }
     return `${min}:${secRest.toString().padStart(2, '0')} /km`;
 }
 
 export function formatPaceFromSpeed(speedInMps) {
     if (!speedInMps || speedInMps === 0) return '-';
     const paceInSecPerKm = 1000 / speedInMps;
-    const min = Math.floor(paceInSecPerKm / 60);
-    const sec = Math.round(paceInSecPerKm % 60);
+    let min = Math.floor(paceInSecPerKm / 60);
+    let sec = Math.round(paceInSecPerKm % 60);
+    if (sec === 60) {
+        min += 1;
+        sec = 0;
+    }
     return `${min}:${sec.toString().padStart(2, '0')}`;
+}
+
+export function calculateEnvironmentalDifficulty(activity) {
+    // Placeholder: calculate based on weather data
+    // Assume activity has weather: { temp: number, humidity: number, wind_speed: number }
+    const weather = activity.weather || {};
+    let difficulty = 0;
+
+    if (weather.temp !== undefined) {
+        if (weather.temp > 30) difficulty += 30;
+        else if (weather.temp > 25) difficulty += 20;
+        else if (weather.temp < 5) difficulty += 15;
+        else if (weather.temp < 0) difficulty += 25;
+    }
+
+    if (weather.humidity !== undefined && weather.humidity > 80) {
+        difficulty += 10;
+    }
+
+    if (weather.wind_speed !== undefined && weather.wind_speed > 10) {
+        difficulty += 15;
+    }
+
+    return Math.min(difficulty, 100); // Max 100%
 }
 
 export function formatDate(date) {

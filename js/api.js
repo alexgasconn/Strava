@@ -67,3 +67,12 @@ export async function fetchTrainingZones() {
     const result = await handleApiResponse(response);
     return result.zones;
 }
+
+export async function fetchAllGears(athlete) {
+    const gearIds = [...(athlete.shoes || []), ...(athlete.bikes || [])];
+    if (gearIds.length === 0) return [];
+
+    const gearPromises = gearIds.map(id => fetchGearById(id));
+    const gears = await Promise.all(gearPromises);
+    return gears;
+}

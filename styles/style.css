@@ -393,7 +393,7 @@ main {
 
 .gear-card h4 {
     margin: 0 0 0.25rem 0;
-    font-size: 0.95em;
+    font-size: 0.85em;
     color: var(--text-dark);
 }
 
@@ -2799,7 +2799,7 @@ body {
 }
 
 .distance-value {
-    font-size: 2.5rem;
+    font-size: 2rem;
     font-weight: 800;
     color: #111827;
     line-height: 1;
