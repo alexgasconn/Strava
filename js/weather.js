@@ -1,4 +1,5 @@
 // weather-analytics.js
+import * as utils from './utils.js';
 
 export async function renderWeatherTab(allActivities) {
     console.log("Initializing Weather Analytics — received", allActivities.length, "activities");
@@ -50,14 +51,21 @@ export async function renderWeatherTab(allActivities) {
 
     const combinedWeatherData = weatherResults.map((wr, index) => {
         const run = wr.run; // Acceder al objeto run directamente
+        const temp = wr.temperature;
+        const hum = wr.humidity;
+        const wind = wr.wind_speed;
+
+        // Calculate environmental difficulty using utils helper
+        const envDifficulty = utils.calculateEnvironmentalDifficulty({ weather: { temp, humidity: hum, wind_speed: wind } });
+
         return {
-            temperature: wr.temperature,
+            temperature: temp,
             precipitation: wr.precipitation,
-            wind_speed: wr.wind_speed,
+            wind_speed: wind,
             wind_direction: wr.wind_direction,
             weather_code: wr.weather_code,
             weather_text: wr.weather_text,
-            humidity: wr.humidity,
+            humidity: hum,
             cloudcover: wr.cloudcover,
             pressure: wr.pressure,
 
@@ -66,6 +74,7 @@ export async function renderWeatherTab(allActivities) {
             distance: (run.distance || 0) / 1000, // Distancia en km
             pace: runPaceMinPerKm(run),        // Pace en min/km
             moving_time: (run.moving_time || 0) / 60, // Tiempo en minutos
+            envDifficulty // % environmental difficulty
         };
     });
 
@@ -759,7 +768,7 @@ function renderRunsList(tbodyElement, weatherResults) {
     tbodyElement.innerHTML = "";
 
     weatherResults.forEach((item) => {
-        const { run, temperature, precipitation, wind_speed, humidity, pressure, cloudcover, weather_text } = item;
+        const { run, temperature, precipitation, wind_speed, humidity, pressure, cloudcover, weather_text, envDifficulty } = item;
 
         const row = tbodyElement.insertRow();
         row.insertCell().textContent = run.name || "Unnamed";
@@ -773,6 +782,7 @@ function renderRunsList(tbodyElement, weatherResults) {
         row.insertCell().textContent = `${pressure?.toFixed(0) ?? "–"} hPa`;
         row.insertCell().textContent = `${cloudcover?.toFixed(0) ?? "–"}%`;
         row.insertCell().textContent = weather_text || "–";
+        row.insertCell().textContent = `${envDifficulty ?? 0}%`;
     });
 }
 
@@ -781,8 +791,10 @@ function listRuns(arr, prop, unit) {
     if (!arr || arr.length === 0) return '<ul><li>No runs found.</li></ul>';
     return `<ul>${arr
         .map(
-            (r) =>
-                `<li>${new Date(r.run.start_date_local).toLocaleDateString()} — ${r[prop].toFixed(1)}${unit} (${r.weather_text})</li>`
+            (r) => {
+                const diff = r.envDifficulty !== undefined ? ` — difficulty: ${r.envDifficulty}%` : '';
+                return `<li>${new Date(r.run.start_date_local).toLocaleDateString()} — ${r[prop].toFixed(1)}${unit} (${r.weather_text})${diff}</li>`;
+            }
         )
         .join("")}</ul>`;
 }

@@ -16,15 +16,11 @@ IN PROGRESS
 🟡🚧TLB ACT FRM.... que conti TOTES les activitats, no nomes running 
 🟡⚠️totes les dates mateix format
 🟡⚠️zonas (Z2) del dashboard de la ma amb las zonas del perfil strava
-
-
-🔴🩹weather data -> % de "difficultat ambiental" 
-🔴🚧arreglar ratxes (streaks)
-🔴🚧corregir Pace: 3:60 /km
-🔴🚨a dashboard, surt SOLO quan athleteCount es 2 clarament
-🔴🌈fer gear.html amb mapes i mes stats de cada gear
-🔴🩹 pestaña Athlete, posar filtre de dates i de esport
 🟡🩹weather api fer servir per predictions 
+🟡🚨a dashboard, surt SOLO quan athleteCount es 2 clarament
+🟡🩹weather data -> % de "difficultat ambiental" 
+🟡🚧arreglar ratxes (streaks)
+🟡🌈fer gear.html amb mapes i mes stats de cada gear
 🟡🚧carregar zonas, profile, gear, weather api... al iniciar app
 
 
@@ -45,6 +41,7 @@ TO DO
 🔴🌈idiomes
 🔴⚠️format del pace decimals-> time amb utils.paceDecimalToTime(pace)
 🔴🩹trail/road shoes in gears
+🔴🌈reestructurar tot, molts mes .html, per cada pagina
 
 
 
@@ -63,6 +60,9 @@ DONE
 🟢⚠️GEARS separate bikes and shoes
 🟢🚧fer servir lo de utils.js sempre, no repetir codi formatPace, formatTime...
 🟢🚧tot english 
+🟢🚧corregir Pace: 3:60 /km
+🟢🩹 pestaña Athlete, posar filtre de dates i de esport
+
 
 
 

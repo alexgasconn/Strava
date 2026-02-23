@@ -236,6 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log(`✅ initializeApp: Fetched ${activities.length} activities.`);
             console.log('✅ initializeApp: Fetched athlete data:', athlete);
             console.log('✅ initializeApp: Fetched training zones:', zones);
+            console.log("📊 initializeApp: activities:", activities);
 
             console.log("🔧 initializeApp: Fetching gears...");
             let gears = [];
