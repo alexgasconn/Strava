@@ -224,44 +224,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- INITIALIZATION ---
     async function initializeApp(tokenData) {
-        console.log("initializeApp: Starting app initialization");
+        console.log("🚀 initializeApp: Starting app initialization");
         showLoading('Loading activities...');
         try {
-            console.log("initializeApp: Fetching activities, athlete, zones");
+            console.log("📡 initializeApp: Fetching activities, athlete, zones");
             const [activities, athlete, zones] = await Promise.all([
                 fetchAllActivities(),
                 fetchAthleteData(),
                 fetchTrainingZones()
             ]);
-            console.log(`initializeApp: Fetched ${activities.length} activities.`);
-            console.log('initializeApp: Fetched athlete data:', athlete);
-            console.log('initializeApp: Fetched training zones:', zones);
+            console.log(`✅ initializeApp: Fetched ${activities.length} activities.`);
+            console.log('✅ initializeApp: Fetched athlete data:', athlete);
+            console.log('✅ initializeApp: Fetched training zones:', zones);
 
-            console.log("initializeApp: Fetching gears...");
-            const gears = await fetchAllGears(athlete);
-            console.log(`initializeApp: Fetched ${gears.length} gears.`);
+            console.log("🔧 initializeApp: Fetching gears...");
+            let gears = [];
+            try {
+                gears = await fetchAllGears(athlete);
+                console.log(`✅ initializeApp: Fetched ${gears.length} gears.`);
+            } catch (gearError) {
+                console.warn("⚠️ initializeApp: Failed to fetch gears, continuing without:", gearError);
+            }
 
-            console.log('initializeApp: Preprocessing activities...');
+            console.log("🌤️ initializeApp: Gathering weather data...");
+            // TODO: Add weather API gathering here
+            console.log("✅ initializeApp: Weather data gathered (placeholder)");
+
+            console.log('⚙️ initializeApp: Preprocessing activities...');
             const preprocessed = preprocessActivities(activities);
             allActivities = preprocessed;
-            console.log(`initializeApp: Preprocessed ${allActivities.length} activities.`);
-            console.log(`initializeApp: Preprocessed activities:`, allActivities);
+            console.log(`✅ initializeApp: Preprocessed ${allActivities.length} activities.`);
+            console.log("📋 initializeApp: Sample preprocessed activities:", allActivities.slice(0, 3));
+
             localStorage.setItem('strava_athlete_data', JSON.stringify(athlete));
             localStorage.setItem('strava_training_zones', JSON.stringify(zones));
             localStorage.setItem('strava_gears', JSON.stringify(gears));
             localStorage.setItem('strava_activities', JSON.stringify(allActivities));
+            console.log("💾 initializeApp: Data saved to localStorage");
 
-            allActivities = activities;
-
-            console.log("initializeApp: Setting up dashboard");
+            console.log("🎛️ initializeApp: Setting up dashboard");
             setupDashboard(allActivities);
-            console.log("initializeApp: Rendering analysis tab");
+            console.log("📊 initializeApp: Rendering analysis tab");
             renderAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
-            console.log("initializeApp: Setting up yearly selector");
+            console.log("📅 initializeApp: Setting up yearly selector");
             setupYearlySelector();
-            console.log("initializeApp: Initialization completed successfully");
+            console.log("🎉 initializeApp: Initialization completed successfully");
         } catch (error) {
-            console.error("initializeApp: Error during initialization", error);
+            console.error("❌ initializeApp: Error during initialization", error);
             handleError("Could not initialize the app", error);
         } finally {
             hideLoading();

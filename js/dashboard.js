@@ -812,17 +812,26 @@ function renderRecentActivitiesPreview(runs) {
 
 function renderMiniMap(runId, polyline) {
     const mapDiv = document.getElementById(`map-${runId}`);
-    if (!mapDiv || !polyline) return;
+    if (!mapDiv || !polyline) {
+        console.log(`🗺️ renderMiniMap: Missing mapDiv or polyline for run ${runId}`, { mapDiv: !!mapDiv, polyline: !!polyline });
+        return;
+    }
+
+    console.log(`🗺️ renderMiniMap: Rendering map for run ${runId}, polyline length: ${polyline.length}`);
 
     // Si Leaflet no está cargado
     if (typeof L === 'undefined') {
+        console.error('🗺️ renderMiniMap: Leaflet not loaded');
         mapDiv.innerHTML = '<p style="text-align:center; padding:2rem; font-size:0.8rem; color:#999;">Leaflet not loaded</p>';
         return;
     }
 
     try {
         const coordinates = decodePolyline(polyline);
+        console.log(`🗺️ renderMiniMap: Decoded ${coordinates.length} coordinates for run ${runId}`);
+
         if (coordinates.length === 0) {
+            console.warn(`🗺️ renderMiniMap: No coordinates decoded for run ${runId}`);
             mapDiv.innerHTML = '<p style="text-align:center; padding:2rem; font-size:0.8rem; color:#999;">No coordinates</p>';
             return;
         }
@@ -869,8 +878,10 @@ function renderMiniMap(runId, polyline) {
                 weight: 2
             }).addTo(map);
         }
+
+        console.log(`🗺️ renderMiniMap: Successfully rendered map for run ${runId}`);
     } catch (err) {
-        console.error('Error rendering mini map:', err);
+        console.error(`🗺️ renderMiniMap: Error rendering mini map for run ${runId}:`, err);
         mapDiv.innerHTML = '<p style="text-align:center; padding:2rem; font-size:0.8rem; color:#999;">Error loading map</p>';
     }
 }

@@ -2,14 +2,18 @@
 import * as utils from './utils.js';
 
 export function renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo, sportFilter = 'all') {
-    console.log("Initializing Athlete Tab...");
+    console.log("🎽 renderAthleteTab: Initializing Athlete Tab with sportFilter:", sportFilter);
 
     // Add filters UI
     addAthleteFilters();
 
     // Filter activities
     const filteredActivities = filterActivities(allActivities, dateFilterFrom, dateFilterTo, sportFilter);
+    console.log("🎽 renderAthleteTab: Filtered activities:", filteredActivities.length);
+
+    // For stats, use the filtered activities, but for runs-specific stats, filter to runs
     const runs = filteredActivities.filter(a => a.type && a.type.includes('Run'));
+    console.log("🎽 renderAthleteTab: Runs in filtered activities:", runs.length);
 
     const athleteData = JSON.parse(localStorage.getItem('strava_athlete_data'));
     const zonesData = JSON.parse(localStorage.getItem('strava_training_zones'));
@@ -18,11 +22,23 @@ export function renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo, sp
     if (athleteData) renderAthleteProfile(athleteData);
     if (zonesData) renderTrainingZones(zonesData);
 
-    renderAllTimeStats(runs);
-    renderRecordStats(runs);
-    renderStartTimeHistogram(runs);
-    renderYearlyComparison(runs);
-    renderWeeklyMixChart(runs);
+    renderAllTimeStats(filteredActivities); // Use filtered activities for general stats
+    renderRecordStats(runs); // Keep runs for record stats
+    renderStartTimeHistogram(filteredActivities);
+    renderYearlyComparison(filteredActivities);
+    renderWeeklyMixChart(filteredActivities);
+    renderMonthlyMixChart(filteredActivities);
+    renderHourMatrix(filteredActivities);
+    renderYearMonthMatrix(filteredActivities);
+    renderMonthWeekdayMatrix(filteredActivities);
+    renderMonthDayMatrix(filteredActivities);
+    renderMonthHourMatrix(filteredActivities);
+    renderYearHourMatrix(filteredActivities);
+    renderYearWeekdayMatrix(filteredActivities);
+    renderInteractiveMatrix(filteredActivities);
+
+    console.log("🎽 renderAthleteTab: Athlete tab rendered");
+}
     renderMonthlyMixChart(runs);
     renderHourMatrix(runs);
     renderYearMonthMatrix(runs);
@@ -36,14 +52,14 @@ export function renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo, sp
 
 
 
-function renderAllTimeStats(runs) {
+function renderAllTimeStats(activities) {
     const container = document.getElementById('all-time-stats-cards');
     if (!container) return;
-    const totalDist = (runs.reduce((s, a) => s + a.distance, 0) / 1000).toFixed(0);
-    const totalTime = (runs.reduce((s, a) => s + a.moving_time, 0) / 3600).toFixed(1);
-    const totalElev = runs.reduce((s, a) => s + a.total_elevation_gain, 0).toLocaleString();
+    const totalDist = (activities.reduce((s, a) => s + a.distance, 0) / 1000).toFixed(0);
+    const totalTime = (activities.reduce((s, a) => s + a.moving_time, 0) / 3600).toFixed(1);
+    const totalElev = activities.reduce((s, a) => s + a.total_elevation_gain, 0).toLocaleString();
     container.innerHTML = `
-        <div class="card"><h3>Total Runs</h3><p>${runs.length}</p></div>
+        <div class="card"><h3>Total Activities</h3><p>${activities.length}</p></div>
         <div class="card"><h3>Total Distance</h3><p>${totalDist} km</p></div>
         <div class="card"><h3>Total Time</h3><p>${totalTime} h</p></div>
         <div class="card"><h3>Total Elevation</h3><p>${totalElev} m</p></div>
