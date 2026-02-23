@@ -252,7 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log("✅ initializeApp: Weather data gathered (placeholder)");
 
             console.log('⚙️ initializeApp: Preprocessing activities...');
-            const preprocessed = preprocessActivities(activities);
+            const preprocessed = await preprocessActivities(activities);
             allActivities = preprocessed;
             console.log(`✅ initializeApp: Preprocessed ${allActivities.length} activities.`);
             console.log("📋 initializeApp: Sample preprocessed activities:", allActivities.slice(0, 3));

@@ -1,11 +1,66 @@
 // js/preprocessing.js
-import { rollingMean } from './utils.js';
+import { rollingMean, calculateEnvironmentalDifficulty } from './utils.js';
 
 // ===================================================================
 // CONFIGURACIÓN
 // ===================================================================
 const SUFFER_TO_TSS = 1.05;
 const MAX_HR_DEFAULT = 200;
+
+// ===================================================================
+// WEATHER API FUNCTION
+// ===================================================================
+function numericSafe(v) {
+    return v === null || v === undefined || isNaN(v) ? 0 : Number(v);
+}
+
+async function getWeatherForRun(run) {
+    if (!run.start_latlng || run.start_latlng.length < 2) {
+        return null;
+    }
+
+    const [lat, lon] = run.start_latlng;
+    const start = new Date(run.start_date_local);
+    const dateStr = start.toISOString().split("T")[0];
+
+    const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m,wind_direction_10m,weathercode,cloudcover,surface_pressure,relativehumidity_2m&start_date=${dateStr}&end_date=${dateStr}&timezone=auto`;
+
+    try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status} - ${res.statusText}`);
+        const data = await res.json();
+
+        if (!data.hourly || !data.hourly.time || !data.hourly.time.length) {
+            return null;
+        }
+
+        const hour = start.getHours();
+        let idx = data.hourly.time.findIndex(t => new Date(t).getHours() === hour);
+
+        if (idx === -1) {
+            idx = Math.min(hour, data.hourly.time.length - 1);
+        }
+
+        const weather = {
+            temperature: numericSafe(data.hourly.temperature_2m[idx]),
+            precipitation: numericSafe(data.hourly.precipitation[idx]),
+            wind_speed: numericSafe(data.hourly.wind_speed_10m[idx]),
+            wind_direction: numericSafe(data.hourly.wind_direction_10m[idx]),
+            weather_code: data.hourly.weathercode ? data.hourly.weathercode[idx] : null,
+            humidity: numericSafe(data.hourly.relativehumidity_2m ? data.hourly.relativehumidity_2m[idx] : null),
+            cloudcover: numericSafe(data.hourly.cloudcover ? data.hourly.cloudcover[idx] : null),
+            pressure: numericSafe(data.hourly.surface_pressure ? data.hourly.surface_pressure[idx] : null),
+        };
+
+        const difficulty = calculateEnvironmentalDifficulty({ weather });
+
+        return { ...weather, difficulty };
+
+    } catch (err) {
+        console.error(`Weather fetch for ${run.name} (${dateStr}) failed:`, err);
+        return null;
+    }
+}
 
 // ===================================================================
 // 1. TSS: suffer_score → TSS (fallback: 36/hora)
@@ -46,10 +101,32 @@ function computeVO2max(activity, maxHr = MAX_HR_DEFAULT) {
 }
 
 // ===================================================================
-// 3. Agrupar por día
+// 3. Agrupar por día (con weather para runs)
 // ===================================================================
-function groupByDay(activities) {
+async function groupByDay(activities) {
     const daily = {};
+    const runs = activities.filter(a => a.type === 'Run' && a.start_latlng);
+
+    // Fetch weather in batches
+    const batches = 5;
+    for (let i = 0; i < runs.length; i += batches) {
+        const batch = runs.slice(i, i + batches);
+        const weatherPromises = batch.map(run => getWeatherForRun(run));
+        const weatherResults = await Promise.all(weatherPromises);
+
+        batch.forEach((run, idx) => {
+            const weather = weatherResults[idx];
+            if (weather) {
+                run.weather = weather;
+                run.difficulty = weather.difficulty;
+            } else {
+                run.difficulty = 0; // default
+            }
+        });
+
+        // Sleep to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
 
     activities.forEach(a => {
         const date = a.start_date_local?.split('T')[0];
@@ -236,7 +313,7 @@ function assignMetrics(activities, dates, pmc, injuryRisk) {
 // ===================================================================
 // 8. Pipeline principal
 // ===================================================================
-export function preprocessActivities(activities, userProfile = {}) {
+export async function preprocessActivities(activities, userProfile = {}) {
     console.log("Preprocessing: Starting with", activities.length, "activities");
     if (!activities?.length) {
         console.warn("Preprocessing: No hay actividades.");
@@ -246,7 +323,7 @@ export function preprocessActivities(activities, userProfile = {}) {
     const maxHr = userProfile.max_hr || MAX_HR_DEFAULT;
     console.log("Preprocessing: Using max HR:", maxHr);
 
-    const daily = groupByDay(activities);
+    const daily = await groupByDay(activities);
     console.log("Preprocessing: Grouped by day, days:", Object.keys(daily).length);
     const { dates, tssValues } = getTimeSeries(daily);
     console.log("Preprocessing: Time series created, dates:", dates.length);
