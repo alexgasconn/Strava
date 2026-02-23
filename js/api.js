@@ -34,7 +34,8 @@ export async function fetchGearById(gearId) {
             Authorization: `Bearer ${getAuthPayload()}`
         }
     });
-    return await handleApiResponse(response);
+    const result = await handleApiResponse(response);
+    return result.gear; // Extract the gear object from the response
 }
 
 export function renderAthleteProfile(athlete) {

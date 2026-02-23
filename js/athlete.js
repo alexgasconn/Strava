@@ -1332,15 +1332,33 @@ function addAthleteFilters() {
     filterDiv.id = 'athlete-filters';
     filterDiv.style = 'display:flex; gap:1rem; margin-bottom:1rem; align-items:center;';
 
+    // Get all activities to determine most practiced sports
+    const allActivities = JSON.parse(localStorage.getItem('strava_activities') || '[]');
+
+    // Count sport occurrences
+    const sportCounts = {};
+    allActivities.forEach(activity => {
+        const sport = activity.type || 'Unknown';
+        sportCounts[sport] = (sportCounts[sport] || 0) + 1;
+    });
+
+    // Sort sports by count (descending) and take top 10
+    const topSports = Object.entries(sportCounts)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 10)
+        .map(([sport]) => sport);
+
     const sportSelect = document.createElement('select');
     sportSelect.id = 'athlete-sport-filter';
-    sportSelect.innerHTML = `
-        <option value="all">All Sports</option>
-        <option value="Run">Run</option>
-        <option value="Ride">Ride</option>
-        <option value="Swim">Swim</option>
-        <option value="Walk">Walk</option>
-    `;
+
+    // Build options HTML
+    let optionsHtml = '<option value="all">All Sports</option>';
+    topSports.forEach(sport => {
+        const count = sportCounts[sport];
+        optionsHtml += `<option value="${sport}">${sport} (${count})</option>`;
+    });
+
+    sportSelect.innerHTML = optionsHtml;
 
     const dateFromInput = document.createElement('input');
     dateFromInput.type = 'date';
