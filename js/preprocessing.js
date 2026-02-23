@@ -164,7 +164,7 @@ function calculateInjuryRiskImproved(tsb, rampRate, atl, tssSeries) {
     // Helper: percentil relativo al historial
     const percentile = (arr, val) => {
         if (!arr.length) return 0.5;
-        const sorted = [...arr].sort((a,b)=>a-b);
+        const sorted = [...arr].sort((a, b) => a - b);
         let count = 0;
         for (const x of sorted) if (x <= val) count++;
         return count / arr.length;
@@ -172,26 +172,26 @@ function calculateInjuryRiskImproved(tsb, rampRate, atl, tssSeries) {
 
     for (let i = 0; i < len; i++) {
         // --- 1. TSB relativo (fatiga) ---
-        const tsbWindow = tsb.slice(Math.max(0,i-42), i+1);
+        const tsbWindow = tsb.slice(Math.max(0, i - 42), i + 1);
         const tsbPerc = 1 - percentile(tsbWindow, tsb[i]); // más negativo → más riesgo
         let risk = 0.6 * Math.pow(tsbPerc, 1.5); // efecto no lineal
 
         // --- 2. Ramp Rate relativo ---
-        const rrWindow = rampRate.slice(Math.max(0,i-14), i+1);
+        const rrWindow = rampRate.slice(Math.max(0, i - 14), i + 1);
         const rrPerc = percentile(rrWindow, rampRate[i]);
         risk += 0.25 * Math.pow(rrPerc, 1.3) * tsbPerc; // interacción: ramp fuerte + fatiga
 
         // --- 3. ATL relativo (carga aguda) ---
-        const atlWindow = atl.slice(Math.max(0,i-7), i+1);
+        const atlWindow = atl.slice(Math.max(0, i - 7), i + 1);
         const atlPerc = percentile(atlWindow, atl[i]);
         risk += 0.15 * Math.pow(atlPerc, 1.2);
 
         // --- 4. Variabilidad reciente ---
-        const recent = tssSeries.slice(Math.max(0,i-6), i+1);
+        const recent = tssSeries.slice(Math.max(0, i - 6), i + 1);
         if (recent.length > 1) {
-            const mean = recent.reduce((a,b)=>a+b,0)/recent.length;
-            const variance = recent.reduce((a,b)=>a+Math.pow(b-mean,2),0)/recent.length;
-            const cv = Math.sqrt(variance)/mean;
+            const mean = recent.reduce((a, b) => a + b, 0) / recent.length;
+            const variance = recent.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / recent.length;
+            const cv = Math.sqrt(variance) / mean;
             risk *= 1 + Math.min(cv, 1) * 0.3; // hasta +30% si CV alto
         }
 
@@ -200,8 +200,8 @@ function calculateInjuryRiskImproved(tsb, rampRate, atl, tssSeries) {
 
         // --- Suavizado EWMA adaptativo ---
         if (i > 0) {
-            const prev = riskHistory[i-1];
-            const alpha = 0.2 + 0.5 * Math.min(1, Math.abs(risk - prev)); 
+            const prev = riskHistory[i - 1];
+            const alpha = 0.2 + 0.5 * Math.min(1, Math.abs(risk - prev));
             risk = prev * (1 - alpha) + risk * alpha;
         }
 
@@ -237,18 +237,26 @@ function assignMetrics(activities, dates, pmc, injuryRisk) {
 // 8. Pipeline principal
 // ===================================================================
 export function preprocessActivities(activities, userProfile = {}) {
+    console.log("Preprocessing: Starting with", activities.length, "activities");
     if (!activities?.length) {
-        console.warn("No hay actividades.");
+        console.warn("Preprocessing: No hay actividades.");
         return [];
     }
 
     const maxHr = userProfile.max_hr || MAX_HR_DEFAULT;
+    console.log("Preprocessing: Using max HR:", maxHr);
 
     const daily = groupByDay(activities);
+    console.log("Preprocessing: Grouped by day, days:", Object.keys(daily).length);
     const { dates, tssValues } = getTimeSeries(daily);
+    console.log("Preprocessing: Time series created, dates:", dates.length);
     const pmc = calculatePMC(tssValues);
+    console.log("Preprocessing: PMC calculated, ATL:", pmc.atl[pmc.atl.length - 1], "CTL:", pmc.ctl[pmc.ctl.length - 1], "TSB:", pmc.tsb[pmc.tsb.length - 1]);
     const injuryRisk = calculateInjuryRiskImproved(pmc.tsb, pmc.rampRate, pmc.atl, pmc.tssSeries);
+    console.log("Preprocessing: Injury risk calculated");
+
     assignMetrics(activities, dates, pmc, injuryRisk);
+    console.log("Preprocessing: Metrics assigned to activities");
 
     // Log final
     const last = dates.length - 1;
@@ -258,5 +266,6 @@ export function preprocessActivities(activities, userProfile = {}) {
     console.log(`  TSB: ${pmc.tsb[last]?.toFixed(1) ?? 'n/a'}`);
     console.log(`  Injury Risk: ${(injuryRisk[last] * 100).toFixed(2)}%`);
 
+    console.log("Preprocessing: Completed");
     return activities;
 }

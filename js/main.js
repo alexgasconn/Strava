@@ -224,27 +224,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- INITIALIZATION ---
     async function initializeApp(tokenData) {
+        console.log("initializeApp: Starting app initialization");
         showLoading('Loading activities...');
         try {
-            console.log("Fetching athlete data and activities...");
+            console.log("initializeApp: Fetching activities, athlete, zones");
             const [activities, athlete, zones] = await Promise.all([
                 fetchAllActivities(),
                 fetchAthleteData(),
                 fetchTrainingZones()
             ]);
-            console.log(`Fetched ${activities.length} activities.`);
-            console.log('Fetched athlete data:', athlete);
-            console.log('Fetched training zones:', zones);
+            console.log(`initializeApp: Fetched ${activities.length} activities.`);
+            console.log('initializeApp: Fetched athlete data:', athlete);
+            console.log('initializeApp: Fetched training zones:', zones);
 
-            console.log("Fetching gears...");
+            console.log("initializeApp: Fetching gears...");
             const gears = await fetchAllGears(athlete);
-            console.log(`Fetched ${gears.length} gears.`);
+            console.log(`initializeApp: Fetched ${gears.length} gears.`);
 
-            console.log('Preprocessing activities...');
+            console.log('initializeApp: Preprocessing activities...');
             const preprocessed = preprocessActivities(activities);
             allActivities = preprocessed;
-            console.log(`Preprocessed ${allActivities.length} activities.`);
-            console.log(`Preprocessed activities:`, allActivities);
+            console.log(`initializeApp: Preprocessed ${allActivities.length} activities.`);
+            console.log(`initializeApp: Preprocessed activities:`, allActivities);
             localStorage.setItem('strava_athlete_data', JSON.stringify(athlete));
             localStorage.setItem('strava_training_zones', JSON.stringify(zones));
             localStorage.setItem('strava_gears', JSON.stringify(gears));
@@ -252,10 +253,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             allActivities = activities;
 
+            console.log("initializeApp: Setting up dashboard");
             setupDashboard(allActivities);
+            console.log("initializeApp: Rendering analysis tab");
             renderAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
+            console.log("initializeApp: Setting up yearly selector");
             setupYearlySelector();
+            console.log("initializeApp: Initialization completed successfully");
         } catch (error) {
+            console.error("initializeApp: Error during initialization", error);
             handleError("Could not initialize the app", error);
         } finally {
             hideLoading();
