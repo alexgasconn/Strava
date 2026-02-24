@@ -1,7 +1,10 @@
 // js/athlete.js - Updated: 2026-02-23 to fix runs reference error
 import * as utils from './utils.js';
 
-export function renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo, sportFilter = 'all', dataType = 'count') {
+let currentDataType = 'time';
+
+export function renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo, sportFilter = 'all', dataType = 'time') {
+    currentDataType = dataType;
     console.log("🎽 renderAthleteTab: Initializing Athlete Tab with sportFilter:", sportFilter);
 
     // Add filters UI
@@ -38,6 +41,62 @@ export function renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo, sp
     renderInteractiveMatrix(filteredActivities, dataType);
 
     console.log("🎽 renderAthleteTab: Athlete tab rendered");
+}
+
+function addAthleteFilters() {
+    const container = document.getElementById('athlete-filters');
+    if (!container) return;
+
+    container.innerHTML = `
+        <div class="filter-group">
+            <label for="data-type-select">Data Type:</label>
+            <select id="data-type-select">
+                <option value="count">Activities</option>
+                <option value="time" selected>Time</option>
+                <option value="distance">Distance</option>
+            </select>
+        </div>
+    `;
+
+    document.getElementById('data-type-select').addEventListener('change', (e) => {
+        currentDataType = e.target.value;
+        // Re-render charts with new dataType
+        reRenderChartsWithDataType();
+    });
+}
+
+function reRenderChartsWithDataType() {
+    // Get the current filtered activities
+    const allActivities = JSON.parse(localStorage.getItem('strava_activities') || '[]');
+    const dateFilterFrom = document.getElementById('date-from')?.value || '';
+    const dateFilterTo = document.getElementById('date-to')?.value || '';
+    const sportFilter = 'all'; // Assuming no sport filter for now
+
+    const filteredActivities = filterActivities(allActivities, dateFilterFrom, dateFilterTo, sportFilter);
+
+    renderStartTimeHistogram(filteredActivities, currentDataType);
+    renderYearlyComparison(filteredActivities, currentDataType);
+    renderWeeklyMixChart(filteredActivities, currentDataType);
+    renderMonthlyMixChart(filteredActivities, currentDataType);
+    renderHourMatrix(filteredActivities, currentDataType);
+    renderYearMonthMatrix(filteredActivities, currentDataType);
+    renderMonthWeekdayMatrix(filteredActivities, currentDataType);
+    renderMonthDayMatrix(filteredActivities, currentDataType);
+    renderMonthHourMatrix(filteredActivities, currentDataType);
+    renderYearHourMatrix(filteredActivities, currentDataType);
+    renderYearWeekdayMatrix(filteredActivities, currentDataType);
+    renderInteractiveMatrix(filteredActivities, currentDataType);
+}
+
+function filterActivities(activities, from, to, sport) {
+    return activities.filter(a => {
+        const date = new Date(a.start_date_local);
+        const fromDate = from ? new Date(from) : null;
+        const toDate = to ? new Date(to) : null;
+        const dateMatch = (!fromDate || date >= fromDate) && (!toDate || date <= toDate);
+        const sportMatch = sport === 'all' || a.type.includes(sport);
+        return dateMatch && sportMatch;
+    });
 }
 
 
@@ -627,9 +686,9 @@ function renderMonthWeekdayMatrix(runs, dataType = 'count') {
         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-    // stats[month][weekday] = { count, distance }
+    // stats[month][weekday] = { count, distance, time }
     const stats = Array.from({ length: 12 }, () =>
-        Array.from({ length: 7 }, () => ({ count: 0, distance: 0 }))
+        Array.from({ length: 7 }, () => ({ count: 0, distance: 0, time: 0 }))
     );
 
     runs.forEach(run => {
@@ -639,39 +698,63 @@ function renderMonthWeekdayMatrix(runs, dataType = 'count') {
         const month = date.getMonth();           // 0–11
         const dayIdx = (date.getDay() + 6) % 7;  // Monday = 0
         const distKm = run.distance / 1000;
+        const timeH = run.moving_time / 3600;
 
         stats[month][dayIdx].count++;
         stats[month][dayIdx].distance += distKm;
+        stats[month][dayIdx].time += timeH;
     });
 
     const data = [];
-    let maxKm = 0;
+    let maxVal = 0;
     for (let m = 0; m < 12; m++) {
         for (let d = 0; d < 7; d++) {
             const entry = stats[m][d];
-            maxKm = Math.max(maxKm, entry.distance);
+            let val;
+            switch (dataType) {
+                case 'count':
+                    val = entry.count;
+                    break;
+                case 'time':
+                    val = entry.time;
+                    break;
+                case 'distance':
+                    val = entry.distance;
+                    break;
+                default:
+                    val = entry.distance;
+            }
+            maxVal = Math.max(maxVal, val);
             data.push({
                 x: m,
                 y: d,
-                km: entry.distance,
-                count: entry.count
+                val: val,
+                count: entry.count,
+                distance: entry.distance,
+                time: entry.time
             });
         }
     }
 
     function getColor(v) {
         if (v === 0) return 'rgba(255,255,255,0)';
-        const alpha = maxKm > 0 ? 0.3 + 0.7 * (v / maxKm) : 0.5;
+        const alpha = maxVal > 0 ? 0.3 + 0.7 * (v / maxVal) : 0.5;
         return `rgba(0,200,120,${alpha.toFixed(2)})`;
     }
+
+    const labelMap = {
+        count: 'Activities',
+        time: 'Time (h)',
+        distance: 'Distance (km)'
+    };
 
     createUiChart('month-weekday-matrix', {
         type: 'matrix',
         data: {
             datasets: [{
-                label: 'Distance (km)',
+                label: labelMap[dataType],
                 data,
-                backgroundColor: data.map(d => getColor(d.km))
+                backgroundColor: data.map(d => getColor(d.val))
             }]
         },
         options: {
@@ -687,8 +770,9 @@ function renderMonthWeekdayMatrix(runs, dataType = 'count') {
                         label: item => {
                             const d = item.raw;
                             return [
-                                `Runs: ${d.count}`,
-                                `Distance: ${d.km.toFixed(1)} km`
+                                `Activities: ${d.count}`,
+                                `Distance: ${d.distance.toFixed(1)} km`,
+                                `Time: ${d.time.toFixed(1)} h`
                             ];
                         }
                     }
@@ -857,9 +941,9 @@ function renderMonthHourMatrix(runs, dataType = 'count') {
         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const hourLabels = Array.from({ length: 24 }, (_, i) => i); // 0–23
 
-    // stats[hour][month] = { count, distance }
+    // stats[hour][month] = { count, distance, time }
     const stats = Array.from({ length: 24 }, () =>
-        Array.from({ length: 12 }, () => ({ count: 0, distance: 0 }))
+        Array.from({ length: 12 }, () => ({ count: 0, distance: 0, time: 0 }))
     );
 
     // Aggregate
@@ -874,9 +958,11 @@ function renderMonthHourMatrix(runs, dataType = 'count') {
         hour = (hour - 2 + 24) % 24;
 
         const km = (run.distance || 0) / 1000;
+        const timeH = run.moving_time / 3600;
 
         stats[hour][month].count++;
         stats[hour][month].distance += km;
+        stats[hour][month].time += timeH;
     });
 
     // Flatten into dataset compatible with matrix chart
@@ -884,12 +970,29 @@ function renderMonthHourMatrix(runs, dataType = 'count') {
     let maxVal = 0;
     for (let h = 0; h < 24; h++) {
         for (let m = 0; m < 12; m++) {
-            const val = stats[h][m];
+            const entry = stats[h][m];
+            let val;
+            switch (dataType) {
+                case 'count':
+                    val = entry.count;
+                    break;
+                case 'time':
+                    val = entry.time;
+                    break;
+                case 'distance':
+                    val = entry.distance;
+                    break;
+                default:
+                    val = entry.distance;
+            }
             maxVal = Math.max(maxVal, val);
             data.push({
                 x: h,         // hour index (x-axis)
                 y: m,         // month index (y-axis)
-                v: val
+                val: val,
+                count: entry.count,
+                distance: entry.distance,
+                time: entry.time
             });
         }
     }
@@ -925,7 +1028,14 @@ function renderMonthHourMatrix(runs, dataType = 'count') {
                             const d = items[0].raw;
                             return `${monthLabels[d.y]} - ${d.x}:00`;
                         },
-                        label: item => `${labelMap[dataType]}: ${item.raw.v.toFixed(1)}`
+                        label: item => {
+                            const d = item.raw;
+                            return [
+                                `Activities: ${d.count}`,
+                                `Distance: ${d.distance.toFixed(1)} km`,
+                                `Time: ${d.time.toFixed(1)} h`
+                            ];
+                        }
                     }
                 },
                 legend: { display: false }
