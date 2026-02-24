@@ -24,8 +24,8 @@ export function renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo, sp
 
     renderAllTimeStats(filteredActivities); // Use filtered activities for general stats
     renderRecordStats(runs); // Keep runs for record stats
-    renderStartTimeHistogram(filteredActivities);
-    renderYearlyComparison(filteredActivities);
+    renderStartTimeHistogram(filteredActivities, dataType);
+    renderYearlyComparison(filteredActivities, dataType);
     renderWeeklyMixChart(filteredActivities, dataType);
     renderMonthlyMixChart(filteredActivities, dataType);
     renderHourMatrix(filteredActivities, dataType);
@@ -128,34 +128,49 @@ function renderRecordStats(runs) {
         `;
 }
 
-function renderStartTimeHistogram(runs) {
-    const hours = Array(24).fill(0);
+function renderStartTimeHistogram(runs, dataType = 'count') {
+    const values = Array(24).fill(0);
     runs.forEach(run => {
         let hour = new Date(run.start_date_local).getHours();
         hour = (hour - 2 + 24) % 24;
-        hours[hour]++;
+        switch (dataType) {
+            case 'count':
+                values[hour]++;
+                break;
+            case 'time':
+                values[hour] += run.moving_time / 3600;
+                break;
+            case 'distance':
+                values[hour] += run.distance / 1000;
+                break;
+        }
     });
-    const labels = hours.map((_, i) => `${i}:00`);
+    const labels = values.map((_, i) => `${i}:00`);
+    const labelMap = {
+        count: '# of Activities',
+        time: 'Time (hours)',
+        distance: 'Distance (km)'
+    };
     createUiChart('start-time-histogram', {
         type: 'bar',
         data: {
             labels,
             datasets: [{
-                label: '# of Runs',
-                data: hours,
+                label: labelMap[dataType],
+                data: values,
                 backgroundColor: 'rgba(252, 82, 0, 0.7)'
             }]
         },
         options: {
             plugins: { legend: { display: false } },
-            scales: { y: { ticks: { stepSize: 1 } } }
+            scales: { y: { beginAtZero: true, title: { display: true, text: labelMap[dataType] } } }
         }
     });
 }
 
 
 
-function renderYearlyComparison(runs) {
+function renderYearlyComparison(runs, dataType = 'count') {
     const byYear = runs.reduce((acc, run) => {
         const year = run.start_date_local.substring(0, 4);
         if (!acc[year]) acc[year] = { distance: 0, count: 0, elevation: 0, movingTime: 0 };
@@ -728,9 +743,9 @@ function renderMonthDayMatrix(runs, dataType = 'count') {
         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const dayLabels = Array.from({ length: 31 }, (_, i) => i + 1);
 
-    // stats[day][month] = { count, distance }
+    // stats[day][month] = value
     const stats = Array.from({ length: 31 }, () =>
-        Array.from({ length: 12 }, () => ({ count: 0, distance: 0 }))
+        Array.from({ length: 12 }, () => 0)
     );
 
     runs.forEach(run => {
@@ -739,40 +754,53 @@ function renderMonthDayMatrix(runs, dataType = 'count') {
 
         const month = date.getMonth();      // 0–11
         const day = date.getDate() - 1;     // 0–30
-        const distKm = run.distance / 1000; // meters → km
 
-        stats[day][month].count++;
-        stats[day][month].distance += distKm;
+        switch (dataType) {
+            case 'count':
+                stats[day][month]++;
+                break;
+            case 'time':
+                stats[day][month] += run.moving_time / 3600;
+                break;
+            case 'distance':
+                stats[day][month] += run.distance / 1000;
+                break;
+        }
     });
 
     const data = [];
-    let maxKm = 0;
+    let maxVal = 0;
     for (let d = 0; d < 31; d++) {
         for (let m = 0; m < 12; m++) {
-            const entry = stats[d][m];
-            if (entry.distance > 0) maxKm = Math.max(maxKm, entry.distance);
+            const val = stats[d][m];
+            maxVal = Math.max(maxVal, val);
             data.push({
                 x: d,   // day
                 y: m,   // month
-                km: entry.distance,
-                count: entry.count
+                v: val
             });
         }
     }
 
-    function getColor(km) {
-        if (km === 0) return 'rgba(255,255,255,0)';
-        const alpha = 0.15 + 0.85 * (km / maxKm);
+    function getColor(v) {
+        if (v === 0) return 'rgba(255,255,255,0)';
+        const alpha = 0.15 + 0.85 * (v / maxVal);
         return `rgba(255,140,0,${alpha.toFixed(2)})`;
     }
+
+    const labelMap = {
+        count: 'Activities',
+        time: 'Time (h)',
+        distance: 'Distance (km)'
+    };
 
     createUiChart('month-day-matrix', {
         type: 'matrix',
         data: {
             datasets: [{
-                label: 'Distance (km)',
+                label: labelMap[dataType],
                 data,
-                backgroundColor: data.map(d => getColor(d.km))
+                backgroundColor: data.map(d => getColor(d.v))
             }]
         },
         options: {
@@ -785,13 +813,7 @@ function renderMonthDayMatrix(runs, dataType = 'count') {
                             const d = items[0].raw;
                             return `${monthLabels[d.y]} ${d.x + 1}`;
                         },
-                        label: item => {
-                            const d = item.raw;
-                            return [
-                                `Runs: ${d.count}`,
-                                `Distance: ${d.km.toFixed(1)} km`
-                            ];
-                        }
+                        label: item => `${labelMap[dataType]}: ${item.raw.v.toFixed(1)}`
                     }
                 },
                 legend: { display: false }
@@ -859,33 +881,38 @@ function renderMonthHourMatrix(runs, dataType = 'count') {
 
     // Flatten into dataset compatible with matrix chart
     const data = [];
-    let maxCount = 0;
+    let maxVal = 0;
     for (let h = 0; h < 24; h++) {
         for (let m = 0; m < 12; m++) {
-            const entry = stats[h][m];
-            maxCount = Math.max(maxCount, entry.count);
+            const val = stats[h][m];
+            maxVal = Math.max(maxVal, val);
             data.push({
                 x: h,         // hour index (x-axis)
                 y: m,         // month index (y-axis)
-                count: entry.count,
-                km: entry.distance
+                v: val
             });
         }
     }
 
-    function getColor(count) {
-        if (!count) return 'rgba(255,255,255,0)';
-        const alpha = maxCount ? (0.15 + 0.85 * (count / maxCount)) : 0.95;
+    function getColor(v) {
+        if (v === 0) return 'rgba(255,255,255,0)';
+        const alpha = 0.15 + 0.85 * (v / maxVal);
         return `rgba(252,82,0,${alpha.toFixed(2)})`;
     }
+
+    const labelMap = {
+        count: 'Activities',
+        time: 'Time (h)',
+        distance: 'Distance (km)'
+    };
 
     createUiChart('month-hour-matrix', {
         type: 'matrix',
         data: {
             datasets: [{
-                label: 'Trainings by Hour & Month',
+                label: labelMap[dataType],
                 data,
-                backgroundColor: data.map(d => getColor(d.count))
+                backgroundColor: data.map(d => getColor(d.v))
             }]
         },
         options: {
@@ -898,13 +925,7 @@ function renderMonthHourMatrix(runs, dataType = 'count') {
                             const d = items[0].raw;
                             return `${monthLabels[d.y]} - ${d.x}:00`;
                         },
-                        label: item => {
-                            const d = item.raw;
-                            return [
-                                `Runs: ${d.count}`,
-                                `Distance: ${d.km.toFixed(1)} km`
-                            ];
-                        }
+                        label: item => `${labelMap[dataType]}: ${item.raw.v.toFixed(1)}`
                     }
                 },
                 legend: { display: false }
@@ -946,47 +967,61 @@ function renderMonthHourMatrix(runs, dataType = 'count') {
 
 function renderYearWeekdayMatrix(runs, dataType = 'count') {
     const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const stats = {}; // { [year]: { [weekday]: { count, distance } } }
+    const stats = {}; // { [year]: { [weekday]: value } }
 
     runs.forEach(run => {
         const date = new Date(run.start_date_local);
         if (isNaN(date)) return;
         const year = date.getFullYear();
         const weekday = (date.getDay() + 6) % 7; // Monday = 0
-        const distKm = run.distance / 1000;
 
         if (!stats[year]) stats[year] = {};
-        if (!stats[year][weekday]) stats[year][weekday] = { count: 0, distance: 0 };
+        if (!stats[year][weekday]) stats[year][weekday] = 0;
 
-        stats[year][weekday].count++;
-        stats[year][weekday].distance += distKm;
+        switch (dataType) {
+            case 'count':
+                stats[year][weekday]++;
+                break;
+            case 'time':
+                stats[year][weekday] += run.moving_time / 3600;
+                break;
+            case 'distance':
+                stats[year][weekday] += run.distance / 1000;
+                break;
+        }
     });
 
     const years = Object.keys(stats).map(Number).sort((a, b) => a - b);
     const data = [];
-    let maxKm = 0;
+    let maxVal = 0;
 
     years.forEach((year, yIdx) => {
         for (let d = 0; d < 7; d++) {
-            const entry = stats[year]?.[d] || { count: 0, distance: 0 };
-            maxKm = Math.max(maxKm, entry.distance);
-            data.push({ x: d, y: yIdx, km: entry.distance, count: entry.count });
+            const val = stats[year]?.[d] || 0;
+            maxVal = Math.max(maxVal, val);
+            data.push({ x: d, y: yIdx, v: val });
         }
     });
 
-    function getColor(km) {
-        if (!km) return 'rgba(255,255,255,0)';
-        const alpha = 0.15 + 0.85 * (km / maxKm);
+    function getColor(v) {
+        if (v === 0) return 'rgba(255,255,255,0)';
+        const alpha = 0.15 + 0.85 * (v / maxVal);
         return `rgba(0,180,200,${alpha.toFixed(2)})`;
     }
+
+    const labelMap = {
+        count: 'Activities',
+        time: 'Time (h)',
+        distance: 'Distance (km)'
+    };
 
     createUiChart('year-weekday-matrix', {
         type: 'matrix',
         data: {
             datasets: [{
-                label: 'Distance (km)',
+                label: labelMap[dataType],
                 data,
-                backgroundColor: data.map(d => getColor(d.km))
+                backgroundColor: data.map(d => getColor(d.v))
             }]
         },
         options: {
@@ -999,13 +1034,7 @@ function renderYearWeekdayMatrix(runs, dataType = 'count') {
                             const d = items[0].raw;
                             return `${years[d.y]} - ${dayLabels[d.x]}`;
                         },
-                        label: item => {
-                            const d = item.raw;
-                            return [
-                                `Runs: ${d.count}`,
-                                `Distance: ${d.km.toFixed(1)} km`
-                            ];
-                        }
+                        label: item => `${labelMap[dataType]}: ${item.raw.v.toFixed(1)}`
                     }
                 },
                 legend: { display: false }
@@ -1045,47 +1074,61 @@ function renderYearWeekdayMatrix(runs, dataType = 'count') {
 
 
 function renderYearHourMatrix(runs, dataType = 'count') {
-    const stats = {}; // { [year]: { [hour]: { count, distance } } }
+    const stats = {}; // { [year]: { [hour]: value } }
 
     runs.forEach(run => {
         const date = new Date(run.start_date_local);
         if (isNaN(date)) return;
         const year = date.getFullYear();
         let hour = (date.getHours() - 2 + 24) % 24;
-        const distKm = run.distance / 1000;
 
         if (!stats[year]) stats[year] = {};
-        if (!stats[year][hour]) stats[year][hour] = { count: 0, distance: 0 };
+        if (!stats[year][hour]) stats[year][hour] = 0;
 
-        stats[year][hour].count++;
-        stats[year][hour].distance += distKm;
+        switch (dataType) {
+            case 'count':
+                stats[year][hour]++;
+                break;
+            case 'time':
+                stats[year][hour] += run.moving_time / 3600;
+                break;
+            case 'distance':
+                stats[year][hour] += run.distance / 1000;
+                break;
+        }
     });
 
     const years = Object.keys(stats).map(Number).sort((a, b) => a - b);
     const data = [];
-    let maxCount = 0;
+    let maxVal = 0;
 
     years.forEach((year, yIdx) => {
         for (let h = 0; h < 24; h++) {
-            const entry = stats[year]?.[h] || { count: 0, distance: 0 };
-            maxCount = Math.max(maxCount, entry.count);
-            data.push({ x: h, y: yIdx, count: entry.count, km: entry.distance });
+            const val = stats[year]?.[h] || 0;
+            maxVal = Math.max(maxVal, val);
+            data.push({ x: h, y: yIdx, v: val });
         }
     });
 
-    function getColor(count) {
-        if (!count) return 'rgba(255,255,255,0)';
-        const alpha = 0.15 + 0.85 * (count / maxCount);
+    function getColor(v) {
+        if (v === 0) return 'rgba(255,255,255,0)';
+        const alpha = 0.15 + 0.85 * (v / maxVal);
         return `rgba(255,100,0,${alpha.toFixed(2)})`;
     }
+
+    const labelMap = {
+        count: 'Activities',
+        time: 'Time (h)',
+        distance: 'Distance (km)'
+    };
 
     createUiChart('year-hour-matrix', {
         type: 'matrix',
         data: {
             datasets: [{
-                label: 'Trainings by Hour & Year',
+                label: labelMap[dataType],
                 data,
-                backgroundColor: data.map(d => getColor(d.count))
+                backgroundColor: data.map(d => getColor(d.v))
             }]
         },
         options: {
@@ -1098,13 +1141,7 @@ function renderYearHourMatrix(runs, dataType = 'count') {
                             const d = items[0].raw;
                             return `${years[d.y]} - ${d.x}:00`;
                         },
-                        label: item => {
-                            const d = item.raw;
-                            return [
-                                `Runs: ${d.count}`,
-                                `Distance: ${d.km.toFixed(1)} km`
-                            ];
-                        }
+                        label: item => `${labelMap[dataType]}: ${item.raw.v.toFixed(1)}`
                     }
                 },
                 legend: { display: false }
