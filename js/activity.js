@@ -1,18 +1,74 @@
-// js/activity.js
+/**
+ * ACTIVITY.JS - Activity Details Page Controller
+ * Handles fetching, processing, and rendering activity data with comprehensive charts and stats
+ * Entry point: Query parameter ?id={activityId}
+ */
 
+// =====================================================
+// 1. INITIALIZATION & CONFIGURATION
+// =====================================================
 
-//NO OFFICIAL
+const CONFIG = {
+    USER_MAX_HR: 195,
+    WINDOW_SIZES: {
+        altitude: 50,
+        pace: 200,
+        heartrate: 80,
+        cadence: 60,
+    },
+    NUM_SEGMENTS: 40,
+};
 
-// --- 1. IMPORTACIONES ---
-import * as utils from './utils.js';
-import { classifyRun } from './classifyRun.js';
+// DOM References
+const DOM = {
+    details: document.getElementById('activity-details'),
+    info: document.getElementById('activity-info'),
+    stats: document.getElementById('activity-stats'),
+    advanced: document.getElementById('activity-advanced'),
+    map: document.getElementById('activity-map'),
+    splitsSection: document.getElementById('splits-section'),
+    streamCharts: document.getElementById('stream-charts'),
+    runClassifier: document.getElementById('run-classifier-results'),
+    hrZonesChart: document.getElementById('hr-zones-chart'),
+};
 
-// --- 2. CONSTANTES GLOBALES Y ESTADO ---
-const USER_MAX_HR = 195;
-let activityCharts = {};
+// Parse activity ID from URL
+const params = new URLSearchParams(window.location.search);
+const activityId = parseInt(params.get('id'), 10);
 
-// --- 3. FUNCIONES AUXILIARES ---
-export function decodePolyline(str) {
+// Chart instances registry for cleanup
+const chartInstances = {};
+
+// =====================================================
+// 2. UTILITY FUNCTIONS
+// =====================================================
+
+/**
+ * Formats seconds into HH:MM:SS format
+ */
+function formatTime(seconds) {
+    if (isNaN(seconds) || seconds < 0) return '0:00';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.round(seconds % 60);
+    return `${h > 0 ? h + ':' : ''}${m.toString().padStart(h > 0 ? 2 : 1, '0')}:${s.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Formats speed (m/s) into pace (min/km)
+ */
+function formatPace(speedInMps) {
+    if (!speedInMps || speedInMps === 0) return '-';
+    const paceInSecPerKm = 1000 / speedInMps;
+    const min = Math.floor(paceInSecPerKm / 60);
+    const sec = Math.round(paceInSecPerKm % 60);
+    return `${min}:${sec.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Decodes Strava polyline encoding to lat/lng coordinates
+ */
+function decodePolyline(str) {
     let index = 0, lat = 0, lng = 0, coordinates = [];
     while (index < str.length) {
         let b, shift = 0, result = 0;
@@ -39,9 +95,11 @@ export function decodePolyline(str) {
     return coordinates;
 }
 
-
-export function estimateVO2max(act, userMaxHr = USER_MAX_HR) {
-    if (!act.distance || !act.moving_time || !act.average_heartrate || act.moving_time === 0) return '-';
+/**
+ * Estimates VO2max from activity data using Karvonen formula
+ */
+function estimateVO2max(act, userMaxHr = CONFIG.USER_MAX_HR) {
+    if (!act.distance || !act.moving_time || !act.average_heartrate) return '-';
     const vel_m_min = (act.distance / act.moving_time) * 60;
     const vo2_at_pace = (vel_m_min * 0.2) + 3.5;
     const percent_max_hr = act.average_heartrate / userMaxHr;
@@ -50,22 +108,26 @@ export function estimateVO2max(act, userMaxHr = USER_MAX_HR) {
     return vo2max.toFixed(1);
 }
 
-
-export function rollingMean(arr, windowSize = 25) {
+/**
+ * Applies rolling mean smoothing to array
+ */
+function rollingMean(arr, windowSize = 25) {
     if (!Array.isArray(arr) || arr.length === 0) return [];
     const result = [];
     for (let i = 0; i < arr.length; i++) {
         const start = Math.max(0, i - Math.floor(windowSize / 2));
         const end = Math.min(arr.length, i + Math.ceil(windowSize / 2));
-        const windowSlice = arr.slice(start, end); // Renombrado de 'window' a 'windowSlice'
-        const mean = windowSlice.reduce((a, b) => a + b, 0) / windowSlice.length;
+        const window = arr.slice(start, end);
+        const mean = window.reduce((a, b) => a + b, 0) / window.length;
         result.push(mean);
     }
     return result;
 }
 
-
-export function calculateVariability(data, applySmoothing = false) {
+/**
+ * Calculates coefficient of variation (CV) for data series
+ */
+function calculateVariability(data, applySmoothing = false) {
     let processedData = data;
     if (applySmoothing) {
         processedData = rollingMean(data, 150);
@@ -84,23 +146,23 @@ export function calculateVariability(data, applySmoothing = false) {
     );
 
     const cv = (standardDeviation / mean) * 100;
-
     return `${cv.toFixed(1)}%`;
 }
 
-
-export function calculateTimeInZones(heartrateStream, timeStream, zones) {
-    if (!heartrateStream || !timeStream || !zones || zones.length === 0 || !heartrateStream.data || !timeStream.data) {
-        return Array(zones.length).fill(0);
+/**
+ * Calculates time spent in each HR zone
+ */
+function calculateTimeInZones(heartrateStream, timeStream, zones) {
+    if (!heartrateStream || !timeStream || !zones || zones.length === 0) {
+        return [];
     }
 
     const timeInZones = Array(zones.length).fill(0);
 
     for (let i = 1; i < heartrateStream.data.length; i++) {
         const hr = heartrateStream.data[i];
-        if (hr === null || hr === undefined) continue;
+        if (hr === null) continue;
         const deltaTime = timeStream.data[i] - timeStream.data[i - 1];
-        if (deltaTime <= 0) continue; // Asegura que el tiempo avance
 
         let zoneIndex = -1;
         for (let j = 0; j < zones.length; j++) {
@@ -118,29 +180,39 @@ export function calculateTimeInZones(heartrateStream, timeStream, zones) {
     return timeInZones;
 }
 
-
-function createActivityChart(canvasId, config) {
+/**
+ * Creates or updates a Chart.js instance with cleanup
+ */
+function createChart(canvasId, config) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) {
-        console.error(`Canvas with id ${canvasId} not found.`);
+        console.warn(`Canvas element not found: ${canvasId}`);
         return;
     }
-    if (activityCharts[canvasId]) {
-        activityCharts[canvasId].destroy();
+
+    if (chartInstances[canvasId]) {
+        chartInstances[canvasId].destroy();
     }
-    activityCharts[canvasId] = new Chart(canvas, config);
+
+    chartInstances[canvasId] = new Chart(canvas, config);
 }
 
+// =====================================================
+// 3. API FUNCTIONS
+// =====================================================
 
-// --- 4. LÓGICA DE LA API ---
-
+/**
+ * Retrieves and decodes auth token from localStorage
+ */
 function getAuthPayload() {
     const tokenString = localStorage.getItem('strava_tokens');
     if (!tokenString) return null;
     return btoa(tokenString);
 }
 
-
+/**
+ * Fetches data from backend API
+ */
 async function fetchFromApi(url, authPayload) {
     const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${authPayload}` }
@@ -156,68 +228,49 @@ async function fetchFromApi(url, authPayload) {
     return result;
 }
 
-
+/**
+ * Fetches detailed activity information
+ */
 async function fetchActivityDetails(activityId, authPayload) {
     const result = await fetchFromApi(`/api/strava-activity?id=${activityId}`, authPayload);
     return result.activity;
 }
 
-
+/**
+ * Fetches activity stream data (distance, time, HR, altitude, cadence)
+ */
 async function fetchActivityStreams(activityId, authPayload) {
     const streamTypes = 'distance,time,heartrate,altitude,cadence';
     const result = await fetchFromApi(`/api/strava-streams?id=${activityId}&type=${streamTypes}`, authPayload);
-    console.log('Fetched streams:', result);
     return result.streams;
 }
 
+// =====================================================
+// 4. RENDERING FUNCTIONS - ACTIVITY INFO
+// =====================================================
 
-// --- 5. FUNCIONES DE RENDERIZADO (exportadas) ---
+/**
+ * Renders basic activity information (title, date, type, gear, etc.)
+ */
+function renderActivityInfo(activity) {
+    if (!DOM.info) return;
 
-export function renderActivityDetails(act) {
-    console.log('Rendering activity:', act);
-    const activityInfoDiv = document.getElementById('activity-info');
-    const activityStatsDiv = document.getElementById('activity-stats');
-    const activityAdvancedDiv = document.getElementById('activity-advanced');
-
-    // --- Info principales ---
-    const name = act.name;
-    const description = act.description || '';
-    const date = new Date(act.start_date_local).toLocaleString();
+    const name = activity.name;
+    const description = activity.description || '';
+    const date = new Date(activity.start_date_local).toLocaleString();
     const typeLabels = ['Workout', 'Race', 'Long Run', 'Workout'];
-    const activityType = act.workout_type !== undefined ? typeLabels[act.workout_type] || 'Other' : (act.type || 'Other');
-    const gear = act.gear?.name || 'N/A';
-    const kudos = act.kudos_count || 0;
-    const commentCount = act.comment_count || 0;
+    const activityType = activity.workout_type !== undefined 
+        ? typeLabels[activity.workout_type] || 'Other' 
+        : (activity.type || 'Other');
+    const gear = activity.gear?.name || 'N/A';
+    const kudos = activity.kudos_count || 0;
+    const commentCount = activity.comment_count || 0;
     let tempStr = 'Not available';
-    if (act.average_temp !== undefined && act.average_temp !== null) {
-        tempStr = `${act.average_temp}°C`;
+    if (activity.average_temp !== undefined && activity.average_temp !== null) {
+        tempStr = `${activity.average_temp}°C`;
     }
 
-    // --- Stats ---
-    const distanceKm = (act.distance / 1000).toFixed(2);
-    const duration = utils.formatTime(act.moving_time);
-    const pace = utils.formatPace(act.average_speed);
-    const elevation = act.total_elevation_gain !== undefined ? act.total_elevation_gain : '-';
-    const elevationPerKm = act.distance > 0 ? (act.total_elevation_gain / (act.distance / 1000)).toFixed(2) : '-';
-    const calories = act.calories !== undefined ? act.calories : '-';
-    const hrAvg = act.average_heartrate ? Math.round(act.average_heartrate) : '-';
-    const hrMax = act.max_heartrate ? Math.round(act.max_heartrate) : '-';
-
-    // --- Advanced stats ---
-    const moveRatio = act.elapsed_time ? (act.moving_time / act.elapsed_time).toFixed(2) : '-';
-    const effort = act.suffer_score !== undefined ? act.suffer_score : (act.perceived_exertion !== undefined ? act.perceived_exertion : '-');
-    const vo2max = estimateVO2max(act);
-    const prCount = act.pr_count !== undefined ? act.pr_count : '-';
-    const athleteCount = act.athlete_count !== undefined ? act.athlete_count : '-';
-    const achievementCount = act.achievement_count !== undefined ? act.achievement_count : '-';
-
-    // Se asignan las variabilidades calculadas en main()
-    const paceVariabilityStream = act.pace_variability_stream || '-';
-    const hrVariabilityStream = act.hr_variability_stream || '-';
-    const paceVariabilityLaps = act.pace_variability_laps || '-';
-    const hrVariabilityLaps = act.hr_variability_laps || '-';
-
-    activityInfoDiv.innerHTML = `
+    DOM.info.innerHTML = `
         <h3>Info</h3>
         <ul>
             <li><b>Title:</b> ${name}</li>
@@ -230,7 +283,65 @@ export function renderActivityDetails(act) {
             <li><b>Kudos:</b> ${kudos}</li>
         </ul>
     `;
-    activityAdvancedDiv.innerHTML = `
+}
+
+/**
+ * Renders core statistics (distance, pace, elevation, HR)
+ */
+function renderActivityStats(activity) {
+    if (!DOM.stats) return;
+
+    const distanceKm = (activity.distance / 1000).toFixed(2);
+    const duration = formatTime(activity.moving_time);
+    const pace = formatPace(activity.average_speed);
+    const elevation = activity.total_elevation_gain !== undefined ? activity.total_elevation_gain : '-';
+    const elevationPerKm = activity.distance > 0 
+        ? (activity.total_elevation_gain / (activity.distance / 1000)).toFixed(2) 
+        : '-';
+    const calories = activity.calories !== undefined ? activity.calories : '-';
+    const hrAvg = activity.average_heartrate ? Math.round(activity.average_heartrate) : '-';
+    const hrMax = activity.max_heartrate ? Math.round(activity.max_heartrate) : '-';
+
+    DOM.stats.innerHTML = `
+        <h3>Stats</h3>
+        <ul>
+            <li><b>Duration:</b> ${duration}</li>
+            <li><b>Distance:</b> ${distanceKm} km</li>
+            <li><b>Pace:</b> ${pace}</li>
+            <li><b>Elevation Gain:</b> ${elevation} m</li>
+            <li><b>Elevation per Km:</b> ${elevationPerKm} m</li>
+            <li><b>Calories:</b> ${calories}</li>
+            <li><b>HR Avg:</b> ${hrAvg} bpm</li>
+            <li><b>HR Max:</b> ${hrMax} bpm</li>
+        </ul>
+    `;
+}
+
+/**
+ * Renders advanced statistics (VO2max, variability, achievements)
+ */
+function renderAdvancedStats(activity) {
+    if (!DOM.advanced) return;
+
+    const elevationPerKm = activity.distance > 0 
+        ? (activity.total_elevation_gain / (activity.distance / 1000)).toFixed(2) 
+        : '-';
+    const moveRatio = activity.elapsed_time 
+        ? (activity.moving_time / activity.elapsed_time).toFixed(2) 
+        : '-';
+    const effort = activity.suffer_score !== undefined 
+        ? activity.suffer_score 
+        : (activity.perceived_exertion !== undefined ? activity.perceived_exertion : '-');
+    const vo2max = estimateVO2max(activity);
+    const paceVariabilityLaps = activity.pace_variability_laps || '-';
+    const paceVariabilityStream = activity.pace_variability_stream || '-';
+    const hrVariabilityLaps = activity.hr_variability_laps || '-';
+    const hrVariabilityStream = activity.hr_variability_stream || '-';
+    const prCount = activity.pr_count !== undefined ? activity.pr_count : '-';
+    const athleteCount = activity.athlete_count !== undefined ? activity.athlete_count : '-';
+    const achievementCount = activity.achievement_count !== undefined ? activity.achievement_count : '-';
+
+    DOM.advanced.innerHTML = `
         <h3>Advanced Stats</h3>
         <ul>
             <li><b>Elevation per Km:</b> ${elevationPerKm} m</li>
@@ -246,102 +357,120 @@ export function renderActivityDetails(act) {
             <li><b>Achievements:</b> ${achievementCount}</li>
         </ul>
     `;
-
-    activityStatsDiv.innerHTML = `
-        <h3>Stats</h3>
-        <ul>
-            <li><b>Duration:</b> ${duration}</li>
-            <li><b>Distance:</b> ${distanceKm} km</li>
-            <li><b>Pace:</b> ${pace}</li>
-            <li><b>Elevation Gain:</b> ${elevation} m</li>
-            <li><b>Calories:</b> ${calories}</li>
-            <li><b>HR Avg:</b> ${hrAvg} bpm</li>
-            <li><b>HR Max:</b> ${hrMax} bpm</li>
-        </ul>
-    `;
 }
 
-/**
- * Renderiza el mapa de la actividad.
- * @param {object} act - Objeto de actividad.
- */
-export function renderActivityMap(act) {
-    const mapDiv = document.getElementById('activity-map');
-    if (!mapDiv) return;
+// =====================================================
+// 5. RENDERING FUNCTIONS - MAPS & ROUTES
+// =====================================================
 
-    if (act.map?.summary_polyline && window.L) {
-        const coords = decodePolyline(act.map.summary_polyline);
+/**
+ * Renders interactive map with route polyline
+ */
+function renderActivityMap(activity) {
+    if (!DOM.map) return;
+
+    if (activity.map?.summary_polyline && window.L) {
+        const coords = decodePolyline(activity.map.summary_polyline);
         if (coords.length > 0) {
-            mapDiv.innerHTML = "";
+            DOM.map.innerHTML = '';
             const map = L.map('activity-map').setView(coords[0], 13);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
             L.polyline(coords, { color: '#FC5200', weight: 4 }).addTo(map);
         } else {
-            mapDiv.innerHTML = '<p>No route data available (empty polyline).</p>';
+            DOM.map.innerHTML = '<p>No route data available (empty polyline).</p>';
         }
     } else {
-        mapDiv.innerHTML = '<p>No route data available or Leaflet not loaded.</p>';
+        DOM.map.innerHTML = '<p>No route data available or Leaflet not loaded.</p>';
     }
 }
 
 /**
- * Renderiza los gráficos de splits (ritmo y FC por kilómetro).
- * @param {object} act - Objeto de actividad.
+ * Renders splits charts (pace and HR by kilometer)
  */
-export function renderSplitsCharts(act) {
-    const splitsSection = document.getElementById('splits-section');
-    if (!splitsSection) return;
+function renderSplitsCharts(activity) {
+    if (!DOM.splitsSection) return;
 
-    if (act.splits_metric && act.splits_metric.length > 0) {
-        splitsSection.classList.remove('hidden');
-        const kmLabels = act.splits_metric.map((_, i) => `Km ${i + 1}`);
-        const paceData = act.splits_metric.map(s => s.average_speed ? 1000 / s.average_speed : null);
-        const hrData = act.splits_metric.map(s => s.average_heartrate || null);
+    if (activity.splits_metric && activity.splits_metric.length > 0) {
+        DOM.splitsSection.classList.remove('hidden');
+        const kmLabels = activity.splits_metric.map((_, i) => `Km ${i + 1}`);
+        const paceData = activity.splits_metric.map(s => s.average_speed ? 1000 / s.average_speed : null);
+        const hrData = activity.splits_metric.map(s => s.average_heartrate || null);
 
-        createActivityChart('chart-pace', {
+        createChart('chart-pace', {
             type: 'line',
-            data: { labels: kmLabels, datasets: [{ label: 'Pace (s/km)', data: paceData, borderColor: '#FC5200' }] },
+            data: {
+                labels: kmLabels,
+                datasets: [{
+                    label: 'Pace (s/km)',
+                    data: paceData,
+                    borderColor: '#FC5200',
+                    backgroundColor: 'rgba(252, 82, 0, 0.07)',
+                    fill: false,
+                    pointRadius: 0,
+                    borderWidth: 2,
+                    tension: 0.3
+                }]
+            },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
-                scales: { y: { reverse: true, title: { display: true, text: 'Pace (min/km)' } } }
+                scales: {
+                    y: { reverse: true, title: { display: true, text: 'Pace (min/km)' } }
+                }
             }
         });
-        createActivityChart('chart-heartrate', {
+
+        createChart('chart-heartrate', {
             type: 'line',
-            data: { labels: kmLabels, datasets: [{ label: 'HR Avg (bpm)', data: hrData, borderColor: 'red' }] },
+            data: {
+                labels: kmLabels,
+                datasets: [{
+                    label: 'HR Avg (bpm)',
+                    data: hrData,
+                    borderColor: 'red',
+                    backgroundColor: 'rgba(255, 0, 0, 0.07)',
+                    fill: false,
+                    pointRadius: 0,
+                    borderWidth: 2,
+                    tension: 0.3
+                }]
+            },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
-                scales: { y: { title: { display: true, text: 'Heart Rate (bpm)' } } }
+                scales: {
+                    y: { title: { display: true, text: 'Heart Rate (bpm)' } }
+                }
             }
         });
     } else {
-        splitsSection.classList.add('hidden');
+        DOM.splitsSection.classList.add('hidden');
     }
 }
 
+// =====================================================
+// 6. RENDERING FUNCTIONS - STREAM CHARTS
+// =====================================================
+
 /**
- * Renderiza los gráficos de streams (altitud, ritmo, FC, cadencia vs distancia).
- * @param {object} streams - Streams de datos de la actividad.
- * @param {object} act - Objeto de actividad (usado para tipo de actividad en cadencia).
+ * Renders detailed stream charts (altitude, pace, HR, cadence vs distance)
  */
-export function renderStreamCharts(streams, act) {
-    const streamChartsDiv = document.getElementById('stream-charts');
-    if (!streamChartsDiv) return;
+function renderStreamCharts(streams, activity) {
+    if (!DOM.streamCharts) return;
 
     if (!streams || !streams.distance || !streams.distance.data || streams.distance.data.length === 0) {
-        streamChartsDiv.innerHTML = '<p>No detailed stream data available for this activity.</p>';
+        DOM.streamCharts.innerHTML = '<p>No detailed stream data available for this activity.</p>';
         return;
     }
 
     const { distance, time, heartrate, altitude, cadence } = streams;
     const distLabels = distance.data.map(d => (d / 1000).toFixed(2));
 
-    function createSingleStreamChart(canvasId, label, data, color, yAxisReverse = false) {
-        createActivityChart(canvasId, {
+    // Helper function to create individual stream charts
+    function createStreamChart(canvasId, label, data, color, yAxisReverse = false) {
+        createChart(canvasId, {
             type: 'line',
             data: {
                 labels: distLabels,
@@ -368,27 +497,29 @@ export function renderStreamCharts(streams, act) {
         });
     }
 
+    // Altitude chart
     if (altitude && altitude.data) {
-        createSingleStreamChart('chart-altitude', 'Altitud (m)', altitude.data, '#888');
+        const smoothAltitude = rollingMean(altitude.data, CONFIG.WINDOW_SIZES.altitude);
+        createStreamChart('chart-altitude', 'Altitud (m)', smoothAltitude, '#888');
     }
 
+    // Pace chart
     if (time && time.data) {
         const paceStreamData = [];
         for (let i = 1; i < distance.data.length; i++) {
             const deltaDist = distance.data[i] - distance.data[i - 1];
             const deltaTime = time.data[i] - time.data[i - 1];
             if (deltaDist > 0 && deltaTime > 0) {
-                const speed = deltaDist / deltaTime; // m/s
-                paceStreamData.push(1000 / speed / 60); // Ritmo en min/km
+                const speed = deltaDist / deltaTime;
+                paceStreamData.push(1000 / speed / 60);
             } else {
                 paceStreamData.push(null);
             }
         }
-        const windowSize = 100;
-        const smoothPaceStreamData = rollingMean(paceStreamData, windowSize);
-        const paceLabels = distLabels.slice(1); // Ajustar etiquetas para el ritmo
+        const smoothPaceStreamData = rollingMean(paceStreamData, CONFIG.WINDOW_SIZES.pace);
+        const paceLabels = distLabels.slice(1);
 
-        createActivityChart('chart-pace-distance', {
+        createChart('chart-pace-distance', {
             type: 'line',
             data: {
                 labels: paceLabels,
@@ -415,21 +546,28 @@ export function renderStreamCharts(streams, act) {
         });
     }
 
+    // Heart rate chart
     if (heartrate && heartrate.data) {
-        createSingleStreamChart('chart-heart-distance', 'FC (bpm)', heartrate.data, 'red');
+        const smoothHeartrate = rollingMean(heartrate.data, CONFIG.WINDOW_SIZES.heartrate);
+        createStreamChart('chart-heart-distance', 'FC (bpm)', smoothHeartrate, 'red');
     }
 
+    // Cadence chart
     if (cadence && cadence.data) {
-        const cadenceData = act.type && act.type.includes('Run') ? cadence.data.map(c => c * 2) : cadence.data;
-        createSingleStreamChart('chart-cadence-distance', 'Cadencia (spm)', cadenceData, '#0074D9');
+        const cadenceData = activity.type === 'Run' ? cadence.data.map(c => c * 2) : cadence.data;
+        const smoothCadence = rollingMean(cadenceData, CONFIG.WINDOW_SIZES.cadence);
+        createStreamChart('chart-cadence-distance', 'Cadencia (spm)', smoothCadence, '#0074D9');
     }
 }
 
+// =====================================================
+// 7. RENDERING FUNCTIONS - TABLES
+// =====================================================
+
 /**
- * Renderiza la tabla de los mejores esfuerzos (Best Efforts).
- * @param {Array<object>} bestEfforts - Array de objetos de mejores esfuerzos.
+ * Renders best efforts table
  */
-export function renderBestEfforts(bestEfforts) {
+function renderBestEfforts(bestEfforts) {
     const section = document.getElementById('best-efforts-section');
     const table = document.getElementById('best-efforts-table');
     if (!section || !table) return;
@@ -452,12 +590,12 @@ export function renderBestEfforts(bestEfforts) {
     </thead>`;
 
     const tableBody = bestEfforts.map(effort => {
-        const pace = utils.formatPace(effort.distance / effort.moving_time);
+        const pace = formatPace(effort.distance / effort.moving_time);
         const achievements = effort.pr_rank ? `🏆 PR #${effort.pr_rank}` : (effort.achievements.length > 0 ? '🏅' : '');
         return `
         <tr>
             <td>${effort.name}</td>
-            <td>${utils.formatTime(effort.moving_time)}</td>
+            <td>${formatTime(effort.moving_time)}</td>
             <td>${pace} /km</td>
             <td>${achievements}</td>
         </tr>`;
@@ -467,10 +605,9 @@ export function renderBestEfforts(bestEfforts) {
 }
 
 /**
- * Renderiza la tabla de vueltas (Laps).
- * @param {Array<object>} laps - Array de objetos de vueltas.
+ * Renders laps table
  */
-export function renderLaps(laps) {
+function renderLaps(laps) {
     const section = document.getElementById('laps-section');
     const table = document.getElementById('laps-table');
     if (!section || !table) return;
@@ -495,12 +632,12 @@ export function renderLaps(laps) {
     </thead>`;
 
     const tableBody = laps.map(lap => {
-        const pace = utils.formatPace(lap.average_speed);
+        const pace = formatPace(lap.average_speed);
         return `
         <tr>
             <td>${lap.lap_index}</td>
             <td>${(lap.distance / 1000).toFixed(2)} km</td>
-            <td>${utils.formatTime(lap.moving_time)}</td>
+            <td>${formatTime(lap.moving_time)}</td>
             <td>${pace} /km</td>
             <td>${Math.round(lap.total_elevation_gain)} m</td>
             <td>${lap.average_heartrate ? Math.round(lap.average_heartrate) : '-'} bpm</td>
@@ -511,10 +648,77 @@ export function renderLaps(laps) {
 }
 
 /**
- * Renderiza la tabla de esfuerzos de segmento (Segments Efforts).
- * @param {Array<object>} segments - Array de objetos de esfuerzos de segmento.
+ * Renders laps pace chart
  */
-export function renderSegments(segments) {
+function renderLapsChart(laps) {
+    const canvas = document.getElementById('laps-chart');
+    const section = document.getElementById('laps-chart-section');
+    if (!canvas || !section || !laps || laps.length === 0) return;
+
+    section.classList.remove('hidden');
+
+    const labels = laps.map((_, i) => `Lap ${i + 1}`);
+    const paces = laps.map(lap => 1000 / lap.average_speed);
+    const minPace = Math.min(...paces);
+    const maxPace = Math.max(...paces);
+
+    const colors = paces.map(pace => {
+        const t = (pace - minPace) / (maxPace - minPace || 1);
+        const lightness = 35 + t * 35;
+        return `hsl(15, 90%, ${lightness}%)`;
+    });
+
+    createChart('laps-chart', {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Pace (min/km)',
+                data: paces,
+                backgroundColor: colors,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { title: { display: true, text: 'Lap' } },
+                y: {
+                    reverse: true,
+                    beginAtZero: false,
+                    title: { display: true, text: 'Pace (min/km)' }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        title: ctx => labels[ctx[0].dataIndex],
+                        label: ctx => {
+                            const lap = laps[ctx.dataIndex];
+                            return `Pace: ${formatPace(lap.average_speed)}`;
+                        },
+                        afterLabel: ctx => {
+                            const lap = laps[ctx.dataIndex];
+                            return [
+                                `Distance: ${(lap.distance / 1000).toFixed(2)} km`,
+                                `Time: ${formatTime(lap.moving_time)}`,
+                                `Elevation: ${Math.round(lap.total_elevation_gain)} m`,
+                                `Avg HR: ${lap.average_heartrate ? Math.round(lap.average_heartrate) : '-'} bpm`
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+/**
+ * Renders segment efforts table
+ */
+function renderSegments(segments) {
     const section = document.getElementById('segments-section');
     const table = document.getElementById('segments-table');
     if (!section || !table) return;
@@ -538,7 +742,7 @@ export function renderSegments(segments) {
     </thead>`;
 
     const tableBody = segments.map(effort => {
-        const pace = utils.formatPace(effort.distance / effort.moving_time);
+        const pace = formatPace(effort.distance / effort.moving_time);
         let rank = '';
         if (effort.pr_rank === 1) {
             rank = '🏆 PR!';
@@ -552,7 +756,7 @@ export function renderSegments(segments) {
         return `
         <tr>
             <td><a href="https://www.strava.com/segments/${effort.segment.id}" target="_blank">${effort.name}</a></td>
-            <td>${utils.formatTime(effort.moving_time)}</td>
+            <td>${formatTime(effort.moving_time)}</td>
             <td>${pace} /km</td>
             <td>${effort.average_heartrate ? Math.round(effort.average_heartrate) : '-'} bpm</td>
             <td>${rank}</td>
@@ -562,75 +766,38 @@ export function renderSegments(segments) {
     table.innerHTML = tableHeader + `<tbody>${tableBody}</tbody>`;
 }
 
-/**
- * Renderiza los resultados del clasificador de carreras.
- * @param {object} classificationData - Datos de clasificación de la carrera.
- */
-export function renderClassifierResults(classificationData) {
-    const container = document.getElementById('run-classifier-results');
-    if (!container) return;
-
-    const results = classificationData ? classificationData.top : null;
-    console.log("Classification Diagnostics:", classificationData.diagnostics);
-
-    if (!results || results.length === 0) {
-        container.innerHTML = '<p>Could not classify this run.</p>';
-        return;
-    }
-
-    const resultsHtml = results.map((result, index) => {
-        const color = index === 0 ? '#FC5200' : index === 1 ? '#6b7280' : '#a0aec0';
-        return `
-            <div class="classifier-result">
-                <div class="classifier-type" style="color: ${color};">${result.type}</div>
-                <div class="classifier-bar-container">
-                    <div class="classifier-bar" style="width: ${result.pct}%; background-color: ${color};"></div>
-                </div>
-                <div class="classifier-score" style="color: ${color};">${result.pct}%</div>
-            </div>`;
-    }).join('');
-
-    container.innerHTML = resultsHtml;
-}
+// =====================================================
+// 8. RENDERING FUNCTIONS - ZONE & AREA CHARTS
+// =====================================================
 
 /**
- * Renderiza el gráfico de distribución de tiempo en zonas de FC.
- * @param {object} streams - Streams de datos de la actividad.
+ * Renders HR zone distribution chart
  */
-export function renderHrZoneDistributionChart(streams) {
+function renderHrZoneDistributionChart(streams) {
     const canvas = document.getElementById('hr-zones-chart');
-    if (!canvas) return;
-
-    if (!streams.heartrate || !streams.time) {
-        canvas.innerHTML = '<p style="text-align:center; padding:2rem;">No heart rate data for zones.</p>';
-        return;
-    }
+    if (!canvas || !streams.heartrate || !streams.time) return;
 
     const zonesDataText = localStorage.getItem('strava_training_zones');
     if (!zonesDataText) {
-        console.warn("Training zones not found in localStorage.");
-        canvas.innerHTML = '<p style="text-align:center; padding:2rem;">Training zones not configured.</p>';
+        console.warn('Training zones not found in localStorage.');
         return;
     }
+
     const allZones = JSON.parse(zonesDataText);
     const hrZones = allZones?.heart_rate?.zones?.filter(z => z.max > 0);
 
     if (!hrZones || hrZones.length === 0) {
-        console.warn("Valid HR zones not found.");
-        canvas.innerHTML = '<p style="text-align:center; padding:2rem;">Valid HR zones not found.</p>';
+        console.warn('Valid HR zones not found.');
         return;
     }
 
     const timeInZones = calculateTimeInZones(streams.heartrate, streams.time, hrZones);
-
     const labels = hrZones.map((zone, i) => `Z${i + 1} (${zone.min}-${zone.max === -1 ? '∞' : zone.max})`);
     const data = timeInZones.map(time => +(time / 60).toFixed(1));
 
-    const gradientColors = [
-        "#fde0e0", "#fababa", "#fa7a7a", "#f44336", "#b71c1c"
-    ];
+    const gradientColors = ['#fde0e0', '#fababa', '#fa7a7a', '#f44336', '#b71c1c'];
 
-    createActivityChart('hr-zones-chart', {
+    createChart('hr-zones-chart', {
         type: 'bar',
         data: {
             labels: labels,
@@ -664,10 +831,9 @@ export function renderHrZoneDistributionChart(streams) {
 }
 
 /**
- * Renderiza el gráfico de área de HR Mín/Máx/Promedio sobre la distancia.
- * @param {object} streams - Streams de datos de la actividad.
+ * Renders HR min/max/avg area chart segmented over distance
  */
-export function renderHrMinMaxAreaChart(streams) {
+function renderHrMinMaxAreaChart(streams) {
     const canvas = document.getElementById('hr-minmax-area-chart');
     const section = document.getElementById('hr-min-max-area-section');
 
@@ -682,14 +848,13 @@ export function renderHrMinMaxAreaChart(streams) {
 
     const hr = streams.heartrate.data;
     const dist = streams.distance.data;
-    const N_SEGMENTS = 40;
     const totalDist = dist[dist.length - 1];
-    const segmentLength = totalDist / N_SEGMENTS;
+    const segmentLength = totalDist / CONFIG.NUM_SEGMENTS;
 
     const minArr = [], maxArr = [], avgArr = [], labels = [];
-    let segStart = 0, segEnd = segmentLength, i = 0;
+    let segEnd = segmentLength, i = 0;
 
-    for (let s = 0; s < N_SEGMENTS; s++) {
+    for (let s = 0; s < CONFIG.NUM_SEGMENTS; s++) {
         const hrVals = [];
         while (i < dist.length && dist[i] < segEnd) {
             if (hr[i] !== null && hr[i] !== undefined) hrVals.push(hr[i]);
@@ -697,7 +862,6 @@ export function renderHrMinMaxAreaChart(streams) {
         }
 
         if (hrVals.length === 0) {
-            // Si no hay datos, se repite el último valor válido o se pone null
             minArr.push(minArr.length ? minArr[minArr.length - 1] : null);
             maxArr.push(maxArr.length ? maxArr[maxArr.length - 1] : null);
             avgArr.push(avgArr.length ? avgArr[avgArr.length - 1] : null);
@@ -708,11 +872,10 @@ export function renderHrMinMaxAreaChart(streams) {
         }
 
         labels.push((segEnd / 1000).toFixed(2));
-        segStart = segEnd;
         segEnd += segmentLength;
     }
 
-    createActivityChart('hr-minmax-area-chart', {
+    createChart('hr-minmax-area-chart', {
         type: 'line',
         data: {
             labels: labels,
@@ -753,8 +916,7 @@ export function renderHrMinMaxAreaChart(streams) {
                 legend: { display: true },
                 tooltip: {
                     callbacks: {
-                        label: context =>
-                            `${context.dataset.label}: ${Math.round(context.parsed.y)} bpm`
+                        label: context => `${context.dataset.label}: ${Math.round(context.parsed.y)} bpm`
                     }
                 }
             },
@@ -766,59 +928,197 @@ export function renderHrMinMaxAreaChart(streams) {
     });
 }
 
-
-// --- 6. FUNCIÓN PRINCIPAL DE INICIO ---
 /**
- * Inicializa la página de detalles de la actividad.
+ * Renders pace min/max/avg area chart segmented over distance
  */
-export async function renderActivityTab() {
-    const params = new URLSearchParams(window.location.search);
-    const activityId = parseInt(params.get('id'), 10);
-    const detailsDiv = document.getElementById('activity-details'); // Contenedor principal
+function renderPaceMinMaxAreaChart(streams) {
+    const canvas = document.getElementById('pace-min-max-area-chart');
+    const section = document.getElementById('pace-min-max-area-section');
 
-    if (!activityId) {
-        if (detailsDiv) detailsDiv.innerHTML = '<p>Error: No Activity ID provided.</p>';
+    if (!canvas || !section) return;
+
+    if (!streams.distance || !streams.time || !Array.isArray(streams.distance.data) || streams.distance.data.length < 2) {
+        section.classList.add('hidden');
         return;
     }
+
+    section.classList.remove('hidden');
+
+    const dist = streams.distance.data;
+    const time = streams.time.data;
+    const totalDist = dist[dist.length - 1];
+    const segmentLength = totalDist / CONFIG.NUM_SEGMENTS;
+
+    const minArr = [], maxArr = [], avgArr = [], labels = [];
+    let segEnd = segmentLength, i = 0;
+
+    for (let s = 0; s < CONFIG.NUM_SEGMENTS; s++) {
+        const paceVals = [];
+        while (i < dist.length && dist[i] < segEnd) {
+            if (i > 0 && dist[i] > dist[i - 1]) {
+                const deltaDist = dist[i] - dist[i - 1];
+                const deltaTime = time[i] - time[i - 1];
+                if (deltaDist > 0 && deltaTime > 0) {
+                    const speed = deltaDist / deltaTime;
+                    paceVals.push(1000 / speed / 60);
+                }
+            }
+            i++;
+        }
+
+        if (paceVals.length === 0) {
+            minArr.push(minArr.length ? minArr[minArr.length - 1] : null);
+            maxArr.push(maxArr.length ? maxArr[maxArr.length - 1] : null);
+            avgArr.push(avgArr.length ? avgArr[avgArr.length - 1] : null);
+        } else {
+            minArr.push(Math.min(...paceVals));
+            maxArr.push(Math.max(...paceVals));
+            avgArr.push(paceVals.reduce((a, b) => a + b, 0) / paceVals.length);
+        }
+
+        labels.push((segEnd / 1000).toFixed(2));
+        segEnd += segmentLength;
+    }
+
+    createChart('pace-min-max-area-chart', {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Pace Min',
+                    data: minArr,
+                    fill: '+1',
+                    backgroundColor: 'rgba(0, 123, 255, 0.25)',
+                    borderColor: 'rgba(0, 123, 255, 0.5)',
+                    pointRadius: 0,
+                    order: 1
+                },
+                {
+                    label: 'Pace Max',
+                    data: maxArr,
+                    fill: '-1',
+                    backgroundColor: 'rgba(0, 123, 255, 0.25)',
+                    borderColor: 'rgba(0, 123, 255, 0.5)',
+                    pointRadius: 0,
+                    order: 1
+                },
+                {
+                    label: 'Pace Avg',
+                    data: avgArr,
+                    fill: false,
+                    borderColor: '#007BFF',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    order: 2
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: true },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)} min/km`
+                    }
+                }
+            },
+            scales: {
+                x: { title: { display: true, text: 'Distance (km)' } },
+                y: {
+                    reverse: true,
+                    beginAtZero: false,
+                    title: { display: true, text: 'Pace (min/km)' }
+                }
+            }
+        }
+    });
+}
+
+/**
+ * Renders run classification results
+ */
+function renderClassifierResults(classificationData) {
+    const container = document.getElementById('run-classifier-results');
+    if (!container) return;
+
+    const results = classificationData ? classificationData.top : null;
+
+    if (!results || results.length === 0) {
+        container.innerHTML = '<p>Could not classify this run.</p>';
+        return;
+    }
+
+    const resultsHtml = results.map((result, index) => {
+        const color = index === 0 ? '#FC5200' : index === 1 ? '#6b7280' : '#a0aec0';
+        return `
+            <div class="classifier-result">
+                <div class="classifier-type" style="color: ${color};">${result.type}</div>
+                <div class="classifier-bar-container">
+                    <div class="classifier-bar" style="width: ${result.pct}%; background-color: ${color};"></div>
+                </div>
+                <div class="classifier-score" style="color: ${color};">${result.pct}%</div>
+            </div>`;
+    }).join('');
+
+    container.innerHTML = resultsHtml;
+}
+
+// =====================================================
+// 9. MAIN INITIALIZATION
+// =====================================================
+
+/**
+ * Main entry point - loads activity data and renders all sections
+ */
+async function main() {
+    // Validate activity ID
+    if (!activityId) {
+        if (DOM.details) DOM.details.innerHTML = '<p>Error: No Activity ID provided.</p>';
+        return;
+    }
+
+    // Check authentication
     const authPayload = getAuthPayload();
     if (!authPayload) {
-        if (detailsDiv) detailsDiv.innerHTML = '<p>You must be logged in to view activity details.</p>';
+        if (DOM.details) DOM.details.innerHTML = '<p>You must be logged in to view activity details.</p>';
         return;
     }
 
     try {
-        const streamChartsDiv = document.getElementById('stream-charts');
-        if (streamChartsDiv) streamChartsDiv.style.display = 'grid'; // Mostrar por defecto
+        if (DOM.streamCharts) DOM.streamCharts.style.display = 'grid';
 
-        const allActivitiesText = localStorage.getItem('strava_all_activities');
-        const allActivities = allActivitiesText ? JSON.parse(allActivitiesText) : [];
-
+        // Fetch activity data in parallel
         const [activityData, streamData] = await Promise.all([
             fetchActivityDetails(activityId, authPayload),
             fetchActivityStreams(activityId, authPayload)
         ]);
 
-        // Cálculo de variabilidad de Streams
-        activityData.pace_variability_stream = '-';
-        activityData.hr_variability_stream = '-';
+        // Calculate variability metrics from streams
+        let paceVariabilityStream = '-';
+        let hrVariabilityStream = '-';
+
         if (streamData && streamData.time && streamData.distance) {
             const paceStream = [];
             for (let i = 1; i < streamData.distance.data.length; i++) {
                 const deltaDist = streamData.distance.data[i] - streamData.distance.data[i - 1];
                 const deltaTime = streamData.time.data[i] - streamData.time.data[i - 1];
                 if (deltaDist > 0 && deltaTime > 0) {
-                    paceStream.push(deltaTime / deltaDist); // s/m
+                    paceStream.push(deltaTime / deltaDist);
                 }
             }
-            activityData.pace_variability_stream = calculateVariability(paceStream, true);
-        }
-        if (streamData && streamData.heartrate) {
-            activityData.hr_variability_stream = calculateVariability(streamData.heartrate.data, true);
+            paceVariabilityStream = calculateVariability(paceStream, true);
         }
 
-        // Cálculo de variabilidad de Laps
-        activityData.pace_variability_laps = '-';
-        activityData.hr_variability_laps = '-';
+        if (streamData && streamData.heartrate) {
+            hrVariabilityStream = calculateVariability(streamData.heartrate.data, true);
+        }
+
+        // Calculate variability metrics from laps
+        let paceVariabilityLaps = '-';
+        let hrVariabilityLaps = '-';
         const lapsData = activityData.laps && activityData.laps.length > 1
             ? activityData.laps
             : activityData.splits_metric;
@@ -826,11 +1126,17 @@ export async function renderActivityTab() {
         if (lapsData && lapsData.length > 1) {
             const paceDataForCV = lapsData.map(lap => lap.average_speed);
             const hrDataForCV = lapsData.map(lap => lap.average_heartrate);
-            activityData.pace_variability_laps = calculateVariability(paceDataForCV, false);
-            activityData.hr_variability_laps = calculateVariability(hrDataForCV, false);
+            paceVariabilityLaps = calculateVariability(paceDataForCV, false);
+            hrVariabilityLaps = calculateVariability(hrDataForCV, false);
         }
 
-        // Aplicar rolling mean a los streams antes de renderizar los gráficos de detalle
+        // Attach variability metrics to activity object
+        activityData.pace_variability_stream = paceVariabilityStream;
+        activityData.hr_variability_stream = hrVariabilityStream;
+        activityData.pace_variability_laps = paceVariabilityLaps;
+        activityData.hr_variability_laps = hrVariabilityLaps;
+
+        // Apply rolling mean smoothing to streams
         const windowSize = 100;
         ['heartrate', 'altitude', 'cadence'].forEach(key => {
             if (streamData[key] && Array.isArray(streamData[key].data)) {
@@ -838,28 +1144,29 @@ export async function renderActivityTab() {
             }
         });
 
-        // Llamar a las funciones de renderizado
-        renderActivityDetails(activityData);
+        // Render all sections
+        renderActivityInfo(activityData);
+        renderActivityStats(activityData);
+        renderAdvancedStats(activityData);
         renderActivityMap(activityData);
         renderSplitsCharts(activityData);
         renderStreamCharts(streamData, activityData);
         renderBestEfforts(activityData.best_efforts);
         renderLaps(activityData.laps);
+        renderLapsChart(activityData.laps);
         renderSegments(activityData.segment_efforts);
-        renderClassifierResults(classifyRun(activityData, streamData)); // Asegúrate de que classifyRun se importa correctamente
-        renderHrMinMaxAreaChart(streamData);
+        renderClassifierResults(classifyRun(activityData, streamData));
         renderHrZoneDistributionChart(streamData);
+        renderHrMinMaxAreaChart(streamData);
+        renderPaceMinMaxAreaChart(streamData);
 
-
-        if (streamChartsDiv) streamChartsDiv.style.display = ''; // Asegurar visibilidad al finalizar
+        if (DOM.streamCharts) DOM.streamCharts.style.display = '';
 
     } catch (error) {
-        console.error("Failed to load activity page:", error);
-        if (detailsDiv) detailsDiv.innerHTML = `<p><strong>Error loading activity:</strong> ${error.message}</p>`;
-        const streamChartsDiv = document.getElementById('stream-charts');
-        if (streamChartsDiv) streamChartsDiv.innerHTML = `<p><strong>Error loading stream data:</strong> ${error.message}</p>`;
+        console.error('Failed to load activity page:', error);
+        if (DOM.details) DOM.details.innerHTML = `<p><strong>Error loading activity:</strong> ${error.message}</p>`;
     }
 }
 
-// El punto de entrada para la ejecución inicial del script
-document.addEventListener('DOMContentLoaded', renderActivityTab);
+// Initialize on DOM ready
+document.addEventListener('DOMContentLoaded', main);

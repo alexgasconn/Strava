@@ -7,30 +7,29 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="../styles/style.css">
 
-  <!-- Leaflet CSS & JS -->
+  <!-- External Libraries -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-
 </head>
 
 <body>
   <div class="container">
-    <h1>Detalles de la Actividad</h1>
+    <h1>Activity Details</h1>
 
+    <!-- ======================================
+         SECTION 1: OVERVIEW & QUICK STATS
+         ====================================== -->
     <div id="activity-details-row" class="activity-details-row">
       <div id="activity-info" class="activity-details-col"></div>
       <div id="activity-stats" class="activity-details-col"></div>
       <div id="activity-advanced" class="activity-details-col"></div>
     </div>
 
+    <!-- ======================================
+         SECTION 2: ANALYSIS & ZONES
+         ====================================== -->
     <div class="side-by-side-container">
-      <!-- Columna Izquierda: Clasificador -->
       <div id="run-classifier-section" class="data-section">
         <h3>Run Type Analysis</h3>
         <div id="run-classifier-results">
@@ -38,7 +37,6 @@
         </div>
       </div>
 
-      <!-- Columna Derecha: Gráfico de Zonas de FC -->
       <div id="hr-zones-section" class="data-section">
         <h3>Time in Heart Rate Zones</h3>
         <div class="chart-container-inner">
@@ -47,12 +45,17 @@
       </div>
     </div>
 
-    <!-- FILA 2: Mapa (Full Width) -->
+    <!-- ======================================
+         SECTION 3: ROUTE MAP
+         ====================================== -->
     <div id="activity-map-container" class="data-section">
       <h3>Route Map</h3>
       <div id="activity-map"></div>
     </div>
 
+    <!-- ======================================
+         SECTION 4: KM SPLITS
+         ====================================== -->
     <div id="splits-section" class="data-section hidden">
       <h3>📈 Splits per Kilometer</h3>
       <div class="side-by-side-container">
@@ -65,6 +68,9 @@
       </div>
     </div>
 
+    <!-- ======================================
+         SECTION 5: DETAILED STREAM DATA
+         ====================================== -->
     <div id="stream-charts" class="charts-grid">
       <div class="chart-container">
         <canvas id="chart-altitude"></canvas>
@@ -80,45 +86,54 @@
       </div>
     </div>
 
+    <!-- ======================================
+         SECTION 6: MIN/MAX AREA CHARTS
+         ====================================== -->
     <div class="side-by-side-container">
       <div id="hr-min-max-area-section" class="data-section hidden">
-        <h3>❤️ Heart Rate Area Chart</h3>
+        <h3>❤️ Heart Rate Variability</h3>
+        <p>Min/Max/Avg heart rate across the route</p>
         <div class="chart-container">
           <canvas id="hr-minmax-area-chart"></canvas>
         </div>
       </div>
 
       <div id="pace-min-max-area-section" class="data-section hidden">
-        <h3>⚡ Pace Area Chart</h3>
+        <h3>⚡ Pace Variability</h3>
+        <p>Min/Max/Avg pace across the route</p>
         <div class="chart-container">
           <canvas id="pace-min-max-area-chart"></canvas>
         </div>
       </div>
     </div>
 
+    <!-- ======================================
+         SECTION 7: LAPS DATA
+         ====================================== -->
     <div class="side-by-side-container">
       <div id="laps-section" class="data-section hidden">
         <h3>🔄 Laps</h3>
-        <p>Data for each lap, either auto-laps (e.g., every 1km) or manual laps you recorded.</p>
+        <p>Details for each lap (auto-laps or manual)</p>
         <div class="table-container">
           <table id="laps-table" class="df-table"></table>
         </div>
       </div>
 
       <div id="laps-chart-section" class="data-section hidden">
-        <h3>📊 Laps Chart</h3>
+        <h3>📊 Lap Pace Comparison</h3>
         <div class="chart-container">
           <canvas id="laps-chart"></canvas>
         </div>
       </div>
     </div>
 
-
-
+    <!-- ======================================
+         SECTION 8: ACHIEVEMENTS & SEGMENTS
+         ====================================== -->
     <div class="side-by-side-container">
       <div id="best-efforts-section" class="data-section hidden">
         <h3>🏆 Best Efforts</h3>
-        <p>Your fastest times recorded during this activity for standard distances.</p>
+        <p>Personal records for standard distances during this activity</p>
         <div class="table-container">
           <table id="best-efforts-table" class="df-table"></table>
         </div>
@@ -126,23 +141,20 @@
 
       <div id="segments-section" class="data-section hidden">
         <h3>⛰️ Segment Efforts</h3>
-        <p>Your performance on Strava segments during this activity.</p>
+        <p>Performance on Strava segments</p>
         <div class="table-container">
           <table id="segments-table" class="df-table"></table>
         </div>
       </div>
     </div>
 
-
-
-
-    <button onclick="window.close()">Cerrar</button>
+    <!-- Close Button -->
+    <button onclick="window.close()">Close</button>
   </div>
 
+  <!-- Scripts -->
   <script src="../classifyRun.js"></script>
-  <script src="../activity.js"></script>
-
-
+  <script src="../js/activity.js"></script>
 
 </body>
 
