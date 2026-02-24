@@ -225,26 +225,79 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- INITIALIZATION ---
     async function initializeApp(tokenData) {
         console.log("🚀 initializeApp: Starting app initialization");
-        showLoading('Loading activities...');
-        try {
-            console.log("📡 initializeApp: Fetching activities, athlete, zones");
-            const [activities, athlete, zones] = await Promise.all([
-                fetchAllActivities(),
-                fetchAthleteData(),
-                fetchTrainingZones()
-            ]);
-            console.log(`✅ initializeApp: Fetched ${activities.length} activities.`);
-            console.log('✅ initializeApp: Fetched athlete data:', athlete);
-            console.log('✅ initializeApp: Fetched training zones:', zones);
-            console.log("📊 initializeApp: activities:", activities);
+        showLoading('Loading activities... 0%');
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+            progress += Math.random() * 10;
+            if (progress > 90) progress = 90;
+            showLoading(`Loading activities... ${Math.round(progress)}%`);
+        }, 500);
 
-            console.log("🔧 initializeApp: Fetching gears...");
-            let gears = [];
-            try {
-                gears = await fetchAllGears(athlete);
-                console.log(`✅ initializeApp: Fetched ${gears.length} gears.`);
-            } catch (gearError) {
-                console.warn("⚠️ initializeApp: Failed to fetch gears, continuing without:", gearError);
+        try {
+            // Check cache for activities
+            const cachedActivities = localStorage.getItem('strava_activities');
+            const cachedTimestamp = localStorage.getItem('strava_activities_timestamp');
+            const cacheAge = cachedTimestamp ? Date.now() - parseInt(cachedTimestamp) : Infinity;
+            const cacheValid = cachedActivities && cacheAge < 60 * 60 * 1000; // 1 hour
+
+            let activities;
+            if (cacheValid) {
+                activities = JSON.parse(cachedActivities);
+                console.log(`✅ initializeApp: Loaded ${activities.length} activities from cache.`);
+                progress = 100;
+                showLoading('Loading activities... 100%');
+            } else {
+                console.log("📡 initializeApp: Fetching activities from API...");
+                activities = await fetchAllActivities();
+                localStorage.setItem('strava_activities', JSON.stringify(activities));
+                localStorage.setItem('strava_activities_timestamp', Date.now().toString());
+                console.log(`✅ initializeApp: Fetched and cached ${activities.length} activities.`);
+                progress = 100;
+                showLoading('Loading activities... 100%');
+            }
+
+            clearInterval(progressInterval);
+
+            console.log("📡 initializeApp: Fetching athlete, zones");
+            showLoading('Loading athlete data...');
+            const cachedAthlete = localStorage.getItem('strava_athlete_data');
+            const cachedZones = localStorage.getItem('strava_training_zones');
+            const cachedGears = localStorage.getItem('strava_gears');
+            const cacheTimestamp = localStorage.getItem('strava_data_timestamp');
+            const dataCacheAge = cacheTimestamp ? Date.now() - parseInt(cacheTimestamp) : Infinity;
+            const dataCacheValid = cachedAthlete && cachedZones && cachedGears && dataCacheAge < 60 * 60 * 1000; // 1 hour
+
+            let athlete, zones, gears;
+            if (dataCacheValid) {
+                athlete = JSON.parse(cachedAthlete);
+                zones = JSON.parse(cachedZones);
+                gears = JSON.parse(cachedGears);
+                console.log('✅ initializeApp: Loaded athlete, zones, gears from cache.');
+            } else {
+                const [fetchedAthlete, fetchedZones] = await Promise.all([
+                    fetchAthleteData(),
+                    fetchTrainingZones()
+                ]);
+                athlete = fetchedAthlete;
+                zones = fetchedZones;
+                console.log('✅ initializeApp: Fetched athlete data:', athlete);
+                console.log('✅ initializeApp: Fetched training zones:', zones);
+
+                console.log("🔧 initializeApp: Fetching gears...");
+                showLoading('Loading gear data...');
+                try {
+                    gears = await fetchAllGears(athlete);
+                    console.log(`✅ initializeApp: Fetched ${gears.length} gears.`);
+                } catch (gearError) {
+                    console.warn("⚠️ initializeApp: Failed to fetch gears, continuing without:", gearError);
+                    gears = [];
+                }
+
+                localStorage.setItem('strava_athlete_data', JSON.stringify(athlete));
+                localStorage.setItem('strava_training_zones', JSON.stringify(zones));
+                localStorage.setItem('strava_gears', JSON.stringify(gears));
+                localStorage.setItem('strava_data_timestamp', Date.now().toString());
+                console.log("💾 initializeApp: Athlete, zones, gears saved to localStorage");
             }
 
             console.log("🌤️ initializeApp: Gathering weather data...");
@@ -257,11 +310,12 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log(`✅ initializeApp: Preprocessed ${allActivities.length} activities.`);
             console.log("📋 initializeApp: Sample preprocessed activities:", allActivities.slice(0, 3));
 
-            localStorage.setItem('strava_athlete_data', JSON.stringify(athlete));
-            localStorage.setItem('strava_training_zones', JSON.stringify(zones));
-            localStorage.setItem('strava_gears', JSON.stringify(gears));
-            localStorage.setItem('strava_activities', JSON.stringify(allActivities));
-            console.log("💾 initializeApp: Data saved to localStorage");
+            // Save activities if not from cache
+            if (!cacheValid) {
+                localStorage.setItem('strava_activities', JSON.stringify(allActivities));
+                localStorage.setItem('strava_activities_timestamp', Date.now().toString());
+                console.log("💾 initializeApp: Activities saved to localStorage");
+            }
 
             console.log("🎛️ initializeApp: Setting up dashboard");
             setupDashboard(allActivities);
@@ -284,6 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             allActivities = await fetchAllActivities(); // La API se encarga de los tokens
             localStorage.setItem('strava_activities', JSON.stringify(allActivities));
+            localStorage.setItem('strava_activities_timestamp', Date.now().toString());
             renderAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
             setupYearlySelector();
 
