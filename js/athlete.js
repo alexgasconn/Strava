@@ -1151,6 +1151,9 @@ let interactiveMatrixChart;
 function renderInteractiveMatrix(runs) {
     const ctx = document.getElementById("interactiveMatrix");
 
+    const weekdayLabels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const monthLabels = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
     function getValue(run, key) {
         const date = new Date(run.start_date_local);
         switch (key) {
@@ -1165,7 +1168,16 @@ function renderInteractiveMatrix(runs) {
         }
     }
 
+    function getLabel(key, value) {
+        switch (key) {
+            case "weekday": return weekdayLabels[value];
+            case "month": return monthLabels[value];
+            default: return value.toString();
+        }
+    }
+
     function updateMatrix() {
+        const dataType = document.getElementById("matrix-data-type").value;
         const xKey = document.getElementById("matrix-x-axis").value;
         const yKey = document.getElementById("matrix-y-axis").value;
 
@@ -1175,7 +1187,17 @@ function renderInteractiveMatrix(runs) {
             const yVal = getValue(run, yKey);
             matrix[yVal] ??= {};
             matrix[yVal][xVal] ??= 0;
-            matrix[yVal][xVal] += 1; // O usar distancia: run.distance/1000
+            switch (dataType) {
+                case "count":
+                    matrix[yVal][xVal] += 1;
+                    break;
+                case "time":
+                    matrix[yVal][xVal] += run.moving_time / 3600; // to hours
+                    break;
+                case "distance":
+                    matrix[yVal][xVal] += run.distance / 1000; // to km
+                    break;
+            }
         });
 
         const xLabels = [...new Set(runs.map(r => getValue(r, xKey)))].sort((a, b) => a - b);
@@ -1187,7 +1209,7 @@ function renderInteractiveMatrix(runs) {
             xLabels.forEach((x, xi) => {
                 const v = matrix[y]?.[x] ?? 0;
                 maxVal = Math.max(maxVal, v);
-                points.push({ x, y, v });
+                points.push({ x: x, y: y, v });
             });
         });
 
@@ -1215,20 +1237,24 @@ function renderInteractiveMatrix(runs) {
                 plugins: {
                     tooltip: {
                         callbacks: {
-                            title: items => `X: ${items[0].raw.x}, Y: ${items[0].raw.y}`,
-                            label: items => `Count: ${items[0].raw.v}`
+                            title: items => `X: ${getLabel(xKey, items[0].raw.x)}, Y: ${getLabel(yKey, items[0].raw.y)}`,
+                            label: items => {
+                                const dataTypeLabel = dataType === 'count' ? 'Count' : dataType === 'time' ? 'Time (h)' : 'Distance (km)';
+                                return `${dataTypeLabel}: ${items[0].raw.v.toFixed(1)}`;
+                            }
                         }
                     },
                     legend: { display: false }
                 },
                 scales: {
-                    x: { type: 'category', labels: xLabels, title: { display: true, text: xKey } },
-                    y: { type: 'category', labels: yLabels, title: { display: true, text: yKey } }
+                    x: { type: 'category', labels: xLabels.map(x => getLabel(xKey, x)), title: { display: true, text: xKey } },
+                    y: { type: 'category', labels: yLabels.map(y => getLabel(yKey, y)), title: { display: true, text: yKey } }
                 }
             }
         });
     }
 
+    document.getElementById("matrix-data-type").addEventListener("change", updateMatrix);
     document.getElementById("matrix-x-axis").addEventListener("change", updateMatrix);
     document.getElementById("matrix-y-axis").addEventListener("change", updateMatrix);
 
