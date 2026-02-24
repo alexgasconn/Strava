@@ -41,6 +41,7 @@ const chartInstances = {};
 
 // Smoothing control
 let currentSmoothingLevel = 100;
+let originalStreamData = null; // Store unsmoothed data
 let lastStreamData = null;
 let lastActivityData = null;
 
@@ -220,6 +221,32 @@ function createChart(canvasId, config) {
 }
 
 /**
+ * Applies smoothing to a copy of stream data based on smoothing level
+ */
+function applySmoothingToStreams(streams, smoothingLevel) {
+    if (!streams) return null;
+    
+    const smoothingFactor = smoothingLevel / 100;
+    const smoothed = JSON.parse(JSON.stringify(streams)); // Deep copy
+    
+    // Calculate window sizes based on smoothing level
+    const windowSizes = {
+        altitude: Math.max(1, Math.round(CONFIG.WINDOW_SIZES.altitude * smoothingFactor)),
+        heartrate: Math.max(1, Math.round(CONFIG.WINDOW_SIZES.heartrate * smoothingFactor)),
+        cadence: Math.max(1, Math.round(CONFIG.WINDOW_SIZES.cadence * smoothingFactor)),
+    };
+    
+    // Apply rolling mean to streams
+    ['heartrate', 'altitude', 'cadence'].forEach(key => {
+        if (smoothed[key] && Array.isArray(smoothed[key].data)) {
+            smoothed[key].data = rollingMean(smoothed[key].data, windowSizes[key]);
+        }
+    });
+    
+    return smoothed;
+}
+
+/**
  * Initializes smoothing slider control
  */
 function initSmoothingControl() {
@@ -232,9 +259,28 @@ function initSmoothingControl() {
         currentSmoothingLevel = parseInt(e.target.value, 10);
         valueDisplay.textContent = currentSmoothingLevel;
         
-        // Re-render stream charts with new smoothing level
-        if (lastStreamData && lastActivityData) {
-            renderStreamCharts(lastStreamData, lastActivityData, currentSmoothingLevel);
+        // Apply smoothing to original data
+        if (originalStreamData && lastActivityData) {
+            const smoothedStreams = applySmoothingToStreams(originalStreamData, currentSmoothingLevel);
+            
+            // Re-render all affected charts
+            renderStreamCharts(smoothedStreams, lastActivityData, currentSmoothingLevel);
+            renderHrMinMaxAreaChart(smoothedStreams, currentSmoothingLevel);
+            renderPaceMinMaxAreaChart(smoothedStreams, currentSmoothingLevel);
+            
+            // Update dynamic chart data and re-render
+            populateDynamicChartData(smoothedStreams);
+            const primaryData = document.getElementById('dynamic-chart-primary-data');
+            if (primaryData && primaryData.value) {
+                const primaryType = document.getElementById('dynamic-chart-primary-type').value;
+                const primaryShow = document.getElementById('dynamic-chart-primary-show').checked;
+                const secondaryData = document.getElementById('dynamic-chart-secondary-data').value;
+                const secondaryType = document.getElementById('dynamic-chart-secondary-type').value;
+                const secondaryShow = document.getElementById('dynamic-chart-secondary-show').checked;
+                const backgroundStat = document.getElementById('dynamic-chart-background-stat').value;
+                
+                renderDynamicChart(primaryData.value, primaryType, primaryShow, secondaryData, secondaryType, secondaryShow, backgroundStat);
+            }
         }
     });
 }
@@ -1158,7 +1204,7 @@ function renderHrZoneDistributionChart(streams) {
 /**
  * Renders HR min/max/avg area chart segmented over distance
  */
-function renderHrMinMaxAreaChart(streams) {
+function renderHrMinMaxAreaChart(streams, smoothingLevel = 100) {
     const canvas = document.getElementById('hr-minmax-area-chart');
     const section = document.getElementById('hr-min-max-area-section');
 
@@ -1256,7 +1302,7 @@ function renderHrMinMaxAreaChart(streams) {
 /**
  * Renders pace min/max/avg area chart segmented over distance
  */
-function renderPaceMinMaxAreaChart(streams) {
+function renderPaceMinMaxAreaChart(streams, smoothingLevel = 100) {
     const canvas = document.getElementById('pace-min-max-area-chart');
     const section = document.getElementById('pace-min-max-area-section');
 
@@ -1461,20 +1507,15 @@ async function main() {
         activityData.pace_variability_laps = paceVariabilityLaps;
         activityData.hr_variability_laps = hrVariabilityLaps;
 
-        // Apply rolling mean smoothing to streams
-        const windowSize = 100;
-        ['heartrate', 'altitude', 'cadence'].forEach(key => {
-            if (streamData[key] && Array.isArray(streamData[key].data)) {
-                streamData[key].data = rollingMean(streamData[key].data, windowSize);
-            }
-        });
-
-        // Store original stream data for re-rendering with different smoothing levels
-        lastStreamData = JSON.parse(JSON.stringify(streamData));
+        // Store original stream data BEFORE applying smoothing
+        originalStreamData = JSON.parse(JSON.stringify(streamData));
         lastActivityData = activityData;
 
-        // Populate dynamic chart data
-        populateDynamicChartData(streamData);
+        // Apply initial smoothing to streams
+        const initialSmoothedStreams = applySmoothingToStreams(originalStreamData, currentSmoothingLevel);
+
+        // Populate dynamic chart data with smoothed data
+        populateDynamicChartData(initialSmoothedStreams);
 
         // Render all sections
         renderActivityInfo(activityData);
@@ -1482,15 +1523,15 @@ async function main() {
         renderAdvancedStats(activityData);
         renderActivityMap(activityData);
         renderSplitsCharts(activityData);
-        renderStreamCharts(streamData, activityData, currentSmoothingLevel);
+        renderStreamCharts(initialSmoothedStreams, activityData, currentSmoothingLevel);
         renderBestEfforts(activityData.best_efforts);
         renderLaps(activityData.laps);
         renderLapsChart(activityData.laps);
         renderSegments(activityData.segment_efforts);
         renderClassifierResults(classifyRun(activityData, streamData));
         renderHrZoneDistributionChart(streamData);
-        renderHrMinMaxAreaChart(streamData);
-        renderPaceMinMaxAreaChart(streamData);
+        renderHrMinMaxAreaChart(initialSmoothedStreams, currentSmoothingLevel);
+        renderPaceMinMaxAreaChart(initialSmoothedStreams, currentSmoothingLevel);
 
         // Initialize smoothing slider control
         initSmoothingControl();
