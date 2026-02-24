@@ -11,12 +11,10 @@
 
 IN PROGRESS
 🟡🚨a dashboard, surt AthleteCount 1 quan he corregut amb martina... raro
+🟡🚨No es veu Monday a una matrix de Athlete
 🟡⚠️totes les dates mateix format
 🟡⚠️zonas (Z2) del dashboard de la ma amb las zonas del perfil strava
 🟡🚧esborrar codi inutil 
-🟡🚧molts mes logs (a cada grafica?)
-🟡🚧TLB ACT FRM.... que conti TOTES les activitats, no nomes running 
-🟡🚧arreglar ratxes (streaks)
 🟡🚧carregar zonas, profile, gear, weather api... al iniciar app
 🟡🩹weather api fer servir per predictions 
 🟡🩹weather data -> % de "difficultat ambiental"
@@ -26,8 +24,8 @@ IN PROGRESS
 
 
 TO DO
-🔴🚨No es veu Monday a una matrix de Athlete
 🔴⚠️format del pace decimals-> time amb utils.paceDecimalToTime(pace)
+🔴⚠️arreglar custom matix a Athlete
 🔴🩹fer mes html, estructura mes clara i dividida
 🔴🩹coords streams in activity -> veure cap a on va el vent -> % de vent a favor, en contra, de costat...
 🔴🩹heatmap general com strava (que tardi una bona estona, pillar streams de coords de cada activitat...)
@@ -61,7 +59,10 @@ DONE
 🟢🚧tot english 
 🟢🚧corregir Pace: 3:60 /km
 🟢🩹 pestaña Athlete, posar filtre de dates i de esport
-
+🟢🚧TLB ACT FRM.... que conti TOTES les activitats, no nomes running 
+🟢🚧molts mes logs (a cada grafica?)
+🟢🚧arreglar ratxes (streaks)
+🟢🚧elegir tipo de dates a Athlete Tab
 
 
 

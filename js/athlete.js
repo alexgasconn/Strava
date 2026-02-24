@@ -661,7 +661,7 @@ function renderMonthWeekdayMatrix(runs, dataType = 'count') {
 
     function getColor(v) {
         if (v === 0) return 'rgba(255,255,255,0)';
-        const alpha = maxVal > 0 ? 0.3 + 0.7 * (v / maxVal) : 0.5;
+        const alpha = maxKm > 0 ? 0.3 + 0.7 * (v / maxKm) : 0.5;
         return `rgba(0,200,120,${alpha.toFixed(2)})`;
     }
 
