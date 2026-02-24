@@ -42,66 +42,6 @@ export function renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo, sp
 
     console.log("🎽 renderAthleteTab: Athlete tab rendered");
 }
-
-function addAthleteFilters() {
-    const container = document.getElementById('athlete-filters');
-    if (!container) return;
-
-    container.innerHTML = `
-        <div class="filter-group">
-            <label for="data-type-select">Data Type:</label>
-            <select id="data-type-select">
-                <option value="count">Activities</option>
-                <option value="time" selected>Time</option>
-                <option value="distance">Distance</option>
-            </select>
-        </div>
-    `;
-
-    document.getElementById('data-type-select').addEventListener('change', (e) => {
-        currentDataType = e.target.value;
-        // Re-render charts with new dataType
-        reRenderChartsWithDataType();
-    });
-}
-
-function reRenderChartsWithDataType() {
-    // Get the current filtered activities
-    const allActivities = JSON.parse(localStorage.getItem('strava_activities') || '[]');
-    const dateFilterFrom = document.getElementById('date-from')?.value || '';
-    const dateFilterTo = document.getElementById('date-to')?.value || '';
-    const sportFilter = 'all'; // Assuming no sport filter for now
-
-    const filteredActivities = filterActivities(allActivities, dateFilterFrom, dateFilterTo, sportFilter);
-
-    renderStartTimeHistogram(filteredActivities, currentDataType);
-    renderYearlyComparison(filteredActivities, currentDataType);
-    renderWeeklyMixChart(filteredActivities, currentDataType);
-    renderMonthlyMixChart(filteredActivities, currentDataType);
-    renderHourMatrix(filteredActivities, currentDataType);
-    renderYearMonthMatrix(filteredActivities, currentDataType);
-    renderMonthWeekdayMatrix(filteredActivities, currentDataType);
-    renderMonthDayMatrix(filteredActivities, currentDataType);
-    renderMonthHourMatrix(filteredActivities, currentDataType);
-    renderYearHourMatrix(filteredActivities, currentDataType);
-    renderYearWeekdayMatrix(filteredActivities, currentDataType);
-    renderInteractiveMatrix(filteredActivities, currentDataType);
-}
-
-function filterActivities(activities, from, to, sport) {
-    return activities.filter(a => {
-        const date = new Date(a.start_date_local);
-        const fromDate = from ? new Date(from) : null;
-        const toDate = to ? new Date(to) : null;
-        const dateMatch = (!fromDate || date >= fromDate) && (!toDate || date <= toDate);
-        const sportMatch = sport === 'all' || a.type.includes(sport);
-        return dateMatch && sportMatch;
-    });
-}
-
-
-
-
 function renderAllTimeStats(activities) {
     const container = document.getElementById('all-time-stats-cards');
     if (!container) return;
