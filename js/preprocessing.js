@@ -4,8 +4,8 @@ import { rollingMean, calculateEnvironmentalDifficulty } from './utils.js';
 // ===================================================================
 // CONFIGURACIÓN
 // ===================================================================
-const SUFFER_TO_TSS = 1.05;
-const MAX_HR_DEFAULT = 200;
+const SUFFER_TO_TSS = 1;
+const MAX_HR_DEFAULT = 190;
 
 // ===================================================================
 // WEATHER API FUNCTION
@@ -80,7 +80,7 @@ function calculateTSS(activity, maxHr = MAX_HR_DEFAULT) {
     if (method === 'none' && activity.average_heartrate != null && activity.average_heartrate > 0) {
         const if_hr = activity.average_heartrate / maxHr;
         const hours = (activity.moving_time || 0) / 3600;
-        tss = (hours * if_hr * if_hr) * 100;
+        tss = (hours * if_hr) * 100;
         method = 'heartrate';
     }
 
@@ -97,6 +97,7 @@ function calculateTSS(activity, maxHr = MAX_HR_DEFAULT) {
         method = 'time';
     }
 
+    if (isNaN(tss)) tss = 0;
     activity.tss = +tss.toFixed(2);
     activity.tss_method = method;
     return activity.tss;
@@ -258,11 +259,12 @@ function calculateInjuryRiskImproved(tsb, rampRate, atl, tssSeries) {
 
     // Helper: percentil relativo al historial
     const percentile = (arr, val) => {
-        if (!arr.length) return 0.5;
-        const sorted = [...arr].sort((a, b) => a - b);
+        const filtered = arr.filter(x => !isNaN(x));
+        if (!filtered.length) return 0.5;
+        const sorted = filtered.sort((a, b) => a - b);
         let count = 0;
         for (const x of sorted) if (x <= val) count++;
-        return count / arr.length;
+        return count / sorted.length;
     }
 
     for (let i = 0; i < len; i++) {
@@ -285,9 +287,11 @@ function calculateInjuryRiskImproved(tsb, rampRate, atl, tssSeries) {
         const recent = tssSeries.slice(Math.max(0, i - 6), i + 1);
         if (recent.length > 1) {
             const mean = recent.reduce((a, b) => a + b, 0) / recent.length;
-            const variance = recent.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / recent.length;
-            const cv = Math.sqrt(variance) / mean;
-            risk *= 1 + Math.min(cv, 1) * 0.3; // hasta +30% si CV alto
+            if (!isNaN(mean) && mean > 0) {
+                const variance = recent.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / recent.length;
+                const cv = Math.sqrt(variance) / mean;
+                risk *= 1 + Math.min(cv, 1) * 0.3; // hasta +30% si CV alto
+            }
         }
 
         // --- Normalizar a [0,1] ---
@@ -300,6 +304,7 @@ function calculateInjuryRiskImproved(tsb, rampRate, atl, tssSeries) {
             risk = prev * (1 - alpha) + risk * alpha;
         }
 
+        if (isNaN(risk)) risk = 0;
         riskHistory.push(+risk.toFixed(3));
     }
 

@@ -18,7 +18,8 @@ export function rollingMean(arr, windowSize) {
     for (let i = 0; i < arr.length; i++) {
         const start = Math.max(0, i - windowSize + 1);
         const window = arr.slice(start, i + 1);
-        result.push(window.reduce((a, b) => a + b, 0) / window.length);
+        const valid = window.filter(x => !isNaN(x) && x !== null);
+        result.push(valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : 0);
     }
     return result;
 }
