@@ -1279,6 +1279,12 @@ function renderHrMinMaxAreaChart(streams, smoothingLevel = 100) {
         segEnd += segmentLength;
     }
 
+    // Apply smoothing to the variability arrays based on smoothing level
+    const smoothingWindow = Math.max(1, Math.round(8 * smoothingLevel / 100));
+    const smoothMinArr = rollingMean(minArr, smoothingWindow);
+    const smoothMaxArr = rollingMean(maxArr, smoothingWindow);
+    const smoothAvgArr = rollingMean(avgArr, smoothingWindow);
+
     createChart('hr-minmax-area-chart', {
         type: 'line',
         data: {
@@ -1286,7 +1292,7 @@ function renderHrMinMaxAreaChart(streams, smoothingLevel = 100) {
             datasets: [
                 {
                     label: 'HR Min',
-                    data: minArr,
+                    data: smoothMinArr,
                     fill: '+1',
                     backgroundColor: 'rgba(252,82,0,0.3)',
                     borderColor: 'rgba(252,82,0,0.6)',
@@ -1295,7 +1301,7 @@ function renderHrMinMaxAreaChart(streams, smoothingLevel = 100) {
                 },
                 {
                     label: 'HR Max',
-                    data: maxArr,
+                    data: smoothMaxArr,
                     fill: '-1',
                     backgroundColor: 'rgba(252,82,0,0.3)',
                     borderColor: 'rgba(252,82,0,0.6)',
@@ -1304,7 +1310,7 @@ function renderHrMinMaxAreaChart(streams, smoothingLevel = 100) {
                 },
                 {
                     label: 'HR Avg',
-                    data: avgArr,
+                    data: smoothAvgArr,
                     fill: false,
                     borderColor: '#FC5200',
                     borderWidth: 2,
@@ -1384,6 +1390,12 @@ function renderPaceMinMaxAreaChart(streams, smoothingLevel = 100) {
         segEnd += segmentLength;
     }
 
+    // Apply smoothing to the variability arrays based on smoothing level
+    const smoothingWindow = Math.max(1, Math.round(8 * smoothingLevel / 100));
+    const smoothMinArr = rollingMean(minArr, smoothingWindow);
+    const smoothMaxArr = rollingMean(maxArr, smoothingWindow);
+    const smoothAvgArr = rollingMean(avgArr, smoothingWindow);
+
     createChart('pace-min-max-area-chart', {
         type: 'line',
         data: {
@@ -1391,7 +1403,7 @@ function renderPaceMinMaxAreaChart(streams, smoothingLevel = 100) {
             datasets: [
                 {
                     label: 'Pace Min',
-                    data: minArr,
+                    data: smoothMinArr,
                     fill: '+1',
                     backgroundColor: 'rgba(0, 123, 255, 0.25)',
                     borderColor: 'rgba(0, 123, 255, 0.5)',
@@ -1400,7 +1412,7 @@ function renderPaceMinMaxAreaChart(streams, smoothingLevel = 100) {
                 },
                 {
                     label: 'Pace Max',
-                    data: maxArr,
+                    data: smoothMaxArr,
                     fill: '-1',
                     backgroundColor: 'rgba(0, 123, 255, 0.25)',
                     borderColor: 'rgba(0, 123, 255, 0.5)',
@@ -1409,7 +1421,7 @@ function renderPaceMinMaxAreaChart(streams, smoothingLevel = 100) {
                 },
                 {
                     label: 'Pace Avg',
-                    data: avgArr,
+                    data: smoothAvgArr,
                     fill: false,
                     borderColor: '#007BFF',
                     borderWidth: 2,
