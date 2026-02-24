@@ -54,6 +54,15 @@ let dynamicChartData = {
     cadence: [],
 };
 
+// Original unsmoothed dynamic chart data (for secondary and background stats)
+let originalDynamicChartData = {
+    distance: [],
+    heartrate: [],
+    pace: [],
+    altitude: [],
+    cadence: [],
+};
+
 // Chart color mapping
 const chartColors = {
     heartrate: { primary: 'rgb(255, 99, 132)', secondary: 'rgba(255, 99, 132, 0.3)' },
@@ -259,11 +268,11 @@ function initSmoothingControl() {
         currentSmoothingLevel = parseInt(e.target.value, 10);
         valueDisplay.textContent = currentSmoothingLevel;
         
-        // Apply smoothing to original data
+        // Apply smoothing only to primary data and smoothing-dependent charts
         if (originalStreamData && lastActivityData) {
             const smoothedStreams = applySmoothingToStreams(originalStreamData, currentSmoothingLevel);
             
-            // Re-render all affected charts
+            // Re-render stream and variability charts (affected by smoothing)
             renderStreamCharts(smoothedStreams, lastActivityData, currentSmoothingLevel);
             renderHrMinMaxAreaChart(smoothedStreams, currentSmoothingLevel);
             renderPaceMinMaxAreaChart(smoothedStreams, currentSmoothingLevel);
@@ -279,6 +288,7 @@ function initSmoothingControl() {
                 const secondaryShow = document.getElementById('dynamic-chart-secondary-show').checked;
                 const backgroundStat = document.getElementById('dynamic-chart-background-stat').value;
                 
+                // Primary uses smoothed data; secondary and background use original
                 renderDynamicChart(primaryData.value, primaryType, primaryShow, secondaryData, secondaryType, secondaryShow, backgroundStat);
             }
         }
@@ -365,12 +375,12 @@ function renderDynamicChart(primaryData, primaryType, primaryShow, secondaryData
         };
     }
 
-    // Secondary dataset
+    // Secondary dataset (uses original unsmoothed data)
     if (secondaryShow && secondaryData && secondaryData !== primaryData) {
         const secondaryColor = chartColors[secondaryData];
         datasets.push({
             label: getDataLabel(secondaryData),
-            data: dynamicChartData[secondaryData],
+            data: originalDynamicChartData[secondaryData],
             borderColor: secondaryColor.primary,
             backgroundColor: secondaryColor.secondary,
             borderWidth: 2,
@@ -389,8 +399,24 @@ function renderDynamicChart(primaryData, primaryType, primaryShow, secondaryData
         };
     }
 
-    // Create background plugin if selected
-    const backgroundPlugin = backgroundStat ? createBackgroundPlugin(backgroundStat) : null;
+    // Background stream dataset (if selected) - uses original unsmoothed data
+    let backgroundPlugin = null;
+    if (backgroundStat && backgroundStat !== primaryData && backgroundStat !== secondaryData) {
+        const bgColor = chartColors[backgroundStat];
+        datasets.push({
+            label: `${getDataLabel(backgroundStat)} (background)`,
+            data: originalDynamicChartData[backgroundStat],
+            borderColor: bgColor.primary,
+            backgroundColor: 'rgba(200, 200, 200, 0.15)',
+            borderWidth: 1,
+            borderDash: [5, 5],
+            fill: true,
+            pointRadius: 0,
+            yAxisID: 'y',
+            tension: 0.3,
+            order: -1,
+        });
+    }
 
     const config = {
         type: 'line',
@@ -527,8 +553,8 @@ function drawIntensityBackground(chart) {
 /**
  * Populates dynamic chart data from stream data
  */
-function populateDynamicChartData(streams) {
-    dynamicChartData = {
+function populateDynamicChartData(streams, isOriginal = false) {
+    const data = {
         distance: streams.distance?.data || [],
         heartrate: streams.heartrate?.data || [],
         altitude: streams.altitude?.data || [],
@@ -550,12 +576,19 @@ function populateDynamicChartData(streams) {
             }
         }
         // Prepend null to match distance array length
-        dynamicChartData.pace = [null, ...pace];
+        data.pace = [null, ...pace];
     }
 
     // Apply cadence doubling for runs
     if (lastActivityData && lastActivityData.type === 'Run') {
-        dynamicChartData.cadence = dynamicChartData.cadence.map(c => c ? c * 2 : null);
+        data.cadence = data.cadence.map(c => c ? c * 2 : null);
+    }
+
+    // Store in appropriate location
+    if (isOriginal) {
+        originalDynamicChartData = data;
+    } else {
+        dynamicChartData = data;
     }
 }
 
@@ -1511,11 +1544,14 @@ async function main() {
         originalStreamData = JSON.parse(JSON.stringify(streamData));
         lastActivityData = activityData;
 
+        // Populate original dynamic chart data (for secondary and background stats)
+        populateDynamicChartData(originalStreamData, true);
+
         // Apply initial smoothing to streams
         const initialSmoothedStreams = applySmoothingToStreams(originalStreamData, currentSmoothingLevel);
 
-        // Populate dynamic chart data with smoothed data
-        populateDynamicChartData(initialSmoothedStreams);
+        // Populate dynamic chart data with smoothed data (for primary stat)
+        populateDynamicChartData(initialSmoothedStreams, false);
 
         // Render all sections
         renderActivityInfo(activityData);
