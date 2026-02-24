@@ -44,6 +44,23 @@ let currentSmoothingLevel = 100;
 let lastStreamData = null;
 let lastActivityData = null;
 
+// Dynamic chart data storage
+let dynamicChartData = {
+    distance: [],
+    heartrate: [],
+    pace: [],
+    altitude: [],
+    cadence: [],
+};
+
+// Chart color mapping
+const chartColors = {
+    heartrate: { primary: 'rgb(255, 99, 132)', secondary: 'rgba(255, 99, 132, 0.3)' },
+    pace: { primary: 'rgb(252, 82, 0)', secondary: 'rgba(252, 82, 0, 0.3)' },
+    altitude: { primary: 'rgb(136, 136, 136)', secondary: 'rgba(136, 136, 136, 0.3)' },
+    cadence: { primary: 'rgb(0, 116, 217)', secondary: 'rgba(0, 116, 217, 0.3)' },
+};
+
 // =====================================================
 // 2. UTILITY FUNCTIONS
 // =====================================================
@@ -220,6 +237,280 @@ function initSmoothingControl() {
             renderStreamCharts(lastStreamData, lastActivityData, currentSmoothingLevel);
         }
     });
+}
+
+/**
+ * Initializes dynamic custom chart controls
+ */
+function initDynamicChartControls() {
+    const primaryDataSelect = document.getElementById('dynamic-chart-primary-data');
+    const secondaryDataSelect = document.getElementById('dynamic-chart-secondary-data');
+    const primaryTypeSelect = document.getElementById('dynamic-chart-primary-type');
+    const secondaryTypeSelect = document.getElementById('dynamic-chart-secondary-type');
+    const backgroundStatSelect = document.getElementById('dynamic-chart-background-stat');
+    const primaryShowCheckbox = document.getElementById('dynamic-chart-primary-show');
+    const secondaryShowCheckbox = document.getElementById('dynamic-chart-secondary-show');
+
+    if (!primaryDataSelect) return;
+
+    const updateDynamicChart = () => {
+        renderDynamicChart(
+            primaryDataSelect.value,
+            primaryTypeSelect.value,
+            primaryShowCheckbox.checked,
+            secondaryDataSelect.value,
+            secondaryTypeSelect.value,
+            secondaryShowCheckbox.checked,
+            backgroundStatSelect.value
+        );
+    };
+
+    primaryDataSelect.addEventListener('change', updateDynamicChart);
+    secondaryDataSelect.addEventListener('change', updateDynamicChart);
+    primaryTypeSelect.addEventListener('change', updateDynamicChart);
+    secondaryTypeSelect.addEventListener('change', updateDynamicChart);
+    backgroundStatSelect.addEventListener('change', updateDynamicChart);
+    primaryShowCheckbox.addEventListener('change', updateDynamicChart);
+    secondaryShowCheckbox.addEventListener('change', updateDynamicChart);
+
+    // Initial render if primary data is pre-selected
+    if (primaryDataSelect.value) {
+        updateDynamicChart();
+    }
+}
+
+/**
+ * Renders dynamic custom chart based on user selections
+ */
+function renderDynamicChart(primaryData, primaryType, primaryShow, secondaryData, secondaryType, secondaryShow, backgroundStat) {
+    const canvas = document.getElementById('dynamic-custom-chart');
+    if (!canvas || !primaryData || !primaryShow) {
+        if (chartInstances['dynamic-custom-chart']) {
+            chartInstances['dynamic-custom-chart'].destroy();
+            delete chartInstances['dynamic-custom-chart'];
+        }
+        return;
+    }
+
+    const labels = dynamicChartData.distance.map(d => (d / 1000).toFixed(2));
+    const datasets = [];
+    let yAxisConfigs = {};
+
+    // Primary dataset
+    if (primaryShow && primaryData) {
+        const primaryColor = chartColors[primaryData];
+        datasets.push({
+            label: getDataLabel(primaryData),
+            data: dynamicChartData[primaryData],
+            borderColor: primaryColor.primary,
+            backgroundColor: primaryColor.secondary,
+            borderWidth: 2,
+            fill: primaryType === 'area',
+            pointRadius: primaryType === 'scatter' ? 3 : 0,
+            type: primaryType === 'scatter' ? 'scatter' : undefined,
+            yAxisID: 'y',
+            tension: primaryType === 'line' || primaryType === 'area' ? 0.3 : 0,
+        });
+        yAxisConfigs.y = {
+            type: 'linear',
+            position: 'left',
+            title: { display: true, text: getDataLabel(primaryData) },
+            reverse: primaryData === 'pace',
+        };
+    }
+
+    // Secondary dataset
+    if (secondaryShow && secondaryData && secondaryData !== primaryData) {
+        const secondaryColor = chartColors[secondaryData];
+        datasets.push({
+            label: getDataLabel(secondaryData),
+            data: dynamicChartData[secondaryData],
+            borderColor: secondaryColor.primary,
+            backgroundColor: secondaryColor.secondary,
+            borderWidth: 2,
+            fill: secondaryType === 'area',
+            pointRadius: secondaryType === 'scatter' ? 3 : 0,
+            type: secondaryType === 'scatter' ? 'scatter' : undefined,
+            yAxisID: 'y1',
+            tension: secondaryType === 'line' || secondaryType === 'area' ? 0.3 : 0,
+        });
+        yAxisConfigs.y1 = {
+            type: 'linear',
+            position: 'right',
+            title: { display: true, text: getDataLabel(secondaryData) },
+            reverse: secondaryData === 'pace',
+            grid: { drawOnChartArea: false },
+        };
+    }
+
+    // Create background plugin if selected
+    const backgroundPlugin = backgroundStat ? createBackgroundPlugin(backgroundStat) : null;
+
+    const config = {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: true, position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: (context) => {
+                            let label = context.dataset.label || '';
+                            if (label) label += ': ';
+                            if (context.parsed.y !== null) {
+                                label += context.parsed.y.toFixed(2);
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    title: { display: true, text: 'Distance (km)' },
+                    type: 'category',
+                },
+                ...yAxisConfigs,
+            }
+        },
+        plugins: backgroundPlugin ? [backgroundPlugin] : [],
+    };
+
+    createChart('dynamic-custom-chart', config);
+}
+
+/**
+ * Gets human-readable label for data type
+ */
+function getDataLabel(dataType) {
+    const labels = {
+        heartrate: 'Heart Rate (bpm)',
+        pace: 'Pace (min/km)',
+        altitude: 'Altitude (m)',
+        cadence: 'Cadence (spm)',
+    };
+    return labels[dataType] || dataType;
+}
+
+/**
+ * Creates a background plugin for effort/intensity visualization
+ */
+function createBackgroundPlugin(backgroundStat) {
+    return {
+        id: 'backgroundPlugin',
+        afterDatasetsDraw(chart) {
+            if (backgroundStat === 'effort') {
+                drawEffortBackground(chart);
+            } else if (backgroundStat === 'recovery') {
+                drawRecoveryBackground(chart);
+            } else if (backgroundStat === 'intensity') {
+                drawIntensityBackground(chart);
+            }
+        }
+    };
+}
+
+/**
+ * Draws effort level background
+ */
+function drawEffortBackground(chart) {
+    const ctx = chart.ctx;
+    const xScale = chart.scales.x;
+    const yScale = chart.scales.y;
+    
+    if (!xScale || !yScale) return;
+
+    const chartArea = chart.chartArea;
+    const totalPoints = chart.data.labels.length;
+
+    // Create effort zones: low (start), medium (middle), high (end)
+    const sections = [
+        { start: 0, end: totalPoints * 0.3, color: 'rgba(76, 175, 80, 0.1)' },
+        { start: totalPoints * 0.3, end: totalPoints * 0.7, color: 'rgba(255, 193, 7, 0.1)' },
+        { start: totalPoints * 0.7, end: totalPoints, color: 'rgba(244, 67, 54, 0.1)' },
+    ];
+
+    sections.forEach(section => {
+        const startPx = chartArea.left + (section.start / totalPoints) * chartArea.width;
+        const endPx = chartArea.left + (section.end / totalPoints) * chartArea.width;
+        ctx.fillStyle = section.color;
+        ctx.fillRect(startPx, chartArea.top, endPx - startPx, chartArea.height);
+    });
+}
+
+/**
+ * Draws recovery zone background
+ */
+function drawRecoveryBackground(chart) {
+    const ctx = chart.ctx;
+    const chartArea = chart.chartArea;
+    const totalPoints = chart.data.labels.length;
+
+    // Recovery zones: alternating easy/moderate
+    for (let i = 0; i < totalPoints; i += 2) {
+        const startPx = chartArea.left + (i / totalPoints) * chartArea.width;
+        const endPx = chartArea.left + (Math.min(i + 1, totalPoints) / totalPoints) * chartArea.width;
+        ctx.fillStyle = i % 4 === 0 ? 'rgba(156, 39, 176, 0.08)' : 'rgba(100, 100, 100, 0.08)';
+        ctx.fillRect(startPx, chartArea.top, endPx - startPx, chartArea.height);
+    }
+}
+
+/**
+ * Draws intensity pattern background
+ */
+function drawIntensityBackground(chart) {
+    const ctx = chart.ctx;
+    const chartArea = chart.chartArea;
+    const totalPoints = chart.data.labels.length;
+
+    // Intensity zones: low, moderate, high repeating
+    const zones = ['rgba(0, 200, 100, 0.08)', 'rgba(255, 165, 0, 0.08)', 'rgba(255, 50, 50, 0.08)'];
+
+    for (let i = 0; i < totalPoints; i++) {
+        const zoneIndex = Math.floor((i / totalPoints) * 3);
+        const startPx = chartArea.left + (i / totalPoints) * chartArea.width;
+        const endPx = chartArea.left + ((i + 1) / totalPoints) * chartArea.width;
+        ctx.fillStyle = zones[zoneIndex];
+        ctx.fillRect(startPx, chartArea.top, endPx - startPx, chartArea.height);
+    }
+}
+
+/**
+ * Populates dynamic chart data from stream data
+ */
+function populateDynamicChartData(streams) {
+    dynamicChartData = {
+        distance: streams.distance?.data || [],
+        heartrate: streams.heartrate?.data || [],
+        altitude: streams.altitude?.data || [],
+        cadence: streams.cadence?.data || [],
+        pace: [],
+    };
+
+    // Calculate pace from distance and time
+    if (streams.distance?.data && streams.time?.data) {
+        const pace = [];
+        for (let i = 1; i < streams.distance.data.length; i++) {
+            const deltaDist = streams.distance.data[i] - streams.distance.data[i - 1];
+            const deltaTime = streams.time.data[i] - streams.time.data[i - 1];
+            if (deltaDist > 0 && deltaTime > 0) {
+                const speed = deltaDist / deltaTime;
+                pace.push(1000 / speed / 60);
+            } else {
+                pace.push(null);
+            }
+        }
+        // Prepend null to match distance array length
+        dynamicChartData.pace = [null, ...pace];
+    }
+
+    // Apply cadence doubling for runs
+    if (lastActivityData && lastActivityData.type === 'Run') {
+        dynamicChartData.cadence = dynamicChartData.cadence.map(c => c ? c * 2 : null);
+    }
 }
 
 // =====================================================
@@ -1182,6 +1473,9 @@ async function main() {
         lastStreamData = JSON.parse(JSON.stringify(streamData));
         lastActivityData = activityData;
 
+        // Populate dynamic chart data
+        populateDynamicChartData(streamData);
+
         // Render all sections
         renderActivityInfo(activityData);
         renderActivityStats(activityData);
@@ -1200,6 +1494,9 @@ async function main() {
 
         // Initialize smoothing slider control
         initSmoothingControl();
+
+        // Initialize dynamic chart controls
+        initDynamicChartControls();
 
         if (DOM.streamCharts) DOM.streamCharts.style.display = '';
 
