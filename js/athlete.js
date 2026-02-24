@@ -1,7 +1,7 @@
 // js/athlete.js - Updated: 2026-02-23 to fix runs reference error
 import * as utils from './utils.js';
 
-export function renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo, sportFilter = 'all') {
+export function renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo, sportFilter = 'all', dataType = 'count') {
     console.log("🎽 renderAthleteTab: Initializing Athlete Tab with sportFilter:", sportFilter);
 
     // Add filters UI
@@ -26,16 +26,16 @@ export function renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo, sp
     renderRecordStats(runs); // Keep runs for record stats
     renderStartTimeHistogram(filteredActivities);
     renderYearlyComparison(filteredActivities);
-    renderWeeklyMixChart(filteredActivities);
-    renderMonthlyMixChart(filteredActivities);
-    renderHourMatrix(filteredActivities);
-    renderYearMonthMatrix(filteredActivities);
-    renderMonthWeekdayMatrix(filteredActivities);
-    renderMonthDayMatrix(filteredActivities);
-    renderMonthHourMatrix(filteredActivities);
-    renderYearHourMatrix(filteredActivities);
-    renderYearWeekdayMatrix(filteredActivities);
-    renderInteractiveMatrix(filteredActivities);
+    renderWeeklyMixChart(filteredActivities, dataType);
+    renderMonthlyMixChart(filteredActivities, dataType);
+    renderHourMatrix(filteredActivities, dataType);
+    renderYearMonthMatrix(filteredActivities, dataType);
+    renderMonthWeekdayMatrix(filteredActivities, dataType);
+    renderMonthDayMatrix(filteredActivities, dataType);
+    renderMonthHourMatrix(filteredActivities, dataType);
+    renderYearHourMatrix(filteredActivities, dataType);
+    renderYearWeekdayMatrix(filteredActivities, dataType);
+    renderInteractiveMatrix(filteredActivities, dataType);
 
     console.log("🎽 renderAthleteTab: Athlete tab rendered");
 }
@@ -268,11 +268,10 @@ function renderYearlyComparison(runs) {
 }
 
 
-function renderWeeklyMixChart(runs) {
+function renderWeeklyMixChart(runs, dataType = 'count') {
     // Prepare data for each day of the week (Monday-Sunday)
     const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const dayCounts = Array(7).fill(0);
-    const dayKms = Array(7).fill(0);
+    const dayData = Array(7).fill(0);
 
     runs.forEach(run => {
         const date = new Date(run.start_date_local);
@@ -280,35 +279,34 @@ function renderWeeklyMixChart(runs) {
         let dayIdx = date.getDay();
         // Shift so Monday=0, Sunday=6
         dayIdx = (dayIdx + 6) % 7;
-        dayCounts[dayIdx]++;
-        dayKms[dayIdx] += run.distance / 1000;
+        switch (dataType) {
+            case 'count':
+                dayData[dayIdx]++;
+                break;
+            case 'time':
+                dayData[dayIdx] += run.moving_time / 3600; // hours
+                break;
+            case 'distance':
+                dayData[dayIdx] += run.distance / 1000; // km
+                break;
+        }
     });
+
+    const labelMap = {
+        count: 'Number of Activities',
+        time: 'Time (hours)',
+        distance: 'Distance (km)'
+    };
 
     createUiChart('weekly-mix-chart', {
         type: 'bar',
         data: {
             labels: dayLabels,
-            datasets: [
-                {
-                    type: 'bar',
-                    label: 'Total Trainings',
-                    data: dayCounts,
-                    backgroundColor: 'rgba(252, 82, 0, 0.7)',
-                    yAxisID: 'y',
-                    order: 1
-                },
-                {
-                    type: 'line',
-                    label: 'Total Distance (km)',
-                    data: dayKms,
-                    fill: true,
-                    backgroundColor: 'rgba(0, 116, 217, 0.2)',
-                    borderColor: 'rgba(0, 116, 217, 1)',
-                    pointBackgroundColor: 'rgba(0, 116, 217, 1)',
-                    yAxisID: 'y1',
-                    order: 2
-                }
-            ]
+            datasets: [{
+                label: labelMap[dataType],
+                data: dayData,
+                backgroundColor: 'rgba(252, 82, 0, 0.7)',
+            }]
         },
         options: {
             plugins: {
@@ -316,18 +314,8 @@ function renderWeeklyMixChart(runs) {
             },
             scales: {
                 y: {
-                    type: 'linear',
-                    position: 'left',
-                    title: { display: true, text: 'Trainings' },
                     beginAtZero: true,
-                    ticks: { stepSize: 1 }
-                },
-                y1: {
-                    type: 'linear',
-                    position: 'right',
-                    title: { display: true, text: 'Distance (km)' },
-                    beginAtZero: true,
-                    grid: { drawOnChartArea: false }
+                    title: { display: true, text: labelMap[dataType] }
                 }
             }
         }
@@ -335,47 +323,44 @@ function renderWeeklyMixChart(runs) {
 }
 
 
-function renderMonthlyMixChart(runs) {
+function renderMonthlyMixChart(runs, dataType = 'count') {
     const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const monthCounts = Array(12).fill(0);
-    const monthKms = Array(12).fill(0);
+    const monthData = Array(12).fill(0);
 
     runs.forEach(run => {
         const date = new Date(run.start_date_local);
         if (isNaN(date)) return;
 
         const monthIdx = date.getMonth(); // 0–11
-        monthCounts[monthIdx]++;
-        monthKms[monthIdx] += run.distance / 1000; // m → km
+        switch (dataType) {
+            case 'count':
+                monthData[monthIdx]++;
+                break;
+            case 'time':
+                monthData[monthIdx] += run.moving_time / 3600; // hours
+                break;
+            case 'distance':
+                monthData[monthIdx] += run.distance / 1000; // km
+                break;
+        }
     });
+
+    const labelMap = {
+        count: 'Number of Activities',
+        time: 'Time (hours)',
+        distance: 'Distance (km)'
+    };
 
     createUiChart('monthly-mix-chart', {
         type: 'bar',
         data: {
             labels: monthLabels,
-            datasets: [
-                {
-                    type: 'bar',
-                    label: 'Total Trainings',
-                    data: monthCounts,
-                    backgroundColor: 'rgba(252, 82, 0, 0.7)',
-                    yAxisID: 'y',
-                    order: 1
-                },
-                {
-                    type: 'line',
-                    label: 'Total Distance (km)',
-                    data: monthKms,
-                    fill: true,
-                    backgroundColor: 'rgba(0, 116, 217, 0.2)',
-                    borderColor: 'rgba(0, 116, 217, 1)',
-                    pointBackgroundColor: 'rgba(0, 116, 217, 1)',
-                    tension: 0.3,
-                    yAxisID: 'y1',
-                    order: 2
-                }
-            ]
+            datasets: [{
+                label: labelMap[dataType],
+                data: monthData,
+                backgroundColor: 'rgba(252, 82, 0, 0.7)',
+            }]
         },
         options: {
             plugins: {
@@ -383,18 +368,8 @@ function renderMonthlyMixChart(runs) {
             },
             scales: {
                 y: {
-                    type: 'linear',
-                    position: 'left',
-                    title: { display: true, text: 'Trainings' },
                     beginAtZero: true,
-                    ticks: { stepSize: 1 }
-                },
-                y1: {
-                    type: 'linear',
-                    position: 'right',
-                    title: { display: true, text: 'Distance (km)' },
-                    beginAtZero: true,
-                    grid: { drawOnChartArea: false }
+                    title: { display: true, text: labelMap[dataType] }
                 }
             }
         }
@@ -406,40 +381,56 @@ function renderMonthlyMixChart(runs) {
 
 
 
-function renderHourMatrix(runs) {
+function renderHourMatrix(runs, dataType = 'count') {
     const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const hourLabels = Array.from({ length: 24 }, (_, i) => i);
 
-    // Inicializar matriz de conteos [7 días x 24 horas]
-    const counts = Array.from({ length: 7 }, () => Array(24).fill(0));
+    // Inicializar matriz de valores [7 días x 24 horas]
+    const values = Array.from({ length: 7 }, () => Array(24).fill(0));
 
     runs.forEach(run => {
         const date = new Date(run.start_date_local);
         const dayIdx = (date.getDay() + 6) % 7; // Monday=0
         const hour = (date.getHours() - 2 + 24) % 24;
-        counts[dayIdx][hour]++;
+        switch (dataType) {
+            case 'count':
+                values[dayIdx][hour]++;
+                break;
+            case 'time':
+                values[dayIdx][hour] += run.moving_time / 3600;
+                break;
+            case 'distance':
+                values[dayIdx][hour] += run.distance / 1000;
+                break;
+        }
     });
 
     const data = [];
-    const maxCount = Math.max(...counts.flat());
+    const maxVal = Math.max(...values.flat());
 
     for (let day = 0; day < 7; day++) {
         for (let hour = 0; hour < 24; hour++) {
-            data.push({ x: hour, y: day, v: counts[day][hour] });
+            data.push({ x: hour, y: day, v: values[day][hour] });
         }
     }
 
     function getColor(v) {
         if (v === 0) return 'rgba(255,255,255,0)';
-        const alpha = 0.2 + 0.8 * (v / maxCount);
+        const alpha = 0.2 + 0.8 * (v / maxVal);
         return `rgba(252,82,0,${alpha.toFixed(2)})`;
     }
+
+    const labelMap = {
+        count: 'Runs',
+        time: 'Time (h)',
+        distance: 'Distance (km)'
+    };
 
     createUiChart('hour-matrix', {
         type: 'matrix',
         data: {
             datasets: [{
-                label: 'Runs',
+                label: labelMap[dataType],
                 data: data,
                 backgroundColor: data.map(d => getColor(d.v))
             }]
@@ -454,7 +445,7 @@ function renderHourMatrix(runs) {
                             const d = item[0].raw;
                             return `${dayLabels[d.y]} - ${d.x}:00`;
                         },
-                        label: item => `Runs: ${item.raw.v}`
+                        label: item => `${labelMap[dataType]}: ${item.raw.v.toFixed(1)}`
                     }
                 },
                 legend: { display: false }
@@ -494,8 +485,8 @@ function renderHourMatrix(runs) {
 
 
 
-function renderYearMonthMatrix(runs) {
-    const stats = {}; // { [year]: { [month]: { count, distance } } }
+function renderYearMonthMatrix(runs, dataType = 'count') {
+    const stats = {}; // { [year]: { [month]: value } }
 
     runs.forEach(run => {
         const date = new Date(run.start_date_local);
@@ -505,10 +496,19 @@ function renderYearMonthMatrix(runs) {
         const month = date.getMonth(); // 0–11
 
         if (!stats[year]) stats[year] = {};
-        if (!stats[year][month]) stats[year][month] = { count: 0, distance: 0 };
+        if (!stats[year][month]) stats[year][month] = 0;
 
-        stats[year][month].count++;
-        stats[year][month].distance += run.distance / 1000; // asumiendo metros → km
+        switch (dataType) {
+            case 'count':
+                stats[year][month]++;
+                break;
+            case 'time':
+                stats[year][month] += run.moving_time / 3600;
+                break;
+            case 'distance':
+                stats[year][month] += run.distance / 1000;
+                break;
+        }
     });
 
     const years = Object.keys(stats).map(Number).sort((a, b) => a - b);
@@ -517,30 +517,34 @@ function renderYearMonthMatrix(runs) {
         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
     const data = [];
-    let maxKm = 0;
+    let maxVal = 0;
     years.forEach((year, yIdx) => {
         months.forEach(month => {
-            const entry = stats[year]?.[month];
-            const km = entry ? entry.distance : 0;
-            const count = entry ? entry.count : 0;
-            maxKm = Math.max(maxKm, km);
-            data.push({ x: month, y: yIdx, km, count });
+            const val = stats[year]?.[month] || 0;
+            maxVal = Math.max(maxVal, val);
+            data.push({ x: month, y: yIdx, v: val });
         });
     });
 
-    function getColor(km) {
-        if (km === 0) return 'rgba(255,255,255,0)';
-        const alpha = 0.15 + 0.85 * (km / maxKm);
+    function getColor(v) {
+        if (v === 0) return 'rgba(255,255,255,0)';
+        const alpha = 0.15 + 0.85 * (v / maxVal);
         return `rgba(0,128,255,${alpha.toFixed(2)})`;
     }
+
+    const labelMap = {
+        count: 'Activities',
+        time: 'Time (h)',
+        distance: 'Distance (km)'
+    };
 
     createUiChart('year-month-matrix', {
         type: 'matrix',
         data: {
             datasets: [{
-                label: 'Distance (km)',
+                label: labelMap[dataType],
                 data,
-                backgroundColor: data.map(d => getColor(d.km))
+                backgroundColor: data.map(d => getColor(d.v))
             }]
         },
         options: {
@@ -553,13 +557,7 @@ function renderYearMonthMatrix(runs) {
                             const d = items[0].raw;
                             return `${years[d.y]} - ${monthLabels[d.x]}`;
                         },
-                        label: item => {
-                            const d = item.raw;
-                            return [
-                                `Runs: ${d.count}`,
-                                `Distance: ${d.km.toFixed(1)} km`
-                            ];
-                        }
+                        label: item => `${labelMap[dataType]}: ${item.raw.v.toFixed(1)}`
                     }
                 },
                 legend: { display: false }
@@ -609,7 +607,7 @@ function renderYearMonthMatrix(runs) {
 
 
 
-function renderMonthWeekdayMatrix(runs) {
+function renderMonthWeekdayMatrix(runs, dataType = 'count') {
     const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -725,7 +723,7 @@ function renderMonthWeekdayMatrix(runs) {
 
 
 
-function renderMonthDayMatrix(runs) {
+function renderMonthDayMatrix(runs, dataType = 'count') {
     const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const dayLabels = Array.from({ length: 31 }, (_, i) => i + 1);
@@ -832,7 +830,7 @@ function renderMonthDayMatrix(runs) {
 }
 
 
-function renderMonthHourMatrix(runs) {
+function renderMonthHourMatrix(runs, dataType = 'count') {
     const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const hourLabels = Array.from({ length: 24 }, (_, i) => i); // 0–23
@@ -946,7 +944,7 @@ function renderMonthHourMatrix(runs) {
 
 
 
-function renderYearWeekdayMatrix(runs) {
+function renderYearWeekdayMatrix(runs, dataType = 'count') {
     const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const stats = {}; // { [year]: { [weekday]: { count, distance } } }
 
@@ -1046,7 +1044,7 @@ function renderYearWeekdayMatrix(runs) {
 }
 
 
-function renderYearHourMatrix(runs) {
+function renderYearHourMatrix(runs, dataType = 'count') {
     const stats = {}; // { [year]: { [hour]: { count, distance } } }
 
     runs.forEach(run => {
@@ -1148,7 +1146,7 @@ function renderYearHourMatrix(runs) {
 
 let interactiveMatrixChart;
 
-function renderInteractiveMatrix(runs) {
+function renderInteractiveMatrix(runs, dataType = 'count') {
     const ctx = document.getElementById("interactiveMatrix");
 
     const weekdayLabels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -1177,7 +1175,6 @@ function renderInteractiveMatrix(runs) {
     }
 
     function updateMatrix() {
-        const dataType = document.getElementById("matrix-data-type").value;
         const xKey = document.getElementById("matrix-x-axis").value;
         const yKey = document.getElementById("matrix-y-axis").value;
 
@@ -1254,7 +1251,6 @@ function renderInteractiveMatrix(runs) {
         });
     }
 
-    document.getElementById("matrix-data-type").addEventListener("change", updateMatrix);
     document.getElementById("matrix-x-axis").addEventListener("change", updateMatrix);
     document.getElementById("matrix-y-axis").addEventListener("change", updateMatrix);
 
@@ -1407,12 +1403,13 @@ function addAthleteFilters() {
     const applyButton = document.createElement('button');
     applyButton.textContent = 'Apply Filters';
     applyButton.onclick = () => {
+        const dataType = dataTypeSelect.value;
         const sport = sportSelect.value;
         const from = dateFromInput.value;
         const to = dateToInput.value;
         // Re-render with filters
         const allActivities = JSON.parse(localStorage.getItem('strava_activities') || '[]');
-        renderAthleteTab(allActivities, from, to, sport);
+        renderAthleteTab(allActivities, from, to, sport, dataType);
     };
 
     filterDiv.appendChild(dataTypeSelect);
