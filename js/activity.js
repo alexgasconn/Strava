@@ -39,6 +39,11 @@ const activityId = parseInt(params.get('id'), 10);
 // Chart instances registry for cleanup
 const chartInstances = {};
 
+// Smoothing control
+let currentSmoothingLevel = 100;
+let lastStreamData = null;
+let lastActivityData = null;
+
 // =====================================================
 // 2. UTILITY FUNCTIONS
 // =====================================================
@@ -195,6 +200,26 @@ function createChart(canvasId, config) {
     }
 
     chartInstances[canvasId] = new Chart(canvas, config);
+}
+
+/**
+ * Initializes smoothing slider control
+ */
+function initSmoothingControl() {
+    const slider = document.getElementById('smoothing-slider');
+    const valueDisplay = document.getElementById('smoothing-value');
+    
+    if (!slider || !valueDisplay) return;
+
+    slider.addEventListener('input', (e) => {
+        currentSmoothingLevel = parseInt(e.target.value, 10);
+        valueDisplay.textContent = currentSmoothingLevel;
+        
+        // Re-render stream charts with new smoothing level
+        if (lastStreamData && lastActivityData) {
+            renderStreamCharts(lastStreamData, lastActivityData, currentSmoothingLevel);
+        }
+    });
 }
 
 // =====================================================
@@ -457,7 +482,7 @@ function renderSplitsCharts(activity) {
 /**
  * Renders detailed stream charts (altitude, pace, HR, cadence vs distance)
  */
-function renderStreamCharts(streams, activity) {
+function renderStreamCharts(streams, activity, smoothingLevel = 100) {
     if (!DOM.streamCharts) return;
 
     if (!streams || !streams.distance || !streams.distance.data || streams.distance.data.length === 0) {
@@ -467,6 +492,15 @@ function renderStreamCharts(streams, activity) {
 
     const { distance, time, heartrate, altitude, cadence } = streams;
     const distLabels = distance.data.map(d => (d / 1000).toFixed(2));
+
+    // Calculate window sizes based on smoothing level (0-200 scale, 100 is default)
+    const smoothingFactor = smoothingLevel / 100;
+    const windowSizes = {
+        altitude: Math.max(1, Math.round(CONFIG.WINDOW_SIZES.altitude * smoothingFactor)),
+        pace: Math.max(1, Math.round(CONFIG.WINDOW_SIZES.pace * smoothingFactor)),
+        heartrate: Math.max(1, Math.round(CONFIG.WINDOW_SIZES.heartrate * smoothingFactor)),
+        cadence: Math.max(1, Math.round(CONFIG.WINDOW_SIZES.cadence * smoothingFactor)),
+    };
 
     // Helper function to create individual stream charts
     function createStreamChart(canvasId, label, data, color, yAxisReverse = false) {
@@ -499,7 +533,7 @@ function renderStreamCharts(streams, activity) {
 
     // Altitude chart
     if (altitude && altitude.data) {
-        const smoothAltitude = rollingMean(altitude.data, CONFIG.WINDOW_SIZES.altitude);
+        const smoothAltitude = rollingMean(altitude.data, windowSizes.altitude);
         createStreamChart('chart-altitude', 'Altitud (m)', smoothAltitude, '#888');
     }
 
@@ -516,7 +550,7 @@ function renderStreamCharts(streams, activity) {
                 paceStreamData.push(null);
             }
         }
-        const smoothPaceStreamData = rollingMean(paceStreamData, CONFIG.WINDOW_SIZES.pace);
+        const smoothPaceStreamData = rollingMean(paceStreamData, windowSizes.pace);
         const paceLabels = distLabels.slice(1);
 
         createChart('chart-pace-distance', {
@@ -548,14 +582,14 @@ function renderStreamCharts(streams, activity) {
 
     // Heart rate chart
     if (heartrate && heartrate.data) {
-        const smoothHeartrate = rollingMean(heartrate.data, CONFIG.WINDOW_SIZES.heartrate);
+        const smoothHeartrate = rollingMean(heartrate.data, windowSizes.heartrate);
         createStreamChart('chart-heart-distance', 'FC (bpm)', smoothHeartrate, 'red');
     }
 
     // Cadence chart
     if (cadence && cadence.data) {
         const cadenceData = activity.type === 'Run' ? cadence.data.map(c => c * 2) : cadence.data;
-        const smoothCadence = rollingMean(cadenceData, CONFIG.WINDOW_SIZES.cadence);
+        const smoothCadence = rollingMean(cadenceData, windowSizes.cadence);
         createStreamChart('chart-cadence-distance', 'Cadencia (spm)', smoothCadence, '#0074D9');
     }
 }
@@ -1144,13 +1178,17 @@ async function main() {
             }
         });
 
+        // Store original stream data for re-rendering with different smoothing levels
+        lastStreamData = JSON.parse(JSON.stringify(streamData));
+        lastActivityData = activityData;
+
         // Render all sections
         renderActivityInfo(activityData);
         renderActivityStats(activityData);
         renderAdvancedStats(activityData);
         renderActivityMap(activityData);
         renderSplitsCharts(activityData);
-        renderStreamCharts(streamData, activityData);
+        renderStreamCharts(streamData, activityData, currentSmoothingLevel);
         renderBestEfforts(activityData.best_efforts);
         renderLaps(activityData.laps);
         renderLapsChart(activityData.laps);
@@ -1159,6 +1197,9 @@ async function main() {
         renderHrZoneDistributionChart(streamData);
         renderHrMinMaxAreaChart(streamData);
         renderPaceMinMaxAreaChart(streamData);
+
+        // Initialize smoothing slider control
+        initSmoothingControl();
 
         if (DOM.streamCharts) DOM.streamCharts.style.display = '';
 
