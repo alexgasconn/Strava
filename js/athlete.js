@@ -1374,6 +1374,14 @@ function addAthleteFilters() {
         .slice(0, 10)
         .map(([sport]) => sport);
 
+    const dataTypeSelect = document.createElement('select');
+    dataTypeSelect.id = 'athlete-data-type';
+    dataTypeSelect.innerHTML = `
+        <option value="count">Number of Activities</option>
+        <option value="time">Time (hours)</option>
+        <option value="distance">Distance (km)</option>
+    `;
+
     const sportSelect = document.createElement('select');
     sportSelect.id = 'athlete-sport-filter';
 
@@ -1407,6 +1415,7 @@ function addAthleteFilters() {
         renderAthleteTab(allActivities, from, to, sport);
     };
 
+    filterDiv.appendChild(dataTypeSelect);
     filterDiv.appendChild(sportSelect);
     filterDiv.appendChild(dateFromInput);
     filterDiv.appendChild(dateToInput);
