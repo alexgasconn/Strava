@@ -65,14 +65,33 @@ async function getWeatherForRun(run) {
 // ===================================================================
 // 1. TSS: suffer_score → TSS (fallback: 36/hora)
 // ===================================================================
-function calculateTSS(activity) {
+function calculateTSS(activity, maxHr = MAX_HR_DEFAULT) {
     let tss = 0;
     let method = 'none';
 
-    if (activity.suffer_score != null && activity.suffer_score >= 0) {
+    // Priority: Power (if available, though rare for running)
+    if (activity.average_watts != null && activity.average_watts > 0) {
+        // For cycling: IF = NP / FTP, but NP not available, use average_watts / FTP
+        // But FTP not available, skip for now
+        method = 'power_unavailable';
+    }
+
+    // Next: Heart Rate
+    if (method === 'none' && activity.average_heartrate != null && activity.average_heartrate > 0) {
+        const if_hr = activity.average_heartrate / maxHr;
+        const hours = (activity.moving_time || 0) / 3600;
+        tss = (hours * if_hr * if_hr) * 100;
+        method = 'heartrate';
+    }
+
+    // Fallback: Suffer score
+    if (method === 'none' && activity.suffer_score != null && activity.suffer_score >= 0) {
         tss = activity.suffer_score * SUFFER_TO_TSS;
         method = 'suffer_score';
-    } else {
+    }
+
+    // Last resort: Time-based
+    if (method === 'none') {
         const hours = (activity.moving_time || 0) / 3600;
         tss = hours * 36;
         method = 'time';
@@ -132,7 +151,6 @@ async function groupByDay(activities) {
         const date = a.start_date_local?.split('T')[0];
         if (!date) return;
 
-        calculateTSS(a);
         computeVO2max(a);
 
         if (!daily[date]) {
@@ -322,6 +340,9 @@ export async function preprocessActivities(activities, userProfile = {}) {
 
     const maxHr = userProfile.max_hr || MAX_HR_DEFAULT;
     console.log("Preprocessing: Using max HR:", maxHr);
+
+    // Calculate TSS for all activities
+    activities.forEach(a => calculateTSS(a, maxHr));
 
     const daily = await groupByDay(activities);
     console.log("Preprocessing: Grouped by day, days:", Object.keys(daily).length);

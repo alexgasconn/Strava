@@ -402,7 +402,6 @@ function renderPMCChart(runs) {
     const atl = sorted.map(r => r.atl);
     const tsb = sorted.map(r => r.tsb);
     const injuryRisk = sorted.map(r => r.injuryRisk * 100);
-    const vo2max = sorted.map(r => r.vo2max ?? null);
 
     window.pmcChart = new Chart(ctx, {
         type: 'line',
@@ -449,19 +448,6 @@ function renderPMCChart(runs) {
                     pointRadius: 0,
                     borderWidth: 2,
                     hidden: false // 🔹 Visible al inicio
-                },
-                {
-                    label: 'VO₂max (ml/kg/min)',
-                    data: vo2max,
-                    borderColor: '#9B59B6',
-                    backgroundColor: 'rgba(155, 89, 182, 0.1)',
-                    tension: 0.3,
-                    yAxisID: 'y3',
-                    pointRadius: 2, // 🔹 Más pequeños
-                    pointBackgroundColor: '#9B59B6',
-                    borderDash: [5, 5], // 🔹 Línea discontinua
-                    spanGaps: true, // 🔹 Une puntos aunque haya huecos
-                    hidden: false // 🔹 Visible al inicio
                 }
             ]
         },
@@ -498,14 +484,6 @@ function renderPMCChart(runs) {
                     grid: { drawOnChartArea: false },
                     min: 0,
                     max: 100
-                },
-                y3: {
-                    type: 'linear',
-                    position: 'left',
-                    title: { display: true, text: 'VO₂max' },
-                    grid: { drawOnChartArea: false },
-                    min: 20,
-                    max: 80
                 }
             }
         }
