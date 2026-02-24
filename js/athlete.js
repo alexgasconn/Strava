@@ -431,7 +431,7 @@ function renderHourMatrix(runs, dataType = 'count') {
 
     function getColor(v) {
         if (v === 0) return 'rgba(255,255,255,0)';
-        const alpha = 0.2 + 0.8 * (v / maxVal);
+        const alpha = maxVal > 0 ? 0.3 + 0.7 * (v / maxVal) : 0.5;
         return `rgba(252,82,0,${alpha.toFixed(2)})`;
     }
 
@@ -543,7 +543,7 @@ function renderYearMonthMatrix(runs, dataType = 'count') {
 
     function getColor(v) {
         if (v === 0) return 'rgba(255,255,255,0)';
-        const alpha = 0.15 + 0.85 * (v / maxVal);
+        const alpha = maxVal > 0 ? 0.3 + 0.7 * (v / maxVal) : 0.5;
         return `rgba(0,128,255,${alpha.toFixed(2)})`;
     }
 
@@ -659,9 +659,9 @@ function renderMonthWeekdayMatrix(runs, dataType = 'count') {
         }
     }
 
-    function getColor(km) {
-        if (km === 0) return 'rgba(255,255,255,0)';
-        const alpha = 0.15 + 0.85 * (km / maxKm);
+    function getColor(v) {
+        if (v === 0) return 'rgba(255,255,255,0)';
+        const alpha = maxVal > 0 ? 0.3 + 0.7 * (v / maxVal) : 0.5;
         return `rgba(0,200,120,${alpha.toFixed(2)})`;
     }
 
@@ -784,7 +784,7 @@ function renderMonthDayMatrix(runs, dataType = 'count') {
 
     function getColor(v) {
         if (v === 0) return 'rgba(255,255,255,0)';
-        const alpha = 0.15 + 0.85 * (v / maxVal);
+        const alpha = maxVal > 0 ? 0.3 + 0.7 * (v / maxVal) : 0.5;
         return `rgba(255,140,0,${alpha.toFixed(2)})`;
     }
 
@@ -896,7 +896,7 @@ function renderMonthHourMatrix(runs, dataType = 'count') {
 
     function getColor(v) {
         if (v === 0) return 'rgba(255,255,255,0)';
-        const alpha = 0.15 + 0.85 * (v / maxVal);
+        const alpha = maxVal > 0 ? 0.3 + 0.7 * (v / maxVal) : 0.5;
         return `rgba(252,82,0,${alpha.toFixed(2)})`;
     }
 
@@ -1005,7 +1005,7 @@ function renderYearWeekdayMatrix(runs, dataType = 'count') {
 
     function getColor(v) {
         if (v === 0) return 'rgba(255,255,255,0)';
-        const alpha = 0.15 + 0.85 * (v / maxVal);
+        const alpha = maxVal > 0 ? 0.3 + 0.7 * (v / maxVal) : 0.5;
         return `rgba(0,180,200,${alpha.toFixed(2)})`;
     }
 
@@ -1112,7 +1112,7 @@ function renderYearHourMatrix(runs, dataType = 'count') {
 
     function getColor(v) {
         if (v === 0) return 'rgba(255,255,255,0)';
-        const alpha = 0.15 + 0.85 * (v / maxVal);
+        const alpha = maxVal > 0 ? 0.3 + 0.7 * (v / maxVal) : 0.5;
         return `rgba(255,100,0,${alpha.toFixed(2)})`;
     }
 
