@@ -101,6 +101,42 @@ button:focus {
     color: var(--text-dark);
 }
 
+.settings-panel {
+    position: absolute;
+    top: 60px;
+    right: 10px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    padding: 1.25rem;
+    z-index: 1000;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-width: 200px;
+}
+
+.settings-panel h4 {
+    margin: 0 0 0.25rem;
+}
+
+.settings-panel label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.settings-panel select,
+.settings-panel input[type="number"] {
+    padding: 0.3rem 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    width: 100px;
+}
+
 #logout-button {
     background-color: var(--text-medium);
 }

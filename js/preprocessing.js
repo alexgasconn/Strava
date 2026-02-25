@@ -196,62 +196,7 @@ function calculatePMC(tssSeries) {
 }
 
 // ===================================================================
-// 6. INJURY RISK: PRECISO, CONTINUO Y REALISTA
-// ===================================================================
-function calculateInjuryRisk(tsb, rampRate, atl, tssSeries) {
-    const riskHistory = [];
-
-    return tsb.map((t, i) => {
-        let risk = 0;
-
-        // 1. TSB (fatiga crónica)
-        if (t < -30) risk += 0.45;
-        else if (t < -20) risk += 0.35;
-        else if (t < -10) risk += 0.25;
-        else if (t < -5) risk += 0.15;
-        else if (t < 0) risk += 0.08;
-        else if (t > 15) risk += 0.05; // Sobre-descanso
-
-        // 2. Ramp Rate (aumento rápido)
-        const r = rampRate[i];
-        if (r > 10) risk += 0.35;
-        else if (r > 7) risk += 0.25;
-        else if (r > 5) risk += 0.15;
-        else if (r > 3) risk += 0.08;
-
-        // 3. ATL alto (carga aguda)
-        const a = atl[i];
-        if (a > 120) risk += 0.20;
-        else if (a > 100) risk += 0.12;
-        else if (a > 80) risk += 0.06;
-
-        // 4. Variabilidad reciente (CV de últimos 7 días)
-        const recent = tssSeries.slice(Math.max(0, i - 6), i + 1);
-        if (recent.length > 1) {
-            const mean = recent.reduce((a, b) => a + b, 0) / recent.length;
-            const variance = recent.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / recent.length;
-            const cv = Math.sqrt(variance) / mean;
-            if (cv > 0.5) risk += 0.15;
-            else if (cv > 0.3) risk += 0.08;
-        }
-
-        // Normalizar
-        risk = Math.min(risk, 1.0);
-        risk = Math.max(risk, 0.0);
-
-        // Suavizado exponencial (70% anterior, 30% actual)
-        if (i > 0) {
-            const prev = riskHistory[i - 1];
-            risk = prev * 0.7 + risk * 0.3;
-        }
-        riskHistory.push(risk);
-
-        return +risk.toFixed(3); // 0.123 → 12.3%
-    });
-}
-
-// ===================================================================
-// 6. INJURY RISK MEJORADO
+// 6. INJURY RISK (adaptive percentile-based)
 // ===================================================================
 function calculateInjuryRiskImproved(tsb, rampRate, atl, tssSeries) {
     const riskHistory = [];
@@ -337,38 +282,18 @@ function assignMetrics(activities, dates, pmc, injuryRisk) {
 // 8. Pipeline principal
 // ===================================================================
 export async function preprocessActivities(activities, userProfile = {}) {
-    console.log("Preprocessing: Starting with", activities.length, "activities");
-    if (!activities?.length) {
-        console.warn("Preprocessing: No hay actividades.");
-        return [];
-    }
+    if (!activities?.length) return [];
 
     const maxHr = userProfile.max_hr || MAX_HR_DEFAULT;
-    console.log("Preprocessing: Using max HR:", maxHr);
 
-    // Calculate TSS for all activities
     activities.forEach(a => calculateTSS(a, maxHr));
 
     const daily = await groupByDay(activities);
-    console.log("Preprocessing: Grouped by day, days:", Object.keys(daily).length);
     const { dates, tssValues } = getTimeSeries(daily);
-    console.log("Preprocessing: Time series created, dates:", dates.length);
     const pmc = calculatePMC(tssValues);
-    console.log("Preprocessing: PMC calculated, ATL:", pmc.atl[pmc.atl.length - 1], "CTL:", pmc.ctl[pmc.ctl.length - 1], "TSB:", pmc.tsb[pmc.tsb.length - 1]);
     const injuryRisk = calculateInjuryRiskImproved(pmc.tsb, pmc.rampRate, pmc.atl, pmc.tssSeries);
-    console.log("Preprocessing: Injury risk calculated");
 
     assignMetrics(activities, dates, pmc, injuryRisk);
-    console.log("Preprocessing: Metrics assigned to activities");
 
-    // Log final
-    const last = dates.length - 1;
-    console.log(`\nPMC (último día: ${dates[last]})`);
-    console.log(`  CTL: ${pmc.ctl[last]?.toFixed(1) ?? 'n/a'}`);
-    console.log(`  ATL: ${pmc.atl[last]?.toFixed(1) ?? 'n/a'}`);
-    console.log(`  TSB: ${pmc.tsb[last]?.toFixed(1) ?? 'n/a'}`);
-    console.log(`  Injury Risk: ${(injuryRisk[last] * 100).toFixed(2)}%`);
-
-    console.log("Preprocessing: Completed");
     return activities;
 }

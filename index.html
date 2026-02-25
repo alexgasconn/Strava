@@ -34,7 +34,7 @@
             <button id="login-button" aria-label="Connect with Strava">Connect with Strava</button>
             <div class="privacy-policy" style="margin-top:1em; font-size:0.95em; color:#555;">
                 <strong>Privacy Notice:</strong> Your Strava data is processed instantly each time you load the page.
-                There is <b>no database</b> and nothing is stored—everything runs in the on your browser and is
+                There is <b>no database</b> and nothing is stored—everything runs in your browser and is
                 <b>never saved</b> or sent to any server. No personal information is collected or retained.
             </div>
 
@@ -51,28 +51,23 @@
                 </nav>
             </header>
 
-            <div id="settings-panel" class="settings-panel"
-                style="display:none; position:absolute; top:60px; left:10px; background:white; border:1px solid #ccc; padding:1rem; z-index:1000; box-shadow:0 2px 8px rgba(0,0,0,0.2);">
+            <div id="settings-panel" class="settings-panel" style="display:none;">
                 <h4>Settings</h4>
-                <br>
                 <label>
                     Units:
                     <select id="units">
-                        <option value="metric">Metric (TBD)</option>
-                        <option value="imperial">Imperial (TBD)</option>
+                        <option value="metric">Metric</option>
+                        <option value="imperial">Imperial</option>
                     </select>
                 </label>
-                <br>
                 <label>
                     Age:
                     <input type="number" id="age" min="0" value="25">
                 </label>
-                <br>
                 <label>
                     Max HR:
-                    <input type="number" id="hr-max" min="0" value="190">
+                    <input type="number" id="hr-max" min="100" max="230" value="190">
                 </label>
-                <br>
                 <button id="close-settings" aria-label="Close settings">Close</button>
             </div>
 
@@ -164,8 +159,8 @@
                     </div>
 
                     <div id="export-buttons" style="display:flex; gap:1em; margin: 1.5em 0;">
-                        <button id="download-csv-btn" aria-label="Download CSV">⬇️ Descargar CSV</button>
-                        <button id="download-pdf-btn" aria-label="Download PDF">⬇️ Descargar PDF</button>
+                        <button id="download-csv-btn" aria-label="Download CSV">⬇️ Download CSV</button>
+                        <button id="download-pdf-btn" aria-label="Download PDF">⬇️ Download PDF</button>
                     </div>
                 </div>
 
@@ -439,7 +434,7 @@
 
                         <div class="chart-container full-width">
                             <h3>Monthly Weather Overview</h3>
-                            <canvas id="monthly-weather">
+                            <canvas id="monthly-weather"></canvas>
                         </div>
 
 

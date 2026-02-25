@@ -3,16 +3,21 @@
 function getAuthPayload() {
     const tokenData = localStorage.getItem('strava_tokens');
     if (!tokenData) throw new Error('User not authenticated');
-    return btoa(tokenData); // Codifica el objeto de token en Base64
+    return btoa(tokenData);
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
 }
 
 async function handleApiResponse(response) {
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || 'API call failed');
 
-    // Si la API devuelve tokens actualizados, los guardamos
     if (result.tokens) {
-        console.log('Tokens refreshed and updated in localStorage.');
         localStorage.setItem('strava_tokens', JSON.stringify(result.tokens));
     }
     return result;
@@ -29,7 +34,7 @@ export async function fetchAllActivities() {
 }
 
 export async function fetchGearById(gearId) {
-    const response = await fetch(`/api/strava-gear?id=${gearId}`, {
+    const response = await fetch(`/api/strava-gear?id=${encodeURIComponent(gearId)}`, {
         headers: {
             Authorization: `Bearer ${getAuthPayload()}`
         }
@@ -44,11 +49,11 @@ export function renderAthleteProfile(athlete) {
     if (!container || !contentDiv) return;
 
     contentDiv.innerHTML = `
-        <img src="${athlete.profile_medium}" alt="Athlete profile picture">
+        <img src="${escapeHtml(athlete.profile_medium)}" alt="Athlete profile picture">
         <div class="profile-details">
-            <span class="name">${athlete.firstname} ${athlete.lastname}</span>
-            <span class="location">${athlete.city}, ${athlete.country}</span>
-            <span class="stats">Followers: ${athlete.follower_count} | Friends: ${athlete.friend_count}</span>
+            <span class="name">${escapeHtml(athlete.firstname)} ${escapeHtml(athlete.lastname)}</span>
+            <span class="location">${escapeHtml(athlete.city)}, ${escapeHtml(athlete.country)}</span>
+            <span class="stats">Followers: ${Number(athlete.follower_count) || 0} | Friends: ${Number(athlete.friend_count) || 0}</span>
         </div>
     `;
 }
@@ -70,20 +75,13 @@ export async function fetchTrainingZones() {
 }
 
 export async function fetchAllGears(athlete) {
-    console.log('fetchAllGears: athlete.shoes:', athlete.shoes);
-    console.log('fetchAllGears: athlete.bikes:', athlete.bikes);
     const rawGearIds = [...(athlete.shoes || []), ...(athlete.bikes || [])];
-    console.log('fetchAllGears: rawGearIds:', rawGearIds);
     const gearIds = rawGearIds.map(g => {
         if (typeof g === 'string') return g;
         if (g && typeof g === 'object' && g.id) return g.id;
-        console.log('fetchAllGears: unknown gear format:', g);
         return null;
     }).filter(id => id);
-    console.log('fetchAllGears: processed gearIds:', gearIds);
     if (gearIds.length === 0) return [];
 
-    const gearPromises = gearIds.map(id => fetchGearById(id));
-    const gears = await Promise.all(gearPromises);
-    return gears;
+    return Promise.all(gearIds.map(id => fetchGearById(id)));
 }

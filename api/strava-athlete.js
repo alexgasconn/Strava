@@ -1,57 +1,5 @@
-// /api/strava-athlete.js
-import fetch from 'node-fetch';
+import { getValidAccessToken } from './_shared.js';
 
-// Función helper para manejar la autenticación y el refresco de tokens
-async function getValidAccessToken(req) {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        throw new Error('Missing or invalid Authorization header');
-    }
-
-    const payloadRaw = authHeader.split(' ')[1];
-    const tokenData = JSON.parse(Buffer.from(payloadRaw, 'base64').toString());
-    const { access_token, refresh_token, expires_at } = tokenData;
-
-    if (!access_token || !refresh_token || !expires_at) {
-        throw new Error('Incomplete token data');
-    }
-
-    const now = Math.floor(Date.now() / 1000);
-    if (expires_at > now + 60) {
-        return { accessToken: access_token, updatedTokens: null };
-    }
-
-    // Token expirado, lo refrescamos
-    console.log(`[strava-athlete] Token expired. Refreshing...`);
-    const response = await fetch('https://www.strava.com/oauth/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            client_id: process.env.STRAVA_CLIENT_ID,
-            client_secret: process.env.STRAVA_CLIENT_SECRET,
-            grant_type: 'refresh_token',
-            refresh_token: refresh_token
-        })
-    });
-
-    if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Token refresh failed:", errorText);
-        throw new Error('Token refresh failed');
-    }
-    const refreshed = await response.json();
-    
-    return {
-        accessToken: refreshed.access_token,
-        updatedTokens: {
-            access_token: refreshed.access_token,
-            refresh_token: refreshed.refresh_token,
-            expires_at: refreshed.expires_at
-        }
-    };
-}
-
-// --- HANDLER PRINCIPAL ---
 export default async function handler(req, res) {
     if (req.method !== 'GET') {
         return res.status(405).json({ error: 'Method Not Allowed' });
@@ -70,11 +18,10 @@ export default async function handler(req, res) {
         }
 
         const athleteData = await stravaResponse.json();
-        
         return res.status(200).json({ athlete: athleteData, tokens: updatedTokens });
 
     } catch (error) {
-        console.error("Error in /api/strava-athlete:", error.message);
+        console.error('Error in /api/strava-athlete:', error.message);
         return res.status(500).json({ error: error.message });
     }
 }
