@@ -1,32 +1,43 @@
-// js/athlete.js - Updated: 2026-02-23 to fix runs reference error
+// js/athlete.js — refactored: grouped sections and comments
 import * as utils from './utils.js';
 
+// -------------------------
+// Module state / constants
+// -------------------------
 let currentDataType = 'time';
+let uiCharts = {}; // cache chart instances for athlete tab
+let interactiveMatrixChart;
 
+// -------------------------
+// Public API
+// -------------------------
 export function renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo, sportFilter = 'all', dataType = 'time') {
+    // Public entry to render the Athlete tab. Keeps signature used by `main.js`.
     currentDataType = dataType;
     console.log("🎽 renderAthleteTab: Initializing Athlete Tab with sportFilter:", sportFilter);
 
-    // Add filters UI
+    // Ensure filters UI exists (will insert only once)
     addAthleteFilters();
 
-    // Filter activities
+    // Apply filtering using the unified helper
     const filteredActivities = filterActivities(allActivities, dateFilterFrom, dateFilterTo, sportFilter);
     console.log("🎽 renderAthleteTab: Filtered activities:", filteredActivities.length);
 
-    // For stats, use the filtered activities, but for runs-specific stats, filter to runs
+    // Runs subset for run-specific components
     const runs = filteredActivities.filter(a => a.type && a.type.includes('Run'));
     console.log("🎽 renderAthleteTab: Runs in filtered activities:", runs.length);
 
     const athleteData = JSON.parse(localStorage.getItem('strava_athlete_data'));
     const zonesData = JSON.parse(localStorage.getItem('strava_training_zones'));
 
-    // Renderizar componentes
     if (athleteData) renderAthleteProfile(athleteData);
     if (zonesData) renderTrainingZones(zonesData);
 
-    renderAllTimeStats(filteredActivities); // Use filtered activities for general stats
-    renderRecordStats(runs); // Keep runs for record stats
+    // Render panels & charts (order: summary, records, charts)
+    renderAllTimeStats(filteredActivities);
+    renderRecordStats(runs);
+
+    // Charts: many of these accept the whole filteredActivities but treat them as runs where appropriate
     renderStartTimeHistogram(filteredActivities, dataType);
     renderYearlyComparison(filteredActivities, dataType);
     renderWeeklyMixChart(filteredActivities, dataType);

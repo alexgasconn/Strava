@@ -12,6 +12,11 @@
 IN PROGRESS
 🟡🚨a dashboard, surt AthleteCount 1 quan he corregut amb martina... raro
 🟡🚨No es veu Monday a una matrix de Athlete
+🟡🚨grafiques de AThlete MALAMENT
+🟡🚨grafica custom de activity ARREGLAR
+🟡🚨grafiques variability de activity rolling mean?
+🟡🚨CARDS de gear mes petites
+🟡⚠️imporve gear.html
 🟡⚠️totes les dates mateix format
 🟡⚠️zonas (Z2) del dashboard de la ma amb las zonas del perfil strava
 🟡🚧esborrar codi inutil 
@@ -19,6 +24,7 @@ IN PROGRESS
 🟡🩹weather api fer servir per predictions 
 🟡🩹weather data -> % de "difficultat ambiental"
 🟡🩹DASHBOARD -> objectius personalitzables (hores, # activities, km...)
+🟡🩹consistency map canvia al posar filre 2026??
 🟡🌈fer gear.html amb mapes i mes stats de cada gear
 
 
@@ -29,13 +35,13 @@ TO DO
 🔴🩹fer mes html, estructura mes clara i dividida
 🔴🩹coords streams in activity -> veure cap a on va el vent -> % de vent a favor, en contra, de costat...
 🔴🩹heatmap general com strava (que tardi una bona estona, pillar streams de coords de cada activitat...)
-🔴🩹activity -> poder elegir el rolling mean dels streams!
 🔴🩹wrapped -> exportar captura pels fans 
 🔴🩹trail/road shoes in gears
+🔴🩹fix bike type in gears
 🔴🚧text de alerta si no hi ha dades de HR
+🔴🚧activity->afegir potencia, i potser algun stream mes
 🔴🚧time zones???
 🔴🚧miles or km...
-🔴🌈guardar acitivitats, no fer get de totes cada cop...
 🔴🌈MENU ocult
 🔴🌈reestructurar tot, molts mes .html, per cada pagina
 🔴🌈idiomes
@@ -63,6 +69,8 @@ DONE
 🟢🚧molts mes logs (a cada grafica?)
 🟢🚧arreglar ratxes (streaks)
 🟢🚧elegir tipo de dates a Athlete Tab
+🟢🩹activity -> poder elegir el rolling mean dels streams!
+🟢🌈guardar acitivitats, no fer get de totes cada cop... (1h)
 
 
 
