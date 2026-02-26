@@ -1242,7 +1242,7 @@ function renderYearHourMatrix(runs, dataType = 'count') {
 
 
 
-let interactiveMatrixChart;
+// let interactiveMatrixChart;
 
 function renderInteractiveMatrix(runs, dataType = 'count') {
     const ctx = document.getElementById("interactiveMatrix");
