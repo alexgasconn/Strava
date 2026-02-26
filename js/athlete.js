@@ -1428,7 +1428,7 @@ export function renderTrainingZones(zones) {
     contentDiv.innerHTML = html || '<p>No custom training zones configured in your Strava profile.</p>';
 }
 
-let uiCharts = {}; // Almacén de gráficos para la pestaña "Athlete" para no interferir con los del dashboard principal
+// let uiCharts = {}; // Almacén de gráficos para la pestaña "Athlete" para no interferir con los del dashboard principal
 function createUiChart(canvasId, config) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) {
