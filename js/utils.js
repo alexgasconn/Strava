@@ -90,40 +90,48 @@ export function formatPace(seconds, km) {
     return `${min}:${secRest.toString().padStart(2, '0')} /km`;
 }
 
-export function formatPaceFromSpeed(speedInMps) {
-    if (!speedInMps || speedInMps === 0) return '-';
-    const paceInSecPerKm = 1000 / speedInMps;
-    let min = Math.floor(paceInSecPerKm / 60);
-    let sec = Math.round(paceInSecPerKm % 60);
-    if (sec === 60) {
-        min += 1;
-        sec = 0;
-    }
-    return `${min}:${sec.toString().padStart(2, '0')}`;
-}
-
 export function calculateEnvironmentalDifficulty(activity) {
-    // Placeholder: calculate based on weather data
-    // Assume activity has weather: { temp: number, humidity: number, wind_speed: number }
     const weather = activity.weather || {};
     let difficulty = 0;
 
-    if (weather.temp !== undefined) {
-        if (weather.temp > 30) difficulty += 30;
-        else if (weather.temp > 25) difficulty += 20;
-        else if (weather.temp < 5) difficulty += 15;
-        else if (weather.temp < 0) difficulty += 25;
+    // Temperature: quadratic deviation from ideal 15°C (up to 40pts)
+    const temp = weather.temperature ?? weather.temp;
+    if (temp !== undefined) {
+        const deviation = Math.abs(temp - 15);
+        difficulty += Math.min(40, (deviation * deviation) / 15.625);
     }
 
-    if (weather.humidity !== undefined && weather.humidity > 80) {
-        difficulty += 10;
+    // Humidity: linear penalty >50% with heat interaction (up to 25pts)
+    const humidity = weather.humidity;
+    if (humidity !== undefined && humidity > 50) {
+        let humidityScore = ((humidity - 50) / 50) * 15;
+        // Heat-humidity interaction: extra penalty when hot and humid
+        if (temp !== undefined && temp > 20) {
+            humidityScore += ((temp - 20) / 20) * ((humidity - 50) / 50) * 10;
+        }
+        difficulty += Math.min(25, humidityScore);
     }
 
-    if (weather.wind_speed !== undefined && weather.wind_speed > 10) {
-        difficulty += 15;
+    // Wind: linear scale 0-30 km/h (up to 20pts)
+    const wind = weather.wind_speed;
+    if (wind !== undefined) {
+        difficulty += Math.min(20, (wind / 30) * 20);
     }
 
-    return Math.min(difficulty, 100); // Max 100%
+    // Precipitation: direct mapping (up to 10pts)
+    const precip = weather.precipitation;
+    if (precip !== undefined) {
+        difficulty += Math.min(10, precip * 2);
+    }
+
+    // Pressure: deviation from 1013 hPa (up to 5pts)
+    const pressure = weather.pressure;
+    if (pressure !== undefined) {
+        const pressureDeviation = Math.abs(pressure - 1013);
+        difficulty += Math.min(5, (pressureDeviation / 40) * 5);
+    }
+
+    return Math.min(Math.round(difficulty), 100);
 }
 
 export function formatDate(date) {

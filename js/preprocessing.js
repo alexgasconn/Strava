@@ -281,10 +281,21 @@ function assignMetrics(activities, dates, pmc, injuryRisk) {
 // ===================================================================
 // 8. Pipeline principal
 // ===================================================================
-export async function preprocessActivities(activities, userProfile = {}) {
+export async function preprocessActivities(activities, userProfile = {}, zones = null, gears = null) {
     if (!activities?.length) return [];
 
-    const maxHr = userProfile.max_hr || MAX_HR_DEFAULT;
+    // Derive maxHR from zones if available (last zone's max), fallback to profile, then default
+    let maxHr = MAX_HR_DEFAULT;
+    if (zones?.heart_rate?.zones) {
+        const hrZones = zones.heart_rate.zones;
+        const lastZoneMax = hrZones[hrZones.length - 1]?.max;
+        if (lastZoneMax && lastZoneMax > 0 && lastZoneMax !== -1) {
+            maxHr = lastZoneMax;
+        }
+    }
+    if (userProfile.max_hr) {
+        maxHr = userProfile.max_hr;
+    }
 
     activities.forEach(a => calculateTSS(a, maxHr));
 

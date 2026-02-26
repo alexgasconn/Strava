@@ -14,18 +14,15 @@ let interactiveMatrixChart;
 export function renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo, sportFilter = 'all', dataType = 'time') {
     // Public entry to render the Athlete tab. Keeps signature used by `main.js`.
     currentDataType = dataType;
-    console.log("🎽 renderAthleteTab: Initializing Athlete Tab with sportFilter:", sportFilter);
 
     // Ensure filters UI exists (will insert only once)
     addAthleteFilters();
 
     // Apply filtering using the unified helper
     const filteredActivities = filterActivities(allActivities, dateFilterFrom, dateFilterTo, sportFilter);
-    console.log("🎽 renderAthleteTab: Filtered activities:", filteredActivities.length);
 
     // Runs subset for run-specific components
     const runs = filteredActivities.filter(a => a.type && a.type.includes('Run'));
-    console.log("🎽 renderAthleteTab: Runs in filtered activities:", runs.length);
 
     const athleteData = JSON.parse(localStorage.getItem('strava_athlete_data'));
     const zonesData = JSON.parse(localStorage.getItem('strava_training_zones'));
@@ -51,7 +48,6 @@ export function renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo, sp
     renderYearWeekdayMatrix(filteredActivities, dataType);
     renderInteractiveMatrix(filteredActivities, dataType);
 
-    console.log("🎽 renderAthleteTab: Athlete tab rendered");
 }
 function renderAllTimeStats(activities) {
     const container = document.getElementById('all-time-stats-cards');
@@ -75,7 +71,7 @@ function renderRecordStats(runs) {
 
     const fastestRun = [...runs].filter(r => r.distance > 1000).sort((a, b) => a.average_speed - b.average_speed).reverse()[0];
     const paceMin = fastestRun.average_speed > 0 ? (1000 / fastestRun.average_speed) / 60 : 0;
-    const paceStr = paceMin > 0 ? `${Math.floor(paceMin)}:${Math.round((paceMin % 1) * 60).toString().padStart(2, '0')}` : '-';
+    const paceStr = paceMin > 0 ? utils.paceDecimalToTime(paceMin) : '-';
 
     const mostElev = [...runs].sort((a, b) => b.total_elevation_gain - a.total_elevation_gain)[0];
 
@@ -112,9 +108,7 @@ function renderRecordStats(runs) {
     const avgPaceMin = runs.length
         ? (runs.reduce((s, r) => s + (r.average_speed > 0 ? (1000 / r.average_speed) / 60 : 0), 0) / runs.length)
         : 0;
-    const avgPaceStr = avgPaceMin > 0
-        ? `${Math.floor(avgPaceMin)}:${Math.round((avgPaceMin % 1) * 60).toString().padStart(2, '0')}`
-        : '-';
+    const avgPaceStr = avgPaceMin > 0 ? utils.paceDecimalToTime(avgPaceMin) : '-';
 
     // Solo vs Group workouts
     const soloCount = runs.filter(r => Number(r.athlete_count) === 1).length;
@@ -1349,8 +1343,19 @@ function renderInteractiveMatrix(runs, dataType = 'count') {
         });
     }
 
-    document.getElementById("matrix-x-axis").addEventListener("change", updateMatrix);
-    document.getElementById("matrix-y-axis").addEventListener("change", updateMatrix);
+    // Clone select elements to remove stacked event listeners
+    const xSelect = document.getElementById("matrix-x-axis");
+    const ySelect = document.getElementById("matrix-y-axis");
+    if (xSelect) {
+        const newX = xSelect.cloneNode(true);
+        xSelect.parentNode.replaceChild(newX, xSelect);
+        newX.addEventListener("change", updateMatrix);
+    }
+    if (ySelect) {
+        const newY = ySelect.cloneNode(true);
+        ySelect.parentNode.replaceChild(newY, ySelect);
+        newY.addEventListener("change", updateMatrix);
+    }
 
     updateMatrix(); // Inicial
 }

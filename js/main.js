@@ -196,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('strava_data_timestamp', Date.now().toString());
             }
 
-            const preprocessed = await preprocessActivities(activities, athlete);
+            const preprocessed = await preprocessActivities(activities, athlete, zones, gears);
             allActivities = preprocessed;
 
             if (!cacheValid) {

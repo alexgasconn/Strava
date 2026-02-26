@@ -111,6 +111,7 @@
             <option value="pace">Pace (min/km)</option>
             <option value="altitude">Altitude (m)</option>
             <option value="cadence">Cadence (spm)</option>
+            <option value="watts">Power (W)</option>
           </select>
           <label style="display: block; margin-top: 10px; margin-bottom: 8px; font-weight: bold;">Chart Type:</label>
           <select id="dynamic-chart-primary-type" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.95em;">
@@ -136,6 +137,7 @@
             <option value="pace">Pace (min/km)</option>
             <option value="altitude">Altitude (m)</option>
             <option value="cadence">Cadence (spm)</option>
+            <option value="watts">Power (W)</option>
           </select>
           <label style="display: block; margin-top: 10px; margin-bottom: 8px; font-weight: bold;">Chart Type:</label>
           <select id="dynamic-chart-secondary-type" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.95em;">
@@ -162,6 +164,7 @@
           <option value="pace">Pace (min/km)</option>
           <option value="altitude">Altitude (m)</option>
           <option value="cadence">Cadence (spm)</option>
+          <option value="watts">Power (W)</option>
         </select>
         <p style="margin-top: 8px; font-size: 0.85em; color: #666;">Background shows a faded version of another stream for visual reference</p>
       </div>
@@ -189,6 +192,9 @@
       </div>
       <div class="chart-container">
         <canvas id="chart-cadence-distance"></canvas>
+      </div>
+      <div class="chart-container">
+        <canvas id="chart-watts-distance"></canvas>
       </div>
     </div>
 

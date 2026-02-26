@@ -3,7 +3,6 @@
 import * as utils from './utils.js';
 
 export function renderRunsTab(allActivities) {
-    console.log("Initializing Runs Tab...");
 
     // Filtra solo las actividades de tipo 'Run'
     const runs = allActivities.filter(a => a.type && a.type.includes('Run'));
@@ -147,7 +146,7 @@ export function renderRunsTab(allActivities) {
         }
 
         const columns = [
-            { key: 'start_date_local', label: 'Date', format: (val) => val ? new Date(val).toLocaleDateString() : '' },
+            { key: 'start_date_local', label: 'Date', format: (val) => val ? utils.formatDate(new Date(val)) : '' },
             { key: 'name', label: 'Race Name', format: (val) => val || '' },
             { key: 'distance', label: 'Distance', format: (val) => typeof val === 'number' ? (val / 1000).toFixed(2) + ' km' : '' },
             { key: 'moving_time', label: 'Time', format: (val) => typeof val === 'number' ? new Date(val * 1000).toISOString().substr(11, 8) : '' },
@@ -288,7 +287,7 @@ export function renderRunsTab(allActivities) {
                             </p>
                             <p style="font-size:1em; color:#333; margin:0;">Distance: ${run.actual_run_km.toFixed(2)} km</p>
                             <p style="font-size:0.9em; color:#555; margin:0;">Pace: ${utils.formatPace(run.time_at_target, run.actual_run_km)}</p>
-                            <p style="font-size:0.8em; color:#777; margin:0.2em 0;">${new Date(run.start_date_local || run.start_date).toLocaleDateString()}</p>
+                            <p style="font-size:0.8em; color:#777; margin:0.2em 0;">${utils.formatDate(new Date(run.start_date_local || run.start_date))}</p>
                             <a href="html/activity.html?id=${run.id}" target="_blank" style="font-size:0.8em; color:#0077cc; text-decoration:none;">
                                 View activity →
                             </a>
@@ -302,7 +301,6 @@ export function renderRunsTab(allActivities) {
 
     // Tu función original para renderizar la tabla de todas las carreras
     function renderAllRunsTable(allRuns) {
-        console.log(allRuns);
         const container = document.getElementById('all-runs-table');
         if (!container) return;
 
@@ -313,7 +311,7 @@ export function renderRunsTab(allActivities) {
 
         // Improved columns for better readability
         const columns = [
-            { key: 'start_date_local', label: 'Date', format: (val) => val ? new Date(val).toLocaleDateString() : '' },
+            { key: 'start_date_local', label: 'Date', format: (val) => val ? utils.formatDate(new Date(val)) : '' },
             { key: 'name', label: 'Name', format: (val) => val || '' },
             { key: 'distance', label: 'Distance', format: (val) => typeof val === 'number' ? (val / 1000).toFixed(2) + ' km' : '' },
             { key: 'moving_time', label: 'Time', format: (val) => typeof val === 'number' ? new Date(val * 1000).toISOString().substr(11, 8) : '' },

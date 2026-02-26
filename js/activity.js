@@ -52,6 +52,7 @@ let dynamicChartData = {
     pace: [],
     altitude: [],
     cadence: [],
+    watts: [],
 };
 
 // Original unsmoothed dynamic chart data (for secondary and background stats)
@@ -61,6 +62,7 @@ let originalDynamicChartData = {
     pace: [],
     altitude: [],
     cadence: [],
+    watts: [],
 };
 
 // Chart color mapping
@@ -69,6 +71,7 @@ const chartColors = {
     pace: { primary: 'rgb(252, 82, 0)', secondary: 'rgba(252, 82, 0, 0.3)' },
     altitude: { primary: 'rgb(136, 136, 136)', secondary: 'rgba(136, 136, 136, 0.3)' },
     cadence: { primary: 'rgb(0, 116, 217)', secondary: 'rgba(0, 116, 217, 0.3)' },
+    watts: { primary: 'rgb(155, 89, 182)', secondary: 'rgba(155, 89, 182, 0.3)' },
 };
 
 // =====================================================
@@ -84,6 +87,29 @@ function formatTime(seconds) {
     const m = Math.floor((seconds % 3600) / 60);
     const s = Math.round(seconds % 60);
     return `${h > 0 ? h + ':' : ''}${m.toString().padStart(h > 0 ? 2 : 1, '0')}:${s.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Formats date as DD/MM/YYYY
+ */
+function formatDate(date) {
+    if (!(date instanceof Date)) date = new Date(date);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+}
+
+/**
+ * Converts decimal pace (e.g. 5.5) to MM:SS string (e.g. "5:30")
+ */
+function paceDecimalToTime(paceDecimal) {
+    if (isNaN(paceDecimal) || paceDecimal <= 0) return "–";
+    const minutes = Math.floor(paceDecimal);
+    const seconds = Math.round((paceDecimal - minutes) * 60);
+    const adjMinutes = seconds === 60 ? minutes + 1 : minutes;
+    const adjSeconds = seconds === 60 ? 0 : seconds;
+    return `${adjMinutes}:${adjSeconds.toString().padStart(2, "0")}`;
 }
 
 /**
@@ -159,10 +185,10 @@ function rollingMean(arr, windowSize = 25) {
 /**
  * Calculates coefficient of variation (CV) for data series
  */
-function calculateVariability(data, applySmoothing = false) {
+function calculateVariability(data, smoothingWindow = 0) {
     let processedData = data;
-    if (applySmoothing) {
-        processedData = rollingMean(data, 150);
+    if (smoothingWindow > 0) {
+        processedData = rollingMean(data, smoothingWindow);
     }
 
     if (!processedData || processedData.length < 2) return '-';
@@ -243,10 +269,11 @@ function applySmoothingToStreams(streams, smoothingLevel) {
         altitude: Math.max(1, Math.round(CONFIG.WINDOW_SIZES.altitude * smoothingFactor)),
         heartrate: Math.max(1, Math.round(CONFIG.WINDOW_SIZES.heartrate * smoothingFactor)),
         cadence: Math.max(1, Math.round(CONFIG.WINDOW_SIZES.cadence * smoothingFactor)),
+        watts: Math.max(1, Math.round(60 * smoothingFactor)),
     };
-    
+
     // Apply rolling mean to streams
-    ['heartrate', 'altitude', 'cadence'].forEach(key => {
+    ['heartrate', 'altitude', 'cadence', 'watts'].forEach(key => {
         if (smoothed[key] && Array.isArray(smoothed[key].data)) {
             smoothed[key].data = rollingMean(smoothed[key].data, windowSizes[key]);
         }
@@ -322,7 +349,13 @@ function initDynamicChartControls() {
     };
 
     primaryDataSelect.addEventListener('change', updateDynamicChart);
-    secondaryDataSelect.addEventListener('change', updateDynamicChart);
+    secondaryDataSelect.addEventListener('change', () => {
+        // Auto-check secondary show checkbox when secondary data is selected
+        if (secondaryDataSelect.value) {
+            secondaryShowCheckbox.checked = true;
+        }
+        updateDynamicChart();
+    });
     primaryTypeSelect.addEventListener('change', updateDynamicChart);
     secondaryTypeSelect.addEventListener('change', updateDynamicChart);
     backgroundStatSelect.addEventListener('change', updateDynamicChart);
@@ -375,12 +408,12 @@ function renderDynamicChart(primaryData, primaryType, primaryShow, secondaryData
         };
     }
 
-    // Secondary dataset (uses original unsmoothed data)
+    // Secondary dataset (uses smoothed data)
     if (secondaryShow && secondaryData && secondaryData !== primaryData) {
         const secondaryColor = chartColors[secondaryData];
         datasets.push({
             label: getDataLabel(secondaryData),
-            data: originalDynamicChartData[secondaryData],
+            data: dynamicChartData[secondaryData],
             borderColor: secondaryColor.primary,
             backgroundColor: secondaryColor.secondary,
             borderWidth: 2,
@@ -463,6 +496,7 @@ function getDataLabel(dataType) {
         pace: 'Pace (min/km)',
         altitude: 'Altitude (m)',
         cadence: 'Cadence (spm)',
+        watts: 'Power (W)',
     };
     return labels[dataType] || dataType;
 }
@@ -559,6 +593,7 @@ function populateDynamicChartData(streams, isOriginal = false) {
         heartrate: streams.heartrate?.data || [],
         altitude: streams.altitude?.data || [],
         cadence: streams.cadence?.data || [],
+        watts: streams.watts?.data || [],
         pace: [],
     };
 
@@ -577,6 +612,13 @@ function populateDynamicChartData(streams, isOriginal = false) {
         }
         // Prepend null to match distance array length
         data.pace = [null, ...pace];
+
+        // Apply rolling mean smoothing to pace when not original
+        if (!isOriginal) {
+            const smoothingFactor = currentSmoothingLevel / 100;
+            const paceWindow = Math.max(1, Math.round(CONFIG.WINDOW_SIZES.pace * smoothingFactor));
+            data.pace = rollingMean(data.pace, paceWindow);
+        }
     }
 
     // Apply cadence doubling for runs
@@ -635,7 +677,7 @@ async function fetchActivityDetails(activityId, authPayload) {
  * Fetches activity stream data (distance, time, HR, altitude, cadence)
  */
 async function fetchActivityStreams(activityId, authPayload) {
-    const streamTypes = 'distance,time,heartrate,altitude,cadence';
+    const streamTypes = 'distance,time,heartrate,altitude,cadence,watts';
     const result = await fetchFromApi(`/api/strava-streams?id=${activityId}&type=${streamTypes}`, authPayload);
     return result.streams;
 }
@@ -652,7 +694,7 @@ function renderActivityInfo(activity) {
 
     const name = activity.name;
     const description = activity.description || '';
-    const date = new Date(activity.start_date_local).toLocaleString();
+    const date = formatDate(new Date(activity.start_date_local));
     const typeLabels = ['Workout', 'Race', 'Long Run', 'Workout'];
     const activityType = activity.workout_type !== undefined 
         ? typeLabels[activity.workout_type] || 'Other' 
@@ -696,6 +738,7 @@ function renderActivityStats(activity) {
     const calories = activity.calories !== undefined ? activity.calories : '-';
     const hrAvg = activity.average_heartrate ? Math.round(activity.average_heartrate) : '-';
     const hrMax = activity.max_heartrate ? Math.round(activity.max_heartrate) : '-';
+    const avgPower = activity.average_watts ? Math.round(activity.average_watts) : null;
 
     DOM.stats.innerHTML = `
         <h3>Stats</h3>
@@ -708,6 +751,7 @@ function renderActivityStats(activity) {
             <li><b>Calories:</b> ${calories}</li>
             <li><b>HR Avg:</b> ${hrAvg} bpm</li>
             <li><b>HR Max:</b> ${hrMax} bpm</li>
+            ${avgPower ? `<li><b>Avg Power:</b> ${avgPower} W</li>` : ''}
         </ul>
     `;
 }
@@ -870,6 +914,7 @@ function renderStreamCharts(streams, activity, smoothingLevel = 100) {
         pace: Math.max(1, Math.round(CONFIG.WINDOW_SIZES.pace * smoothingFactor)),
         heartrate: Math.max(1, Math.round(CONFIG.WINDOW_SIZES.heartrate * smoothingFactor)),
         cadence: Math.max(1, Math.round(CONFIG.WINDOW_SIZES.cadence * smoothingFactor)),
+        watts: Math.max(1, Math.round(60 * smoothingFactor)),
     };
 
     // Helper function to create individual stream charts
@@ -961,6 +1006,13 @@ function renderStreamCharts(streams, activity, smoothingLevel = 100) {
         const cadenceData = activity.type === 'Run' ? cadence.data.map(c => c * 2) : cadence.data;
         const smoothCadence = rollingMean(cadenceData, windowSizes.cadence);
         createStreamChart('chart-cadence-distance', 'Cadencia (spm)', smoothCadence, '#0074D9');
+    }
+
+    // Power (watts) chart
+    const watts = streams.watts;
+    if (watts && watts.data && watts.data.some(w => w > 0)) {
+        const smoothWatts = rollingMean(watts.data, windowSizes.watts);
+        createStreamChart('chart-watts-distance', 'Power (W)', smoothWatts, '#9b59b6');
     }
 }
 
@@ -1525,11 +1577,13 @@ async function main() {
                     paceStream.push(deltaTime / deltaDist);
                 }
             }
-            paceVariabilityStream = calculateVariability(paceStream, true);
+            const smoothingWindowForVariability = Math.max(1, Math.round(150 * (currentSmoothingLevel / 100)));
+            paceVariabilityStream = calculateVariability(paceStream, smoothingWindowForVariability);
         }
 
         if (streamData && streamData.heartrate) {
-            hrVariabilityStream = calculateVariability(streamData.heartrate.data, true);
+            const smoothingWindowForVariability = Math.max(1, Math.round(150 * (currentSmoothingLevel / 100)));
+            hrVariabilityStream = calculateVariability(streamData.heartrate.data, smoothingWindowForVariability);
         }
 
         // Calculate variability metrics from laps
