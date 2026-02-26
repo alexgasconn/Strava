@@ -2,7 +2,6 @@
 import * as utils from './utils.js';
 
 export async function renderWeatherTab(allActivities) {
-    console.log("Initializing Weather Analytics — received", allActivities.length, "activities");
 
 
     const weatherTabContainer = document.getElementById("weather-tab");
@@ -40,7 +39,6 @@ export async function renderWeatherTab(allActivities) {
                 }
             }));
             results.push(...batchResults.filter(Boolean));
-            console.log(`Processed ${results.length}/${runs.length}`);
             sleep(10);
         }
         return results;
@@ -56,7 +54,7 @@ export async function renderWeatherTab(allActivities) {
         const wind = wr.wind_speed;
 
         // Calculate environmental difficulty using utils helper
-        const envDifficulty = utils.calculateEnvironmentalDifficulty({ weather: { temp, humidity: hum, wind_speed: wind } });
+        const envDifficulty = utils.calculateEnvironmentalDifficulty({ weather: { temperature: temp, humidity: hum, wind_speed: wind, precipitation: wr.precipitation, pressure: wr.pressure } });
 
         return {
             temperature: temp,
@@ -623,10 +621,10 @@ function renderCustomScatter(ctx, data, xVar, yVar, pointSize, colorScheme) {
                             if (item) {
                                 const tooltipLines = [
                                     `${item.run_name || 'Unnamed Run'}`,
-                                    `Date: ${new Date(item.run_date).toLocaleDateString()}`,
+                                    `Date: ${utils.formatDate(new Date(item.run_date))}`,
                                     `${xlabel}: ${item[xVar]?.toFixed(item[xVar] < 10 ? 2 : 1) ?? 'N/A'}`, // Formato dinámico
                                     `${ylabel}: ${item[yVar]?.toFixed(item[yVar] < 10 ? 2 : 1) ?? 'N/A'}`, // Formato dinámico
-                                    `Pace: ${item.pace?.toFixed(2) ?? 'N/A'} min/km`,
+                                    `Pace: ${item.pace ? utils.paceDecimalToTime(item.pace) : 'N/A'} /km`,
                                     `Distance: ${item.distance?.toFixed(2) ?? 'N/A'} km`,
                                     `Time: ${item.moving_time?.toFixed(0) ?? 'N/A'} min`,
                                     `Temp: ${item.temperature?.toFixed(1) ?? 'N/A'}°C`,
@@ -772,9 +770,9 @@ function renderRunsList(tbodyElement, weatherResults) {
 
         const row = tbodyElement.insertRow();
         row.insertCell().textContent = run.name || "Unnamed";
-        row.insertCell().textContent = new Date(run.start_date_local).toLocaleDateString();
+        row.insertCell().textContent = utils.formatDate(new Date(run.start_date_local));
         row.insertCell().textContent = ((run.distance || 0) / 1000).toFixed(2);
-        row.insertCell().textContent = runPaceMinPerKm(run).toFixed(2);
+        row.insertCell().textContent = utils.paceDecimalToTime(runPaceMinPerKm(run));
         row.insertCell().textContent = `${temperature?.toFixed(1) ?? "–"}°C`;
         row.insertCell().textContent = `${humidity?.toFixed(0) ?? "–"}%`;
         row.insertCell().textContent = `${wind_speed?.toFixed(1) ?? "–"} km/h`;
@@ -793,7 +791,7 @@ function listRuns(arr, prop, unit) {
         .map(
             (r) => {
                 const diff = r.envDifficulty !== undefined ? ` — difficulty: ${r.envDifficulty}%` : '';
-                return `<li>${new Date(r.run.start_date_local).toLocaleDateString()} — ${r[prop].toFixed(1)}${unit} (${r.weather_text})${diff}</li>`;
+                return `<li>${utils.formatDate(new Date(r.run.start_date_local))} — ${r[prop].toFixed(1)}${unit} (${r.weather_text})${diff}</li>`;
             }
         )
         .join("")}</ul>`;
@@ -913,7 +911,7 @@ function renderWeatherPredictor(weatherData, currentWeatherData) {
 
         // Construir predicción
         let prediction = `
-            <h4>Predicted Weather for ${targetDate.toLocaleDateString()}</h4>
+            <h4>Predicted Weather for ${utils.formatDate(targetDate)}</h4>
             <p>Based on ${combinedData.length} historical & recent data points (±10 days from past years).</p>
             <ul>
                 <li>Temperature: ${avgTemp.toFixed(1)}°C</li>

@@ -16,12 +16,21 @@
 
 <body>
     <div class="container">
+        <div style="margin-bottom: 1rem;">
+            <button onclick="window.history.back()" style="padding: 8px 16px; border: 1px solid #ddd; border-radius: 6px; background: #f8f9fa; cursor: pointer; font-size: 0.9rem;">← Back</button>
+        </div>
         <h1>Gear Details</h1>
 
         <div id="gear-details-row" class="activity-details-row">
             <div id="gear-info" class="activity-details-col"></div>
             <div id="gear-stats" class="activity-details-col"></div>
             <div id="gear-advanced" class="activity-details-col"></div>
+        </div>
+
+        <!-- Gear Durability / Health -->
+        <div id="gear-health-section" class="data-section">
+            <h3>Gear Health</h3>
+            <div id="gear-health-content"></div>
         </div>
 
         <div class="side-by-side-container">
@@ -36,6 +45,22 @@
                 <h3>Usage Over Time</h3>
                 <div class="chart-container-inner">
                     <canvas id="gear-usage-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pace Evolution & Cumulative Elevation Charts -->
+        <div class="side-by-side-container">
+            <div id="gear-pace-section" class="data-section">
+                <h3>Pace Evolution</h3>
+                <div class="chart-container-inner">
+                    <canvas id="gear-pace-chart"></canvas>
+                </div>
+            </div>
+            <div id="gear-elevation-section" class="data-section">
+                <h3>Cumulative Elevation</h3>
+                <div class="chart-container-inner">
+                    <canvas id="gear-elevation-chart"></canvas>
                 </div>
             </div>
         </div>

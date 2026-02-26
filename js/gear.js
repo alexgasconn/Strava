@@ -15,7 +15,6 @@ function getGears() {
 // ============================================================================
 
 export function renderGearTab(allActivities) {
-    console.log("🎽 Initializing Gear Tab...");
 
     const runs = allActivities.filter(a =>
         a.type && a.gear_id && a.gear_id.trim() !== ''
@@ -85,6 +84,17 @@ function updateGearDisplay(runs, filter) {
 // GEAR METRICS CALCULATION
 // ============================================================================
 
+function bikeFrameTypeLabel(frameType) {
+    const map = { 1: 'MTB', 2: 'Cross', 3: 'Road', 4: 'Time Trial', 5: 'Gravel' };
+    return map[frameType] || null;
+}
+
+function classifyShoeType(runs) {
+    if (!runs || runs.length === 0) return 'Running Shoe';
+    const trailCount = runs.filter(r => r.type === 'TrailRun' || r.sport_type === 'TrailRun').length;
+    return (trailCount / runs.length) > 0.3 ? 'Trail Running Shoe' : 'Road Running Shoe';
+}
+
 function calculateGearMetrics(runs) {
     const gearMetrics = new Map();
 
@@ -100,6 +110,7 @@ function calculateGearMetrics(runs) {
                 totalDistance: 0,
                 totalMovingTime: 0,
                 totalElevationGain: 0,
+                trailRunCount: 0,
                 runs: []
             });
         }
@@ -109,6 +120,9 @@ function calculateGearMetrics(runs) {
         metrics.totalDistance += run.distance || 0;
         metrics.totalMovingTime += run.moving_time || 0;
         metrics.totalElevationGain += run.total_elevation_gain || 0;
+        if (run.type === 'TrailRun' || run.sport_type === 'TrailRun') {
+            metrics.trailRunCount++;
+        }
 
         const runDate = new Date(run.start_date_local);
         metrics.firstUse = runDate < metrics.firstUse ? runDate : metrics.firstUse;
@@ -150,7 +164,6 @@ async function renderGearSection(runs, filter = 'all') {
     }
 
     const gearMetrics = calculateGearMetrics(runs);
-    console.log("🔧 renderGearSection: gearMetrics keys:", Array.from(gearMetrics.keys()));
 
     let gearIds = Array.from(gearMetrics.keys());
 
@@ -163,7 +176,6 @@ async function renderGearSection(runs, filter = 'all') {
 
     try {
         const allGears = getGears();
-        console.log("🔧 renderGearSection: allGears from localStorage:", allGears.length, allGears.map(g => ({ id: g.id, name: g.name })));
 
         // Process gear details to ensure type is set correctly
         const processedGears = allGears.map(gear => {
@@ -191,21 +203,10 @@ async function renderGearSection(runs, filter = 'all') {
             metrics: gearMetrics.get(gear.id) || {}
         }));
 
-        console.log("🔧 renderGearSection: combinedGearData before filter:", combinedGearData.length, combinedGearData.map(d => ({
-            id: d.gear.id,
-            name: d.gear.name,
-            type: d.gear.type,
-            hasMetrics: !!d.metrics.numUses,
-            distance: d.gear.distance
-        })));
-
         // Filter by type
         if (filter !== 'all') {
             combinedGearData = combinedGearData.filter(item => item.gear.type === filter);
-            console.log("🔧 renderGearSection: combinedGearData after type filter:", combinedGearData.length);
         }
-
-        console.log("🔧 renderGearSection: final combinedGearData:", combinedGearData.length);
         renderGearCards(combinedGearData);
     } catch (error) {
         console.error("❌ Failed to fetch gear details:", error);
@@ -244,7 +245,6 @@ function processGearDetails(results) {
 
         gear.frame_category = frameTypeMap[gear.frame_type] || 'N/A';
         gearDetailsMap.set(gear.id, gear);
-        console.log(gearDetailsMap);
     });
 
     return gearDetailsMap;
@@ -309,7 +309,7 @@ function createGearCard(data, isEditMode) {
                 <div class="gear-icon">${gear.type === 'bike' ? '🚴' : '👟'}</div>
                 <div class="gear-title">
                     <h4>${gear.name || `${gear.brand_name} ${gear.model_name}`}</h4>
-                    <p class="gear-category">${gear.type === 'bike' ? gear.frame_category : 'Running Shoe'}</p>
+                    <p class="gear-category">${gear.type === 'bike' ? (bikeFrameTypeLabel(gear.frame_type) || gear.frame_category || 'Bike') : classifyShoeType(metrics.runs)}</p>
                 </div>
             </div>
             
@@ -846,8 +846,11 @@ export async function renderGearDetailPage(gearId) {
     renderGearInfo(gear, gearActivities);
     renderGearStats(gear, gearActivities);
     renderGearAdvanced(gear, gearActivities);
+    renderGearHealth(gear, gearActivities);
     renderGearMap(gearActivities);
     renderGearUsageChart(gearActivities);
+    renderGearPaceEvolutionChart(gearActivities);
+    renderGearCumulativeElevationChart(gearActivities);
     renderGearActivitiesList(gearActivities);
 }
 
@@ -923,11 +926,11 @@ function renderGearStats(gear, activities) {
                 <div class="stat-label">Avg Pace</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value">${firstUse.toLocaleDateString()}</div>
+                <div class="stat-value">${formatDate(firstUse)}</div>
                 <div class="stat-label">First Use</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value">${lastUse.toLocaleDateString()}</div>
+                <div class="stat-value">${formatDate(lastUse)}</div>
                 <div class="stat-label">Last Use</div>
             </div>
             <div class="stat-card">
@@ -1068,7 +1071,7 @@ function renderGearMap(activities) {
                 fillColor: '#2ECC40',
                 fillOpacity: 0.8,
                 weight: 2
-            }).addTo(map).bindPopup(`<b>Start:</b> ${activity.name}<br>${new Date(activity.start_date_local).toLocaleDateString()}`);
+            }).addTo(map).bindPopup(`<b>Start:</b> ${activity.name}<br>${formatDate(new Date(activity.start_date_local))}`);
 
             bounds.push(startLatLng);
         }
@@ -1081,7 +1084,7 @@ function renderGearMap(activities) {
                 fillColor: '#FF4136',
                 fillOpacity: 0.8,
                 weight: 2
-            }).addTo(map).bindPopup(`<b>Finish:</b> ${activity.name}<br>${(activity.distance / 1000).toFixed(1)} km<br>${new Date(activity.start_date_local).toLocaleDateString()}`);
+            }).addTo(map).bindPopup(`<b>Finish:</b> ${activity.name}<br>${(activity.distance / 1000).toFixed(1)} km<br>${formatDate(new Date(activity.start_date_local))}`);
 
             bounds.push(endLatLng);
         }
@@ -1235,7 +1238,7 @@ function renderGearActivitiesList(activities) {
                     <div class="gear-activity-card" onclick="window.open('activity.html?id=${activity.id}', '_blank')" style="cursor: pointer;">
                         <div class="activity-header">
                             <h4>${activity.name || 'Unnamed Activity'}</h4>
-                            <span class="activity-date">${date.toLocaleDateString()}</span>
+                            <span class="activity-date">${formatDate(date)}</span>
                         </div>
                         <div class="activity-stats">
                             <div class="activity-stat">
@@ -1267,4 +1270,143 @@ function renderGearActivitiesList(activities) {
     }).join('')}
         </div>
     `;
+}
+
+function renderGearHealth(gear, activities) {
+    const container = document.getElementById('gear-health-content');
+    if (!container) return;
+
+    if (activities.length === 0) {
+        container.innerHTML = '<p>No activities to assess gear health.</p>';
+        return;
+    }
+
+    const customData = getCustomData(gear.id);
+    const defaults = getDefaultValues(gear.type || 'unknown');
+    const durationKm = customData.durationKm ?? defaults.durationKm;
+    const price = customData.price ?? defaults.price;
+    const totalKm = activities.reduce((sum, a) => sum + (a.distance || 0), 0) / 1000;
+    const durabilityPercent = Math.min((totalKm / durationKm) * 100, 100);
+    const remainingKm = Math.max(0, durationKm - totalKm);
+    const euroPerKm = (price > 0 && totalKm > 0) ? (price / totalKm).toFixed(2) : '-';
+
+    // Weekly usage rate
+    const firstUse = new Date(Math.min(...activities.map(a => new Date(a.start_date_local))));
+    const lastUse = new Date(Math.max(...activities.map(a => new Date(a.start_date_local))));
+    const weeksUsed = Math.max(1, (lastUse - firstUse) / (1000 * 60 * 60 * 24 * 7));
+    const weeklyKm = totalKm / weeksUsed;
+    const estimatedWeeksLeft = weeklyKm > 0 ? Math.round(remainingKm / weeklyKm) : null;
+
+    const color = durabilityPercent > 90 ? '#ef4444' : durabilityPercent > 75 ? '#f59e0b' : '#10b981';
+
+    container.innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+            <div class="stat-card">
+                <div class="stat-value" style="color: ${color};">${durabilityPercent.toFixed(0)}%</div>
+                <div class="stat-label">Durability Used</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${remainingKm.toFixed(0)} km</div>
+                <div class="stat-label">Remaining Life</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${weeklyKm.toFixed(1)} km</div>
+                <div class="stat-label">Weekly Avg</div>
+            </div>
+            ${estimatedWeeksLeft !== null ? `
+            <div class="stat-card">
+                <div class="stat-value">${estimatedWeeksLeft} wks</div>
+                <div class="stat-label">Est. Weeks Left</div>
+            </div>` : ''}
+            <div class="stat-card">
+                <div class="stat-value">${euroPerKm}</div>
+                <div class="stat-label">€/km</div>
+            </div>
+        </div>
+        <div style="margin-top: 1rem;">
+            <div style="height: 12px; background: #e5e7eb; border-radius: 999px; overflow: hidden;">
+                <div style="width: ${durabilityPercent}%; height: 100%; background: ${color}; border-radius: 999px; transition: width 0.6s;"></div>
+            </div>
+            <small style="display: block; text-align: center; margin-top: 0.5rem; color: #6b7280;">${totalKm.toFixed(0)} / ${durationKm} km lifespan</small>
+        </div>
+    `;
+}
+
+function renderGearPaceEvolutionChart(activities) {
+    const ctx = document.getElementById('gear-pace-chart');
+    if (!ctx || activities.length === 0) return;
+
+    const sorted = activities
+        .filter(a => a.distance > 0 && a.moving_time > 0)
+        .sort((a, b) => new Date(a.start_date_local) - new Date(b.start_date_local));
+
+    if (sorted.length === 0) return;
+
+    const labels = sorted.map(a => formatDate(new Date(a.start_date_local)));
+    const paces = sorted.map(a => (a.moving_time / 60) / (a.distance / 1000));
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Pace (min/km)',
+                data: paces,
+                borderColor: '#FC5200',
+                backgroundColor: 'rgba(252, 82, 0, 0.1)',
+                fill: false,
+                tension: 0.3,
+                pointRadius: 2,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { reverse: true, title: { display: true, text: 'Pace (min/km)' } },
+                x: { display: true, ticks: { maxTicksLimit: 10 } }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+}
+
+function renderGearCumulativeElevationChart(activities) {
+    const ctx = document.getElementById('gear-elevation-chart');
+    if (!ctx || activities.length === 0) return;
+
+    const sorted = activities
+        .filter(a => a.total_elevation_gain != null)
+        .sort((a, b) => new Date(a.start_date_local) - new Date(b.start_date_local));
+
+    if (sorted.length === 0) return;
+
+    const labels = sorted.map(a => formatDate(new Date(a.start_date_local)));
+    let cumulative = 0;
+    const cumulativeData = sorted.map(a => cumulative += (a.total_elevation_gain || 0));
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Cumulative Elevation (m)',
+                data: cumulativeData,
+                borderColor: '#2ECC40',
+                backgroundColor: 'rgba(46, 204, 64, 0.1)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 1,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { title: { display: true, text: 'Elevation (m)' }, beginAtZero: true },
+                x: { display: true, ticks: { maxTicksLimit: 10 } }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
 }

@@ -4,7 +4,6 @@ import * as utils from './utils.js';
 
 // Este archivo es un módulo que exporta la función principal para la pestaña del planner.
 export function renderPlannerTab(allActivities) {
-    console.log("Initializing Planner Tab...");
 
     // --- Referencias a los controles de la UI ---
     const riegelWeightSlider = document.getElementById('riegel-weight');
@@ -20,7 +19,6 @@ export function renderPlannerTab(allActivities) {
 
     // --- Función maestra que se ejecuta para actualizar las predicciones ---
     function updateUI() {
-        console.log("Updating predictions...");
         updatePredictions(runs);
     }
 

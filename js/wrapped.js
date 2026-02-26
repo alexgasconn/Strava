@@ -266,7 +266,6 @@ export async function renderWrappedTab(allActivities, options = {}) {
     }
 
     const coordKeys = Object.keys(uniqueCoords);
-    console.log(`Unique coordinate groups for country resolution: ${coordKeys.length}`);
 
     const concurrency = 5; // Number of parallel geocoding requests
     const chunks = [];
@@ -316,7 +315,6 @@ export async function renderWrappedTab(allActivities, options = {}) {
   }
 
   const countries = await resolveCountries(currentActs);
-  console.log('Resolved Countries:', countries);
 
   // === RENDER COMPONENTS ===
 
@@ -717,7 +715,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
   function renderPersonalBests(pbs) {
     function actSummary(a) {
       if (!a) return 'N/A';
-      const date = new Date(a.start_date).toLocaleDateString();
+      const date = utils.formatDate(new Date(a.start_date));
       const t = (a.type || a.sport || '').toLowerCase();
       const icon = t.includes('run') ? '🏃' : t.includes('ride') || t.includes('bike') ? '🚴' : t.includes('swim') ? '🏊' : '🏅';
       return `
@@ -1048,11 +1046,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
         ? utils.formatPace(Number(a.moving_time), Number(a.distance) / 1000)
         : '—';
 
-      const date = new Date(a.start_date).toLocaleDateString(undefined, {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric'
-      });
+      const date = utils.formatDate(new Date(a.start_date));
 
       return `
                 <tr class="fade-in-up" style="animation-delay: ${Math.min(idx * 0.02, 1)}s">
