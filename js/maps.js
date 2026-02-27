@@ -46,6 +46,9 @@ export function renderMapTab(activities = [], dateFrom = null, dateTo = null) {
     const vizSel = document.getElementById('map-visualization');
     const tilesSel = document.getElementById('map-tiles');
     const densitySlider = document.getElementById('map-heat-intensity');
+    const radiusSlider = document.getElementById('map-heat-radius');
+    const blurSlider = document.getElementById('map-heat-blur');
+    const colorBySportCheckbox = document.getElementById('map-color-by-sport');
     const mapEl = document.getElementById('global-map');
 
     // color palette per activity type when showing all sports
@@ -113,12 +116,12 @@ export function renderMapTab(activities = [], dateFrom = null, dateTo = null) {
         clearLayers();
         const visible = filterActivities();
         const bounds = [];
-
         const view = vizSel?.value || 'routes';
 
         if (view === 'heat') {
-            // collect all coords
             const factor = parseFloat(densitySlider?.value) || 1;
+            const rad = parseInt(radiusSlider?.value, 10) || 25;
+            const blur = parseInt(blurSlider?.value, 10) || 15;
             const heatPoints = [];
             visible.forEach(a => {
                 const coords = parseActivityPolyline(a);
@@ -126,47 +129,42 @@ export function renderMapTab(activities = [], dateFrom = null, dateTo = null) {
                 else if (a.start_latlng && a.start_latlng.length === 2) heatPoints.push([a.start_latlng[0], a.start_latlng[1], 0.5 * factor]);
             });
             if (heatPoints.length) {
-                try { window._stravaHeat = L.heatLayer(heatPoints, { radius: 25, blur: 15, maxZoom: 12 }).addTo(window._stravaMap); } catch (e) { }
+                try { window._stravaHeat = L.heatLayer(heatPoints, { radius: rad, blur: blur, maxZoom: 12 }).addTo(window._stravaMap); } catch (e) { }
             }
+        } else {
+            visible.forEach(a => {
+                const coords = parseActivityPolyline(a);
+                const useColorBySport = colorBySportCheckbox ? colorBySportCheckbox.checked : true;
+                const baseColor = (sportSel?.value && sportSel.value !== 'all')
+                    ? '#e31a1c'
+                    : (useColorBySport ? (typeColors[a.type] || typeColors.Default) : '#e31a1c');
+
+                if (view === 'routes' && coords && coords.length) {
+                    const poly = L.polyline(coords, { color: baseColor, weight: 3, opacity: 0.8, smoothFactor: 1 }).addTo(window._stravaPolylines);
+                    bounds.push(...coords);
+                    poly.activity = a;
+                }
+
+                if (view === 'points' || (view === 'routes' && !coords)) {
+                    if (a.start_latlng && a.start_latlng.length === 2) {
+                        const m = L.circleMarker([a.start_latlng[0], a.start_latlng[1]], { radius: 5, color: baseColor, fillColor: baseColor, fillOpacity: 0.9 });
+                        m.bindPopup(`<strong>${a.name || a.type}</strong><br>${a.start_date_local || ''}`);
+                        m.addTo(window._stravaPoints);
+                        bounds.push([a.start_latlng[0], a.start_latlng[1]]);
+                    }
+                    let end = null;
+                    if (a.end_latlng && a.end_latlng.length === 2) end = a.end_latlng;
+                    else if (coords && coords.length) end = coords[coords.length - 1];
+                    if (end) {
+                        const me = L.circleMarker([end[0], end[1]], { radius: 5, color: baseColor, fillColor: baseColor, fillOpacity: 0.9 });
+                        me.bindPopup(`<strong>End: ${a.name || a.type}</strong><br>${a.start_date_local || ''}`);
+                        me.addTo(window._stravaPoints);
+                        bounds.push([end[0], end[1]]);
+                    }
+                }
+            });
         }
 
-        visible.forEach(a => {
-            const coords = parseActivityPolyline(a);
-            // choose base color: either fixed (when a type is filtered) or by type palette
-            const baseColor = (sportSel?.value && sportSel.value !== 'all')
-                ? '#e31a1c' // if a filter exists, keep single color (red)
-                : (typeColors[a.type] || typeColors.Default);
-
-            // Polylines
-            if (view === 'routes' && coords && coords.length) {
-                const poly = L.polyline(coords, { color: baseColor, weight: 3, opacity: 0.8, smoothFactor: 1 }).addTo(window._stravaPolylines);
-                bounds.push(...coords);
-                poly.activity = a;
-            }
-
-            // Points view or also add start/end for routes
-            if (view === 'points' || (view === 'routes' && !coords)) {
-                if (a.start_latlng && a.start_latlng.length === 2) {
-                    const m = L.circleMarker([a.start_latlng[0], a.start_latlng[1]], { radius: 5, color: baseColor, fillColor: baseColor, fillOpacity: 0.9 });
-                    m.bindPopup(`<strong>${a.name || a.type}</strong><br>${a.start_date_local || ''}`);
-                    m.addTo(window._stravaPoints);
-                    bounds.push([a.start_latlng[0], a.start_latlng[1]]);
-                }
-
-                // end point
-                let end = null;
-                if (a.end_latlng && a.end_latlng.length === 2) end = a.end_latlng;
-                else if (coords && coords.length) end = coords[coords.length - 1];
-                if (end) {
-                    const me = L.circleMarker([end[0], end[1]], { radius: 5, color: baseColor, fillColor: baseColor, fillOpacity: 0.9 });
-                    me.bindPopup(`<strong>End: ${a.name || a.type}</strong><br>${a.start_date_local || ''}`);
-                    me.addTo(window._stravaPoints);
-                    bounds.push([end[0], end[1]]);
-                }
-            }
-        });
-
-        // Fit to bounds if any
         if (bounds.length) {
             try {
                 const bb = L.latLngBounds(bounds);
@@ -189,15 +187,22 @@ export function renderMapTab(activities = [], dateFrom = null, dateTo = null) {
         dateFromInput.value = '';
         dateToInput.value = '';
         sportSel.value = 'all';
-        if (densitySlider) densitySlider.value = '1';
+        if (densitySlider) densitySlider.value = '0.5';
+        if (radiusSlider) radiusSlider.value = '25';
+        if (blurSlider) blurSlider.value = '15';
+        if (colorBySportCheckbox) colorBySportCheckbox.checked = true;
         render();
     });
     vizSel?.addEventListener('change', () => render());
     sportSel?.addEventListener('change', () => render());
     densitySlider?.addEventListener('input', () => render());
+    radiusSlider?.addEventListener('input', () => render());
+    blurSlider?.addEventListener('input', () => render());
+    colorBySportCheckbox?.addEventListener('change', () => render());
 
     // Initial render
     render();
 }
 
 export default { renderMapTab };
+

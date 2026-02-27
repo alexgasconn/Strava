@@ -35,7 +35,6 @@ TO DO
 🔴⚠️[ATHLETE]arreglar custom matix a Athlete (no fa be les bar charts, les ha de fer el grups de 1 km)
 🔴🩹[GENERAL]fer mes html, estructura mes clara i dividida
 🔴🩹[ACTIVITY]coords streams in activity -> veure cap a on va el vent -> % de vent a favor, en contra, de costat...
-🔴🩹[GENERAL]heatmap general com strava (que tardi una bona estona, pillar streams de coords de cada activitat...)
 🔴🩹[WRAPPED]wrapped -> exportar captura pels fans 
 🔴🚧[ACTIVITY]text de alerta si no hi ha dades de HR/cadence, watts, time...
 🔴🚧[GENERAL]time zones???
@@ -95,6 +94,7 @@ DONE
 🟢🩹[GEAR]fix bike type in gears
 🟢🚧activity->afegir potencia, i potser algun stream mes
 🟢🩹trail/road shoes in gears
+🟢🩹[GENERAL]heatmap general com strava
 
 
 
