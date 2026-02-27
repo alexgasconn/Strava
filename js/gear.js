@@ -388,7 +388,7 @@ function createStatsSection(metrics, gear, euroPerKm) {
             <div class="stat-row">
                 <div class="stat-item">
                     <span class="stat-label">Uses</span>
-                    <span class="stat-value">${metrics.numUses || 0}</span>
+                    <span class="stat-value" style="font-size:0.8rem;">${metrics.numUses || 0}</span>
                 </div>
                 <div class="stat-item">
                     <span class="stat-label">€/km</span>
@@ -398,11 +398,11 @@ function createStatsSection(metrics, gear, euroPerKm) {
             <div class="stat-row">
                 <div class="stat-item">
                     <span class="stat-label">Avg Distance</span>
-                    <span class="stat-value">${formatDistance(metrics.avgDistancePerUse || 0, 1)}</span>
+                    <span class="stat-value" style="font-size:0.8rem;">${formatDistance(metrics.avgDistancePerUse || 0, 1)}</span>
                 </div>
                 <div class="stat-item">
                     <span class="stat-label">First Use</span>
-                    <span class="stat-value">${metrics.firstUse ? formatDate(metrics.firstUse) : 'N/A'}</span>
+                    <span class="stat-value" style="font-size:0.8rem;">${metrics.firstUse ? formatDate(metrics.firstUse) : 'N/A'}</span>
                 </div>
             </div>
             <div class="stat-row">
@@ -412,7 +412,7 @@ function createStatsSection(metrics, gear, euroPerKm) {
                 </div>
                 <div class="stat-item">
                     <span class="stat-label">Last Use</span>
-                    <span class="stat-value">${metrics.lastUse ? formatDate(metrics.lastUse) : 'N/A'}</span>
+                    <span class="stat-value" style="font-size:0.8rem;">${metrics.lastUse ? formatDate(metrics.lastUse) : 'N/A'}</span>
                 </div>
             </div>
         </div>
@@ -926,7 +926,7 @@ function renderGearStats(gear, activities) {
                 <div class="stat-label">Total Activities</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value">${totalDistance.toFixed(0)}</div>
+                <div class="stat-value" style="font-size:0.8rem;">${totalDistance.toFixed(0)}</div>
                 <div class="stat-label">Total Distance (km)</div>
             </div>
             <div class="stat-card">
@@ -954,12 +954,11 @@ function renderGearStats(gear, activities) {
                 <div class="stat-label">Avg Pace</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value">${formatDate(firstUse)}</div>
+                <div class="stat-value" style="font-size:0.8rem;">${formatDate(firstUse)}</div>
                 <div class="stat-label">First Use</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value">${formatDate(lastUse)}</div>
-                <div class="stat-label">Last Use</div>
+                <div class="stat-value" style="font-size:0.8rem;">${formatDate(lastUse)}</div>                <div class="stat-label">Last Use</div>
             </div>
             <div class="stat-card">
                 <div class="stat-value">${daysUsed}</div>

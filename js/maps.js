@@ -62,9 +62,19 @@ export function renderMapTab(activities = [], dateFrom = null, dateTo = null) {
         Default: '#888'
     };
 
-    // Populate sport types
+    // Populate sport types and apply defaults
     const types = [...new Set(activities.map(a => a.type).filter(Boolean))].sort();
     sportSel.innerHTML = '<option value="all">All</option>' + types.map(t => `<option value="${t}">${t}</option>`).join('');
+    // default control values
+    sportSel.value = 'all';
+    if (vizSel) vizSel.value = 'heat';
+    if (densitySlider) densitySlider.value = '2';
+    if (radiusSlider) radiusSlider.value = '9';
+    if (blurSlider) blurSlider.value = '14';
+    if (colorBySportCheckbox) colorBySportCheckbox.checked = false;
+    if (dateFromInput) dateFromInput.value = '';
+    if (dateToInput) dateToInput.value = '';
+
 
     // Initialize leaflet map singleton
     if (!window._stravaMap) {
