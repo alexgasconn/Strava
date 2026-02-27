@@ -48,6 +48,17 @@ export function renderMapTab(activities = [], dateFrom = null, dateTo = null) {
     const densitySlider = document.getElementById('map-heat-intensity');
     const mapEl = document.getElementById('global-map');
 
+    // color palette per activity type when showing all sports
+    const typeColors = {
+        Run: '#e31a1c',
+        Ride: '#1f78b4',
+        Swim: '#33a02c',
+        Walk: '#ff7f00',
+        Hike: '#6a3d9a',
+        Row: '#b15928',
+        Default: '#888'
+    };
+
     // Populate sport types
     const types = [...new Set(activities.map(a => a.type).filter(Boolean))].sort();
     sportSel.innerHTML = '<option value="all">All</option>' + types.map(t => `<option value="${t}">${t}</option>`).join('');
@@ -120,10 +131,15 @@ export function renderMapTab(activities = [], dateFrom = null, dateTo = null) {
         }
 
         visible.forEach(a => {
-            // Polylines
             const coords = parseActivityPolyline(a);
+            // choose base color: either fixed (when a type is filtered) or by type palette
+            const baseColor = (sportSel?.value && sportSel.value !== 'all')
+                ? '#e31a1c' // if a filter exists, keep single color (red)
+                : (typeColors[a.type] || typeColors.Default);
+
+            // Polylines
             if (view === 'routes' && coords && coords.length) {
-                const poly = L.polyline(coords, { color: '#e31a1c', weight: 3, opacity: 0.8, smoothFactor: 1 }).addTo(window._stravaPolylines);
+                const poly = L.polyline(coords, { color: baseColor, weight: 3, opacity: 0.8, smoothFactor: 1 }).addTo(window._stravaPolylines);
                 bounds.push(...coords);
                 poly.activity = a;
             }
@@ -131,18 +147,18 @@ export function renderMapTab(activities = [], dateFrom = null, dateTo = null) {
             // Points view or also add start/end for routes
             if (view === 'points' || (view === 'routes' && !coords)) {
                 if (a.start_latlng && a.start_latlng.length === 2) {
-                    const m = L.circleMarker([a.start_latlng[0], a.start_latlng[1]], { radius: 5, color: 'green', fillColor: 'green', fillOpacity: 0.9 });
+                    const m = L.circleMarker([a.start_latlng[0], a.start_latlng[1]], { radius: 5, color: baseColor, fillColor: baseColor, fillOpacity: 0.9 });
                     m.bindPopup(`<strong>${a.name || a.type}</strong><br>${a.start_date_local || ''}`);
                     m.addTo(window._stravaPoints);
                     bounds.push([a.start_latlng[0], a.start_latlng[1]]);
                 }
 
-                // end point: try end_latlng or last point of polyline
+                // end point
                 let end = null;
                 if (a.end_latlng && a.end_latlng.length === 2) end = a.end_latlng;
                 else if (coords && coords.length) end = coords[coords.length - 1];
                 if (end) {
-                    const me = L.circleMarker([end[0], end[1]], { radius: 5, color: 'red', fillColor: 'red', fillOpacity: 0.9 });
+                    const me = L.circleMarker([end[0], end[1]], { radius: 5, color: baseColor, fillColor: baseColor, fillOpacity: 0.9 });
                     me.bindPopup(`<strong>End: ${a.name || a.type}</strong><br>${a.start_date_local || ''}`);
                     me.addTo(window._stravaPoints);
                     bounds.push([end[0], end[1]]);
