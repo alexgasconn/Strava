@@ -3199,19 +3199,19 @@ body {
 }
 
 .stat-icon {
-    font-size: 2.5rem;
+    font-size: 2.3rem;
     margin-bottom: 0.8rem;
 }
 
 .stat-value {
-    font-size: 2.2rem;
+    font-size: 1.2rem;
     font-weight: 700;
     color: #222;
     margin-bottom: 0.4rem;
 }
 
 .stat-label {
-    font-size: 0.95rem;
+    font-size: 0.90rem;
     color: #777;
     text-transform: uppercase;
     letter-spacing: 0.5px;
