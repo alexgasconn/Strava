@@ -13,24 +13,18 @@ IN PROGRESS
 🟡🚨a dashboard, surt AthleteCount 1 quan he corregut amb martina... raro
 🟡🚨No es veu Monday a una matrix de Athlete
 🟡🚨grafiques de AThlete MALAMENT
-🟡🚨grafica custom de activity ARREGLAR
-🟡🚨grafiques variability de activity rolling mean?
-🟡🚨CARDS de gear mes petites
 🟡⚠️imporve gear.html
-🟡⚠️totes les dates mateix format
-🟡⚠️zonas (Z2) del dashboard de la ma amb las zonas del perfil strava
 🟡🚧esborrar codi inutil 
 🟡🚧carregar zonas, profile, gear, weather api... al iniciar app
 🟡🩹weather api fer servir per predictions 
-🟡🩹weather data -> % de "difficultat ambiental"
+🟡🩹weather data -> % de "difficultat ambiental" AFEGIR A LA LLISTA DE RUNS DE WEATHER TAB
 🟡🩹consistency map canvia al posar filre 2026??
-🟡🌈fer gear.html amb mapes i mes stats de cada gear
 🟡⚠️format del pace decimals-> time amb utils.paceDecimalToTime(pace)
 
 
 
 TO DO
-🔴⚠️arreglar custom matix a Athlete
+🔴⚠️arreglar custom matix a Athlete (no fa be les bar charts, les ha de fer el grups de 1 km)
 🔴🩹fer mes html, estructura mes clara i dividida
 🔴🩹coords streams in activity -> veure cap a on va el vent -> % de vent a favor, en contra, de costat...
 🔴🩹heatmap general com strava (que tardi una bona estona, pillar streams de coords de cada activitat...)
@@ -45,12 +39,12 @@ TO DO
 🔴🌈reestructurar tot, molts mes .html, per cada pagina
 🔴🌈idiomes
 🔴🌈versio mobil
-🔴afegir chat IA, 
-🔴afegir algun model ML a predicts
-🔴tenir una base de dades
-🔴calcular be el TSS
+🔴🌈afegir chat IA
+🔴🌈afegir algun model ML a predicts
+🔴🌈tenir una base de dades
+🔴calcular be el TSS, de ALL activities! fer servir duracio i HR. i un multiplicador per esport!! (si hi ha effort, ferlo sevrir (es nomes premium))
 🔴boto de "show all runs" fore de la llista
-🔴el titol "Monthly Distance (Last Year)"
+🔴el titol "Monthly Distance (Last Year)", que sigui "Monthly Distance"
 🔴tamany dades gear cards mes petites
 🔴grarfica de gear "usage over time" es fa gran cap abaix fins inifint, deixarli mida fixa
 🔴ahlete -> "Month vs Hour Heatmap" esta tot marcat, no agafa be les dades
@@ -58,7 +52,8 @@ TO DO
 🔴TSS a TOTES les activitats... fins al dia de avui
 🔴tenir un arxiu de config general (dades metriques/imperials, zona horaria, HR_MAX, edat...)
 🔴mostrar tambe (o no, toggle) les gears "retired"
-🔴weather api en segon pla desde preprocessing....
+🔴reduir tamany lletra dades gear cards
+🔴get weather api en segon pla desde preprocessing.... NO al entrar a weatehr TAB
 
 
 
@@ -86,9 +81,12 @@ DONE
 🟢🩹activity -> poder elegir el rolling mean dels streams!
 🟢🌈guardar acitivitats, no fer get de totes cada cop... (1h)
 🟢🩹DASHBOARD -> objectius personalitzables (hores, # activities, km...)
-
-
-
+🟢⚠️zonas (Z2) del dashboard de la ma amb las zonas del perfil strava
+🟢⚠️totes les dates mateix format
+🟢🚨grafica custom de activity ARREGLAR
+🟢🚨grafiques variability de activity rolling mean?
+🟢🚨CARDS de gear mes petites
+🟢🌈fer gear.html amb mapes i mes stats de cada gear
 
 
 
