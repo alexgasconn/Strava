@@ -119,9 +119,9 @@ export function renderMapTab(activities = [], dateFrom = null, dateTo = null) {
         const view = vizSel?.value || 'routes';
 
         if (view === 'heat') {
-            const factor = parseFloat(densitySlider?.value) || 1;
-            const rad = parseInt(radiusSlider?.value, 10) || 25;
-            const blur = parseInt(blurSlider?.value, 10) || 15;
+            const factor = parseFloat(densitySlider?.value) || 2;
+            const rad = parseInt(radiusSlider?.value, 10) || 9;
+            const blur = parseInt(blurSlider?.value, 10) || 14;
             const heatPoints = [];
             visible.forEach(a => {
                 const coords = parseActivityPolyline(a);
