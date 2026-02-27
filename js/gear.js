@@ -3,6 +3,34 @@
 import { formatDistance, formatPace, formatTime, formatDate } from './utils.js';
 import { fetchGearById } from './api.js';
 
+// polyline decoder helper (copied from activity.js)
+function decodePolyline(str) {
+    let index = 0, lat = 0, lng = 0, coordinates = [];
+    while (index < str.length) {
+        let b, shift = 0, result = 0;
+        do {
+            b = str.charCodeAt(index++) - 63;
+            result |= (b & 0x1f) << shift;
+            shift += 5;
+        } while (b >= 0x20);
+        const dlat = (result & 1) ? ~(result >> 1) : (result >> 1);
+        lat += dlat;
+
+        shift = 0;
+        result = 0;
+        do {
+            b = str.charCodeAt(index++) - 63;
+            result |= (b & 0x1f) << shift;
+            shift += 5;
+        } while (b >= 0x20);
+        const dlng = (result & 1) ? ~(result >> 1) : (result >> 1);
+        lng += dlng;
+
+        coordinates.push([lat / 1e5, lng / 1e5]);
+    }
+    return coordinates;
+}
+
 let gearChartInstance = null;
 let gearGanttChartInstance = null;
 
@@ -1055,40 +1083,34 @@ function renderGearMap(activities) {
     }
 
     const map = L.map('gear-map').setView([40.7128, -74.0060], 10);
-
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
     }).addTo(map);
 
+    const heatPoints = [];
     const bounds = [];
 
-    activities.forEach((activity, index) => {
-        if (activity.start_latlng && activity.start_latlng.length >= 2) {
-            const startLatLng = [activity.start_latlng[0], activity.start_latlng[1]];
-            L.circleMarker(startLatLng, {
-                radius: 6,
-                color: '#2ECC40',
-                fillColor: '#2ECC40',
-                fillOpacity: 0.8,
-                weight: 2
-            }).addTo(map).bindPopup(`<b>Start:</b> ${activity.name}<br>${formatDate(new Date(activity.start_date_local))}`);
-
-            bounds.push(startLatLng);
+    activities.forEach(act => {
+        // decode summary polyline if available
+        let coords = null;
+        if (act.map && (act.map.summary_polyline || act.map.polyline)) {
+            coords = decodePolyline(act.map.summary_polyline || act.map.polyline);
         }
-
-        if (activity.end_latlng && activity.end_latlng.length >= 2) {
-            const endLatLng = [activity.end_latlng[0], activity.end_latlng[1]];
-            L.circleMarker(endLatLng, {
-                radius: 6,
-                color: '#FF4136',
-                fillColor: '#FF4136',
-                fillOpacity: 0.8,
-                weight: 2
-            }).addTo(map).bindPopup(`<b>Finish:</b> ${activity.name}<br>${(activity.distance / 1000).toFixed(1)} km<br>${formatDate(new Date(activity.start_date_local))}`);
-
-            bounds.push(endLatLng);
+        if (coords && coords.length) {
+            coords.forEach(c => heatPoints.push([c[0], c[1], 0.5 * 2])); // factor =2
+            bounds.push(...coords);
+        } else if (act.start_latlng && act.start_latlng.length === 2) {
+            const pt = [act.start_latlng[0], act.start_latlng[1]];
+            heatPoints.push([pt[0], pt[1], 0.5 * 2]);
+            bounds.push(pt);
         }
     });
+
+    if (heatPoints.length) {
+        try {
+            L.heatLayer(heatPoints, { radius: 9, blur: 14, maxZoom: 12 }).addTo(map);
+        } catch (e) { }
+    }
 
     if (bounds.length > 0) {
         map.fitBounds(bounds, { padding: [20, 20] });
@@ -1131,6 +1153,8 @@ function renderGearUsageChart(activities) {
     let cumulativeDistance = 0;
     const cumulativeData = distanceData.map(d => cumulativeDistance += d);
 
+    // constrain canvas height
+    ctx.parentElement.style.height = '250px';
     new Chart(ctx, {
         type: 'line',
         data: {
@@ -1142,8 +1166,8 @@ function renderGearUsageChart(activities) {
                 {
                     label: 'Monthly Distance (km)',
                     data: distanceData,
-                    borderColor: '#FC5200',
-                    backgroundColor: 'rgba(252, 82, 0, 0.1)',
+                    borderColor: '#666',
+                    backgroundColor: 'rgba(100,100,100,0.1)',
                     fill: false,
                     yAxisID: 'y',
                     tension: 0.4
@@ -1151,8 +1175,8 @@ function renderGearUsageChart(activities) {
                 {
                     label: 'Cumulative Distance (km)',
                     data: cumulativeData,
-                    borderColor: '#4CAF50',
-                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    borderColor: '#888',
+                    backgroundColor: 'rgba(120, 120, 120, 0.1)',
                     fill: false,
                     yAxisID: 'y',
                     tension: 0.4,
@@ -1161,8 +1185,8 @@ function renderGearUsageChart(activities) {
                 {
                     label: 'Activities Count',
                     data: countData,
-                    borderColor: '#2196F3',
-                    backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                    borderColor: '#666',
+                    backgroundColor: 'rgba(100,100,100,0.1)',
                     fill: false,
                     yAxisID: 'y1',
                     tension: 0.4,
@@ -1178,6 +1202,7 @@ function renderGearUsageChart(activities) {
                     type: 'linear',
                     display: true,
                     position: 'left',
+                    beginAtZero: true,
                     title: {
                         display: true,
                         text: 'Distance (km)'
@@ -1187,6 +1212,7 @@ function renderGearUsageChart(activities) {
                     type: 'linear',
                     display: true,
                     position: 'right',
+                    beginAtZero: true,
                     title: {
                         display: true,
                         text: 'Activities Count'
@@ -1335,6 +1361,7 @@ function renderGearHealth(gear, activities) {
 function renderGearPaceEvolutionChart(activities) {
     const ctx = document.getElementById('gear-pace-chart');
     if (!ctx || activities.length === 0) return;
+    ctx.parentElement.style.height = '200px';
 
     const sorted = activities
         .filter(a => a.distance > 0 && a.moving_time > 0)
@@ -1352,8 +1379,8 @@ function renderGearPaceEvolutionChart(activities) {
             datasets: [{
                 label: 'Pace (min/km)',
                 data: paces,
-                borderColor: '#FC5200',
-                backgroundColor: 'rgba(252, 82, 0, 0.1)',
+                borderColor: '#666',
+                backgroundColor: 'rgba(100, 100, 100, 0.1)',
                 fill: false,
                 tension: 0.3,
                 pointRadius: 2,
@@ -1374,6 +1401,7 @@ function renderGearPaceEvolutionChart(activities) {
 function renderGearCumulativeElevationChart(activities) {
     const ctx = document.getElementById('gear-elevation-chart');
     if (!ctx || activities.length === 0) return;
+    ctx.parentElement.style.height = '200px';
 
     const sorted = activities
         .filter(a => a.total_elevation_gain != null)
@@ -1392,8 +1420,8 @@ function renderGearCumulativeElevationChart(activities) {
             datasets: [{
                 label: 'Cumulative Elevation (m)',
                 data: cumulativeData,
-                borderColor: '#2ECC40',
-                backgroundColor: 'rgba(46, 204, 64, 0.1)',
+                borderColor: '#666',
+                backgroundColor: 'rgba(100, 100, 100, 0.1)',
                 fill: true,
                 tension: 0.3,
                 pointRadius: 1,

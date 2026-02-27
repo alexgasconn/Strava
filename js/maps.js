@@ -188,10 +188,11 @@ export function renderMapTab(activities = [], dateFrom = null, dateTo = null) {
         dateFromInput.value = '';
         dateToInput.value = '';
         sportSel.value = 'all';
-        if (densitySlider) densitySlider.value = '0.5';
-        if (radiusSlider) radiusSlider.value = '25';
-        if (blurSlider) blurSlider.value = '15';
-        if (colorBySportCheckbox) colorBySportCheckbox.checked = true;
+        if (densitySlider) densitySlider.value = '2';
+        if (radiusSlider) radiusSlider.value = '9';
+        if (blurSlider) blurSlider.value = '14';
+        if (colorBySportCheckbox) colorBySportCheckbox.checked = false;
+        vizSel.value = 'heat';
         render();
     });
     vizSel?.addEventListener('change', () => render());

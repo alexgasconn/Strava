@@ -582,7 +582,7 @@
                                 <select id="map-visualization">
                                     <option value="routes">Routes (polylines)</option>
                                     <option value="points">Start / End points</option>
-                                    <option value="heat">Heat (density)</option>
+                                    <option value="heat" selected>Heat (density)</option>
                                 </select>
                             </label>
                             <label>Tiles:
@@ -596,13 +596,13 @@
                                     value="0.5">
                             </label>
                             <label>Radius:
-                                <input type="range" id="map-heat-radius" min="5" max="50" step="1" value="25">
+                                <input type="range" id="map-heat-radius" min="5" max="50" step="1" value="9">
                             </label>
                             <label>Blur:
-                                <input type="range" id="map-heat-blur" min="5" max="50" step="1" value="15">
+                                <input type="range" id="map-heat-blur" min="5" max="50" step="1" value="14">
                             </label>
                             <label>
-                                <input type="checkbox" id="map-color-by-sport" checked>
+                                <input type="checkbox" id="map-color-by-sport">
                                 Color by sport
                             </label>
                         </div>
