@@ -65,36 +65,89 @@ async function getWeatherForRun(run) {
 // ===================================================================
 // 1. TSS: suffer_score → TSS (fallback: 36/hora)
 // ===================================================================
-function calculateTSS(activity, maxHr = MAX_HR_DEFAULT) {
+// Enhanced TSS calculator: accepts optional athlete profile for better intensity factor
+// If athlete object is not provided (or lacks required fields), falls back to simple maxHr-based
+function calculateTSS(activity, athlete = null) {
     let tss = 0;
     let method = 'none';
-
-    // Priority: Power (if available, though rare for running)
-    if (activity.average_watts != null && activity.average_watts > 0) {
-        // For cycling: IF = NP / FTP, but NP not available, use average_watts / FTP
-        // But FTP not available, skip for now
-        method = 'power_unavailable';
+    const hours = (activity.moving_time || 0) / 3600;
+    if (hours <= 0) {
+        activity.tss = 0;
+        activity.tss_method = 'none';
+        return 0;
     }
 
-    // Next: Heart Rate
-    if (method === 'none' && activity.average_heartrate != null && activity.average_heartrate > 0) {
-        const if_hr = activity.average_heartrate / maxHr;
-        const hours = (activity.moving_time || 0) / 3600;
-        tss = (hours * if_hr) * 100;
-        method = 'heartrate';
+    // attempt athlete-based method when profile available
+    let IF = null;
+    if (athlete) {
+        // priority HR with LTHR if we have resting hr
+        if (activity.average_heartrate) {
+            if (athlete.lthr && athlete.hr_rest) {
+                IF = (activity.average_heartrate - athlete.hr_rest) /
+                    (athlete.lthr - athlete.hr_rest);
+                method = 'hr_lthr';
+            } else if (athlete.max_hr) {
+                IF = activity.average_heartrate / athlete.max_hr;
+                method = 'hr_max';
+            }
+        }
+        // power fallback
+        if (!IF && activity.average_watts && athlete.ftp) {
+            IF = activity.average_watts / athlete.ftp;
+            method = 'power';
+        }
+        // running pace fallback
+        if (!IF && activity.average_speed && athlete.threshold_speed) {
+            IF = activity.average_speed / athlete.threshold_speed;
+            method = 'pace';
+        }
+        // ultimate default
+        if (!IF) {
+            IF = 0.6; // assumed moderate
+            method = 'time_estimated';
+        }
+
+        tss = hours * Math.pow(IF, 2) * 100;
+        // sport multiplier softens/hardens by type
+        const sportMultipliers = {
+            Run: 1.0,
+            TrailRun: 1.1,
+            Ride: 0.9,
+            GravelRide: 0.95,
+            Swim: 0.8,
+            Ski: 0.85,
+            Hike: 0.75,
+            Workout: 0.6
+        };
+        tss *= sportMultipliers[activity.sport_type] || 0.9;
+        // long low-intensity correction
+        if (hours > 4 && IF < 0.7) {
+            const factor = Math.max(0.7, 1 - 0.05 * (hours - 4));
+            tss *= factor;
+        }
     }
 
-    // Fallback: Suffer score
-    if (method === 'none' && activity.suffer_score != null && activity.suffer_score >= 0) {
-        tss = activity.suffer_score * SUFFER_TO_TSS;
-        method = 'suffer_score';
-    }
-
-    // Last resort: Time-based
-    if (method === 'none') {
-        const hours = (activity.moving_time || 0) / 3600;
-        tss = hours * 36;
-        method = 'time';
+    // simple fallback (original implementation) when IF still null or no athlete info
+    if (IF === null) {
+        let simpleMethod = 'none';
+        if (activity.average_watts != null && activity.average_watts > 0) {
+            simpleMethod = 'power_unavailable';
+        }
+        if (simpleMethod === 'none' && activity.average_heartrate != null && activity.average_heartrate > 0) {
+            const refHr = (athlete && athlete.max_hr) ? athlete.max_hr : MAX_HR_DEFAULT;
+            const if_hr = activity.average_heartrate / refHr;
+            tss = hours * if_hr * 100;
+            simpleMethod = 'heartrate';
+        }
+        if (simpleMethod === 'none' && activity.suffer_score != null && activity.suffer_score >= 0) {
+            tss = activity.suffer_score * SUFFER_TO_TSS;
+            simpleMethod = 'suffer_score';
+        }
+        if (simpleMethod === 'none') {
+            tss = hours * 36;
+            simpleMethod = 'time';
+        }
+        method = simpleMethod;
     }
 
     if (isNaN(tss)) tss = 0;
