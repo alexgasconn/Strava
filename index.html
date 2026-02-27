@@ -22,6 +22,35 @@
 
     <!-- Tu CSS y scripts -->
     <link rel="stylesheet" href="../styles/style.css">
+    <style>
+        /* Map tab styles */
+        .map-controls {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.75rem;
+            align-items: center;
+        }
+
+        .map-controls .filter-group {
+            display: flex;
+            gap: .5rem;
+            align-items: center;
+        }
+
+        #global-map {
+            width: 100%;
+            height: 720px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+        }
+
+        .map-toolbar {
+            display: flex;
+            gap: .5rem;
+            align-items: center;
+        }
+    </style>
 </head>
 
 
@@ -86,7 +115,8 @@
                 aria-label="Runs and Races">🏃‍♂️ Runs & Races</button>
             <button class="tab-link" data-tab="weather-tab" aria-controls="weather-tab" aria-label="Weather">🌤
                 Weather</button>
-            <button class="tab-link" data-tab="wrapped-tab" aria-controls="wrapped-tab"
+            <button class="tab-link" data-tab="map-tab" aria-controls="map-tab" aria-label="Map">🗺️ Map</button>
+            <button class="tab-link" data-tab="wrapped-tab" data-tab="wrapped-tab" aria-controls="wrapped-tab"
                 aria-label="Wrapped - Your year in sport">🎁 Wrapped</button>
 
 
@@ -528,6 +558,52 @@
                 </div>
 
 
+
+                <div id="map-tab" class="tab-content">
+                    <h2>🗺️ All Activities Map</h2>
+                    <div class="map-controls">
+                        <div class="filter-group">
+                            <label>From: <input type="date" id="map-date-from"></label>
+                            <label>To: <input type="date" id="map-date-to"></label>
+                            <button id="map-apply-date">Apply</button>
+                            <button id="map-reset-date">Reset</button>
+                        </div>
+
+                        <div class="filter-group">
+                            <label>Sport:
+                                <select id="map-sport-filter">
+                                    <option value="all">All</option>
+                                </select>
+                            </label>
+                        </div>
+
+                        <div class="filter-group">
+                            <label>Hour from: <input type="time" id="map-hour-from"></label>
+                            <label>to: <input type="time" id="map-hour-to"></label>
+                        </div>
+
+                        <div class="map-toolbar">
+                            <label>View:
+                                <select id="map-visualization">
+                                    <option value="routes">Routes (polylines)</option>
+                                    <option value="points">Start / End points</option>
+                                    <option value="heat">Heat (density)</option>
+                                </select>
+                            </label>
+                            <label>Tiles:
+                                <select id="map-tiles">
+                                    <option value="osm">OpenStreetMap</option>
+                                    <option value="carto">Carto Voyager</option>
+                                    <option value="stamen">Stamen Toner</option>
+                                </select>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="global-map" role="region" aria-label="Global map showing activities"></div>
+                    <div style="margin-top:.5rem; font-size:.95em; color:#444">Tip: selecciona filtros y cambia la vista
+                        entre <i>routes</i> o <i>points</i>.</div>
+                </div>
 
                 <div id="wrapped-tab" class="tab-content">
                     <h2>🎁 Your Year in Sport</h2>

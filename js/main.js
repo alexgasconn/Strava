@@ -9,6 +9,7 @@ import { renderGearTab } from './gear.js';
 import { renderWeatherTab } from './weather.js';
 import { renderRunsTab } from './runs.js';
 import { renderWrappedTab } from './wrapped.js';
+import { renderMapTab } from './maps.js';
 import { fetchAllActivities, fetchAthleteData, fetchTrainingZones, fetchAllGears } from './api.js';
 import { preprocessActivities } from './preprocessing.js';
 
@@ -20,14 +21,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Tab rendering config: maps tab id → { render function, uses date filters } ---
     const tabConfig = {
-        'dashboard-tab':  { render: () => renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
-        'analysis-tab':   { render: () => renderAnalysisTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
-        'athlete-tab':    { render: () => renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
-        'planner-tab':    { render: () => renderPlannerTab(allActivities) },
-        'gear-tab':       { render: () => renderGearTab(allActivities) },
+        'dashboard-tab': { render: () => renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
+        'analysis-tab': { render: () => renderAnalysisTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
+        'athlete-tab': { render: () => renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
+        'planner-tab': { render: () => renderPlannerTab(allActivities) },
+        'gear-tab': { render: () => renderGearTab(allActivities) },
         'runs-races-tab': { render: () => renderRunsTab(allActivities) },
-        'weather-tab':    { render: () => renderWeatherTab(allActivities) },
-        'wrapped-tab':    { render: () => renderWrappedTab(allActivities) },
+        'weather-tab': { render: () => renderWeatherTab(allActivities) },
+        'map-tab': { render: () => renderMapTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
+        'wrapped-tab': { render: () => renderWrappedTab(allActivities) },
     };
     const renderedTabs = new Set();
 
