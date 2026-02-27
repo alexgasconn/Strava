@@ -563,8 +563,8 @@
                     <h2>🗺️ All Activities Map</h2>
                     <div class="map-controls">
                         <div class="filter-group">
-                            <label>From: <input type="date" id="map-date-from"></label>
-                            <label>To: <input type="date" id="map-date-to"></label>
+                            <label>From: <input type="text" id="map-date-from" placeholder="dd/mm/yyyy"></label>
+                            <label>To: <input type="text" id="map-date-to" placeholder="dd/mm/yyyy"></label>
                             <button id="map-apply-date">Apply</button>
                             <button id="map-reset-date">Reset</button>
                         </div>
@@ -575,11 +575,6 @@
                                     <option value="all">All</option>
                                 </select>
                             </label>
-                        </div>
-
-                        <div class="filter-group">
-                            <label>Hour from: <input type="time" id="map-hour-from"></label>
-                            <label>to: <input type="time" id="map-hour-to"></label>
                         </div>
 
                         <div class="map-toolbar">
@@ -594,8 +589,10 @@
                                 <select id="map-tiles">
                                     <option value="osm">OpenStreetMap</option>
                                     <option value="carto">Carto Voyager</option>
-                                    <option value="stamen">Stamen Toner</option>
                                 </select>
+                            </label>
+                            <label>Density:
+                                <input type="range" id="map-heat-intensity" min="0.1" max="2" step="0.1" value="0.5">
                             </label>
                         </div>
                     </div>

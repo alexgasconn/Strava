@@ -43,10 +43,9 @@ export function renderMapTab(activities = [], dateFrom = null, dateTo = null) {
     const applyBtn = document.getElementById('map-apply-date');
     const resetBtn = document.getElementById('map-reset-date');
     const sportSel = document.getElementById('map-sport-filter');
-    const hourFrom = document.getElementById('map-hour-from');
-    const hourTo = document.getElementById('map-hour-to');
     const vizSel = document.getElementById('map-visualization');
     const tilesSel = document.getElementById('map-tiles');
+    const densitySlider = document.getElementById('map-heat-intensity');
     const mapEl = document.getElementById('global-map');
 
     // Populate sport types
@@ -77,24 +76,24 @@ export function renderMapTab(activities = [], dateFrom = null, dateTo = null) {
     function filterActivities() {
         return activities.filter(a => {
             if (!a) return false;
-            // Date filter
+            // Date filter (convert dd/mm/yyyy inputs to ISO)
             const d = a.start_date_local ? a.start_date_local.split('T')[0] : null;
-            if (dateFromInput?.value && d && d < dateFromInput.value) return false;
-            if (dateToInput?.value && d && d > dateToInput.value) return false;
+            const parseDMY = str => {
+                const parts = str.split('/');
+                if (parts.length !== 3) return null;
+                const [dd, mm, yy] = parts;
+                return `${yy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+            };
+            if (dateFromInput?.value) {
+                const iso = parseDMY(dateFromInput.value);
+                if (iso && d && d < iso) return false;
+            }
+            if (dateToInput?.value) {
+                const iso = parseDMY(dateToInput.value);
+                if (iso && d && d > iso) return false;
+            }
             // Sport filter
             if (sportSel?.value && sportSel.value !== 'all' && a.type !== sportSel.value) return false;
-            // Hour filter
-            if ((hourFrom?.value || hourTo?.value) && a.start_date_local) {
-                const h = new Date(a.start_date_local).getHours();
-                if (hourFrom?.value) {
-                    const hf = parseInt(hourFrom.value.split(':')[0], 10);
-                    if (h < hf) return false;
-                }
-                if (hourTo?.value) {
-                    const ht = parseInt(hourTo.value.split(':')[0], 10);
-                    if (h > ht) return false;
-                }
-            }
             return true;
         });
     }
@@ -108,11 +107,12 @@ export function renderMapTab(activities = [], dateFrom = null, dateTo = null) {
 
         if (view === 'heat') {
             // collect all coords
+            const factor = parseFloat(densitySlider?.value) || 1;
             const heatPoints = [];
             visible.forEach(a => {
                 const coords = parseActivityPolyline(a);
-                if (coords && coords.length) coords.forEach(c => heatPoints.push([c[0], c[1], 0.5]));
-                else if (a.start_latlng && a.start_latlng.length === 2) heatPoints.push([a.start_latlng[0], a.start_latlng[1], 0.5]);
+                if (coords && coords.length) coords.forEach(c => heatPoints.push([c[0], c[1], 0.5 * factor]));
+                else if (a.start_latlng && a.start_latlng.length === 2) heatPoints.push([a.start_latlng[0], a.start_latlng[1], 0.5 * factor]);
             });
             if (heatPoints.length) {
                 try { window._stravaHeat = L.heatLayer(heatPoints, { radius: 25, blur: 15, maxZoom: 12 }).addTo(window._stravaMap); } catch (e) { }
@@ -123,7 +123,7 @@ export function renderMapTab(activities = [], dateFrom = null, dateTo = null) {
             // Polylines
             const coords = parseActivityPolyline(a);
             if (view === 'routes' && coords && coords.length) {
-                const poly = L.polyline(coords, { color: '#1f78b4', weight: 2, opacity: 0.6, smoothFactor: 1 }).addTo(window._stravaPolylines);
+                const poly = L.polyline(coords, { color: '#e31a1c', weight: 3, opacity: 0.8, smoothFactor: 1 }).addTo(window._stravaPolylines);
                 bounds.push(...coords);
                 poly.activity = a;
             }
@@ -172,15 +172,13 @@ export function renderMapTab(activities = [], dateFrom = null, dateTo = null) {
     resetBtn?.addEventListener('click', () => {
         dateFromInput.value = '';
         dateToInput.value = '';
-        hourFrom.value = '';
-        hourTo.value = '';
         sportSel.value = 'all';
+        if (densitySlider) densitySlider.value = '1';
         render();
     });
     vizSel?.addEventListener('change', () => render());
     sportSel?.addEventListener('change', () => render());
-    hourFrom?.addEventListener('change', () => render());
-    hourTo?.addEventListener('change', () => render());
+    densitySlider?.addEventListener('input', () => render());
 
     // Initial render
     render();
