@@ -411,6 +411,166 @@ function renderStrokeBreakdown(activity) {
 }
 
 /**
+ * Renders stroke breakdown if available
+ */
+function renderStrokeBreakdown(activity) {
+    const section = document.getElementById('stroke-section');
+    if (!section || !activityStrokes || activityStrokes.length === 0) {
+        // Hide section if no strokes available
+        if (section) {
+            section.classList.add('hidden');
+        }
+        return;
+    }
+
+    section.classList.remove('hidden');
+
+    const strokeBreakdown = activityStrokes.map(stroke => {
+        const strokeTypes = {
+            0: 'Unknown',
+            1: 'Freestyle',
+            2: 'Backstroke',
+            3: 'Breaststroke',
+            4: 'Butterfly',
+            5: 'Mixed',
+            6: 'Drill'
+        };
+
+        const strokeName = strokeTypes[stroke.stroke_type] || 'Unknown';
+        const distance = (stroke.distance || 0).toFixed(0);
+        const duration = formatTime(stroke.duration || 0);
+        const avgPace = formatSwimPace(stroke.distance && stroke.duration ? stroke.distance / stroke.duration : 0);
+
+        return `
+            <div style="padding: 10px; margin: 5px 0; background: #f9f9f9; border-left: 4px solid #FC5200; border-radius: 4px;">
+                <b>${strokeName}</b> | ${distance}m | ${duration} | ${avgPace}
+            </div>
+        `;
+    }).join('');
+
+    section.innerHTML = `
+        <h3>Strokes Breakdown</h3>
+        ${strokeBreakdown}
+    `;
+}
+
+/**
+ * Renders laps table for swimming
+ */
+function renderLaps(laps) {
+    const section = document.getElementById('laps-section');
+    const table = document.getElementById('laps-table');
+    if (!section || !table) return;
+
+    if (!laps || laps.length === 0) {
+        section.classList.add('hidden');
+        return;
+    }
+
+    section.classList.remove('hidden');
+
+    const tableHeader = `
+    <thead>
+        <tr>
+            <th>Lap</th>
+            <th>Distance</th>
+            <th>Time</th>
+            <th>Pace</th>
+            <th>Avg HR</th>
+            <th>Strokes</th>
+        </tr>
+    </thead>`;
+
+    const tableBody = laps.map(lap => {
+        const pace = formatSwimPace(lap.average_speed);
+        const strokes = lap.total_strokes || '-';
+        return `
+        <tr>
+            <td>${lap.lap_index}</td>
+            <td>${(lap.distance).toFixed(0)} m</td>
+            <td>${formatTime(lap.moving_time)}</td>
+            <td>${pace}</td>
+            <td>${lap.average_heartrate ? Math.round(lap.average_heartrate) : '-'} bpm</td>
+            <td>${strokes}</td>
+        </tr>`;
+    }).join('');
+
+    table.innerHTML = tableHeader + `<tbody>${tableBody}</tbody>`;
+}
+
+/**
+ * Renders laps pace chart for swimming
+ */
+function renderLapsChart(laps) {
+    const canvas = document.getElementById('laps-chart');
+    const section = document.getElementById('laps-chart-section');
+    if (!canvas || !section || !laps || laps.length === 0) return;
+
+    section.classList.remove('hidden');
+
+    const labels = laps.map((_, i) => `Lap ${i + 1}`);
+    const paces = laps.map(lap => {
+        if (!lap.average_speed || lap.average_speed === 0) return 0;
+        return 100 / lap.average_speed; // pace in seconds per 100m
+    });
+
+    const minPace = Math.min(...paces.filter(p => p > 0));
+    const maxPace = Math.max(...paces.filter(p => p > 0));
+
+    const colors = paces.map(pace => {
+        if (pace === 0) return '#ccc';
+        const t = (pace - minPace) / (maxPace - minPace || 1);
+        const lightness = 35 + t * 35;
+        return `hsl(15, 90%, ${lightness}%)`;
+    });
+
+    createChart('laps-chart', {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Pace (sec/100m)',
+                data: paces,
+                backgroundColor: colors,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { title: { display: true, text: 'Lap' } },
+                y: {
+                    beginAtZero: false,
+                    title: { display: true, text: 'Pace (sec/100m)' }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        title: ctx => labels[ctx[0].dataIndex],
+                        label: ctx => {
+                            const lap = laps[ctx.dataIndex];
+                            return `Pace: ${formatSwimPace(lap.average_speed)}`;
+                        },
+                        afterLabel: ctx => {
+                            const lap = laps[ctx.dataIndex];
+                            return [
+                                `Distance: ${(lap.distance).toFixed(0)} m`,
+                                `Time: ${formatTime(lap.moving_time)}`,
+                                `Avg HR: ${lap.average_heartrate ? Math.round(lap.average_heartrate) : '-'} bpm`,
+                                `Strokes: ${lap.total_strokes || '-'}`
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+/**
  * Renders HR zones distribution
  */
 function renderHRZones(activity, zones) {
@@ -563,6 +723,8 @@ async function loadActivityPage() {
         renderActivityStats(activityData);
         renderActivityAdvanced(activityData);
         renderStrokeBreakdown(activityData);
+        renderLaps(activityData.laps);
+        renderLapsChart(activityData.laps);
 
         // Get zones from localStorage for HR zone rendering
         const cachedZones = JSON.parse(localStorage.getItem('strava_zones') || '[]');

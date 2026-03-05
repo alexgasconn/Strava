@@ -149,14 +149,15 @@ document.addEventListener('DOMContentLoaded', () => {
             let activities;
             if (activitiesCacheValid) {
                 activities = JSON.parse(cachedActivities);
+                progress = 40;
+                showLoading(`✓ Activities loaded: ${activities.length} found (${progress}%)`);
             } else {
                 activities = await fetchAllActivities();
+                progress = 40;
+                showLoading(`✓ Activities loaded: ${activities.length} found (${progress}%)`);
                 localStorage.setItem('strava_activities', JSON.stringify(activities));
                 localStorage.setItem('strava_activities_timestamp', Date.now().toString());
             }
-
-            progress = 40;
-            showLoading(`Loading activities... ${progress}%`);
 
             // Phase 2: Load athlete, zones, and gears (40% -> 90%)
             // These are optional - if they fail, continue without them
@@ -174,8 +175,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 ]);
                 athlete = fetchedAthlete;
                 zones = fetchedZones;
-                progress = 70;
-                showLoading(`Loading gear data... ${progress}%`);
+                progress = 65;
+                showLoading(`✓ Athlete data loaded (${progress}%)`);
             } catch (error) {
                 console.warn('Failed to load athlete/zones data, continuing without:', error);
                 athlete = null;
