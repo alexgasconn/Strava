@@ -591,7 +591,7 @@ function renderRecentActivitiesPreview(runs) {
                                     ` : ''}
                                 </div>
                             </div>
-                            <a href="html/activity.html?id=${r.id}" target="_blank" 
+                            <a href="html/activity-router.html?id=${r.id}" target="_blank" 
                                style="font-size:0.85rem; color:#FC5200; text-decoration:none; font-weight:500;
                                       padding:5px 14px; border-radius:6px; background:#FFF5F0; 
                                       white-space:nowrap; margin-left:0.5rem; transition:background 0.2s;">

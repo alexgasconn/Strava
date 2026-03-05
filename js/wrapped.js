@@ -719,7 +719,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
       const t = (a.type || a.sport || '').toLowerCase();
       const icon = t.includes('run') ? '🏃' : t.includes('ride') || t.includes('bike') ? '🚴' : t.includes('swim') ? '🏊' : '🏅';
       return `
-        <a class="pb-activity-link" href="html/activity.html?id=${a.id}" target="_blank">
+        <a class="pb-activity-link" href="html/activity-router.html?id=${a.id}" target="_blank">
           <div class="pb-activity">
             <div style="display:flex;align-items:center;gap:0.6rem">
               <div style="font-size:1.15rem">${icon}</div>
@@ -1059,7 +1059,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
                   <td class="table-time">${utils.formatTime(Number(a.moving_time) || 0)}</td>
                   <td class="table-pace">${pace}</td>
                   <td class="table-action">
-                    <a href="html/activity.html?id=${a.id}" target="_blank" class="table-link">
+                    <a href="html/activity-router.html?id=${a.id}" target="_blank" class="table-link">
                       View →
                     </a>
                   </td>

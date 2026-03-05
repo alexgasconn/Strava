@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Activity Details</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+    <div style="text-align: center; padding: 40px;">
+        <p>Loading activity details...</p>
+    </div>
+
+    <script>
+        /**
+         * Activity Router - Detects activity type and routes to appropriate page
+         * Supports: Run, Swim, general Activity
+         */
+        async function routeActivity() {
+            try {
+                // Get activity ID from URL
+                const params = new URLSearchParams(window.location.search);
+                const activityId = parseInt(params.get('id'), 10);
+
+                if (!activityId) {
+                    throw new Error('No activity ID provided');
+                }
+
+                // Get auth token
+                const tokens = localStorage.getItem('strava_tokens');
+                if (!tokens) {
+                    throw new Error('Not authenticated');
+                }
+
+                const authPayload = btoa(tokens);
+
+                // Fetch activity details to determine type
+                const response = await fetch(`/api/strava-activity?id=${activityId}`, {
+                    headers: { 'Authorization': `Bearer ${authPayload}` }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API Error ${response.status}`);
+                }
+
+                const result = await response.json();
+                const activity = result.activity;
+
+                // Update tokens if needed
+                if (result.tokens) {
+                    localStorage.setItem('strava_tokens', JSON.stringify(result.tokens));
+                }
+
+                // Determine activity type and route accordingly
+                const sportType = activity.sport_type || activity.type || 'Unknown';
+                let targetPage = 'activity.html';
+
+                // Route based on sport type
+                if (sportType.toLowerCase().includes('swim')) {
+                    targetPage = 'swim.html';
+                } else if (
+                    sportType === 'Run' ||
+                    sportType === 'TrailRun' ||
+                    sportType.toLowerCase().includes('run')
+                ) {
+                    targetPage = 'run.html';
+                }
+
+                // Redirect to appropriate page
+                window.location.href = `${targetPage}?id=${activityId}`;
+
+            } catch (error) {
+                console.error('Router error:', error);
+                document.body.innerHTML = `
+          <div style="text-align: center; padding: 40px; color: red;">
+            <h2>Error Loading Activity</h2>
+            <p>${error.message}</p>
+            <button onclick="window.history.back()">Go Back</button>
+          </div>
+        `;
+            }
+        }
+
+        // Execute routing when page loads
+        document.addEventListener('DOMContentLoaded', routeActivity);
+    </script>
+</body>
+
+</html>

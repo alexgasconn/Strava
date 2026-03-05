@@ -176,7 +176,7 @@ export function renderRunsTab(allActivities) {
                 }
                 return `<td>${formatted}</td>`;
             }).join('');
-            return `<tr>${cells}<td><a href="html/activity.html?id=${act.id}" target="_blank"><button>View</button></a></td></tr>`;
+            return `<tr>${cells}<td><a href="html/activity-router.html?id=${act.id}" target="_blank"><button>View</button></a></td></tr>`;
         }).join('');
 
         // Build full table HTML and wrap in a horizontally scrollable container with hover-scroll controls
@@ -288,7 +288,7 @@ export function renderRunsTab(allActivities) {
                             <p style="font-size:1em; color:#333; margin:0;">Distance: ${run.actual_run_km.toFixed(2)} km</p>
                             <p style="font-size:0.9em; color:#555; margin:0;">Pace: ${utils.formatPace(run.time_at_target, run.actual_run_km)}</p>
                             <p style="font-size:0.8em; color:#777; margin:0.2em 0;">${utils.formatDate(new Date(run.start_date_local || run.start_date))}</p>
-                            <a href="html/activity.html?id=${run.id}" target="_blank" style="font-size:0.8em; color:#0077cc; text-decoration:none;">
+                            <a href="html/activity-router.html?id=${run.id}" target="_blank" style="font-size:0.8em; color:#0077cc; text-decoration:none;">
                                 View activity →
                             </a>
                         </div>
@@ -349,7 +349,7 @@ export function renderRunsTab(allActivities) {
                 }
                 return `<td>${formatted}</td>`;
             }).join('');
-            return `<tr>${cells}<td><a href="html/activity.html?id=${act.id}" target="_blank"><button>View</button></a></td></tr>`;
+            return `<tr>${cells}<td><a href="html/activity-router.html?id=${act.id}" target="_blank"><button>View</button></a></td></tr>`;
         }).join('');
         let toggleBtn = '';
         if (sortedRuns.length > 10) {
