@@ -198,6 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Phase 3: Preprocess activities (90% -> 100%)
             const preprocessed = await preprocessActivities(activities, athlete, zones, gears);
             allActivities = preprocessed;
+            console.log('Preprocessed activities:', allActivities);
 
             progress = 100;
             showLoading(`Done! ${progress}%`);
