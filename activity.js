@@ -1,6 +1,8 @@
 // js/activity.js
 // import { classifyRun } from './classifyRun.js';
 
+import { Activity } from "react";
+
 document.addEventListener('DOMContentLoaded', () => {
     
     // --- 1. REFERENCIAS AL DOM Y ESTADO INICIAL ---
@@ -568,6 +570,9 @@ document.addEventListener('DOMContentLoaded', () => {
             detailsDiv.innerHTML = '<p>You must be logged in to view activity details.</p>';
             return;
         }
+
+        console.log('Loading activity page for ID:', activityId);
+        console.log(Activity);
 
         try {
             streamChartsDiv.style.display = 'grid';

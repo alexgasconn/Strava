@@ -135,76 +135,72 @@ document.addEventListener('DOMContentLoaded', () => {
     async function initializeApp(tokenData) {
         showLoading('Loading activities... 0%');
         let progress = 0;
-        const progressInterval = setInterval(() => {
-            progress += Math.random() * 10;
-            if (progress > 90) progress = 90;
-            showLoading(`Loading activities... ${Math.round(progress)}%`);
-        }, 500);
 
         try {
-            // Check cache for activities
+            // Phase 1: Load activities (0% -> 40%)
+            progress = 0;
+            showLoading(`Loading activities... ${progress}%`);
+
             const cachedActivities = localStorage.getItem('strava_activities');
-            const cachedTimestamp = localStorage.getItem('strava_activities_timestamp');
-            const cacheAge = cachedTimestamp ? Date.now() - parseInt(cachedTimestamp) : Infinity;
-            const cacheValid = cachedActivities && cacheAge < 60 * 60 * 1000; // 1 hour
+            const cachedActivitiesTimestamp = localStorage.getItem('strava_activities_timestamp');
+            const activitiesCacheAge = cachedActivitiesTimestamp ? Date.now() - parseInt(cachedActivitiesTimestamp) : Infinity;
+            const activitiesCacheValid = cachedActivities && activitiesCacheAge < 60 * 60 * 1000; // 1 hour
 
             let activities;
-            if (cacheValid) {
+            if (activitiesCacheValid) {
                 activities = JSON.parse(cachedActivities);
-                progress = 100;
-                showLoading('Loading activities... 100%');
             } else {
                 activities = await fetchAllActivities();
                 localStorage.setItem('strava_activities', JSON.stringify(activities));
                 localStorage.setItem('strava_activities_timestamp', Date.now().toString());
-                progress = 100;
-                showLoading('Loading activities... 100%');
             }
 
-            clearInterval(progressInterval);
+            progress = 40;
+            showLoading(`Loading activities... ${progress}%`);
 
-            showLoading('Loading athlete data...');
-            const cachedAthlete = localStorage.getItem('strava_athlete_data');
-            const cachedZones = localStorage.getItem('strava_training_zones');
-            const cachedGears = localStorage.getItem('strava_gears');
-            const cacheTimestamp = localStorage.getItem('strava_data_timestamp');
-            const dataCacheAge = cacheTimestamp ? Date.now() - parseInt(cacheTimestamp) : Infinity;
-            const dataCacheValid = cachedAthlete && cachedZones && cachedGears && dataCacheAge < 60 * 60 * 1000;
+            // Phase 2: Load athlete, zones, and gears (40% -> 90%)
+            // These are optional - if they fail, continue without them
+            let athlete = null;
+            let zones = null;
+            let gears = [];
 
-            let athlete, zones, gears;
-            if (dataCacheValid) {
-                athlete = JSON.parse(cachedAthlete);
-                zones = JSON.parse(cachedZones);
-                gears = JSON.parse(cachedGears);
-            } else {
+            progress = 50;
+            showLoading(`Loading athlete & zones... ${progress}%`);
+
+            try {
                 const [fetchedAthlete, fetchedZones] = await Promise.all([
                     fetchAthleteData(),
                     fetchTrainingZones()
                 ]);
                 athlete = fetchedAthlete;
                 zones = fetchedZones;
-
-                showLoading('Loading gear data...');
-                try {
-                    gears = await fetchAllGears(athlete);
-                } catch (gearError) {
-                    console.warn('Failed to fetch gears, continuing without:', gearError);
-                    gears = [];
-                }
-
-                localStorage.setItem('strava_athlete_data', JSON.stringify(athlete));
-                localStorage.setItem('strava_training_zones', JSON.stringify(zones));
-                localStorage.setItem('strava_gears', JSON.stringify(gears));
-                localStorage.setItem('strava_data_timestamp', Date.now().toString());
+                progress = 70;
+                showLoading(`Loading gear data... ${progress}%`);
+            } catch (error) {
+                console.warn('Failed to load athlete/zones data, continuing without:', error);
+                athlete = null;
+                zones = null;
             }
 
+            // Try to load gears - also optional
+            try {
+                if (athlete) {
+                    gears = await fetchAllGears(athlete);
+                }
+            } catch (error) {
+                console.warn('Failed to load gears, continuing without:', error);
+                gears = [];
+            }
+
+            progress = 90;
+            showLoading(`Processing... ${progress}%`);
+
+            // Phase 3: Preprocess activities (90% -> 100%)
             const preprocessed = await preprocessActivities(activities, athlete, zones, gears);
             allActivities = preprocessed;
 
-            if (!cacheValid) {
-                localStorage.setItem('strava_activities', JSON.stringify(allActivities));
-                localStorage.setItem('strava_activities_timestamp', Date.now().toString());
-            }
+            progress = 100;
+            showLoading(`Done! ${progress}%`);
 
             setupDashboard(allActivities);
             renderAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);

@@ -1,5 +1,43 @@
 // js/api.js
 
+// ===================================================================
+// CACHE CONFIGURATION
+// ===================================================================
+const CACHE_DURATION = 60 * 60 * 1000; // 1 hour in milliseconds
+
+function getFromCache(key) {
+    const cached = localStorage.getItem(key);
+    const timestamp = localStorage.getItem(`${key}_timestamp`);
+
+    if (!cached || !timestamp) return null;
+
+    const age = Date.now() - parseInt(timestamp);
+    if (age > CACHE_DURATION) {
+        localStorage.removeItem(key);
+        localStorage.removeItem(`${key}_timestamp`);
+        return null;
+    }
+
+    try {
+        return JSON.parse(cached);
+    } catch (e) {
+        console.warn(`Cache parse error for ${key}:`, e);
+        return null;
+    }
+}
+
+function saveToCache(key, data) {
+    try {
+        localStorage.setItem(key, JSON.stringify(data));
+        localStorage.setItem(`${key}_timestamp`, Date.now().toString());
+    } catch (e) {
+        console.warn(`Cache save error for ${key}:`, e);
+    }
+}
+
+// ===================================================================
+// AUTH & HELPERS
+// ===================================================================
 function getAuthPayload() {
     const tokenData = localStorage.getItem('strava_tokens');
     if (!tokenData) throw new Error('User not authenticated');
@@ -34,13 +72,23 @@ export async function fetchAllActivities() {
 }
 
 export async function fetchGearById(gearId) {
+    // Check cache first
+    const cacheKey = `strava_gear_${gearId}`;
+    const cached = getFromCache(cacheKey);
+    if (cached) {
+        return cached;
+    }
+
     const response = await fetch(`/api/strava-gear?id=${encodeURIComponent(gearId)}`, {
         headers: {
             Authorization: `Bearer ${getAuthPayload()}`
         }
     });
     const result = await handleApiResponse(response);
-    return result.gear; // Extract the gear object from the response
+    const gear = result.gear;
+
+    saveToCache(cacheKey, gear);
+    return gear;
 }
 
 export function renderAthleteProfile(athlete) {
@@ -59,19 +107,37 @@ export function renderAthleteProfile(athlete) {
 }
 
 export async function fetchAthleteData() {
+    // Check cache first
+    const cached = getFromCache('strava_athlete');
+    if (cached) {
+        return cached;
+    }
+
     const response = await fetch('/api/strava-athlete', {
         headers: { Authorization: `Bearer ${getAuthPayload()}` }
     });
     const result = await handleApiResponse(response);
-    return result.athlete;
+    const athlete = result.athlete;
+
+    saveToCache('strava_athlete', athlete);
+    return athlete;
 }
 
 export async function fetchTrainingZones() {
+    // Check cache first
+    const cached = getFromCache('strava_zones');
+    if (cached) {
+        return cached;
+    }
+
     const response = await fetch('/api/strava-zones', {
         headers: { Authorization: `Bearer ${getAuthPayload()}` }
     });
     const result = await handleApiResponse(response);
-    return result.zones;
+    const zones = result.zones;
+
+    saveToCache('strava_zones', zones);
+    return zones;
 }
 
 export async function fetchAllGears(athlete) {
@@ -83,5 +149,12 @@ export async function fetchAllGears(athlete) {
     }).filter(id => id);
     if (gearIds.length === 0) return [];
 
-    return Promise.all(gearIds.map(id => fetchGearById(id)));
+    // Use Promise.allSettled so failed gear fetches don't block others
+    const results = await Promise.allSettled(gearIds.map(id => fetchGearById(id)));
+
+    // Filter out rejected promises and return only successful gears
+    return results
+        .filter(r => r.status === 'fulfilled')
+        .map(r => r.value)
+        .filter(g => g); // Remove null/undefined
 }
