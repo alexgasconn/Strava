@@ -282,7 +282,8 @@ async function fetchActivityStreams(activityId, authPayload) {
  */
 function renderActivityInfo(activity) {
     if (!DOM.info) return;
-
+    
+    console.log(activity);
     const name = activity.name;
     const description = activity.description || '';
     const date = formatDate(new Date(activity.start_date_local));
