@@ -15,7 +15,7 @@
     <script>
         /**
          * Activity Router - Detects activity type and routes to appropriate page
-         * Supports: Run, Swim, general Activity
+         * Supports: Run, Swim, Bike, general Activity
          */
         async function routeActivity() {
             try {
@@ -65,6 +65,13 @@
                     sportType.toLowerCase().includes('run')
                 ) {
                     targetPage = 'run.html';
+                } else if (
+                    sportType === 'Ride' ||
+                    sportType === 'MountainBike' ||
+                    sportType.toLowerCase().includes('bike') ||
+                    sportType.toLowerCase().includes('ride')
+                ) {
+                    targetPage = 'bike.html';
                 }
 
                 // Redirect to appropriate page
