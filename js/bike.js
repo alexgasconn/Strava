@@ -666,6 +666,8 @@ async function init() {
             fetchActivityStreams(activityId)
         ]);
 
+        console.log('Fetched activity data:', activityData);
+
         // Process data
         const processedActivity = processActivityData(activityData);
         const processedStreams = processStreamData(streamsData, currentSmoothingLevel);
