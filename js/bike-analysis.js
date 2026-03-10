@@ -18,6 +18,9 @@ export function renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterT
         a.sport_type === "MountainBikeRide"
     );
 
+    console.log("Rendering bike analysis for", rides.length, "rides");
+    console.log(rides);
+
     if (!rides.length) return;
 
     renderSummaryCards(rides);
