@@ -132,32 +132,36 @@ function renderBikeTypeChart(rides) {
 // DISTANCE HISTOGRAM
 // ------------------------
 
-function renderDistanceHistogram(rides){
+let distanceHistogramChart; // fuera de la función, global o en scope superior
 
-    const distances =
-        rides.map(r=>r.distance/1000);
+function renderDistanceHistogram(rides) {
+    if (distanceHistogramChart) {
+        distanceHistogramChart.destroy();
+    }
 
-    const binSize=10;
+    const distances = rides.map(r => r.distance / 1000);
+    const binSize = 10;
+    const max = Math.max(...distances);
+    const bins = new Array(Math.ceil(max / binSize)).fill(0);
 
-    const max=Math.max(...distances);
-    const bins=new Array(Math.ceil(max/binSize)).fill(0);
-
-    distances.forEach(d=>{
-        bins[Math.floor(d/binSize)]++;
+    distances.forEach(d => {
+        bins[Math.floor(d / binSize)]++;
     });
 
-    createChart("distance-histogram",{
-
-        type:"bar",
-
-        data:{
-            labels:bins.map((_,i)=>
-                `${i*binSize}-${(i+1)*binSize}`),
-            datasets:[{
-                label:"# rides",
-                data:bins,
-                backgroundColor:"rgba(252,82,0,0.7)"
+    // Guardar la nueva instancia en la variable
+    distanceHistogramChart = createChart("distance-histogram", {
+        type: "bar",
+        data: {
+            labels: bins.map((_, i) => `${i * binSize}-${(i + 1) * binSize}`),
+            datasets: [{
+                label: "# rides",
+                data: bins,
+                backgroundColor: "rgba(252,82,0,0.7)"
             }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } }
         }
     });
 }
