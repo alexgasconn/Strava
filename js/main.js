@@ -2,7 +2,7 @@
 import { redirectToStrava, logout, handleAuth } from './auth.js';
 import { setupDashboard, showLoading, hideLoading, handleError, } from './ui.js';
 import { renderAnalysisTab } from './analysis.js';
-import { renderBikeAnalysisTab} from './bike-analysis.js';
+import { renderBikeAnalysisTab } from './bike-analysis.js';
 import { renderDashboardTab } from './dashboard.js';
 import { renderAthleteTab } from './athlete.js';
 import { renderPlannerTab } from './planner.js';
@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('date-from').value = dateFilterFrom;
                 document.getElementById('date-to').value = dateFilterTo;
 
-                renderAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
+                rerenderActiveTab();
             });
         });
     }
@@ -235,6 +235,18 @@ document.addEventListener('DOMContentLoaded', () => {
             hideLoading();
         }
     }
+
+
+    function rerenderActiveTab() {
+        const activeTab = document.querySelector('.tab-content.active');
+        if (!activeTab) return;
+
+        const tabId = activeTab.id;
+        if (tabConfig[tabId]) {
+            tabConfig[tabId].render();
+        }
+    }
+
 
     // --- EVENT LISTENERS ---
     if (loginButton) loginButton.addEventListener('click', redirectToStrava);
