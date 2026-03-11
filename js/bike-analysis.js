@@ -54,7 +54,9 @@ function createChart(canvasId, config) {
         charts[canvasId].destroy();
     }
 
-    const chart = new Chart(canvas, config);  // ← AQUÍ creas la instancia real
+    const ctx = canvas.getContext("2d");
+    const chart = new Chart(ctx, config);
+
     charts[canvasId] = chart;
 
     return chart;  // ← Y AHORA sí devuelves la instancia correcta
@@ -71,16 +73,16 @@ function renderSummaryCards(rides) {
     if (!el) return;
 
     const totalDistance =
-        rides.reduce((s,a)=>s+a.distance,0)/1000;
+        rides.reduce((s, a) => s + a.distance, 0) / 1000;
 
     const totalElevation =
-        rides.reduce((s,a)=>s+(a.total_elevation_gain||0),0);
+        rides.reduce((s, a) => s + (a.total_elevation_gain || 0), 0);
 
     const totalTime =
-        rides.reduce((s,a)=>s+a.moving_time,0);
+        rides.reduce((s, a) => s + a.moving_time, 0);
 
     const avgSpeed =
-        totalDistance/(totalTime/3600);
+        totalDistance / (totalTime / 3600);
 
     el.innerHTML = `
         <div class="card">
@@ -113,21 +115,30 @@ function renderBikeTypeChart(rides) {
 
     let road = 0;
     let mtb = 0;
+    let indoor = 0;
+    let gravel = 0;
+    let electric = 0;
 
-    rides.forEach(r=>{
-        if(r.sport_type==="MountainBikeRide") mtb++;
+    rides.forEach(r => {
+        if (r.sport_type === "MountainBikeRide") mtb++;
+        else if (r.distance == 0) indoor++;
+        else if (r.sport_type == "IndoorRide") indoor++;
+        else if (r.sport_type == "GravelBikeRide") gravel++;
+        else if (r.sport_type == "EBikeRide") electric++;
+        else if (r.sport_type == "EMountainBikeRide") electric++;
+        else if (r.sport_type == "EGravelBikeRide") electric++;
         else road++;
     });
 
-    createChart("bike-type-chart",{
+    createChart("bike-type-chart", {
 
-        type:"pie",
+        type: "pie",
 
-        data:{
-            labels:["Road","MTB"],
-            datasets:[{
-                data:[road,mtb],
-                backgroundColor:["#FC5200","#2e7d32"]
+        data: {
+            labels: ["Road", "MTB", "Indoor", "Gravel", "Electric"],
+            datasets: [{
+                data: [road, mtb, indoor, gravel, electric],
+                backgroundColor: ["#FC5200", "#2e7d32", "#1976d2", "#FFD54F", "#7E57C2"]
             }]
         }
     });
@@ -170,33 +181,33 @@ function renderDistanceHistogram(rides) {
 // ELEVATION HISTOGRAM
 // ------------------------
 
-function renderElevationHistogram(rides){
+function renderElevationHistogram(rides) {
 
     const values =
-        rides.map(r=>r.total_elevation_gain||0);
+        rides.map(r => r.total_elevation_gain || 0);
 
-    const binSize=200;
+    const binSize = 200;
 
-    const max=Math.max(...values);
+    const max = Math.max(...values);
 
-    const bins=new Array(Math.ceil(max/binSize)).fill(0);
+    const bins = new Array(Math.ceil(max / binSize)).fill(0);
 
-    values.forEach(v=>{
-        bins[Math.floor(v/binSize)]++;
+    values.forEach(v => {
+        bins[Math.floor(v / binSize)]++;
     });
 
-    createChart("elevation-histogram",{
+    createChart("elevation-histogram", {
 
-        type:"bar",
+        type: "bar",
 
-        data:{
-            labels:bins.map((_,i)=>
-                `${i*binSize}-${(i+1)*binSize}`),
+        data: {
+            labels: bins.map((_, i) =>
+                `${i * binSize}-${(i + 1) * binSize}`),
 
-            datasets:[{
-                label:"# rides",
-                data:bins,
-                backgroundColor:"rgba(200,40,40,0.7)"
+            datasets: [{
+                label: "# rides",
+                data: bins,
+                backgroundColor: "rgba(200,40,40,0.7)"
             }]
         }
     });
@@ -206,33 +217,33 @@ function renderElevationHistogram(rides){
 // DISTANCE VS SPEED
 // ------------------------
 
-function renderSpeedVsDistanceChart(rides){
+function renderSpeedVsDistanceChart(rides) {
 
     const data = rides
-        .filter(r=>r.moving_time)
-        .map(r=>({
+        .filter(r => r.moving_time)
+        .map(r => ({
 
-            x:r.distance/1000,
+            x: r.distance / 1000,
 
-            y:(r.distance/1000)/(r.moving_time/3600)
+            y: (r.distance / 1000) / (r.moving_time / 3600)
         }));
 
-    createChart("speed-distance-chart",{
+    createChart("speed-distance-chart", {
 
-        type:"scatter",
+        type: "scatter",
 
-        data:{
-            datasets:[{
-                label:"Ride",
+        data: {
+            datasets: [{
+                label: "Ride",
                 data,
-                backgroundColor:"#FC5200"
+                backgroundColor: "#FC5200"
             }]
         },
 
-        options:{
-            scales:{
-                x:{title:{display:true,text:"Distance (km)"}},
-                y:{title:{display:true,text:"Speed (km/h)"}}
+        options: {
+            scales: {
+                x: { title: { display: true, text: "Distance (km)" } },
+                y: { title: { display: true, text: "Speed (km/h)" } }
             }
         }
     });
@@ -242,31 +253,31 @@ function renderSpeedVsDistanceChart(rides){
 // DISTANCE VS ELEVATION
 // ------------------------
 
-function renderDistanceVsElevationChart(rides){
+function renderDistanceVsElevationChart(rides) {
 
-    const data=rides.map(r=>({
+    const data = rides.map(r => ({
 
-        x:r.distance/1000,
+        x: r.distance / 1000,
 
-        y:r.total_elevation_gain||0
+        y: r.total_elevation_gain || 0
     }));
 
-    createChart("distance-elevation-chart",{
+    createChart("distance-elevation-chart", {
 
-        type:"scatter",
+        type: "scatter",
 
-        data:{
-            datasets:[{
-                label:"Ride",
+        data: {
+            datasets: [{
+                label: "Ride",
                 data,
-                backgroundColor:"rgba(50,100,200,0.8)"
+                backgroundColor: "rgba(50,100,200,0.8)"
             }]
         },
 
-        options:{
-            scales:{
-                x:{title:{display:true,text:"Distance (km)"}},
-                y:{title:{display:true,text:"Elevation Gain (m)"}}
+        options: {
+            scales: {
+                x: { title: { display: true, text: "Distance (km)" } },
+                y: { title: { display: true, text: "Elevation Gain (m)" } }
             }
         }
     });
@@ -276,33 +287,33 @@ function renderDistanceVsElevationChart(rides){
 // ELEVATION RATIO
 // ------------------------
 
-function renderElevationRatioChart(rides){
+function renderElevationRatioChart(rides) {
 
-    const data=rides
-        .filter(r=>r.distance)
-        .map(r=>({
+    const data = rides
+        .filter(r => r.distance)
+        .map(r => ({
 
-            x:r.distance/1000,
+            x: r.distance / 1000,
 
-            y:(r.total_elevation_gain||0)/(r.distance/1000)
+            y: (r.total_elevation_gain || 0) / (r.distance / 1000)
         }));
 
-    createChart("elevation-ratio-chart",{
+    createChart("elevation-ratio-chart", {
 
-        type:"scatter",
+        type: "scatter",
 
-        data:{
-            datasets:[{
-                label:"Elevation per km",
+        data: {
+            datasets: [{
+                label: "Elevation per km",
                 data,
-                backgroundColor:"rgba(120,40,180,0.8)"
+                backgroundColor: "rgba(120,40,180,0.8)"
             }]
         },
 
-        options:{
-            scales:{
-                x:{title:{display:true,text:"Distance (km)"}},
-                y:{title:{display:true,text:"m / km"}}
+        options: {
+            scales: {
+                x: { title: { display: true, text: "Distance (km)" } },
+                y: { title: { display: true, text: "m / km" } }
             }
         }
     });
@@ -312,35 +323,35 @@ function renderElevationRatioChart(rides){
 // POWER VS SPEED
 // ------------------------
 
-function renderPowerVsSpeedChart(rides){
+function renderPowerVsSpeedChart(rides) {
 
-    const data=rides
-        .filter(r=>r.average_watts)
-        .map(r=>({
+    const data = rides
+        .filter(r => r.average_watts)
+        .map(r => ({
 
-            x:r.average_watts,
+            x: r.average_watts,
 
-            y:(r.distance/1000)/(r.moving_time/3600)
+            y: (r.distance / 1000) / (r.moving_time / 3600)
         }));
 
-    if(!data.length) return;
+    if (!data.length) return;
 
-    createChart("power-speed-chart",{
+    createChart("power-speed-chart", {
 
-        type:"scatter",
+        type: "scatter",
 
-        data:{
-            datasets:[{
-                label:"Power vs Speed",
+        data: {
+            datasets: [{
+                label: "Power vs Speed",
                 data,
-                backgroundColor:"rgba(220,60,60,0.8)"
+                backgroundColor: "rgba(220,60,60,0.8)"
             }]
         },
 
-        options:{
-            scales:{
-                x:{title:{display:true,text:"Power (W)"}},
-                y:{title:{display:true,text:"Speed (km/h)"}}
+        options: {
+            scales: {
+                x: { title: { display: true, text: "Power (W)" } },
+                y: { title: { display: true, text: "Speed (km/h)" } }
             }
         }
     });
@@ -350,41 +361,41 @@ function renderPowerVsSpeedChart(rides){
 // TOP RIDES
 // ------------------------
 
-function renderTopActivities(rides){
+function renderTopActivities(rides) {
 
-    const el=document.getElementById("top-rides");
-    if(!el) return;
+    const el = document.getElementById("top-rides");
+    if (!el) return;
 
-    const topDistance=[...rides]
-        .sort((a,b)=>b.distance-a.distance)
-        .slice(0,10);
+    const topDistance = [...rides]
+        .sort((a, b) => b.distance - a.distance)
+        .slice(0, 10);
 
-    const topElevation=[...rides]
-        .sort((a,b)=>b.total_elevation_gain-a.total_elevation_gain)
-        .slice(0,10);
+    const topElevation = [...rides]
+        .sort((a, b) => b.total_elevation_gain - a.total_elevation_gain)
+        .slice(0, 10);
 
-    const topDuration=[...rides]
-        .sort((a,b)=>b.moving_time-a.moving_time)
-        .slice(0,10);
+    const topDuration = [...rides]
+        .sort((a, b) => b.moving_time - a.moving_time)
+        .slice(0, 10);
 
-    const formatTime=s=>{
+    const formatTime = s => {
 
-        const h=Math.floor(s/3600);
-        const m=Math.floor((s%3600)/60);
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
 
         return `${h}h ${m}m`;
     };
 
-    el.innerHTML=`
+    el.innerHTML = `
 
         <div class="top-box">
 
             <h3>Longest Rides</h3>
 
             <ol>
-                ${topDistance.map(a=>
-                    `<li>${a.name} – ${(a.distance/1000).toFixed(1)} km</li>`
-                ).join("")}
+                ${topDistance.map(a =>
+        `<li>${a.name} – ${(a.distance / 1000).toFixed(1)} km</li>`
+    ).join("")}
             </ol>
 
         </div>
@@ -394,9 +405,9 @@ function renderTopActivities(rides){
             <h3>Most Elevation</h3>
 
             <ol>
-                ${topElevation.map(a=>
-                    `<li>${a.name} – ${a.total_elevation_gain} m</li>`
-                ).join("")}
+                ${topElevation.map(a =>
+        `<li>${a.name} – ${a.total_elevation_gain} m</li>`
+    ).join("")}
             </ol>
 
         </div>
@@ -406,9 +417,9 @@ function renderTopActivities(rides){
             <h3>Longest Duration</h3>
 
             <ol>
-                ${topDuration.map(a=>
-                    `<li>${a.name} – ${formatTime(a.moving_time)}</li>`
-                ).join("")}
+                ${topDuration.map(a =>
+        `<li>${a.name} – ${formatTime(a.moving_time)}</li>`
+    ).join("")}
             </ol>
 
         </div>
@@ -419,32 +430,32 @@ function renderTopActivities(rides){
 // ACTIVITIES TABLE
 // ------------------------
 
-function renderActivitiesTable(rides){
+function renderActivitiesTable(rides) {
 
-    const el=document.getElementById("activities-table");
-    if(!el) return;
+    const el = document.getElementById("activities-table");
+    if (!el) return;
 
     const rows = rides
-        .sort((a,b)=>new Date(b.start_date)-new Date(a.start_date))
-        .map(a=>{
+        .sort((a, b) => new Date(b.start_date) - new Date(a.start_date))
+        .map(a => {
 
             const speed =
-                (a.distance/1000)/(a.moving_time/3600);
+                (a.distance / 1000) / (a.moving_time / 3600);
 
             return `
             <tr>
-                <td>${a.start_date_local.substring(0,10)}</td>
+                <td>${a.start_date_local.substring(0, 10)}</td>
                 <td>${a.name}</td>
-                <td>${(a.distance/1000).toFixed(1)}</td>
-                <td>${a.total_elevation_gain||0}</td>
+                <td>${(a.distance / 1000).toFixed(1)}</td>
+                <td>${a.total_elevation_gain || 0}</td>
                 <td>${speed.toFixed(1)}</td>
-                <td>${a.average_watts||"-"}</td>
+                <td>${a.average_watts || "-"}</td>
             </tr>
             `;
         })
         .join("");
 
-    el.innerHTML=`
+    el.innerHTML = `
 
         <table>
 
