@@ -149,13 +149,19 @@ function renderBikeTypeChart(rides) {
 // ------------------------
 
 function renderDistanceHistogram(rides) {
-    const distances = rides.map(r => r.distance / 1000);
+    const distances = rides
+        .map(r => (r.distance ? r.distance / 1000 : 0))
+        .filter(d => !isNaN(d) && d >= 0);
+
+    if (!distances.length) return;
+
     const binSize = 10;
-    const max = Math.max(...distances);
+    const max = Math.max(...distances, 0);
     const bins = new Array(Math.ceil(max / binSize)).fill(0);
 
     distances.forEach(d => {
-        bins[Math.floor(d / binSize)]++;
+        const idx = Math.floor(d / binSize);
+        if (bins[idx] !== undefined) bins[idx]++;
     });
 
     createChart("distance-histogram", {
@@ -177,33 +183,31 @@ function renderDistanceHistogram(rides) {
 
 
 
+
 // ------------------------
 // ELEVATION HISTOGRAM
 // ------------------------
 
 function renderElevationHistogram(rides) {
+    const values = rides
+        .map(r => r.total_elevation_gain || 0)
+        .filter(v => !isNaN(v) && v >= 0);
 
-    const values =
-        rides.map(r => r.total_elevation_gain || 0);
+    if (!values.length) return;
 
     const binSize = 200;
-
-    const max = Math.max(...values);
-
+    const max = Math.max(...values, 0);
     const bins = new Array(Math.ceil(max / binSize)).fill(0);
 
     values.forEach(v => {
-        bins[Math.floor(v / binSize)]++;
+        const idx = Math.floor(v / binSize);
+        if (bins[idx] !== undefined) bins[idx]++;
     });
 
     createChart("elevation-histogram", {
-
         type: "bar",
-
         data: {
-            labels: bins.map((_, i) =>
-                `${i * binSize}-${(i + 1) * binSize}`),
-
+            labels: bins.map((_, i) => `${i * binSize}-${(i + 1) * binSize}`),
             datasets: [{
                 label: "# rides",
                 data: bins,
@@ -213,25 +217,23 @@ function renderElevationHistogram(rides) {
     });
 }
 
+
 // ------------------------
 // DISTANCE VS SPEED
 // ------------------------
 
 function renderSpeedVsDistanceChart(rides) {
-
     const data = rides
-        .filter(r => r.moving_time)
+        .filter(r => r.moving_time > 0 && r.distance > 0)
         .map(r => ({
-
             x: r.distance / 1000,
-
             y: (r.distance / 1000) / (r.moving_time / 3600)
         }));
 
+    if (!data.length) return;
+
     createChart("speed-distance-chart", {
-
         type: "scatter",
-
         data: {
             datasets: [{
                 label: "Ride",
@@ -239,7 +241,6 @@ function renderSpeedVsDistanceChart(rides) {
                 backgroundColor: "#FC5200"
             }]
         },
-
         options: {
             scales: {
                 x: { title: { display: true, text: "Distance (km)" } },
@@ -249,23 +250,23 @@ function renderSpeedVsDistanceChart(rides) {
     });
 }
 
+
 // ------------------------
 // DISTANCE VS ELEVATION
 // ------------------------
 
 function renderDistanceVsElevationChart(rides) {
+    const data = rides
+        .filter(r => r.distance >= 0 && r.total_elevation_gain >= 0)
+        .map(r => ({
+            x: r.distance / 1000,
+            y: r.total_elevation_gain || 0
+        }));
 
-    const data = rides.map(r => ({
-
-        x: r.distance / 1000,
-
-        y: r.total_elevation_gain || 0
-    }));
+    if (!data.length) return;
 
     createChart("distance-elevation-chart", {
-
         type: "scatter",
-
         data: {
             datasets: [{
                 label: "Ride",
@@ -273,7 +274,6 @@ function renderDistanceVsElevationChart(rides) {
                 backgroundColor: "rgba(50,100,200,0.8)"
             }]
         },
-
         options: {
             scales: {
                 x: { title: { display: true, text: "Distance (km)" } },
@@ -283,25 +283,24 @@ function renderDistanceVsElevationChart(rides) {
     });
 }
 
+
 // ------------------------
 // ELEVATION RATIO
 // ------------------------
 
 function renderElevationRatioChart(rides) {
-
     const data = rides
-        .filter(r => r.distance)
+        .filter(r => r.distance > 0)
         .map(r => ({
-
             x: r.distance / 1000,
-
             y: (r.total_elevation_gain || 0) / (r.distance / 1000)
-        }));
+        }))
+        .filter(p => isFinite(p.y));
+
+    if (!data.length) return;
 
     createChart("elevation-ratio-chart", {
-
         type: "scatter",
-
         data: {
             datasets: [{
                 label: "Elevation per km",
@@ -309,7 +308,6 @@ function renderElevationRatioChart(rides) {
                 backgroundColor: "rgba(120,40,180,0.8)"
             }]
         },
-
         options: {
             scales: {
                 x: { title: { display: true, text: "Distance (km)" } },
@@ -319,27 +317,24 @@ function renderElevationRatioChart(rides) {
     });
 }
 
+
 // ------------------------
 // POWER VS SPEED
 // ------------------------
 
 function renderPowerVsSpeedChart(rides) {
-
     const data = rides
-        .filter(r => r.average_watts)
+        .filter(r => r.average_watts > 0 && r.moving_time > 0 && r.distance > 0)
         .map(r => ({
-
             x: r.average_watts,
-
             y: (r.distance / 1000) / (r.moving_time / 3600)
-        }));
+        }))
+        .filter(p => isFinite(p.y));
 
     if (!data.length) return;
 
     createChart("power-speed-chart", {
-
         type: "scatter",
-
         data: {
             datasets: [{
                 label: "Power vs Speed",
@@ -347,7 +342,6 @@ function renderPowerVsSpeedChart(rides) {
                 backgroundColor: "rgba(220,60,60,0.8)"
             }]
         },
-
         options: {
             scales: {
                 x: { title: { display: true, text: "Power (W)" } },
@@ -356,6 +350,7 @@ function renderPowerVsSpeedChart(rides) {
         }
     });
 }
+
 
 // ------------------------
 // TOP RIDES
