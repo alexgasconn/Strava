@@ -47,15 +47,19 @@ export function renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterT
 // ------------------------
 
 function createChart(canvasId, config) {
-
     const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
+    if (!canvas) return null;
 
-    if (charts[canvasId]) charts[canvasId].destroy();
+    if (charts[canvasId]) {
+        charts[canvasId].destroy();
+    }
 
-    charts[canvasId] = new Chart(canvas, config);
-    return chart;
+    const chart = new Chart(canvas, config);  // ← AQUÍ creas la instancia real
+    charts[canvasId] = chart;
+
+    return chart;  // ← Y AHORA sí devuelves la instancia correcta
 }
+
 
 // ------------------------
 // SUMMARY
@@ -136,10 +140,6 @@ function renderBikeTypeChart(rides) {
 let distanceHistogramChart; // fuera de la función, global o en scope superior
 
 function renderDistanceHistogram(rides) {
-    if (distanceHistogramChart) {
-        distanceHistogramChart.destroy();
-    }
-
     const distances = rides.map(r => r.distance / 1000);
     const binSize = 10;
     const max = Math.max(...distances);
@@ -149,8 +149,7 @@ function renderDistanceHistogram(rides) {
         bins[Math.floor(d / binSize)]++;
     });
 
-    // Guardar la nueva instancia en la variable
-    distanceHistogramChart = createChart("distance-histogram", {
+    createChart("distance-histogram", {
         type: "bar",
         data: {
             labels: bins.map((_, i) => `${i * binSize}-${(i + 1) * binSize}`),
@@ -166,6 +165,7 @@ function renderDistanceHistogram(rides) {
         }
     });
 }
+
 
 // ------------------------
 // ELEVATION HISTOGRAM
