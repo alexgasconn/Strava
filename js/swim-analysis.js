@@ -4,6 +4,21 @@ import * as utils from './utils.js';
 let charts = {};
 
 // ------------------------
+// SWIM TYPE COLORING
+// ------------------------
+
+const swimColors = {
+    pool: "#0077cc",
+    openwater: "#00b894"
+};
+
+function getSwimType(a) {
+    if (a.trainer === true) return "pool";
+    if (a.start_latlng?.length === 2) return "openwater";
+    return "pool";
+}
+
+// ------------------------
 // MAIN ENTRY
 // ------------------------
 
@@ -74,7 +89,7 @@ function renderSummaryCards(swims) {
         swims.reduce((s, a) => s + a.moving_time, 0);
 
     const avgPaceSec =
-        totalTime / (totalDistance * 10); // pace per 100m
+        totalTime / (totalDistance * 10); // sec per 100m
 
     const paceMin = Math.floor(avgPaceSec / 60);
     const paceSec = Math.round(avgPaceSec % 60);
@@ -128,7 +143,7 @@ function renderPaceHistogram(swims) {
 
     const paces = swims
         .filter(s => s.distance > 0)
-        .map(s => (s.moving_time / (s.distance / 100)) ); // sec per 100m
+        .map(s => (s.moving_time / (s.distance / 100))); // sec per 100m
 
     const binSize = 5; // 5 seconds
     const max = Math.max(...paces, 0);
@@ -165,7 +180,8 @@ function renderPaceVsDistanceChart(swims) {
         .filter(s => s.distance > 0)
         .map(s => ({
             x: s.distance / 1000,
-            y: (s.moving_time / (s.distance / 100)), // sec per 100m
+            y: (s.moving_time / (s.distance / 100)), // sec/100m
+            type: getSwimType(s)
         }));
 
     createChart("swim-pace-distance-chart", {
@@ -174,7 +190,7 @@ function renderPaceVsDistanceChart(swims) {
             datasets: [{
                 label: "Swim",
                 data,
-                backgroundColor: "rgba(0,150,255,0.8)"
+                backgroundColor: ctx => swimColors[ctx.raw.type]
             }]
         },
         options: {
@@ -264,7 +280,8 @@ function renderDistanceVsDuration(swims) {
 
     const data = swims.map(s => ({
         x: s.moving_time / 60, // minutes
-        y: s.distance / 1000
+        y: s.distance / 1000,
+        type: getSwimType(s)
     }));
 
     createChart("swim-distance-duration-chart", {
@@ -273,7 +290,7 @@ function renderDistanceVsDuration(swims) {
             datasets: [{
                 label: "Swim",
                 data,
-                backgroundColor: "rgba(0,100,255,0.8)"
+                backgroundColor: ctx => swimColors[ctx.raw.type]
             }]
         },
         options: {
@@ -293,10 +310,13 @@ function renderDistanceVsDuration(swims) {
 function renderSwolfHistogram(swims) {
 
     const swolfValues = swims
-        .map(s => s.swolf || s.average_swolf || null)
-        .filter(v => v !== null);
+        .map(s => s.swolf || s.average_swolf)
+        .filter(v => v !== undefined && v !== null);
 
-    if (!swolfValues.length) return;
+    if (!swolfValues.length) {
+        console.log("No SWOLF data available.");
+        return;
+    }
 
     const binSize = 2;
     const max = Math.max(...swolfValues, 0);
@@ -329,21 +349,15 @@ function renderTopSwims(swims) {
     const el = document.getElementById("swim-top");
     if (!el) return;
 
-    const topDistance = [...swims].sort((a,b)=>b.distance-a.distance).slice(0,10);
+    const topDistance = [...swims]
+        .sort((a,b)=>b.distance-a.distance)
+        .slice(0,10);
 
     const topPace = [...swims]
         .filter(s=>s.distance>0)
         .sort((a,b)=>
             (a.moving_time/(a.distance/100)) -
             (b.moving_time/(b.distance/100))
-        )
-        .slice(0,10);
-
-    const topSwolf = [...swims]
-        .filter(s=>s.swolf || s.average_swolf)
-        .sort((a,b)=>
-            (a.swolf||a.average_swolf) -
-            (b.swolf||b.average_swolf)
         )
         .slice(0,10);
 
@@ -361,11 +375,6 @@ function renderTopSwims(swims) {
                 const sec = Math.round(pace%60);
                 return `<li>${s.name} – ${min}:${sec.toString().padStart(2,'0')} /100m</li>`;
             }).join("")}</ol>
-        </div>
-
-        <div class="top-box">
-            <h3>Best SWOLF</h3>
-            <ol>${topSwolf.map(s=>`<li>${s.name} – ${s.swolf||s.average_swolf}</li>`).join("")}</ol>
         </div>
     `;
 }
@@ -391,7 +400,7 @@ function renderSwimsTable(swims) {
                     <td>${s.name}</td>
                     <td>${(s.distance/1000).toFixed(2)}</td>
                     <td>${min}:${sec.toString().padStart(2,'0')}</td>
-                    <td>${s.swolf||s.average_swolf||"-"}</td>
+                    <td>${getSwimType(s)}</td>
                 </tr>
             `;
         }).join("");
@@ -404,7 +413,7 @@ function renderSwimsTable(swims) {
                     <th>Activity</th>
                     <th>km</th>
                     <th>Pace /100m</th>
-                    <th>SWOLF</th>
+                    <th>Type</th>
                 </tr>
             </thead>
             <tbody>${rows}</tbody>
