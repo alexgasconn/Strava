@@ -2,7 +2,7 @@
 import { redirectToStrava, logout, handleAuth } from './auth.js';
 import { setupDashboard, showLoading, hideLoading, handleError, } from './ui.js';
 import { renderAnalysisTab } from './analysis.js';
-import { renderBikeAnalysisTab } from './bike-analysis.js';
+import { renderBikeAnalysisTab} from './bike-analysis.js';
 import { renderDashboardTab } from './dashboard.js';
 import { renderAthleteTab } from './athlete.js';
 import { renderPlannerTab } from './planner.js';
@@ -97,11 +97,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Lazy-render tabs on first visit
             if (!renderedTabs.has(tabId) && tabConfig[tabId]) {
-                {
-                    tabConfig[tabId].render();
-                    renderedTabs.add(tabId);
-                }
-            });
+                tabConfig[tabId].render();
+                renderedTabs.add(tabId);
+            }
+        });
     });
 
     // --- YEAR FILTER BUTTONS ---
