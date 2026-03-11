@@ -54,6 +54,7 @@ function createChart(canvasId, config) {
     if (charts[canvasId]) charts[canvasId].destroy();
 
     charts[canvasId] = new Chart(canvas, config);
+    return chart;
 }
 
 // ------------------------
