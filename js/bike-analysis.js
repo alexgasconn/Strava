@@ -137,8 +137,6 @@ function renderBikeTypeChart(rides) {
 // DISTANCE HISTOGRAM
 // ------------------------
 
-let distanceHistogramChart; // fuera de la función, global o en scope superior
-
 function renderDistanceHistogram(rides) {
     const distances = rides.map(r => r.distance / 1000);
     const binSize = 10;
@@ -165,6 +163,7 @@ function renderDistanceHistogram(rides) {
         }
     });
 }
+
 
 
 // ------------------------
