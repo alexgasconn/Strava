@@ -3,6 +3,7 @@ import { redirectToStrava, logout, handleAuth } from './auth.js';
 import { setupDashboard, showLoading, hideLoading, handleError, } from './ui.js';
 import { renderAnalysisTab } from './analysis.js';
 import { renderBikeAnalysisTab} from './bike-analysis.js';
+import { renderSwimAnalysisTab} from './swim-analysis.js';
 import { renderDashboardTab } from './dashboard.js';
 import { renderAthleteTab } from './athlete.js';
 import { renderPlannerTab } from './planner.js';
@@ -25,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'dashboard-tab': { render: () => renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
         'analysis-tab': { render: () => renderAnalysisTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
         'bike-tab': { render: () => renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
+        'swim-tab': { render: () => renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
         'athlete-tab': { render: () => renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
         'planner-tab': { render: () => renderPlannerTab(allActivities) },
         'gear-tab': { render: () => renderGearTab(allActivities) },
