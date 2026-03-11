@@ -164,7 +164,7 @@ function renderDistanceHistogram(rides) {
         if (bins[idx] !== undefined) bins[idx]++;
     });
 
-    createChart("distance-histogram", {
+    createChart("bike-distance-histogram", {
         type: "bar",
         data: {
             labels: bins.map((_, i) => `${i * binSize}-${(i + 1) * binSize}`),
@@ -180,6 +180,7 @@ function renderDistanceHistogram(rides) {
         }
     });
 }
+
 
 
 
@@ -204,7 +205,7 @@ function renderElevationHistogram(rides) {
         if (bins[idx] !== undefined) bins[idx]++;
     });
 
-    createChart("elevation-histogram", {
+    createChart("bike-elevation-histogram", {
         type: "bar",
         data: {
             labels: bins.map((_, i) => `${i * binSize}-${(i + 1) * binSize}`),
@@ -216,6 +217,7 @@ function renderElevationHistogram(rides) {
         }
     });
 }
+
 
 
 // ------------------------
@@ -232,7 +234,7 @@ function renderSpeedVsDistanceChart(rides) {
 
     if (!data.length) return;
 
-    createChart("speed-distance-chart", {
+    createChart("bike-speed-distance-chart", {
         type: "scatter",
         data: {
             datasets: [{
@@ -251,6 +253,7 @@ function renderSpeedVsDistanceChart(rides) {
 }
 
 
+
 // ------------------------
 // DISTANCE VS ELEVATION
 // ------------------------
@@ -265,7 +268,7 @@ function renderDistanceVsElevationChart(rides) {
 
     if (!data.length) return;
 
-    createChart("distance-elevation-chart", {
+    createChart("bike-distance-elevation-chart", {
         type: "scatter",
         data: {
             datasets: [{
@@ -284,6 +287,7 @@ function renderDistanceVsElevationChart(rides) {
 }
 
 
+
 // ------------------------
 // ELEVATION RATIO
 // ------------------------
@@ -299,7 +303,7 @@ function renderElevationRatioChart(rides) {
 
     if (!data.length) return;
 
-    createChart("elevation-ratio-chart", {
+    createChart("bike-elevation-ratio-chart", {
         type: "scatter",
         data: {
             datasets: [{
@@ -318,6 +322,7 @@ function renderElevationRatioChart(rides) {
 }
 
 
+
 // ------------------------
 // POWER VS SPEED
 // ------------------------
@@ -333,7 +338,7 @@ function renderPowerVsSpeedChart(rides) {
 
     if (!data.length) return;
 
-    createChart("power-speed-chart", {
+    createChart("bike-power-speed-chart", {
         type: "scatter",
         data: {
             datasets: [{
@@ -350,6 +355,7 @@ function renderPowerVsSpeedChart(rides) {
         }
     });
 }
+
 
 
 // ------------------------
