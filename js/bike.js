@@ -659,6 +659,7 @@ function renderCadenceSpeedChart(streams) {
  * Main initialization function
  */
 async function init() {
+    console.log('Initializing activity page for ID:', activityId);
     try {
         // Fetch data
         const [activityData, streamsData] = await Promise.all([
@@ -670,6 +671,7 @@ async function init() {
 
         // Process data
         const processedActivity = processActivityData(activityData);
+        console.log('Processed activity data:', processedActivity);
         const processedStreams = processStreamData(streamsData, currentSmoothingLevel);
 
         // Store for smoothing updates
