@@ -130,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('date-from').value = dateFilterFrom;
                 document.getElementById('date-to').value = dateFilterTo;
 
-                renderAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
+                renderRunAnalysisTab (allActivities, dateFilterFrom, dateFilterTo);
             });
         });
     }
@@ -209,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showLoading(`Done! ${progress}%`);
 
             setupDashboard(allActivities);
-            renderAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
+            renderRunAnalysisTab (allActivities, dateFilterFrom, dateFilterTo);
             renderedTabs.add('analysis-tab');
             setupYearlySelector();
         } catch (error) {
@@ -228,7 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Reset rendered state so tabs re-render with fresh data
             renderedTabs.clear();
-            renderAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
+            renderRunAnalysisTab (allActivities, dateFilterFrom, dateFilterTo);
             renderedTabs.add('analysis-tab');
             setupYearlySelector();
         } catch (error) {
@@ -250,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.year-btn').forEach(b => b.classList.remove('active'));
             dateFilterFrom = document.getElementById('date-from').value || null;
             dateFilterTo = document.getElementById('date-to').value || null;
-            renderAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
+            renderRunAnalysisTab (allActivities, dateFilterFrom, dateFilterTo);
         });
     }
 
@@ -261,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('date-from').value = '';
             document.getElementById('date-to').value = '';
             document.querySelectorAll('.year-btn').forEach(b => b.classList.remove('active'));
-            renderAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
+            renderRunAnalysisTab (allActivities, dateFilterFrom, dateFilterTo);
         });
     }
 
