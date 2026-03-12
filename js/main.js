@@ -9,7 +9,7 @@ import { renderAthleteTab } from './athlete.js';
 import { renderPlannerTab } from './planner.js';
 import { renderGearTab } from './gear.js';
 import { renderWeatherTab } from './weather.js';
-import { renderRunsTab } from './activities.js';
+import { renderActivitiesTab } from './activities.js';
 import { renderWrappedTab } from './wrapped.js';
 import { renderMapTab } from './maps.js';
 import { fetchAllActivities, fetchAthleteData, fetchTrainingZones, fetchAllGears } from './api.js';
