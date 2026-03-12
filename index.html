@@ -104,8 +104,7 @@
             <!-- BARRA DE NAVEGACIÓN DE PESTAÑAS -->
             <button class="tab-link" data-tab="dashboard-tab" aria-controls="dashboard-tab" aria-label="Dashboard">📈
                 Dashboard</button>
-            <button class="tab-link active" data-tab="run-tab" aria-controls="run-tab"
-                aria-label="Run">Run</button>
+            <button class="tab-link active" data-tab="run-tab" aria-controls="run-tab" aria-label="Run"> 🏃 Run</button>
             <button class="tab-link" data-tab="bike-tab" aria-controls="bike-tab" aria-label="Bike">🚴 Bike</button>
             <button class="tab-link" data-tab="swim-tab" aria-controls="swim-tab" aria-label="Swim">🏊 Swim</button>
             <button class="tab-link" data-tab="athlete-tab" aria-controls="athlete-tab" aria-label="Athlete">👤
@@ -113,8 +112,8 @@
             <button class="tab-link" data-tab="planner-tab" aria-controls="planner-tab"
                 aria-label="Planner and Tools">📅 Planner & Tools</button>
             <button class="tab-link" data-tab="gear-tab" aria-controls="gear-tab" aria-label="Gear">👟 Gear</button>
-            <button class="tab-link" data-tab="activities-tab" aria-controls="activities-tab"
-                aria-label="Activities">📝 Activities</button>
+            <button class="tab-link" data-tab="activities-tab" aria-controls="activities-tab" aria-label="Activities">📝
+                Activities</button>
             <button class="tab-link" data-tab="weather-tab" aria-controls="weather-tab" aria-label="Weather">🌤
                 Weather</button>
             <button class="tab-link" data-tab="map-tab" aria-controls="map-tab" aria-label="Map">🗺️ Map</button>
@@ -526,25 +525,19 @@
 
 
                 <div id="activities-tab" class="tab-content">
-                    <h3>Runs & Races</h3>
-                    <div class="chart-container">
-                        <h3>Personal Bests</h3>
-                        <div id="personal-bests"></div>
-                    </div>
-                    <div class="chart-container">
-                        <h3>Races</h3>
-                        <div style="overflow-x:auto;">
-                            <table id="race-list" class="df-table"></table>
-                        </div>
-                    </div>
+                    <h3>Activities</h3>
 
                     <div class="chart-container full-width">
-                        <h3>All Runs</h3>
+                        <h3>Activities List</h3>
+
+                        <div id="activity-filters" style="margin-bottom:1rem;"></div>
+
                         <div style="overflow-x:auto;">
-                            <table id="all-runs-table" class="df-table"></table>
+                            <table id="activities-table" class="df-table"></table>
                         </div>
                     </div>
                 </div>
+
 
                 <div id="weather-tab" class="tab-content">
                     <h2>🌦 Weather Analytics</h2>
