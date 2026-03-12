@@ -6,7 +6,7 @@ function getGears() {
     return JSON.parse(localStorage.getItem('strava_gears') || '[]');
 }
 
-export function renderAnalysisTab(allActivities, dateFilterFrom, dateFilterTo) {
+export function renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo) {
     const filteredActivities = utils.filterActivitiesByDate(allActivities, dateFilterFrom, dateFilterTo);
     const runs = filteredActivities.filter(a => a.type && a.type.includes('Run'));
 
