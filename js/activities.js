@@ -2,6 +2,8 @@ import * as utils from './utils.js';
 
 export function renderActivitiesTab(allActivities) {
 
+    console.log(allActivities.slice(0, 5));
+
     const tableEl = document.getElementById('activities-table');
     const filterContainer = document.getElementById('activity-filters');
 
@@ -18,10 +20,15 @@ export function renderActivitiesTab(allActivities) {
         return;
     }
 
+    // Helper: normalize activity type consistently
+    function getActivityType(a) {
+        return (a.type || a.sport_type || 'Unknown').trim();
+    }
+
     // --------------------------------
-    // 1. Build type filter (in English)
+    // 1. Build type filter
     // --------------------------------
-    const activityTypes = [...new Set(allActivities.map(a => a.type || 'Unknown'))];
+    const activityTypes = [...new Set(allActivities.map(getActivityType))];
 
     if (filterContainer) {
         filterContainer.innerHTML = `
@@ -52,11 +59,7 @@ export function renderActivitiesTab(allActivities) {
         let filtered = allActivities;
 
         if (selectedType !== 'all') {
-            if (selectedType === 'Unknown') {
-                filtered = allActivities.filter(a => !a.type);
-            } else {
-                filtered = allActivities.filter(a => (a.type || '').trim() === selectedType);
-            }
+            filtered = allActivities.filter(a => getActivityType(a) === selectedType);
         }
 
         renderActivitiesTable(filtered);
@@ -84,7 +87,7 @@ export function renderActivitiesTab(allActivities) {
 
         const columns = [
             { key: 'start_date_local', label: 'Date', format: v => v ? utils.formatDate(new Date(v)) : '' },
-            { key: 'type', label: 'Type', format: v => v || '' },
+            { key: 'type', label: 'Type', format: (v, act) => getActivityType(act) },
             { key: 'name', label: 'Name', format: v => v || '' },
             { key: 'distance', label: 'Distance', format: v => typeof v === 'number' ? (v / 1000).toFixed(2) + ' km' : '' },
             { key: 'moving_time', label: 'Time', format: v => typeof v === 'number' ? new Date(v * 1000).toISOString().substr(11, 8) : '' },
@@ -92,7 +95,8 @@ export function renderActivitiesTab(allActivities) {
                 key: 'pace',
                 label: 'Pace',
                 format: (v, act) => {
-                    if (act.distance && act.moving_time && act.type === 'Run') {
+                    const type = getActivityType(act);
+                    if (act.distance && act.moving_time && type === 'Run') {
                         const paceSec = act.moving_time / (act.distance / 1000);
                         const min = Math.floor(paceSec / 60);
                         const sec = Math.round(paceSec % 60);
@@ -128,8 +132,8 @@ export function renderActivitiesTab(allActivities) {
                 ${sorted.map(act => `
                     <tr>
                         ${columns.map(col => {
-                            const val = act[col.key];
-                            const formatted = col.format(val, act);
+                            const rawVal = act[col.key];
+                            const formatted = col.format(rawVal, act);
                             return `<td>${formatted}</td>`;
                         }).join('')}
                         <td><a href="html/activity-router.html?id=${act.id}" target="_blank"><button>View</button></a></td>
@@ -138,7 +142,6 @@ export function renderActivitiesTab(allActivities) {
             </tbody>
         `;
 
-        // IMPORTANT: tableEl is the <table>, so we only inject thead+tbody, not another <table>
         tableEl.innerHTML = theadHtml + tbodyHtml;
 
         // Sorting handlers
@@ -169,15 +172,20 @@ export function renderActivitiesTab(allActivities) {
     function sortActivities(acts, col, dir) {
         const factor = dir === 'desc' ? -1 : 1;
         return acts.slice().sort((a, b) => {
-            const va = a[col];
-            const vb = b[col];
+            let va = a[col];
+            let vb = b[col];
 
-            // Numbers first
+            if (col === 'type') {
+                va = getActivityType(a);
+                vb = getActivityType(b);
+            }
+
+            // Numbers
             if (typeof va === 'number' && typeof vb === 'number') {
                 return (va - vb) * factor;
             }
 
-            // Dates (start_date_local) as strings but sortable
+            // Dates
             if (col === 'start_date_local') {
                 const ta = va ? Date.parse(va) : 0;
                 const tb = vb ? Date.parse(vb) : 0;
