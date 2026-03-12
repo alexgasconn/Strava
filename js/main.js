@@ -1,7 +1,7 @@
 // js/main.js
 import { redirectToStrava, logout, handleAuth } from './auth.js';
 import { setupDashboard, showLoading, hideLoading, handleError, } from './ui.js';
-import { renderAnalysisTab } from './analysis.js';
+import { renderRunAnalysisTab } from './run-analysis.js';
 import { renderBikeAnalysisTab} from './bike-analysis.js';
 import { renderSwimAnalysisTab} from './swim-analysis.js';
 import { renderDashboardTab } from './dashboard.js';
@@ -9,7 +9,7 @@ import { renderAthleteTab } from './athlete.js';
 import { renderPlannerTab } from './planner.js';
 import { renderGearTab } from './gear.js';
 import { renderWeatherTab } from './weather.js';
-import { renderRunsTab } from './runs.js';
+import { renderRunsTab } from './activities.js';
 import { renderWrappedTab } from './wrapped.js';
 import { renderMapTab } from './maps.js';
 import { fetchAllActivities, fetchAthleteData, fetchTrainingZones, fetchAllGears } from './api.js';
@@ -24,13 +24,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Tab rendering config: maps tab id → { render function, uses date filters } ---
     const tabConfig = {
         'dashboard-tab': { render: () => renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
-        'analysis-tab': { render: () => renderAnalysisTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
+        'run-tab': { render: () => renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
         'bike-tab': { render: () => renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
         'swim-tab': { render: () => renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
         'athlete-tab': { render: () => renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
         'planner-tab': { render: () => renderPlannerTab(allActivities) },
         'gear-tab': { render: () => renderGearTab(allActivities) },
-        'runs-races-tab': { render: () => renderRunsTab(allActivities) },
+        'activities-tab': { render: () => renderRunsTab(allActivities) },
         'weather-tab': { render: () => renderWeatherTab(allActivities) },
         'map-tab': { render: () => renderMapTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
         'wrapped-tab': { render: () => renderWrappedTab(allActivities) },
