@@ -139,7 +139,6 @@ function renderSummaryCards(swims) {
         <div class="card"><h3>Total Time</h3><p>${(totalTime/3600).toFixed(1)} h</p></div>
         <div class="card"><h3>Avg Pace</h3><p>${paceMin}:${paceSec.toString().padStart(2,'0')} /100m</p></div>
         <div class="card"><h3>Avg HR</h3><p>${isFinite(avgHr)?avgHr.toFixed(0):"-"} bpm</p></div>
-        <div class="card"><h3>Longest Session</h3><p>${longest ? longest.name+" – "+longest.distance_km.toFixed(2)+" km" : "-"}</p></div>
     `;
 }
 

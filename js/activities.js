@@ -2,64 +2,81 @@ import * as utils from './utils.js';
 
 export function renderActivitiesTab(allActivities) {
 
-    const tableContainer = document.getElementById('activities-table');
+    const tableEl = document.getElementById('activities-table');
     const filterContainer = document.getElementById('activity-filters');
 
-    if (!tableContainer) {
-        console.error("Activities table container not found.");
+    if (!tableEl) {
+        console.error("Activities table element not found.");
         return;
     }
 
     if (!allActivities || allActivities.length === 0) {
-        tableContainer.innerHTML = `
+        tableEl.innerHTML = `
             <thead><tr><th>No Activities</th></tr></thead>
             <tbody><tr><td>No activity data available.</td></tr></tbody>
         `;
         return;
     }
 
-    // -----------------------------
-    // 1. Crear filtros por tipo
-    // -----------------------------
-    const activityTypes = [...new Set(allActivities.map(a => a.type || "Unknown"))];
+    // --------------------------------
+    // 1. Build type filter (in English)
+    // --------------------------------
+    const activityTypes = [...new Set(allActivities.map(a => a.type || 'Unknown'))];
 
-    filterContainer.innerHTML = `
-        <label style="font-weight:600; margin-right:1rem;">
-            Tipo:
-            <select id="activity-type-filter">
-                <option value="all">Todos</option>
-                ${activityTypes.map(t => `<option value="${t}">${t}</option>`).join('')}
-            </select>
-        </label>
-    `;
+    if (filterContainer) {
+        filterContainer.innerHTML = `
+            <label style="font-weight:600; margin-right:1rem;">
+                Type:
+                <select id="activity-type-filter">
+                    <option value="all">All</option>
+                    ${activityTypes.map(t => `<option value="${t}">${t}</option>`).join('')}
+                </select>
+            </label>
+        `;
+    }
 
     const typeFilter = document.getElementById('activity-type-filter');
 
-    // -----------------------------
-    // 2. Render principal
-    // -----------------------------
-    function render() {
-        const selectedType = typeFilter.value;
+    // Keep sort state on the table element
+    if (!tableEl.dataset.sortCol) {
+        tableEl.dataset.sortCol = 'start_date_local';
+        tableEl.dataset.sortDir = 'desc';
+    }
 
-        const filtered = selectedType === "all"
-            ? allActivities
-            : allActivities.filter(a => a.type === selectedType);
+    // --------------------------------
+    // 2. Main render function
+    // --------------------------------
+    function render() {
+        const selectedType = typeFilter ? typeFilter.value : 'all';
+
+        let filtered = allActivities;
+
+        if (selectedType !== 'all') {
+            if (selectedType === 'Unknown') {
+                filtered = allActivities.filter(a => !a.type);
+            } else {
+                filtered = allActivities.filter(a => (a.type || '').trim() === selectedType);
+            }
+        }
 
         renderActivitiesTable(filtered);
     }
 
-    typeFilter.addEventListener('change', render);
+    if (typeFilter) {
+        typeFilter.addEventListener('change', render);
+    }
 
-    // Render inicial
+    // Initial render
     render();
 
-    // -----------------------------
-    // 3. Tabla unificada
-    // -----------------------------
+    // --------------------------------
+    // 3. Unified activities table
+    // --------------------------------
     function renderActivitiesTable(activities) {
 
-        if (activities.length === 0) {
-            tableContainer.innerHTML = `
+        if (!activities || activities.length === 0) {
+            tableEl.innerHTML = `
+                <thead><tr><th>No Activities</th></tr></thead>
                 <tbody><tr><td>No activities found for this filter.</td></tr></tbody>
             `;
             return;
@@ -88,22 +105,16 @@ export function renderActivitiesTab(allActivities) {
             { key: 'total_elevation_gain', label: 'Elevation', format: v => typeof v === 'number' ? v.toFixed(0) + ' m' : '' }
         ];
 
-        // Sorting state
-        if (!tableContainer.dataset.sortCol) {
-            tableContainer.dataset.sortCol = 'start_date_local';
-            tableContainer.dataset.sortDir = 'desc';
-        }
-
-        const sortCol = tableContainer.dataset.sortCol;
-        const sortDir = tableContainer.dataset.sortDir;
+        const sortCol = tableEl.dataset.sortCol || 'start_date_local';
+        const sortDir = tableEl.dataset.sortDir || 'desc';
 
         const sorted = sortActivities(activities, sortCol, sortDir);
 
-        const header = `
+        const theadHtml = `
             <thead>
                 <tr>
                     ${columns.map(c =>
-                        `<th class="sortable" data-col="${c.key}" style="cursor:pointer;">
+                        `<th class="sortable" data-col="${c.key}" style="cursor:pointer; white-space:nowrap;">
                             ${c.label} <span class="sort-indicator"></span>
                         </th>`
                     ).join('')}
@@ -112,57 +123,65 @@ export function renderActivitiesTab(allActivities) {
             </thead>
         `;
 
-        const body = sorted.map(act => `
-            <tr>
-                ${columns.map(col => {
-                    const val = act[col.key];
-                    const formatted = col.format(val, act);
-                    return `<td>${formatted}</td>`;
-                }).join('')}
-                <td><a href="html/activity-router.html?id=${act.id}" target="_blank"><button>View</button></a></td>
-            </tr>
-        `).join('');
-
-        tableContainer.innerHTML = `
-            <table style="width:100%; border-collapse:collapse;">
-                ${header}
-                <tbody>${body}</tbody>
-            </table>
+        const tbodyHtml = `
+            <tbody>
+                ${sorted.map(act => `
+                    <tr>
+                        ${columns.map(col => {
+                            const val = act[col.key];
+                            const formatted = col.format(val, act);
+                            return `<td>${formatted}</td>`;
+                        }).join('')}
+                        <td><a href="html/activity-router.html?id=${act.id}" target="_blank"><button>View</button></a></td>
+                    </tr>
+                `).join('')}
+            </tbody>
         `;
 
+        // IMPORTANT: tableEl is the <table>, so we only inject thead+tbody, not another <table>
+        tableEl.innerHTML = theadHtml + tbodyHtml;
+
         // Sorting handlers
-        tableContainer.querySelectorAll('th.sortable').forEach(th => {
+        tableEl.querySelectorAll('th.sortable').forEach(th => {
             th.addEventListener('click', () => {
                 const col = th.dataset.col;
                 let dir = 'desc';
-                if (tableContainer.dataset.sortCol === col) {
-                    dir = tableContainer.dataset.sortDir === 'desc' ? 'asc' : 'desc';
+                if (tableEl.dataset.sortCol === col) {
+                    dir = tableEl.dataset.sortDir === 'desc' ? 'asc' : 'desc';
                 }
-                tableContainer.dataset.sortCol = col;
-                tableContainer.dataset.sortDir = dir;
+                tableEl.dataset.sortCol = col;
+                tableEl.dataset.sortDir = dir;
                 render();
             });
 
             const ind = th.querySelector('.sort-indicator');
-            if (tableContainer.dataset.sortCol === th.dataset.col) {
-                ind.textContent = tableContainer.dataset.sortDir === 'desc' ? '▼' : '▲';
+            if (tableEl.dataset.sortCol === th.dataset.col) {
+                ind.textContent = tableEl.dataset.sortDir === 'desc' ? '▼' : '▲';
             } else {
                 ind.textContent = '';
             }
         });
     }
 
-    // -----------------------------
-    // Sorting helper (tu versión)
-    // -----------------------------
+    // --------------------------------
+    // 4. Sorting helper
+    // --------------------------------
     function sortActivities(acts, col, dir) {
         const factor = dir === 'desc' ? -1 : 1;
         return acts.slice().sort((a, b) => {
             const va = a[col];
             const vb = b[col];
 
+            // Numbers first
             if (typeof va === 'number' && typeof vb === 'number') {
                 return (va - vb) * factor;
+            }
+
+            // Dates (start_date_local) as strings but sortable
+            if (col === 'start_date_local') {
+                const ta = va ? Date.parse(va) : 0;
+                const tb = vb ? Date.parse(vb) : 0;
+                return (ta - tb) * factor;
             }
 
             const sa = String(va || '').toLowerCase();
