@@ -63,19 +63,10 @@ export function renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterT
 
     renderDistanceHistogram(enriched);
     renderPaceHistogram(enriched);
-    renderDurationHistogram(enriched);
-    renderHrHistogram(enriched);
 
     renderPaceVsDistanceChart(enriched);
-    renderHrVsPaceChart(enriched);
-    renderDistanceVsHrChart(enriched);
-
-    renderDistanceOverTime(enriched);
-    renderPaceOverTime(enriched);
 
     renderPaceZonesChart(enriched);
-
-    renderDistanceVsDuration(enriched);
 
     renderTopSwims(enriched);
     renderSwimsTable(enriched);
@@ -281,62 +272,6 @@ function renderPaceHistogram(swims) {
     });
 }
 
-function renderDurationHistogram(swims) {
-    const durations = swims.map(s => (s.moving_time || 0)/60);
-    if (!durations.length) return;
-
-    const binSize = 10;
-    const max = Math.max(...durations, 0);
-    const bins = new Array(Math.ceil(max / binSize)).fill(0);
-
-    durations.forEach(d => {
-        const idx = Math.floor(d / binSize);
-        if (bins[idx] !== undefined) bins[idx]++;
-    });
-
-    createChart("swim-duration-histogram", {
-        type: "bar",
-        data: {
-            labels: bins.map((_,i)=>`${i*binSize}-${(i+1)*binSize} min`),
-            datasets: [{
-                label: "# swims",
-                data: bins,
-                backgroundColor: "rgba(0,120,200,0.7)"
-            }]
-        },
-        options: { plugins: { legend: { display: false } } }
-    });
-}
-
-function renderHrHistogram(swims) {
-    const hrs = swims
-        .map(s=>s.average_heartrate)
-        .filter(h=>h && isFinite(h));
-    if (!hrs.length) return;
-
-    const binSize = 5;
-    const max = Math.max(...hrs, 0);
-    const min = Math.min(...hrs, max);
-    const bins = new Array(Math.ceil((max-min)/binSize)).fill(0);
-
-    hrs.forEach(h=>{
-        const idx = Math.floor((h-min)/binSize);
-        if (bins[idx] !== undefined) bins[idx]++;
-    });
-
-    createChart("swim-hr-histogram", {
-        type: "bar",
-        data: {
-            labels: bins.map((_,i)=>`${min+i*binSize}-${min+(i+1)*binSize} bpm`),
-            datasets: [{
-                label: "# swims",
-                data: bins,
-                backgroundColor: "rgba(200,80,80,0.7)"
-            }]
-        },
-        options: { plugins: { legend: { display: false } } }
-    });
-}
 
 // ------------------------
 // SCATTERS
@@ -371,111 +306,7 @@ function renderPaceVsDistanceChart(swims) {
     });
 }
 
-function renderHrVsPaceChart(swims) {
-    const data = swims
-        .filter(s=>s.pace_min100 && s.average_heartrate)
-        .map(s=>({
-            x: s.pace_min100,
-            y: s.average_heartrate,
-            type: s.swim_type
-        }));
 
-    createChart("swim-hr-pace-chart", {
-        type: "scatter",
-        data: {
-            datasets: [{
-                label: "Swim",
-                data,
-                backgroundColor: ctx => swimColors[ctx.raw.type]
-            }]
-        },
-        options: {
-            parsing: false,
-            scales: {
-                x: { title: { display: true, text: "Pace (min/100m)" } },
-                y: { title: { display: true, text: "Avg HR (bpm)" } }
-            }
-        }
-    });
-}
-
-function renderDistanceVsHrChart(swims) {
-    const data = swims
-        .filter(s=>s.average_heartrate)
-        .map(s=>({
-            x: s.distance_km,
-            y: s.average_heartrate,
-            type: s.swim_type
-        }));
-
-    createChart("swim-distance-hr-chart", {
-        type: "scatter",
-        data: {
-            datasets: [{
-                label: "Swim",
-                data,
-                backgroundColor: ctx => swimColors[ctx.raw.type]
-            }]
-        },
-        options: {
-            parsing: false,
-            scales: {
-                x: { title: { display: true, text: "Distance (km)" } },
-                y: { title: { display: true, text: "Avg HR (bpm)" } }
-            }
-        }
-    });
-}
-
-// ------------------------
-// TIME EVOLUTION
-// ------------------------
-
-function renderDistanceOverTime(swims) {
-
-    const sorted = [...swims].sort((a,b)=>
-        new Date(a.start_date) - new Date(b.start_date)
-    );
-
-    const labels = sorted.map(s => s.start_date_local.substring(0,10));
-    const distances = sorted.map(s => s.distance_km);
-
-    createChart("swim-distance-over-time", {
-        type: "line",
-        data: {
-            labels,
-            datasets: [{
-                label: "Distance (km)",
-                data: distances,
-                borderColor: "rgba(0,150,255,0.9)",
-                fill: false
-            }]
-        }
-    });
-}
-
-function renderPaceOverTime(swims) {
-    const sorted = [...swims].sort((a,b)=>
-        new Date(a.start_date) - new Date(b.start_date)
-    );
-
-    const labels = sorted.map(s => s.start_date_local.substring(0,10));
-    const paces = sorted.map(s => s.pace_min100 || null);
-
-    createChart("swim-pace-over-time", {
-        type: "line",
-        data: {
-            labels,
-            datasets: [{
-                label: "Pace (min/100m)",
-                data: paces,
-                borderColor: "rgba(0,200,150,1)",
-                spanGaps: true,
-                fill: false
-            }]
-        }
-    });
-}
 
 // ------------------------
 // PACE ZONES
@@ -520,36 +351,7 @@ function renderPaceZonesChart(swims) {
     });
 }
 
-// ------------------------
-// DISTANCE VS DURATION
-// ------------------------
 
-function renderDistanceVsDuration(swims) {
-
-    const data = swims.map(s => ({
-        x: (s.moving_time || 0) / 60,
-        y: s.distance_km,
-        type: s.swim_type
-    }));
-
-    createChart("swim-distance-duration-chart", {
-        type: "scatter",
-        data: {
-            datasets: [{
-                label: "Swim",
-                data,
-                backgroundColor: ctx => swimColors[ctx.raw.type]
-            }]
-        },
-        options: {
-            parsing: false,
-            scales: {
-                x: { title: { display: true, text: "Duration (min)" } },
-                y: { title: { display: true, text: "Distance (km)" } }
-            }
-        }
-    });
-}
 
 // ------------------------
 // TOP SWIMS
