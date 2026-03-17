@@ -4242,3 +4242,36 @@ body {
     color: #0066cc;
     font-weight: 600;
 }
+table {
+    width:100%;
+    border-collapse:collapse;
+}
+
+thead {
+    background:#1e1e1e;
+}
+
+tbody tr:nth-child(even){
+    background:#f5f5f5;
+}
+
+tbody tr:hover{
+    background:#e8f4ff;
+}
+
+.swim-badge{
+padding:2px 8px;
+border-radius:6px;
+font-size:12px;
+font-weight:600;
+}
+
+.swim-badge.pool{
+background:#0077cc20;
+color:#0077cc;
+}
+
+.swim-badge.openwater{
+background:#00b89420;
+color:#00b894;
+}
