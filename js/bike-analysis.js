@@ -61,6 +61,8 @@ export function renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterT
     renderTopActivities(rides);
 
     renderActivitiesTable(rides);
+
+    renderConsistencyChart(rides);
 }
 
 // ------------------------
@@ -514,4 +516,123 @@ function renderActivitiesTable(rides) {
 
         </table>
     `;
+}
+
+
+// --- CHART RENDERING FUNCTIONS ---
+export function renderConsistencyChart(runs) {
+    const container = document.getElementById('cal-heatmap-bike');
+    if (!container) return;
+
+    container.innerHTML = '';
+    container.style.position = 'relative';
+    container.style.width = '100%';
+    container.style.display = 'flex';
+    container.style.justifyContent = 'center'; // CENTRAR
+    container.style.alignItems = 'flex-start'; // alineación vertical al top
+
+    // Wrapper interno para mantener la anchura del heatmap
+    const heatmapWrapper = document.createElement('div');
+    heatmapWrapper.style.display = 'inline-block';
+    container.appendChild(heatmapWrapper);
+
+    // Verificar disponibilidad de CalHeatmap
+    if (typeof CalHeatmap === 'undefined') {
+        heatmapWrapper.innerHTML = `<p style="text-align:center; color:#8c8c8c;">
+            Heatmap no disponible en este dispositivo o navegador.
+        </p>`;
+        return;
+    }
+
+    if (!runs || runs.length === 0) {
+        heatmapWrapper.innerHTML = `<p style="text-align:center; color:#8c8c8c;">
+            No hay datos de actividad para este período.
+        </p>`;
+        return;
+    }
+
+    // Agregar datos y calcular umbrales
+    const aggregatedData = runs.reduce((acc, act) => {
+        const date = act.start_date_local.substring(0, 10);
+        acc[date] = (acc[date] || 0) + (act.distance ? act.distance / 1000 : 0);
+        return acc;
+    }, {});
+
+    const kmValues = Object.values(aggregatedData).filter(v => v > 0).sort((a, b) => a - b);
+    const thresholds = kmValues.length >= 5
+        ? [
+            kmValues[Math.floor(0.2 * kmValues.length)],
+            kmValues[Math.floor(0.4 * kmValues.length)],
+            kmValues[Math.floor(0.6 * kmValues.length)],
+            kmValues[Math.floor(0.8 * kmValues.length)]
+        ]
+        : [2, 5, 10, 15];
+
+    // Crear CalHeatmap con configuración correcta
+    const cal = new CalHeatmap();
+    const today = new Date();
+
+    // Calcular el primer lunes del año
+    const startOfYear = new Date(today.getFullYear(), 0, 1);
+    const dayOfWeek = startOfYear.getDay(); // 0 = domingo, 1 = lunes, ...
+    const daysUntilMonday = dayOfWeek === 0 ? 1 : (8 - dayOfWeek) % 7;
+    const firstMonday = new Date(startOfYear);
+    firstMonday.setDate(startOfYear.getDate() + daysUntilMonday);
+
+    cal.paint({
+        itemSelector: heatmapWrapper, // usamos wrapper
+        domain: {
+            type: 'month',
+            gutter: 4,
+            label: { text: 'MMM', textAlign: 'center', position: 'top' } // centrado
+        },
+        subDomain: {
+            type: 'day',
+            width: 11,
+            height: 11,
+            gutter: 2,
+            radius: 2,
+            label: null
+        },
+        date: { start: firstMonday, locale: { weekStart: 1 } }, // Semana empieza en lunes
+        range: 12, // 12 meses
+        data: {
+            source: Object.entries(aggregatedData).map(([date, value]) => ({
+                date,
+                value
+            })),
+            type: 'json',
+            x: 'date',
+            y: 'value'
+        },
+        scale: {
+            color: {
+                type: 'threshold',
+                range: ['#ebedf0', '#fcbba1', '#fc9272', '#fb6a4a', '#de2d26'],
+                domain: thresholds
+            }
+        }
+    });
+
+    // Agregar etiquetas de días de la semana (solo primera columna)
+    setTimeout(() => {
+        const weekdayLabels = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+        const firstColumn = heatmapWrapper.querySelector('[data-week="1"]');
+
+        if (firstColumn) {
+            const days = firstColumn.querySelectorAll('[data-day]');
+            days.forEach((day, idx) => {
+                if (weekdayLabels[idx]) {
+                    const label = document.createElement('span');
+                    label.textContent = weekdayLabels[idx];
+                    label.style.position = 'absolute';
+                    label.style.left = '-12px';
+                    label.style.fontSize = '9px';
+                    label.style.color = '#767676';
+                    day.style.position = 'relative';
+                    day.appendChild(label);
+                }
+            });
+        }
+    }, 100);
 }

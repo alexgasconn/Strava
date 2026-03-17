@@ -455,7 +455,7 @@ function renderSwimsTable(swims) {
 
 // --- CHART RENDERING FUNCTIONS ---
 export function renderConsistencyChart(runs) {
-    const container = document.getElementById('cal-heatmap-run');
+    const container = document.getElementById('cal-heatmap-swim');
     if (!container) return;
 
     container.innerHTML = '';
