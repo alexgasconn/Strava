@@ -88,7 +88,7 @@ export function renderConsistencyChart(runs) {
             kmValues[Math.floor(0.6 * kmValues.length)],
             kmValues[Math.floor(0.8 * kmValues.length)]
         ]
-        : [2, 5, 10, 15];
+        : [5, 9, 15, 25]; // km
 
     // Crear CalHeatmap con configuración correcta
     const cal = new CalHeatmap();

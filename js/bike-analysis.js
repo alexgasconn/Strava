@@ -569,7 +569,7 @@ const thresholds = durationValues.length >= 5
         durationValues[Math.floor(0.6 * durationValues.length)],
         durationValues[Math.floor(0.8 * durationValues.length)]
     ]
-    : [0.5, 1.5, 2.5, 4]; // horas
+    : [1, 2, 3.5, 5]; // horas
 
     // Crear CalHeatmap con configuración correcta
     const cal = new CalHeatmap();
