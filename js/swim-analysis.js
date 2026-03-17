@@ -493,17 +493,18 @@ export function renderConsistencyChart(swims) {
     }, {});
 
     const durationValues = Object.values(aggregatedData)
-    .filter(v => v > 0)
-    .sort((a, b) => a - b);
+        .filter(v => v > 0)
+        .sort((a, b) => a - b);
 
-const thresholds = durationValues.length >= 5
-    ? [
-        durationValues[Math.floor(0.2 * durationValues.length)],
-        durationValues[Math.floor(0.4 * durationValues.length)],
-        durationValues[Math.floor(0.6 * durationValues.length)],
-        durationValues[Math.floor(0.8 * durationValues.length)]
-    ]
-    : [0.3, 0.75, 1.25, 2]; // horas
+    const thresholds = durationValues.length >= 6
+        ? [
+            durationValues[Math.floor(0.1 * durationValues.length)],
+            durationValues[Math.floor(0.3 * durationValues.length)],
+            durationValues[Math.floor(0.5 * durationValues.length)],
+            durationValues[Math.floor(0.7 * durationValues.length)],
+            durationValues[Math.floor(0.9 * durationValues.length)]
+        ]
+        : [0.25, 0.5, 0.75, 1.25, 2]; // horas
 
     // Crear CalHeatmap con configuración correcta
     const cal = new CalHeatmap();
@@ -545,7 +546,14 @@ const thresholds = durationValues.length >= 5
         scale: {
             color: {
                 type: 'threshold',
-                range: ['#ebedf0', '#79e8f7', '#91baf8', '#067ff0', '#1100ff'],
+                range: [
+                    '#ffffff',  // sin actividad
+                    '#dbeafe',  // azul muy claro
+                    '#93c5fd',
+                    '#60a5fa',
+                    '#2563eb',
+                    '#1e3a8a'   // azul muy oscuro
+                ],
                 domain: thresholds
             }
         }

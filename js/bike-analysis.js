@@ -559,17 +559,18 @@ export function renderConsistencyChart(rides) {
     }, {});
 
     const durationValues = Object.values(aggregatedData)
-    .filter(v => v > 0)
-    .sort((a, b) => a - b);
+        .filter(v => v > 0)
+        .sort((a, b) => a - b);
 
-const thresholds = durationValues.length >= 5
-    ? [
-        durationValues[Math.floor(0.2 * durationValues.length)],
-        durationValues[Math.floor(0.4 * durationValues.length)],
-        durationValues[Math.floor(0.6 * durationValues.length)],
-        durationValues[Math.floor(0.8 * durationValues.length)]
-    ]
-    : [1, 2, 3.5, 5]; // horas
+    const thresholds = durationValues.length >= 6
+        ? [
+            durationValues[Math.floor(0.1 * durationValues.length)],
+            durationValues[Math.floor(0.3 * durationValues.length)],
+            durationValues[Math.floor(0.5 * durationValues.length)],
+            durationValues[Math.floor(0.7 * durationValues.length)],
+            durationValues[Math.floor(0.9 * durationValues.length)]
+        ]
+        : [0.75, 1.5, 2.5, 4, 6]; // horas
 
     // Crear CalHeatmap con configuración correcta
     const cal = new CalHeatmap();
@@ -611,7 +612,14 @@ const thresholds = durationValues.length >= 5
         scale: {
             color: {
                 type: 'threshold',
-                range: ['#ebedf0', '#c2ffc0', '#73f39e', '#11b355', '#0a6102'],
+                range: [
+                    '#ffffff',
+                    '#d9fdd3',
+                    '#a8f0a2',
+                    '#5edb77',
+                    '#22b455',
+                    '#0a6102'
+                ],
                 domain: thresholds
             }
         }

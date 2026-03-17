@@ -80,15 +80,19 @@ export function renderConsistencyChart(runs) {
         return acc;
     }, {});
 
-    const kmValues = Object.values(aggregatedData).filter(v => v > 0).sort((a, b) => a - b);
-    const thresholds = kmValues.length >= 5
+    const kmValues = Object.values(aggregatedData)
+        .filter(v => v > 0)
+        .sort((a, b) => a - b);
+
+    const thresholds = kmValues.length >= 6
         ? [
-            kmValues[Math.floor(0.2 * kmValues.length)],
-            kmValues[Math.floor(0.4 * kmValues.length)],
-            kmValues[Math.floor(0.6 * kmValues.length)],
-            kmValues[Math.floor(0.8 * kmValues.length)]
+            kmValues[Math.floor(0.1 * kmValues.length)],
+            kmValues[Math.floor(0.3 * kmValues.length)],
+            kmValues[Math.floor(0.5 * kmValues.length)],
+            kmValues[Math.floor(0.7 * kmValues.length)],
+            kmValues[Math.floor(0.9 * kmValues.length)]
         ]
-        : [5, 9, 15, 25]; // km
+        : [5, 10, 15, 21, 30]; // km
 
     // Crear CalHeatmap con configuración correcta
     const cal = new CalHeatmap();
@@ -130,7 +134,14 @@ export function renderConsistencyChart(runs) {
         scale: {
             color: {
                 type: 'threshold',
-                range: ['#ebedf0', '#fcbba1', '#fc9272', '#fb6a4a', '#de2d26'],
+                range: [
+                    '#ffffff',  // descanso
+                    '#fee5d9',
+                    '#fcbba1',
+                    '#fc9272',
+                    '#fb6a4a',
+                    '#cb181d'
+                ],
                 domain: thresholds
             }
         }
