@@ -219,7 +219,7 @@ function renderDistanceHistogram(swims) {
 
     swims.forEach(s => {
 
-        const idx = Math.floor(s.distance_km / binSize);
+        const idx = Math.min(Math.floor(s.distance_km / binSize), binCount - 1);
         if (idx >= binCount) return;
 
         if (s.swim_type === "pool") binsPool[idx]++;
@@ -334,8 +334,14 @@ function renderPaceVsDistanceChart(swims) {
                 y: { title: { display: true, text: "Pace (min/100m)" } }
             },
             plugins: {
-                legend: {
-                    display: true
+                tooltip: {
+                    callbacks: {
+                        label: ctx => {
+                            const d = ctx.raw.x.toFixed(2);
+                            const p = formatPace(ctx.raw.y);
+                            return `Distance: ${d} km | Pace: ${p}/100m`;
+                        }
+                    }
                 }
             }
         }
@@ -471,8 +477,12 @@ function renderSwimsTable(swims) {
                     <td>${s.distance_km.toFixed(2)}</td>
                     <td>${s.pace_min100 ? formatPace(s.pace_min100) : "-"}</td>
                     <td>${s.average_heartrate ? s.average_heartrate.toFixed(0) : "-"}</td>
-                    <td>${s.swim_type}</td>
-                    <td>${s.moving_ratio}</td>
+                    <td>
+                        <span class="swim-badge ${s.swim_type}">
+                        ${s.swim_type}
+                        </span>
+                        </td>
+                    <td>${(s.moving_ratio * 100).toFixed(2)}%</td>
                 </tr>
             `;
         }).join("");
@@ -487,6 +497,7 @@ function renderSwimsTable(swims) {
                     <th>Pace /100m</th>
                     <th>Avg HR</th>
                     <th>Type</th>
+                    <th>Moving %</th>
                 </tr>
             </thead>
             <tbody>${rows}</tbody>

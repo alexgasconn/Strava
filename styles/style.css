@@ -4248,7 +4248,7 @@ table {
 }
 
 thead {
-    background:#1e1e1e;
+    background:#03a9f4;
 }
 
 tbody tr:nth-child(even){
@@ -4258,7 +4258,13 @@ tbody tr:nth-child(even){
 tbody tr:hover{
     background:#e8f4ff;
 }
+tbody tr:nth-child(even){
+    background:#f5f5f5;
+}
 
+tbody tr:hover{
+    background:#e8f4ff;
+}
 .swim-badge{
 padding:2px 8px;
 border-radius:6px;
@@ -4274,4 +4280,7 @@ color:#0077cc;
 .swim-badge.openwater{
 background:#00b89420;
 color:#00b894;
+}
+td, th{
+padding:8px 10px;
 }
