@@ -138,14 +138,18 @@ function renderPoolVsOpenWaterSummary(swims) {
     const ow = swims.filter(s => s.swim_type === "openwater");
 
     function agg(arr) {
-        const dist = arr.reduce((s, a) => s + a.distance_km, 0);
         const count = arr.length;
-        const avgPace = arr.filter(a => a.pace_min100)
-            .reduce((s, a) => s + a.pace_min100, 0) / Math.max(1, arr.filter(a => a.pace_min100).length);
-        const avgHr = arr.filter(a => a.average_heartrate)
-            .reduce((s, a) => s + a.average_heartrate, 0) / Math.max(1, arr.filter(a => a.average_heartrate).length);
-        const avgDist = arr.reduce((s, a) => s + a.distance_km, 0);
-        return { dist, count, avgPace, avgHr, avgDist };
+
+        const dist = arr.reduce((s, a) => s + (a.distance_km || 0), 0);
+        const avgDist = count ? dist / count : 0;
+        const avgPace = arr.filter(a => a.pace_min100 != null)
+            .reduce((s, a) => s + a.pace_min100, 0) / Math.max(1, arr.filter(a => a.pace_min100 != null).length);
+        const avgHr = arr.filter(a => a.average_heartrate != null)
+            .reduce((s, a) => s + a.average_heartrate, 0) / Math.max(1, arr.filter(a => a.average_heartrate != null).length);
+        const tempVals = arr.filter(a => a.average_temp != null);
+        const avgTemp = tempVals.reduce((s, a) => s + a.average_temp, 0) / Math.max(1, tempVals.length);
+
+        return { dist, count, avgPace, avgHr, avgDist, avgTemp };
     }
 
     const poolAgg = agg(pool);
@@ -186,6 +190,11 @@ function renderPoolVsOpenWaterSummary(swims) {
                     <td>${poolAgg.count ? poolAgg.avgDist.toFixed(1) : "-"}</td>
                     <td>${owAgg.count ? owAgg.avgDist.toFixed(1) : "-"}</td>
                 </tr>
+                <tr>
+                    <td>Avg Temp (°C)</td>
+                    <td>${isFinite(poolAgg.avgTemp) ? poolAgg.avgTemp.toFixed(1) : "-"}</td>
+                    <td>${isFinite(owAgg.avgTemp) ? owAgg.avgTemp.toFixed(1) : "-"}</td>
+                </tr>
 
             </tbody>
         </table>
@@ -198,7 +207,7 @@ function renderPoolVsOpenWaterSummary(swims) {
 
 function renderDistanceHistogram(swims) {
 
-    const binSize = 0.5;
+    const binSize = 0.25;
 
     const distances = swims.map(s => s.distance_km);
     if (!distances.length) return;
