@@ -488,19 +488,22 @@ export function renderConsistencyChart(swims) {
     // Agregar datos y calcular umbrales
     const aggregatedData = swims.reduce((acc, act) => {
         const date = act.start_date_local.substring(0, 10);
-        acc[date] = (acc[date] || 0) + (act.distance ? act.distance / 1000 : 0);
+        acc[date] = (acc[date] || 0) + (act.moving_time ? act.moving_time / 3600 : 0);
         return acc;
     }, {});
 
-    const kmValues = Object.values(aggregatedData).filter(v => v > 0).sort((a, b) => a - b);
-    const thresholds = kmValues.length >= 5
-        ? [
-            kmValues[Math.floor(0.2 * kmValues.length)],
-            kmValues[Math.floor(0.4 * kmValues.length)],
-            kmValues[Math.floor(0.6 * kmValues.length)],
-            kmValues[Math.floor(0.8 * kmValues.length)]
-        ]
-        : [2, 5, 10, 15];
+    const durationValues = Object.values(aggregatedData)
+    .filter(v => v > 0)
+    .sort((a, b) => a - b);
+
+const thresholds = durationValues.length >= 5
+    ? [
+        durationValues[Math.floor(0.2 * durationValues.length)],
+        durationValues[Math.floor(0.4 * durationValues.length)],
+        durationValues[Math.floor(0.6 * durationValues.length)],
+        durationValues[Math.floor(0.8 * durationValues.length)]
+    ]
+    : [0.2, 5, 1, 2]; // horas
 
     // Crear CalHeatmap con configuración correcta
     const cal = new CalHeatmap();
@@ -542,7 +545,7 @@ export function renderConsistencyChart(swims) {
         scale: {
             color: {
                 type: 'threshold',
-                range: ['#ebedf0', '#a1f1fc', '#91baf8', '#067ff0', '#1100ff'],
+                range: ['#ebedf0', '#79e8f7', '#91baf8', '#067ff0', '#1100ff'],
                 domain: thresholds
             }
         }
