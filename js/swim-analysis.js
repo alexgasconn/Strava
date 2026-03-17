@@ -8,8 +8,8 @@ let charts = {};
 // ------------------------
 
 const swimColors = {
-    pool: "#0077cc",
-    openwater: "#00b894"
+    pool: "#56b5f8",
+    openwater: "#3204d4"
 };
 
 function getSwimType(a) {
@@ -49,7 +49,6 @@ export function renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterT
 
     if (!swims.length) return;
 
-    // Enriquecer con derivados
     const enriched = swims.map(a => ({
         ...a,
         distance_km: a.distance ? a.distance / 1000 : 0,
@@ -66,8 +65,6 @@ export function renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterT
     renderPaceHistogram(enriched);
 
     renderPaceVsDistanceChart(enriched);
-
-    renderPaceZonesChart(enriched);
 
     renderTopSwims(enriched);
     renderSwimsTable(enriched);
@@ -109,19 +106,6 @@ function renderSummaryCards(swims) {
             .reduce((s, a) => s + a.pace_min100, 0) /
         Math.max(1, swims.filter(a => a.pace_min100).length);
 
-    const avgHr =
-        swims.filter(a => a.average_heartrate)
-            .reduce((s, a) => s + a.average_heartrate, 0) /
-        Math.max(1, swims.filter(a => a.average_heartrate).length);
-
-    const longest = swims.reduce((best, a) =>
-        a.distance_km > (best?.distance_km || 0) ? a : best, null);
-
-    const bestPace = swims
-        .filter(a => a.pace_min100)
-        .reduce((best, a) =>
-            a.pace_min100 < (best?.pace_min100 || Infinity) ? a : best, null);
-
     const paceMin = Math.floor(avgPaceMin);
     const paceSec = Math.round((avgPaceMin - paceMin) * 60);
 
@@ -130,7 +114,6 @@ function renderSummaryCards(swims) {
         <div class="card"><h3>Total Distance</h3><p>${totalDistance.toFixed(1)} km</p></div>
         <div class="card"><h3>Total Time</h3><p>${(totalTime / 3600).toFixed(1)} h</p></div>
         <div class="card"><h3>Avg Pace</h3><p>${paceMin}:${paceSec.toString().padStart(2, '0')} /100m</p></div>
-        <div class="card"><h3>Avg HR</h3><p>${isFinite(avgHr) ? avgHr.toFixed(0) : "-"} bpm</p></div>
     `;
 }
 
@@ -159,7 +142,8 @@ function renderPoolVsOpenWaterSummary(swims) {
             .reduce((s, a) => s + a.pace_min100, 0) / Math.max(1, arr.filter(a => a.pace_min100).length);
         const avgHr = arr.filter(a => a.average_heartrate)
             .reduce((s, a) => s + a.average_heartrate, 0) / Math.max(1, arr.filter(a => a.average_heartrate).length);
-        return { dist, count, avgPace, avgHr };
+        const avgDist = arr.reduce((s, a) => s + a.distance_km, 0);
+        return { dist, count, avgPace, avgHr, avgDist };
     }
 
     const poolAgg = agg(pool);
@@ -195,6 +179,12 @@ function renderPoolVsOpenWaterSummary(swims) {
                     <td>${isFinite(poolAgg.avgHr) ? poolAgg.avgHr.toFixed(0) : "-"}</td>
                     <td>${isFinite(owAgg.avgHr) ? owAgg.avgHr.toFixed(0) : "-"}</td>
                 </tr>
+                <tr>
+                    <td>Avg Distance (km)</td>
+                    <td>${poolAgg.count ? poolAgg.avgDist.toFixed(1) : "-"}</td>
+                    <td>${owAgg.count ? owAgg.avgDist.toFixed(1) : "-"}</td>
+                </tr>
+
             </tbody>
         </table>
     `;
@@ -343,51 +333,6 @@ function renderPaceVsDistanceChart(swims) {
                         }
                     }
                 }
-            }
-        }
-    });
-}
-
-
-
-// ------------------------
-// PACE ZONES
-// ------------------------
-
-function renderPaceZonesChart(swims) {
-    const paces = swims
-        .map(s => s.pace_min100)
-        .filter(p => p && isFinite(p));
-    if (!paces.length) return;
-
-    const zones = [
-        { label: "<1:40", min: 0, max: 1 + 40 / 60 },
-        { label: "1:40–1:50", min: 1 + 40 / 60, max: 1 + 50 / 60 },
-        { label: "1:50–2:00", min: 1 + 50 / 60, max: 2 },
-        { label: "2:00–2:10", min: 2, max: 2 + 10 / 60 },
-        { label: ">2:10", min: 2 + 10 / 60, max: 999 }
-    ];
-
-    const counts = zones.map(z =>
-        paces.filter(p => p >= z.min && p < z.max).length
-    );
-
-    const total = paces.length;
-    const perc = counts.map(c => total ? (c / total * 100) : 0);
-
-    createChart("swim-pace-zones-chart", {
-        type: "bar",
-        data: {
-            labels: zones.map(z => z.label),
-            datasets: [{
-                label: "% time",
-                data: perc,
-                backgroundColor: "rgba(0,150,255,0.7)"
-            }]
-        },
-        options: {
-            scales: {
-                y: { title: { display: true, text: "% of swims" }, max: 100 }
             }
         }
     });
