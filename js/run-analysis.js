@@ -43,7 +43,7 @@ function createChart(canvasId, config) {
 
 // --- CHART RENDERING FUNCTIONS ---
 export function renderConsistencyChart(runs) {
-    const container = document.getElementById('cal-heatmap');
+    const container = document.getElementById('cal-heatmap-run');
     if (!container) return;
 
     container.innerHTML = '';
