@@ -520,7 +520,7 @@ function renderActivitiesTable(rides) {
 
 
 // --- CHART RENDERING FUNCTIONS ---
-export function renderConsistencyChart(runs) {
+export function renderConsistencyChart(rides) {
     const container = document.getElementById('cal-heatmap-bike');
     if (!container) return;
 
@@ -544,7 +544,7 @@ export function renderConsistencyChart(runs) {
         return;
     }
 
-    if (!runs || runs.length === 0) {
+    if (!rides || rides.length === 0) {
         heatmapWrapper.innerHTML = `<p style="text-align:center; color:#8c8c8c;">
             No hay datos de actividad para este período.
         </p>`;
@@ -552,7 +552,7 @@ export function renderConsistencyChart(runs) {
     }
 
     // Agregar datos y calcular umbrales
-    const aggregatedData = runs.reduce((acc, act) => {
+    const aggregatedData = rides.reduce((acc, act) => {
         const date = act.start_date_local.substring(0, 10);
         acc[date] = (acc[date] || 0) + (act.distance ? act.distance / 1000 : 0);
         return acc;
@@ -608,7 +608,7 @@ export function renderConsistencyChart(runs) {
         scale: {
             color: {
                 type: 'threshold',
-                range: ['#ebedf0', '#fcbba1', '#fc9272', '#fb6a4a', '#de2d26'],
+                range: ['#ebedf0', '#c2ffc0', '#73f39e', '#11b355', '#0a6102'],
                 domain: thresholds
             }
         }
