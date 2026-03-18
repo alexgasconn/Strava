@@ -30,11 +30,6 @@ function paceMinPer100m(act) {
 }
 
 
-// ------------------------
-// POOL LENGTH ESTIMATION
-// ------------------------
-
-const POOL_LENGTHS = [20, 25, 50];
 
 // ------------------------
 // POOL / YARD LENGTH ESTIMATION
