@@ -29,6 +29,53 @@ function paceMinPer100m(act) {
     return sec / 60;
 }
 
+
+// ------------------------
+// POOL LENGTH ESTIMATION
+// ------------------------
+
+const POOL_LENGTHS = [20, 25, 50];
+
+function realisticLengthTime(poolLength, timePerLength) {
+    if (poolLength === 20) return timePerLength >= 15 && timePerLength <= 35;
+    if (poolLength === 25) return timePerLength >= 18 && timePerLength <= 45;
+    if (poolLength === 50) return timePerLength >= 35 && timePerLength <= 120;
+    return false;
+}
+
+function estimatePoolLength(activity, historicalCounts = {}) {
+
+    if (!activity.distance || !activity.moving_time) return "unknown";
+
+    // 1. candidatos divisibles
+    let candidates = POOL_LENGTHS.filter(p => activity.distance % p === 0);
+
+    if (!candidates.length) return "unknown";
+
+    // 2. filtrar por tiempo por largo realista
+    candidates = candidates.filter(p => {
+        const lengths = activity.distance / p;
+        const timePerLength = activity.moving_time / lengths;
+        return realisticLengthTime(p, timePerLength);
+    });
+
+    if (candidates.length === 1) return candidates[0];
+
+    if (candidates.length > 1) {
+        // 4. usar frecuencia histórica
+        candidates.sort((a, b) =>
+            (historicalCounts[b] || 0) - (historicalCounts[a] || 0)
+        );
+        return candidates[0];
+    }
+
+    // 5. ninguno válido
+    return "unknown";
+}
+
+
+
+
 // ------------------------
 // MAIN ENTRY
 // ------------------------
@@ -49,14 +96,40 @@ export function renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterT
 
     if (!swims.length) return;
 
-    const enriched = swims.map(a => ({
-        ...a,
-        distance_km: a.distance ? a.distance / 1000 : 0,
-        pace_sec100: paceSecPer100m(a),
-        pace_min100: paceMinPer100m(a),
-        swim_type: getSwimType(a),
-        moving_ratio: a.elapsed_time ? (a.moving_time || 0) / a.elapsed_time : 1
-    }));
+    // calcular frecuencias de longitudes en todo el dataset
+    const historicalCounts = { 20: 0, 25: 0, 50: 0 };
+
+    swims.forEach(a => {
+
+        if (getSwimType(a) !== "pool") return;
+
+        const candidates = POOL_LENGTHS.filter(p => a.distance && a.distance % p === 0);
+
+        if (candidates.length === 1) {
+            historicalCounts[candidates[0]]++;
+        }
+
+    });
+
+    const enriched = swims.map(a => {
+
+        const swimType = getSwimType(a);
+
+        const poolLength =
+            swimType === "pool"
+                ? estimatePoolLength(a, historicalCounts)
+                : null;
+
+        return {
+            ...a,
+            distance_km: a.distance ? a.distance / 1000 : 0,
+            pace_sec100: paceSecPer100m(a),
+            pace_min100: paceMinPer100m(a),
+            swim_type: swimType,
+            moving_ratio: a.elapsed_time ? (a.moving_time || 0) / a.elapsed_time : 1,
+            pool_length: poolLength
+        };
+    });
 
     renderSummaryCards(enriched);
     renderPoolVsOpenWaterSummary(enriched);
@@ -439,6 +512,7 @@ function renderSwimsTable(swims) {
                         </span>
                         </td>
                     <td>${(s.moving_ratio * 100).toFixed(2)}%</td>
+                    <td>${s.pool_length ? s.pool_length + " m" : "-"}</td>
                 </tr>
             `;
         }).join("");
@@ -454,6 +528,7 @@ function renderSwimsTable(swims) {
                     <th>Avg HR</th>
                     <th>Type</th>
                     <th>Moving %</th>
+                    <th>Pool</th>
                 </tr>
             </thead>
             <tbody>${rows}</tbody>
