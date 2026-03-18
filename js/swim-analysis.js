@@ -685,46 +685,48 @@ export function renderConsistencyChart(swims) {
 
 
 // ------------------------
-// POOL LENGTH DISTRIBUTION
+// POOL + OPEN WATER DISTRIBUTION
 // ------------------------
-
 function renderPoolLengthChart(swims) {
 
     const counts = {
         20: 0,
         25: 0,
         50: 0,
-        unknown: 0
+        unknown: 0,
+        openwater: 0
     };
 
-    swims
-        .filter(s => s.swim_type === "pool")
-        .forEach(s => {
-
+    swims.forEach(s => {
+        if (s.swim_type === "pool") {
             if (s.pool_length === 20) counts[20]++;
             else if (s.pool_length === 25) counts[25]++;
             else if (s.pool_length === 50) counts[50]++;
             else counts.unknown++;
-
-        });
+        } else if (s.swim_type === "openwater") {
+            counts.openwater++;
+        }
+    });
 
     createChart("swim-pool-length-chart", {
         type: "bar",
         data: {
-            labels: ["20 m", "25 m", "50 m", "Unknown"],
+            labels: ["20 m", "25 m", "50 m", "Unknown", "Open Water"],
             datasets: [{
                 label: "Sessions",
                 data: [
                     counts[20],
                     counts[25],
                     counts[50],
-                    counts.unknown
+                    counts.unknown,
+                    counts.openwater
                 ],
                 backgroundColor: [
                     "#10b981",
                     "#2563eb",
                     "#7c3aed",
-                    "#9ca3af"
+                    "#9ca3af",
+                    "#3204d4"
                 ]
             }]
         },
@@ -735,9 +737,7 @@ function renderPoolLengthChart(swims) {
             scales: {
                 y: {
                     beginAtZero: true,
-                    ticks: {
-                        precision: 0
-                    }
+                    ticks: { precision: 0 }
                 }
             }
         }
