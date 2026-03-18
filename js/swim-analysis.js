@@ -143,6 +143,8 @@ export function renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterT
     renderSwimsTable(enriched);
 
     renderConsistencyChart(enriched);
+
+    renderPoolLengthChart(enriched);
 }
 
 // ------------------------
@@ -679,4 +681,65 @@ export function renderConsistencyChart(swims) {
             });
         }
     }, 100);
+}
+
+
+// ------------------------
+// POOL LENGTH DISTRIBUTION
+// ------------------------
+
+function renderPoolLengthChart(swims) {
+
+    const counts = {
+        20: 0,
+        25: 0,
+        50: 0,
+        unknown: 0
+    };
+
+    swims
+        .filter(s => s.swim_type === "pool")
+        .forEach(s => {
+
+            if (s.pool_length === 20) counts[20]++;
+            else if (s.pool_length === 25) counts[25]++;
+            else if (s.pool_length === 50) counts[50]++;
+            else counts.unknown++;
+
+        });
+
+    createChart("swim-pool-length-chart", {
+        type: "bar",
+        data: {
+            labels: ["20 m", "25 m", "50 m", "Unknown"],
+            datasets: [{
+                label: "Sessions",
+                data: [
+                    counts[20],
+                    counts[25],
+                    counts[50],
+                    counts.unknown
+                ],
+                backgroundColor: [
+                    "#10b981",
+                    "#2563eb",
+                    "#7c3aed",
+                    "#9ca3af"
+                ]
+            }]
+        },
+        options: {
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0
+                    }
+                }
+            }
+        }
+    });
 }
