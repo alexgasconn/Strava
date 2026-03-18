@@ -199,6 +199,21 @@ function formatPace(paceMin100) {
     return `${min}:${sec.toString().padStart(2, '0')}`;
 }
 
+
+function poolBadge(poolLength) {
+
+    if (poolLength === 20)
+        return `<span class="pool-badge pool-20">20m</span>`;
+
+    if (poolLength === 25)
+        return `<span class="pool-badge pool-25">25m</span>`;
+
+    if (poolLength === 50)
+        return `<span class="pool-badge pool-50">50m</span>`;
+
+    return `<span class="pool-badge pool-unknown">-</span>`;
+}
+
 // ------------------------
 // POOL VS OPEN WATER SUMMARY
 // ------------------------
@@ -512,7 +527,7 @@ function renderSwimsTable(swims) {
                         </span>
                         </td>
                     <td>${(s.moving_ratio * 100).toFixed(2)}%</td>
-                    <td>${s.pool_length ? s.pool_length + " m" : "-"}</td>
+                    <td>${poolBadge(s.pool_length)}</td>
                 </tr>
             `;
         }).join("");
