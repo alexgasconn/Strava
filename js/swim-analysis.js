@@ -36,25 +36,40 @@ function paceMinPer100m(act) {
 
 const POOL_LENGTHS = [20, 25, 50];
 
+// ------------------------
+// POOL / YARD LENGTH ESTIMATION
+// ------------------------
+
+const POOL_LENGTHS = [20, 25, 50, "25yd", "50yd"];
+
+// Tiempo realista por largo (segundos)
 function realisticLengthTime(poolLength, timePerLength) {
-    if (poolLength === 20) return timePerLength >= 15 && timePerLength <= 35;
-    if (poolLength === 25) return timePerLength >= 18 && timePerLength <= 45;
-    if (poolLength === 50) return timePerLength >= 35 && timePerLength <= 120;
-    return false;
+    switch(poolLength) {
+        case 20:   return timePerLength >= 15 && timePerLength <= 35;
+        case 25:   return timePerLength >= 18 && timePerLength <= 45;
+        case 50:   return timePerLength >= 35 && timePerLength <= 120;
+        case "25yd": return timePerLength >= 15 && timePerLength <= 40;
+        case "50yd": return timePerLength >= 35 && timePerLength <= 120;
+        default:   return false;
+    }
 }
 
 function estimatePoolLength(activity, historicalCounts = {}) {
+    if (!activity.distance || !activity.moving_time) return null;
 
-    if (!activity.distance || !activity.moving_time) return "unknown";
+    // candidatos divisibles
+    let candidates = POOL_LENGTHS.filter(p => {
+        if (typeof p === "number") return activity.distance % p === 0;
+        if (p === "25yd") return activity.distance % 23 === 0; // aprox 25yd en metros
+        if (p === "50yd") return activity.distance % 46 === 0; // aprox 50yd en metros
+        return false;
+    });
 
-    // 1. candidatos divisibles
-    let candidates = POOL_LENGTHS.filter(p => activity.distance % p === 0);
+    if (!candidates.length) return null;
 
-    if (!candidates.length) return "unknown";
-
-    // 2. filtrar por tiempo por largo realista
+    // filtrar por tiempo por largo realista
     candidates = candidates.filter(p => {
-        const lengths = activity.distance / p;
+        const lengths = activity.distance / (typeof p === "number" ? p : (p === "25yd" ? 23 : 46));
         const timePerLength = activity.moving_time / lengths;
         return realisticLengthTime(p, timePerLength);
     });
@@ -62,15 +77,12 @@ function estimatePoolLength(activity, historicalCounts = {}) {
     if (candidates.length === 1) return candidates[0];
 
     if (candidates.length > 1) {
-        // 4. usar frecuencia histórica
-        candidates.sort((a, b) =>
-            (historicalCounts[b] || 0) - (historicalCounts[a] || 0)
-        );
+        // usar frecuencia histórica
+        candidates.sort((a, b) => (historicalCounts[b] || 0) - (historicalCounts[a] || 0));
         return candidates[0];
     }
 
-    // 5. ninguno válido
-    return "unknown";
+    return null; // ninguno válido
 }
 
 
@@ -97,7 +109,7 @@ export function renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterT
     if (!swims.length) return;
 
     // calcular frecuencias de longitudes en todo el dataset
-    const historicalCounts = { 20: 0, 25: 0, 50: 0 };
+    const historicalCounts = { 20: 0, 25: 0, 50: 0, "25yd": 0, "50yd": 0 };
 
     swims.forEach(a => {
 
@@ -690,44 +702,58 @@ export function renderConsistencyChart(swims) {
 function renderPoolLengthChart(swims) {
 
     const counts = {
-        20: 0,
-        25: 0,
-        50: 0,
-        unknown: 0,
-        openwater: 0
+        "20m": 0,
+        "25m": 0,
+        "50m": 0,
+        "25yd": 0,
+        "50yd": 0,
+        "openwater": 0
     };
 
     swims.forEach(s => {
         if (s.swim_type === "pool") {
-            if (s.pool_length === 20) counts[20]++;
-            else if (s.pool_length === 25) counts[25]++;
-            else if (s.pool_length === 50) counts[50]++;
-            else counts.unknown++;
+            switch(s.pool_length) {
+                case 20: counts["20m"]++; break;
+                case 25: counts["25m"]++; break;
+                case 50: counts["50m"]++; break;
+                case "25yd": counts["25yd"]++; break;
+                case "50yd": counts["50yd"]++; break;
+            }
         } else if (s.swim_type === "openwater") {
             counts.openwater++;
+        }
+    });
+
+    // Filtrar solo longitudes con >0 sesiones
+    const labels = [];
+    const data = [];
+    const backgroundColor = [];
+
+    const colorMap = {
+        "20m": "#10b981",
+        "25m": "#2563eb",
+        "50m": "#7c3aed",
+        "25yd": "#f59e0b",
+        "50yd": "#d97706",
+        "openwater": "#3204d4"
+    };
+
+    Object.entries(counts).forEach(([key, val]) => {
+        if (val > 0) {
+            labels.push(key.replace("m"," m").replace("yd"," yd")); // formateo bonito
+            data.push(val);
+            backgroundColor.push(colorMap[key]);
         }
     });
 
     createChart("swim-pool-length-chart", {
         type: "bar",
         data: {
-            labels: ["20 m", "25 m", "50 m", "Unknown", "Open Water"],
+            labels,
             datasets: [{
                 label: "Sessions",
-                data: [
-                    counts[20],
-                    counts[25],
-                    counts[50],
-                    counts.unknown,
-                    counts.openwater
-                ],
-                backgroundColor: [
-                    "#10b981",
-                    "#2563eb",
-                    "#7c3aed",
-                    "#9ca3af",
-                    "#3204d4"
-                ]
+                data,
+                backgroundColor
             }]
         },
         options: {
@@ -735,10 +761,7 @@ function renderPoolLengthChart(swims) {
                 legend: { display: false }
             },
             scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { precision: 0 }
-                }
+                y: { beginAtZero: true, ticks: { precision: 0 } }
             }
         }
     });
