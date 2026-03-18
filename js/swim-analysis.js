@@ -30,17 +30,6 @@ function paceMinPer100m(act) {
 }
 
 
-function strokesPerLength(act) {
-    if (!act.pool_length || !act.stroke_count || !act.distance) return null;
-    const lengthMeters =
-        act.pool_length === 20 || act.pool_length === 25 || act.pool_length === 50 ? act.pool_length :
-            act.pool_length === "25yd" ? 23 : 46;
-    const lengths = act.distance / lengthMeters;
-    if (lengths <= 0) return null;
-    return act.stroke_count / lengths;
-}
-
-
 
 // ------------------------
 // POOL / YARD LENGTH ESTIMATION
@@ -50,13 +39,13 @@ const POOL_LENGTHS = [20, 25, 50, "25yd", "50yd"];
 
 // Tiempo realista por largo (segundos)
 function realisticLengthTime(poolLength, timePerLength) {
-    switch (poolLength) {
-        case 20: return timePerLength >= 15 && timePerLength <= 35;
-        case 25: return timePerLength >= 18 && timePerLength <= 45;
-        case 50: return timePerLength >= 35 && timePerLength <= 120;
+    switch(poolLength) {
+        case 20:   return timePerLength >= 15 && timePerLength <= 35;
+        case 25:   return timePerLength >= 18 && timePerLength <= 45;
+        case 50:   return timePerLength >= 35 && timePerLength <= 120;
         case "25yd": return timePerLength >= 15 && timePerLength <= 40;
         case "50yd": return timePerLength >= 35 && timePerLength <= 120;
-        default: return false;
+        default:   return false;
     }
 }
 
@@ -130,8 +119,13 @@ export function renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterT
     });
 
     const enriched = swims.map(a => {
+
         const swimType = getSwimType(a);
-        const poolLength = swimType === "pool" ? estimatePoolLength(a, historicalCounts) : null;
+
+        const poolLength =
+            swimType === "pool"
+                ? estimatePoolLength(a, historicalCounts)
+                : null;
 
         return {
             ...a,
@@ -140,8 +134,7 @@ export function renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterT
             pace_min100: paceMinPer100m(a),
             swim_type: swimType,
             moving_ratio: a.elapsed_time ? (a.moving_time || 0) / a.elapsed_time : 1,
-            pool_length: poolLength,
-            strokes_per_length: swimType === "pool" ? strokesPerLength(a) : null
+            pool_length: poolLength
         };
     });
 
@@ -536,7 +529,6 @@ function renderSwimsTable(swims) {
                     <td>${s.name}</td>
                     <td>${s.distance_km.toFixed(2)}</td>
                     <td>${s.pace_min100 ? formatPace(s.pace_min100) : "-"}</td>
-                    <td>${s.strokes_per_length != null ? s.strokes_per_length.toFixed(1) : "-"}</td>
                     <td>${s.average_heartrate ? s.average_heartrate.toFixed(0) : "-"}</td>
                     <td>
                         <span class="swim-badge ${s.swim_type}">
@@ -557,7 +549,6 @@ function renderSwimsTable(swims) {
                     <th>Activity</th>
                     <th>km</th>
                     <th>Pace /100m</th>
-                    <th>Strokes / Length</th>
                     <th>Avg HR</th>
                     <th>Type</th>
                     <th>Moving %</th>
@@ -716,7 +707,7 @@ function renderPoolLengthChart(swims) {
 
     swims.forEach(s => {
         if (s.swim_type === "pool") {
-            switch (s.pool_length) {
+            switch(s.pool_length) {
                 case 20: counts["20m"]++; break;
                 case 25: counts["25m"]++; break;
                 case 50: counts["50m"]++; break;
@@ -744,7 +735,7 @@ function renderPoolLengthChart(swims) {
 
     Object.entries(counts).forEach(([key, val]) => {
         if (val > 0) {
-            labels.push(key.replace("m", " m").replace("yd", " yd")); // formateo bonito
+            labels.push(key.replace("m"," m").replace("yd"," yd")); // formateo bonito
             data.push(val);
             backgroundColor.push(colorMap[key]);
         }
