@@ -47,7 +47,7 @@ TO DO
 🔴🌈[PREDICTIONS]afegir algun model ML a predicts
 🔴🌈[GENERAL]tenir una base de dades
 🔴[PREPROCESSING]calcular be el TSS, de ALL activities! fer servir duracio i HR. i un multiplicador per esport!! (si hi ha effort, ferlo sevrir (es nomes premium))
-🔴[RUNS]boto de "show all runs" fore de la llista
+🔴[RUNS]boto de "show all runs" fora de la llista
 🔴[ANALYSIS]el titol "Monthly Distance (Last Year)", que sigui "Monthly Distance"
 🔴[GEAR]tamany dades gear cards mes petites
 🔴[GEAR]grarfica de gear "usage over time" es fa gran cap abaix fins inifint, deixarli mida fixa
