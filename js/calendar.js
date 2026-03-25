@@ -216,7 +216,7 @@ export function renderCalendarTab(allActivities) {
         const filtered = state.filterType === 'all' ? allActivities
             : allActivities.filter(a => getType(a) === state.filterType);
         const byDate = groupByDate(filtered);
-        const streaks = computeStreaks(groupByDate(allActivities)); // always full data
+        const streaks = computeStreaks(byDate);
 
         // View buttons active state
         root.querySelectorAll('.cal-view-btn').forEach(b =>
@@ -235,7 +235,7 @@ export function renderCalendarTab(allActivities) {
             titleEl.textContent = `${ws.getDate()} ${MONTHS_FULL[ws.getMonth()].slice(0, 3)} – ${we.getDate()} ${MONTHS_FULL[we.getMonth()].slice(0, 3)} ${we.getFullYear()}`;
         }
 
-        renderStreaks(streaks, groupByDate(allActivities));
+        renderStreaks(streaks, byDate);
 
         const bodyEl = root.querySelector('#cal-body');
         // Remove any lingering day-detail panel

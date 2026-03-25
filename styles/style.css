@@ -392,6 +392,7 @@ main {
     border: none;
     border-right: 1px solid var(--border-color);
     background: #fff;
+    color: var(--text-dark);
     cursor: pointer;
     transition: background .12s, color .12s;
 }
@@ -416,7 +417,11 @@ main {
     border: 1px solid var(--border-color);
     border-radius: 6px;
     background: #fff;
-    color: inherit;
+    color: var(--text-dark);
+}
+
+.cal-type-filter option {
+    color: var(--text-dark);
 }
 
 .cal-nav {
@@ -431,6 +436,7 @@ main {
     border: 1px solid var(--border-color);
     border-radius: 6px;
     background: #fff;
+    color: var(--text-dark);
     cursor: pointer;
     transition: background .12s;
 }
