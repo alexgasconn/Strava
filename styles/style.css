@@ -358,6 +358,135 @@ main {
     background: #fdfdfd;
 }
 
+/* ─── Activities tab ─────────────────────────────────────────── */
+.act-filters {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    padding: .75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: .55rem;
+    margin-bottom: 1rem;
+}
+
+.act-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .65rem 1.1rem;
+}
+
+.act-filter-label {
+    display: flex;
+    flex-direction: column;
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--text-medium);
+    gap: .2rem;
+}
+
+.act-filter-label select,
+.act-filter-label input[type="text"],
+.act-filter-label input[type="date"],
+.act-filter-label input[type="number"] {
+    font-size: .85rem;
+    padding: .25rem .45rem;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    background: var(--bg-page);
+    color: inherit;
+    min-width: 0;
+}
+
+.act-filter-label select {
+    min-width: 130px;
+}
+
+.act-filter-label input[type="text"] {
+    width: 145px;
+}
+
+.act-filter-label input[type="date"] {
+    width: 140px;
+}
+
+.act-filter-label input[type="number"] {
+    width: 68px;
+}
+
+.act-range-pair {
+    display: flex;
+    align-items: center;
+    gap: .3rem;
+    font-weight: 400;
+    color: var(--text-light);
+}
+
+.act-reset-btn {
+    align-self: flex-end;
+    padding: .3rem .8rem;
+    font-size: .8rem;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    background: #fff;
+    cursor: pointer;
+    color: var(--text-medium);
+    transition: background .15s, color .15s;
+    margin-top: auto;
+}
+
+.act-reset-btn:hover {
+    background: var(--strava-orange);
+    color: #fff;
+    border-color: var(--strava-orange);
+}
+
+#act-counter {
+    font-size: .82rem;
+    color: var(--text-light);
+    margin-bottom: .4rem;
+}
+
+/* Table enhancements for Activities */
+#activities-table.df-table th.sortable {
+    cursor: pointer;
+    white-space: nowrap;
+    user-select: none;
+}
+
+#activities-table.df-table th.sortable:hover {
+    background: #eef0f5;
+}
+
+#activities-table.df-table th.act-sort-active {
+    color: var(--strava-orange);
+}
+
+.act-name-link {
+    color: inherit;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.act-name-link:hover {
+    text-decoration: underline;
+    color: var(--strava-orange);
+}
+
+.act-empty {
+    text-align: center;
+    padding: 2.5rem;
+    opacity: .5;
+    font-style: italic;
+}
+
+#activities-table.df-table td small,
+#activities-table.df-table td small {
+    opacity: .65;
+    font-size: .8em;
+}
+
 
 /* --- GEAR SECTION STYLES (VERSIÓN DEFINITIVA) --- */
 
@@ -4242,47 +4371,52 @@ body {
     color: #0066cc;
     font-weight: 600;
 }
+
 table {
-    width:100%;
-    border-collapse:collapse;
+    width: 100%;
+    border-collapse: collapse;
 }
 
 thead {
-    background:#03a9f4;
+    background: #03a9f4;
 }
 
-tbody tr:nth-child(even){
-    background:#f5f5f5;
+tbody tr:nth-child(even) {
+    background: #f5f5f5;
 }
 
-tbody tr:hover{
-    background:#e8f4ff;
-}
-tbody tr:nth-child(even){
-    background:#f5f5f5;
+tbody tr:hover {
+    background: #e8f4ff;
 }
 
-tbody tr:hover{
-    background:#e8f4ff;
-}
-.swim-badge{
-padding:2px 8px;
-border-radius:6px;
-font-size:12px;
-font-weight:600;
+tbody tr:nth-child(even) {
+    background: #f5f5f5;
 }
 
-.swim-badge.pool{
-background:#0077cc20;
-color:#0077cc;
+tbody tr:hover {
+    background: #e8f4ff;
 }
 
-.swim-badge.openwater{
-background:#00b89420;
-color:#00b894;
+.swim-badge {
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
 }
-td, th{
-padding:8px 10px;
+
+.swim-badge.pool {
+    background: #0077cc20;
+    color: #0077cc;
+}
+
+.swim-badge.openwater {
+    background: #00b89420;
+    color: #00b894;
+}
+
+td,
+th {
+    padding: 8px 10px;
 }
 
 .pool-badge {
