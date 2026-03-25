@@ -468,7 +468,7 @@ function renderTopActivities(rides) {
 
 function renderActivitiesTable(rides) {
 
-    const el = document.getElementById("activities-table");
+    const el = document.getElementById("bike-activities-table");
     if (!el) return;
 
     const rows = rides
