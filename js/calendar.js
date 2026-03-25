@@ -16,10 +16,20 @@ const SPORT_PALETTE = {
 const SPORT_EMOJI = {
     Run: '🏃', TrailRun: '🏔️', VirtualRun: '🏃',
     Ride: '🚴', VirtualRide: '🚴', GravelRide: '🪨', MountainBikeRide: '🚵',
-    Swim: '🏊', OpenWaterSwim: '🌊', Walk: '🚶', Hike: '🥾',
+    Swim: '🏊', OpenWaterSwim: '🌊',
+    Walk: '🚶', Hike: '🥾',
+
+    Tennis: '🎾',
+    Padel: '🎾',
+    Soccer: '⚽',
+    Football: '⚽',
+
     AlpineSki: '⛷️', NordicSki: '⛷️', Snowboard: '🏂',
     Workout: '💪', WeightTraining: '🏋️', Yoga: '🧘',
-    Kayaking: '🚣', Rowing: '🚣', IceSkate: '⛸️', Crossfit: '💥',
+    Crossfit: '💥',
+
+    Kayaking: '🚣', Rowing: '🚣',
+    IceSkate: '⛸️'
 };
 
 const DAYS_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];

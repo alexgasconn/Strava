@@ -68,8 +68,8 @@ export function renderMapTab(activities = [], dateFrom = null, dateTo = null) {
     // default control values
     sportSel.value = 'all';
     if (vizSel) vizSel.value = 'heat';
-    if (densitySlider) densitySlider.value = '2';
-    if (radiusSlider) radiusSlider.value = '9';
+    if (densitySlider) densitySlider.value = '1.133';
+    if (radiusSlider) radiusSlider.value = '8';
     if (blurSlider) blurSlider.value = '14';
     if (colorBySportCheckbox) colorBySportCheckbox.checked = false;
     if (dateFromInput) dateFromInput.value = '';
@@ -129,8 +129,8 @@ export function renderMapTab(activities = [], dateFrom = null, dateTo = null) {
         const view = vizSel?.value || 'routes';
 
         if (view === 'heat') {
-            const factor = parseFloat(densitySlider?.value) || 2;
-            const rad = parseInt(radiusSlider?.value, 10) || 9;
+            const factor = parseFloat(densitySlider?.value) || 1.133;
+            const rad = parseInt(radiusSlider?.value, 10) || 8;
             const blur = parseInt(blurSlider?.value, 10) || 14;
             const heatPoints = [];
             visible.forEach(a => {
@@ -198,8 +198,8 @@ export function renderMapTab(activities = [], dateFrom = null, dateTo = null) {
         dateFromInput.value = '';
         dateToInput.value = '';
         sportSel.value = 'all';
-        if (densitySlider) densitySlider.value = '2';
-        if (radiusSlider) radiusSlider.value = '9';
+        if (densitySlider) densitySlider.value = '1.133';
+        if (radiusSlider) radiusSlider.value = '8';
         if (blurSlider) blurSlider.value = '14';
         if (colorBySportCheckbox) colorBySportCheckbox.checked = false;
         vizSel.value = 'heat';
