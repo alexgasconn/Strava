@@ -358,6 +358,491 @@ main {
     background: #fdfdfd;
 }
 
+/* ─── Calendar tab ──────────────────────────────────────────── */
+.cal-root {
+    padding: 1rem;
+}
+
+.cal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: .75rem;
+    margin-bottom: .75rem;
+}
+
+.cal-controls-left {
+    display: flex;
+    gap: .75rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.cal-view-btns {
+    display: flex;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.cal-view-btn {
+    padding: .32rem .8rem;
+    font-size: .82rem;
+    border: none;
+    border-right: 1px solid var(--border-color);
+    background: #fff;
+    cursor: pointer;
+    transition: background .12s, color .12s;
+}
+
+.cal-view-btn:last-child {
+    border-right: none;
+}
+
+.cal-view-btn:hover {
+    background: #f0f0f0;
+}
+
+.cal-view-btn.active {
+    background: var(--strava-orange);
+    color: #fff;
+    font-weight: 700;
+}
+
+.cal-type-filter {
+    padding: .3rem .55rem;
+    font-size: .83rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: #fff;
+    color: inherit;
+}
+
+.cal-nav {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+}
+
+.cal-nav-btn {
+    padding: .3rem .7rem;
+    font-size: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+    transition: background .12s;
+}
+
+.cal-nav-btn:hover {
+    background: #f0f0f0;
+}
+
+.cal-today-btn {
+    font-size: .78rem;
+}
+
+.cal-title {
+    font-weight: 700;
+    font-size: 1.05rem;
+    min-width: 200px;
+    text-align: center;
+}
+
+/* Streaks */
+.cal-streak-cards {
+    display: flex;
+    gap: .65rem;
+    flex-wrap: wrap;
+    margin-bottom: .9rem;
+}
+
+.cal-streak-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    padding: .6rem 1rem;
+    text-align: center;
+    min-width: 95px;
+    flex: 1;
+}
+
+.cal-streak-num {
+    font-size: 1.6rem;
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--strava-orange);
+}
+
+.cal-streak-label {
+    font-size: .68rem;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-top: .15rem;
+}
+
+/* Month grid */
+.cal-month-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    background: var(--border-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    overflow: hidden;
+}
+
+.cal-dow-header {
+    background: #f8f9fa;
+    text-align: center;
+    font-size: .75rem;
+    font-weight: 700;
+    color: var(--text-medium);
+    padding: .45rem 0;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.cal-day {
+    background: var(--bg-card);
+    min-height: 90px;
+    padding: .35rem;
+    cursor: pointer;
+    transition: background .1s;
+}
+
+.cal-day:hover {
+    background: #f4f6f9;
+}
+
+.cal-day-empty {
+    background: #fafafa !important;
+    cursor: default;
+}
+
+.cal-today {
+    background: #fff7f4 !important;
+    outline: 2px solid var(--strava-orange);
+    outline-offset: -2px;
+}
+
+.cal-future {
+    opacity: .4;
+    pointer-events: none;
+}
+
+.cal-day-num {
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--text-medium);
+    margin-bottom: .2rem;
+}
+
+.cal-today .cal-day-num {
+    color: var(--strava-orange);
+    font-weight: 900;
+}
+
+.cal-day-pills {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.cal-pill {
+    font-size: .65rem;
+    padding: 1px 4px;
+    border-radius: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+}
+
+.cal-pill-more {
+    background: #ebebeb;
+    color: #777;
+    font-style: italic;
+}
+
+/* Week grid */
+.cal-week-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+}
+
+.cal-week-col {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    overflow: hidden;
+    min-height: 220px;
+}
+
+.cal-week-col.cal-today {
+    outline: 2px solid var(--strava-orange);
+    outline-offset: -2px;
+    background: #fff7f4;
+}
+
+.cal-week-col.cal-future {
+    opacity: .4;
+    pointer-events: none;
+}
+
+.cal-week-day-header {
+    background: #f8f9fa;
+    padding: .38rem .55rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: .1rem;
+}
+
+.cal-week-dow {
+    font-weight: 700;
+    font-size: .74rem;
+    text-transform: uppercase;
+    color: var(--text-medium);
+}
+
+.cal-week-date {
+    font-size: .7rem;
+    color: var(--text-light);
+}
+
+.cal-week-day-total {
+    font-size: .68rem;
+    color: var(--strava-orange);
+    font-weight: 600;
+    margin-top: .1rem;
+}
+
+.cal-week-acts {
+    padding: .45rem .38rem;
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+}
+
+.cal-week-activity {
+    display: block;
+    padding: .38rem .45rem;
+    border-radius: 5px;
+    text-decoration: none;
+    color: inherit;
+    font-size: .73rem;
+    line-height: 1.4;
+    transition: filter .1s;
+}
+
+.cal-week-activity:hover {
+    filter: brightness(.9);
+}
+
+.cal-week-act-sport {
+    font-weight: 600;
+    font-size: .67rem;
+    opacity: .7;
+}
+
+.cal-week-act-name {
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.cal-week-act-stats {
+    opacity: .6;
+    font-size: .65rem;
+}
+
+.cal-week-rest {
+    font-size: .72rem;
+    color: var(--text-light);
+    font-style: italic;
+    padding: .3rem .15rem;
+}
+
+/* Year heatmap */
+.cal-year-outer {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.cal-year-dow-col {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-top: 22px;
+    flex-shrink: 0;
+    align-items: flex-end;
+}
+
+.cal-year-dow {
+    height: 13px;
+    font-size: .59rem;
+    color: var(--text-light);
+    white-space: nowrap;
+    padding-right: 3px;
+    display: flex;
+    align-items: center;
+}
+
+.cal-year-heatmap {
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.cal-year-weeks {
+    display: flex;
+    gap: 2px;
+}
+
+.cal-year-week {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.cal-year-cell {
+    width: 13px;
+    height: 13px;
+    border-radius: 2px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: transform .1s;
+}
+
+.cal-year-cell:hover {
+    transform: scale(1.45);
+    z-index: 1;
+    position: relative;
+}
+
+.cal-year-empty {
+    background: #e8e8e8;
+    cursor: default;
+}
+
+.cal-year-empty:hover {
+    transform: none;
+}
+
+.cal-year-summary {
+    display: flex;
+    gap: 1.25rem;
+    margin-top: .9rem;
+    font-size: .84rem;
+    color: var(--text-medium);
+    flex-wrap: wrap;
+}
+
+.cal-year-summary span {
+    font-weight: 600;
+}
+
+/* Day detail panel */
+.cal-day-detail {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    margin-top: .7rem;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.cal-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: .55rem 1rem;
+    background: #f8f9fa;
+    border-bottom: 1px solid var(--border-color);
+    font-size: .88rem;
+}
+
+.cal-detail-close {
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 1rem;
+    opacity: .45;
+    padding: 0 .25rem;
+}
+
+.cal-detail-close:hover {
+    opacity: 1;
+}
+
+.cal-detail-row {
+    display: flex;
+    align-items: baseline;
+    gap: .7rem;
+    padding: .5rem 1rem;
+    border-bottom: 1px solid #f4f4f4;
+    text-decoration: none;
+    color: inherit;
+    transition: background .1s;
+}
+
+.cal-detail-row:hover {
+    background: #f9f9f9;
+}
+
+.cal-detail-row:last-child {
+    border-bottom: none;
+}
+
+.cal-detail-sport {
+    font-size: .73rem;
+    opacity: .68;
+    min-width: 85px;
+}
+
+.cal-detail-name {
+    font-weight: 500;
+    font-size: .84rem;
+    flex: 1;
+}
+
+.cal-detail-stats {
+    font-size: .76rem;
+    color: var(--text-light);
+    white-space: nowrap;
+}
+
+/* Legend */
+.cal-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem .85rem;
+    margin-top: .7rem;
+    padding: .45rem;
+    font-size: .73rem;
+    color: var(--text-medium);
+}
+
+.cal-legend-item {
+    display: flex;
+    align-items: center;
+    gap: .28rem;
+}
+
+.cal-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
 /* ─── Activities tab ─────────────────────────────────────────── */
 .act-filters {
     background: var(--bg-card);

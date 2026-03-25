@@ -2,14 +2,15 @@
 import { redirectToStrava, logout, handleAuth } from './auth.js';
 import { setupDashboard, showLoading, hideLoading, handleError, } from './ui.js';
 import { renderRunAnalysisTab } from './run-analysis.js';
-import { renderBikeAnalysisTab} from './bike-analysis.js';
-import { renderSwimAnalysisTab} from './swim-analysis.js';
+import { renderBikeAnalysisTab } from './bike-analysis.js';
+import { renderSwimAnalysisTab } from './swim-analysis.js';
 import { renderDashboardTab } from './dashboard.js';
 import { renderAthleteTab } from './athlete.js';
 import { renderPlannerTab } from './planner.js';
 import { renderGearTab } from './gear.js';
 import { renderWeatherTab } from './weather.js';
 import { renderActivitiesTab } from './activities.js';
+import { renderCalendarTab } from './calendar.js';
 import { renderWrappedTab } from './wrapped.js';
 import { renderMapTab } from './maps.js';
 import { fetchAllActivities, fetchAthleteData, fetchTrainingZones, fetchAllGears } from './api.js';
@@ -31,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'planner-tab': { render: () => renderPlannerTab(allActivities) },
         'gear-tab': { render: () => renderGearTab(allActivities) },
         'activities-tab': { render: () => renderActivitiesTab(allActivities) },
+        'calendar-tab': { render: () => renderCalendarTab(allActivities) },
         'weather-tab': { render: () => renderWeatherTab(allActivities) },
         'map-tab': { render: () => renderMapTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
         'wrapped-tab': { render: () => renderWrappedTab(allActivities) },
@@ -130,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('date-from').value = dateFilterFrom;
                 document.getElementById('date-to').value = dateFilterTo;
 
-                renderRunAnalysisTab (allActivities, dateFilterFrom, dateFilterTo);
+                renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
             });
         });
     }
@@ -209,7 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showLoading(`Done! ${progress}%`);
 
             setupDashboard(allActivities);
-            renderRunAnalysisTab (allActivities, dateFilterFrom, dateFilterTo);
+            renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
             renderedTabs.add('analysis-tab');
             setupYearlySelector();
         } catch (error) {
@@ -228,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Reset rendered state so tabs re-render with fresh data
             renderedTabs.clear();
-            renderRunAnalysisTab (allActivities, dateFilterFrom, dateFilterTo);
+            renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
             renderedTabs.add('analysis-tab');
             setupYearlySelector();
         } catch (error) {
@@ -250,7 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.year-btn').forEach(b => b.classList.remove('active'));
             dateFilterFrom = document.getElementById('date-from').value || null;
             dateFilterTo = document.getElementById('date-to').value || null;
-            renderRunAnalysisTab (allActivities, dateFilterFrom, dateFilterTo);
+            renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
         });
     }
 
@@ -261,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('date-from').value = '';
             document.getElementById('date-to').value = '';
             document.querySelectorAll('.year-btn').forEach(b => b.classList.remove('active'));
-            renderRunAnalysisTab (allActivities, dateFilterFrom, dateFilterTo);
+            renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
         });
     }
 
