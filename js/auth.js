@@ -31,11 +31,27 @@ export async function logout() {
 
 async function getTokensFromCode(code) {
     try {
-        const response = await fetch('/api/strava-auth', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code })
-        });
+        let response;
+        try {
+            response = await fetch('/api/strava-auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code })
+            });
+        } catch (networkErr) {
+            throw new Error('Cannot reach /api/strava-auth. Run the app with "vercel dev" for local testing.');
+        }
+
+        const contentType = response.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+            // Endpoint returned HTML — likely a 404 (not running via vercel dev) or a Vercel error page
+            const text = await response.text().catch(() => '');
+            const hint = response.status === 404
+                ? 'Endpoint not found — make sure you are running the app with "vercel dev".'
+                : `Server returned HTTP ${response.status}. Check that STRAVA_CLIENT_SECRET is set in your Vercel environment variables.`;
+            throw new Error(hint + (text ? `\n\nServer said: ${text.slice(0, 200)}` : ''));
+        }
+
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Authentication failed');
 

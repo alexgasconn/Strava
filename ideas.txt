@@ -39,7 +39,6 @@ TO DO
 🔴🚧[ACTIVITY]text de alerta si no hi ha dades de HR/cadence, watts, time...
 🔴🚧[GENERAL]time zones???
 🔴🚧[GENERAL]miles or km...
-🔴🌈[GENERAL]MENU ocult
 🔴🌈[GENERAL]reestructurar tot, molts mes .html, per cada pagina
 🔴🌈[GENERAL]idiomes
 🔴🌈[GENERAL]versio mobil
@@ -47,7 +46,6 @@ TO DO
 🔴🌈[PREDICTIONS]afegir algun model ML a predicts
 🔴🌈[GENERAL]tenir una base de dades
 🔴[PREPROCESSING]calcular be el TSS, de ALL activities! fer servir duracio i HR. i un multiplicador per esport!! (si hi ha effort, ferlo sevrir (es nomes premium))
-🔴[RUNS]boto de "show all runs" fora de la llista
 🔴[ANALYSIS]el titol "Monthly Distance (Last Year)", que sigui "Monthly Distance"
 🔴[GEAR]tamany dades gear cards mes petites
 🔴[GEAR]grarfica de gear "usage over time" es fa gran cap abaix fins inifint, deixarli mida fixa
@@ -95,3 +93,5 @@ DONE
 🟢🚧activity->afegir potencia, i potser algun stream mes
 🟢🩹trail/road shoes in gears
 🟢🩹[GENERAL]heatmap general com strava
+🔴[RUNS]boto de "show all runs" fora de la llista
+🔴🌈[GENERAL]MENU ocult
