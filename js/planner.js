@@ -62,43 +62,51 @@ function renderPersonalBestsSection(runs) {
     ];
 
     const pbs = getPBsWithMargin(runs, targetDistances);
+    const allBests = getBestPerformances(runs);
 
     let pbRows = targetDistances.map(target => {
         const pb = pbs.find(p => Math.abs(p.km - target.km) < 0.1);
         if (!pb || !pb.time) {
-            return `<tr><td>${target.name}</td><td colspan="5" style="text-align:center; color:#999;">No PB recorded</td></tr>`;
+            return `<tr><td>${target.name}</td><td colspan="4" style="text-align:center; color:#999;">No PB recorded</td></tr>`;
         }
 
         // Adjust time to exactly target distance (pace * target_km) for fair comparison
         const adjustedTime = (pb.time / pb.distance) * target.km;
         const timeStr = utils.formatTime(adjustedTime);
         const pace = utils.formatPace(adjustedTime, target.km);
-        // Show ±3% (realistic improvement) and +5% (conservative)
-        const fastTime = adjustedTime * 0.97;
-        const slowTime = adjustedTime * 1.03;
-        const fastTimeStr = utils.formatTime(fastTime);
-        const slowTimeStr = utils.formatTime(slowTime);
-        const fastPace = utils.formatPace(fastTime, target.km);
-        const slowPace = utils.formatPace(slowTime, target.km);
         const dateStr = pb.date ? new Date(pb.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+
+        // Get top 3 times for this distance
+        const topTimes = allBests[target.km] ? allBests[target.km].slice(0, 3) : [];
+        let topTimesHTML = '';
+        if (topTimes.length > 1) {
+            topTimesHTML = `<details style="cursor: pointer; user-select: none;">
+                <summary style="color: #666; font-size: 0.85em; margin-top: 0.3rem;">📊 Top 3 times</summary>
+                <div style="margin-top: 0.3rem; padding-left: 1rem; font-size: 0.85em; color: #888;">
+                    ${topTimes.map((t, i) => {
+                const tTime = (t.seconds / t.km) * target.km;
+                const tPace = utils.formatPace(tTime, target.km);
+                return `<div>#${i + 1}: ${utils.formatTime(tTime)} (${tPace})</div>`;
+            }).join('')}
+                </div>
+            </details>`;
+        }
 
         return `<tr>
             <td><strong>${target.name}</strong></td>
             <td>${timeStr}</td>
             <td>${pace}</td>
-            <td style="color:#28a745; font-size:0.9em;">▲ -3%: ${fastTimeStr} (${fastPace})</td>
-            <td style="color:#888; font-size:0.9em;">▼ +3%: ${slowTimeStr} (${slowPace})</td>
-            <td style="font-size:0.82em; color:#999;">${dateStr} · ${pb.runs} runs</td>
+            <td style="font-size:0.82em; color:#999;">${dateStr} · ${pb.runs} runs${topTimesHTML}</td>
         </tr>`;
     }).join('');
 
     container.innerHTML = `
         <h3>🏆 Personal Bests</h3>
-        <p style="font-size:0.9em; color:#666; margin-bottom:1rem;">Your fastest races at each distance (±3-5% search margin). The ±3% columns show your realistic improvement / bad-day range.</p>
+        <p style="font-size:0.9em; color:#666; margin-bottom:1rem;">Your fastest races at each distance (±3-5% search margin).</p>
         <div style="overflow-x:auto;">
         <table class="df-table">
             <thead>
-                <tr><th>Distance</th><th>Best Time</th><th>Pace</th><th>Goal (-3%)</th><th>Cushion (+3%)</th><th>Date · Runs</th></tr>
+                <tr><th>Distance</th><th>Best Time</th><th>Pace</th><th>Details</th></tr>
             </thead>
             <tbody>${pbRows}</tbody>
         </table>
@@ -366,11 +374,10 @@ function calculateAllPredictions(bestPerformances, model, vdot, settings) {
 function renderResultsTableAndChart(container, predictions, bests) {
     const rows = predictions.map(p => {
         if (!p.combined) {
-            return `<tr><td>${p.name}</td><td colspan="4" style="text-align:center; color:#999;">No prediction available</td></tr>`;
+            return `<tr><td>${p.name}</td><td colspan="3" style="text-align:center; color:#999;">No prediction available</td></tr>`;
         }
 
         const confidenceColor = p.confidence >= 80 ? '#28a745' : p.confidence >= 60 ? '#ffc107' : '#dc3545';
-        const sourceStr = p.sources.join(', ');
         const paceStr = utils.formatPace(p.combined, p.km);
 
         return `<tr>
@@ -378,7 +385,6 @@ function renderResultsTableAndChart(container, predictions, bests) {
             <td>${utils.formatTime(p.combined)}</td>
             <td>${paceStr}</td>
             <td style="color: ${confidenceColor}; font-weight: bold;">${p.confidence}%</td>
-            <td style="font-size:0.85em; color:#666;">${sourceStr}</td>
         </tr>`;
     }).join('');
 
@@ -388,7 +394,7 @@ function renderResultsTableAndChart(container, predictions, bests) {
             <div style="flex: 1 1 400px; min-width: 300px; overflow-x:auto;">
                 <table class="df-table">
                     <thead>
-                        <tr><th>Distance</th><th>Predicted Time</th><th>Pace</th><th>Confidence</th><th>Based On</th></tr>
+                        <tr><th>Distance</th><th>Predicted Time</th><th>Pace</th><th>Confidence</th></tr>
                     </thead>
                     <tbody>${rows}</tbody>
                 </table>

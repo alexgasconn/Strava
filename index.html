@@ -424,40 +424,11 @@
                 <div id="planner-tab" class="tab-content">
                     <div id="prediction-controls" class="prediction-controls">
 
-                        <!-- MOOD SELECTOR -->
-                        <fieldset style="border:none; padding:0; margin-bottom:0.75rem;">
-                            <legend style="font-weight:600; margin-bottom:0.5rem;">🎭 Prediction Scenario</legend>
-                            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-                                <label style="cursor:pointer;">
-                                    <input type="radio" name="prediction-mood" value="optimistic">
-                                    <span
-                                        style="display:inline-flex; align-items:center; gap:0.3rem; padding:0.35rem 0.8rem; border:1.5px solid #ccc; border-radius:20px; font-size:0.9em;">
-                                        🚀 Optimistic <small style="color:#888;">(peak day)</small>
-                                    </span>
-                                </label>
-                                <label style="cursor:pointer;">
-                                    <input type="radio" name="prediction-mood" value="realistic" checked>
-                                    <span
-                                        style="display:inline-flex; align-items:center; gap:0.3rem; padding:0.35rem 0.8rem; border:1.5px solid #ccc; border-radius:20px; font-size:0.9em;">
-                                        🎯 Realistic <small style="color:#888;">(typical race)</small>
-                                    </span>
-                                </label>
-                                <label style="cursor:pointer;">
-                                    <input type="radio" name="prediction-mood" value="conservative">
-                                    <span
-                                        style="display:inline-flex; align-items:center; gap:0.3rem; padding:0.35rem 0.8rem; border:1.5px solid #ccc; border-radius:20px; font-size:0.9em;">
-                                        🐢 Conservative <small style="color:#888;">(bad day)</small>
-                                    </span>
-                                </label>
-                            </div>
-                        </fieldset>
-
                         <!-- MODEL WEIGHTS -->
-                        <fieldset style="border:none; padding:0; margin-bottom:0.75rem;">
+                        <fieldset style="border:none; padding:0; margin-bottom:1rem;">
                             <legend style="font-weight:600; margin-bottom:0.5rem;">⚖️ Model Weights <small
                                     style="color:#888; font-weight:400;">(auto-normalised to 100%)</small></legend>
-                            <div
-                                style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:0.6rem;">
+                            <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:0.6rem;">
                                 <div
                                     style="background:#f9f9f9; padding:0.6rem 0.8rem; border-radius:8px; border:1px solid #e8e8e8;">
                                     <div
@@ -502,6 +473,34 @@
                                     <div style="font-size:0.75em; color:#999; margin-top:0.2rem;">VO₂max-based race
                                         equivalency tables</div>
                                 </div>
+                            </div>
+                        </fieldset>
+
+                        <!-- MOOD SELECTOR -->
+                        <fieldset style="border:none; padding:0; margin-bottom:0.75rem;">
+                            <legend style="font-weight:600; margin-bottom:0.5rem;">🎭 Prediction Scenario</legend>
+                            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                                <label style="cursor:pointer;">
+                                    <input type="radio" name="prediction-mood" value="optimistic">
+                                    <span
+                                        style="display:inline-flex; align-items:center; gap:0.3rem; padding:0.35rem 0.8rem; border:1.5px solid #ccc; border-radius:20px; font-size:0.9em;">
+                                        🚀 Optimistic <small style="color:#888;">(peak day)</small>
+                                    </span>
+                                </label>
+                                <label style="cursor:pointer;">
+                                    <input type="radio" name="prediction-mood" value="realistic" checked>
+                                    <span
+                                        style="display:inline-flex; align-items:center; gap:0.3rem; padding:0.35rem 0.8rem; border:1.5px solid #ccc; border-radius:20px; font-size:0.9em;">
+                                        🎯 Realistic <small style="color:#888;">(typical race)</small>
+                                    </span>
+                                </label>
+                                <label style="cursor:pointer;">
+                                    <input type="radio" name="prediction-mood" value="conservative">
+                                    <span
+                                        style="display:inline-flex; align-items:center; gap:0.3rem; padding:0.35rem 0.8rem; border:1.5px solid #ccc; border-radius:20px; font-size:0.9em;">
+                                        🐢 Conservative <small style="color:#888;">(bad day)</small>
+                                    </span>
+                                </label>
                             </div>
                         </fieldset>
 
