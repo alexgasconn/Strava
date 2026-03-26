@@ -93,5 +93,5 @@ DONE
 🟢🚧activity->afegir potencia, i potser algun stream mes
 🟢🩹trail/road shoes in gears
 🟢🩹[GENERAL]heatmap general com strava
-🔴[RUNS]boto de "show all runs" fora de la llista
-🔴🌈[GENERAL]MENU ocult
+🟢[RUNS]boto de "show all runs" fora de la llista
+🟢🌈[GENERAL]MENU ocult
