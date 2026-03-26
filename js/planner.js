@@ -714,13 +714,31 @@ function buildPredictionHistorySeries(runs, granularity, settings, selectedDista
         points.push(bucket.label);
         series.forEach(distanceSeries => {
             const prediction = predictionByDistance.get(distanceSeries.km);
-            distanceSeries.values.push(prediction?.combined ?? null);
-            distanceSeries.lows.push(prediction?.low ?? null);
-            distanceSeries.highs.push(prediction?.high ?? null);
+            const combined = prediction?.combined ?? null;
+            distanceSeries.values.push(combined);
+            // Use a tight ±5% band around the combined prediction instead of the full model spread,
+            // which can be extremely wide especially for marathon.
+            distanceSeries.lows.push(combined !== null ? combined * 0.95 : null);
+            distanceSeries.highs.push(combined !== null ? combined * 1.05 : null);
         });
     });
 
+    // Apply a light rolling mean (window = 3) to smooth the series
+    series.forEach(distanceSeries => {
+        distanceSeries.values = rollingMean3(distanceSeries.values);
+        distanceSeries.lows = rollingMean3(distanceSeries.lows);
+        distanceSeries.highs = rollingMean3(distanceSeries.highs);
+    });
+
     return { points, series };
+}
+
+function rollingMean3(arr) {
+    return arr.map((value, index) => {
+        const neighbours = [arr[index - 1], value, arr[index + 1]]
+            .filter(element => element !== null && element !== undefined && Number.isFinite(element));
+        return neighbours.length ? neighbours.reduce((sum, element) => sum + element, 0) / neighbours.length : null;
+    });
 }
 
 function createHistoryBuckets(runs, granularity) {
@@ -800,8 +818,8 @@ function renderPredictionHistoryChart(canvas, historySeries) {
             backgroundColor: series.color,
             borderWidth: 2,
             tension: 0.25,
-            pointRadius: 3,
-            pointHoverRadius: 5,
+            pointRadius: 2,
+            pointHoverRadius: 4,
             spanGaps: true,
             fill: false
         });
