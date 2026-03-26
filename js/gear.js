@@ -1,7 +1,7 @@
 // js/gear.js
 
 import { formatDistance, formatPace, formatTime, formatDate } from './utils.js';
-import { fetchGearById } from './api.js';
+import { fetchGearById, getCachedGears } from './api.js';
 
 // polyline decoder helper (copied from activity.js)
 function decodePolyline(str) {
@@ -35,6 +35,8 @@ let gearChartInstance = null;
 let gearGanttChartInstance = null;
 
 function getGears() {
+    const cached = getCachedGears();
+    if (cached) return cached;
     return JSON.parse(localStorage.getItem('strava_gears') || '[]');
 }
 

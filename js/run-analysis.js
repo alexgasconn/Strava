@@ -1,8 +1,11 @@
 // js/analysis.js
 import * as utils from './utils.js';
 import { calculateFitness, rollingMean as calculateRollingMean } from './utils.js';
+import { getCachedGears } from './api.js';
 
 function getGears() {
+    const cached = getCachedGears();
+    if (cached) return cached;
     return JSON.parse(localStorage.getItem('strava_gears') || '[]');
 }
 

@@ -13,7 +13,7 @@ import { renderActivitiesTab } from './activities.js';
 import { renderCalendarTab } from './calendar.js';
 import { renderWrappedTab } from './wrapped.js';
 import { renderMapTab } from './maps.js';
-import { fetchAllActivities, fetchAthleteData, fetchTrainingZones, fetchAllGears } from './api.js';
+import { fetchAllActivities, fetchAthleteData, fetchTrainingZones, fetchAllGears, setCachedGears } from './api.js';
 import { preprocessActivities } from './preprocessing.js';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -107,6 +107,28 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // --- FILTER STATE PERSISTENCE ---
+    function saveFilterState() {
+        localStorage.setItem('dashboard_filters', JSON.stringify({
+            dateFilterFrom,
+            dateFilterTo
+        }));
+    }
+
+    function loadFilterState() {
+        const saved = localStorage.getItem('dashboard_filters');
+        if (saved) {
+            const filters = JSON.parse(saved);
+            dateFilterFrom = filters.dateFilterFrom;
+            dateFilterTo = filters.dateFilterTo;
+
+            const dateFromEl = document.getElementById('date-from');
+            const dateToEl = document.getElementById('date-to');
+            if (dateFromEl && dateFilterFrom) dateFromEl.value = dateFilterFrom;
+            if (dateToEl && dateFilterTo) dateToEl.value = dateFilterTo;
+        }
+    }
+
     // --- YEAR FILTER BUTTONS ---
     function setupYearlySelector() {
         const yearsToShow = 5;
@@ -131,6 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 document.getElementById('date-from').value = dateFilterFrom;
                 document.getElementById('date-to').value = dateFilterTo;
+                saveFilterState();
 
                 renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
             });
@@ -178,14 +201,37 @@ document.addEventListener('DOMContentLoaded', () => {
             showLoading('Loading athlete profile and zones...', progress, elapsed());
 
             try {
-                const [fetchedAthlete, fetchedZones] = await Promise.all([
+                // Use Promise.allSettled with timeout to prevent hanging
+                const timeout = 8000; // 8 second timeout per request
+                const athletePromise = Promise.race([
                     fetchAthleteData(),
-                    fetchTrainingZones()
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Athlete fetch timeout')), timeout))
                 ]);
-                athlete = fetchedAthlete;
-                zones = fetchedZones;
-                progress = 65;
-                showLoading('Athlete profile and zones ready', progress, elapsed());
+                const zonesPromise = Promise.race([
+                    fetchTrainingZones(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Zones fetch timeout')), timeout))
+                ]);
+
+                const results = await Promise.allSettled([athletePromise, zonesPromise]);
+
+                if (results[0].status === 'fulfilled') {
+                    athlete = results[0].value;
+                } else {
+                    console.warn('Failed to load athlete data:', results[0].reason);
+                }
+
+                if (results[1].status === 'fulfilled') {
+                    zones = results[1].value;
+                } else {
+                    console.warn('Failed to load zones data:', results[1].reason);
+                }
+
+                if (athlete || zones) {
+                    progress = 65;
+                    showLoading('Athlete profile and zones ready', progress, elapsed());
+                } else {
+                    showLoading('Athlete/zones unavailable (timeout or error), continuing...', 65, elapsed());
+                }
             } catch (error) {
                 console.warn('Failed to load athlete/zones data, continuing without:', error);
                 athlete = null;
@@ -198,6 +244,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (athlete) {
                     showLoading('Loading gear usage...', 72, elapsed());
                     gears = await fetchAllGears(athlete);
+                    // Persist gears to cache with 24h TTL
+                    setCachedGears(gears);
                 }
             } catch (error) {
                 console.warn('Failed to load gears, continuing without:', error);
@@ -217,8 +265,9 @@ document.addEventListener('DOMContentLoaded', () => {
             showLoading('Finalizing UI...', progress, elapsed());
 
             setupDashboard(allActivities);
+            loadFilterState();
             renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
-            renderedTabs.add('analysis-tab');
+            renderedTabs.add('run-tab');
             setupYearlySelector();
         } catch (error) {
             handleError('Could not initialize the app', error);
@@ -239,8 +288,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Reset rendered state so tabs re-render with fresh data
             renderedTabs.clear();
+            loadFilterState();
             renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
-            renderedTabs.add('analysis-tab');
+            renderedTabs.add('run-tab');
             setupYearlySelector();
             showLoading('Refresh completed', 100, elapsed());
         } catch (error) {
@@ -262,6 +312,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.year-btn').forEach(b => b.classList.remove('active'));
             dateFilterFrom = document.getElementById('date-from').value || null;
             dateFilterTo = document.getElementById('date-to').value || null;
+            saveFilterState();
             renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
         });
     }
@@ -273,6 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('date-from').value = '';
             document.getElementById('date-to').value = '';
             document.querySelectorAll('.year-btn').forEach(b => b.classList.remove('active'));
+            saveFilterState();
             renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
         });
     }

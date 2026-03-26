@@ -25,7 +25,12 @@ export async function logout() {
     }
     localStorage.removeItem('strava_tokens');
     localStorage.removeItem('strava_athlete_data');
+    localStorage.removeItem('strava_athlete_data_timestamp');
     localStorage.removeItem('strava_training_zones');
+    localStorage.removeItem('strava_training_zones_timestamp');
+    localStorage.removeItem('strava_gears');
+    localStorage.removeItem('strava_gears_timestamp');
+    localStorage.removeItem('dashboard_filters');
     window.location.reload();
 }
 
@@ -88,7 +93,12 @@ export async function handleAuth(onAuthenticated) {
         } else {
             localStorage.removeItem('strava_tokens');
             localStorage.removeItem('strava_athlete_data');
+            localStorage.removeItem('strava_athlete_data_timestamp');
             localStorage.removeItem('strava_training_zones');
+            localStorage.removeItem('strava_training_zones_timestamp');
+            localStorage.removeItem('strava_gears');
+            localStorage.removeItem('strava_gears_timestamp');
+            localStorage.removeItem('dashboard_filters');
         }
     }
 

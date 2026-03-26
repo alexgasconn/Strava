@@ -3,16 +3,22 @@
 // ===================================================================
 // CACHE CONFIGURATION
 // ===================================================================
-const CACHE_DURATION = 60 * 60 * 1000; // 1 hour in milliseconds
+const CACHE_DURATIONS = {
+    athlete: 24 * 60 * 60 * 1000,      // 24 hours
+    zones: 24 * 60 * 60 * 1000,        // 24 hours
+    gear: 24 * 60 * 60 * 1000,         // 24 hours
+    activities: 60 * 60 * 1000         // 1 hour (default)
+};
 
-function getFromCache(key) {
+function getFromCache(key, ttlKey = 'activities') {
     const cached = localStorage.getItem(key);
     const timestamp = localStorage.getItem(`${key}_timestamp`);
 
     if (!cached || !timestamp) return null;
 
+    const cacheDuration = CACHE_DURATIONS[ttlKey] || CACHE_DURATIONS.activities;
     const age = Date.now() - parseInt(timestamp);
-    if (age > CACHE_DURATION) {
+    if (age > cacheDuration) {
         localStorage.removeItem(key);
         localStorage.removeItem(`${key}_timestamp`);
         return null;
@@ -72,9 +78,9 @@ export async function fetchAllActivities() {
 }
 
 export async function fetchGearById(gearId) {
-    // Check cache first
+    // Check cache first with 24h TTL
     const cacheKey = `strava_gear_${gearId}`;
-    const cached = getFromCache(cacheKey);
+    const cached = getFromCache(cacheKey, 'gear');
     if (cached) {
         return cached;
     }
@@ -107,8 +113,9 @@ export function renderAthleteProfile(athlete) {
 }
 
 export async function fetchAthleteData() {
-    // Check cache first
-    const cached = getFromCache('strava_athlete');
+    // Check cache first with 24h TTL
+    const cacheKey = 'strava_athlete_data';
+    const cached = getFromCache(cacheKey, 'athlete');
     if (cached) {
         return cached;
     }
@@ -119,13 +126,14 @@ export async function fetchAthleteData() {
     const result = await handleApiResponse(response);
     const athlete = result.athlete;
 
-    saveToCache('strava_athlete', athlete);
+    saveToCache(cacheKey, athlete);
     return athlete;
 }
 
 export async function fetchTrainingZones() {
-    // Check cache first
-    const cached = getFromCache('strava_zones');
+    // Check cache first with 24h TTL
+    const cacheKey = 'strava_training_zones';
+    const cached = getFromCache(cacheKey, 'zones');
     if (cached) {
         return cached;
     }
@@ -136,7 +144,7 @@ export async function fetchTrainingZones() {
     const result = await handleApiResponse(response);
     const zones = result.zones;
 
-    saveToCache('strava_zones', zones);
+    saveToCache(cacheKey, zones);
     return zones;
 }
 
@@ -157,4 +165,18 @@ export async function fetchAllGears(athlete) {
         .filter(r => r.status === 'fulfilled')
         .map(r => r.value)
         .filter(g => g); // Remove null/undefined
+}
+
+export function getCachedGears() {
+    // Try to read cached gears array with 24h TTL
+    const cached = getFromCache('strava_gears', 'gear');
+    if (cached) {
+        return cached;
+    }
+    return null;
+}
+
+export function setCachedGears(gearsList) {
+    // Save gears array to cache with 24h TTL
+    saveToCache('strava_gears', gearsList);
 }
