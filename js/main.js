@@ -21,6 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let allActivities = [];
     let dateFilterFrom = null;
     let dateFilterTo = null;
+    let athleteSportFilter = 'all';
+    let athleteDataType = 'time';
 
     // --- Tab rendering config: maps tab id → { render function, uses date filters } ---
     const tabConfig = {
@@ -28,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'run-tab': { render: () => renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
         'bike-tab': { render: () => renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
         'swim-tab': { render: () => renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
-        'athlete-tab': { render: () => renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
+        'athlete-tab': { render: () => renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo, athleteSportFilter, athleteDataType), usesFilters: true },
         'planner-tab': { render: () => renderPlannerTab(allActivities) },
         'gear-tab': { render: () => renderGearTab(allActivities) },
         'activities-tab': { render: () => renderActivitiesTab(allActivities) },
@@ -111,7 +113,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function saveFilterState() {
         localStorage.setItem('dashboard_filters', JSON.stringify({
             dateFilterFrom,
-            dateFilterTo
+            dateFilterTo,
+            athleteSportFilter,
+            athleteDataType
         }));
     }
 
@@ -119,12 +123,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const saved = localStorage.getItem('dashboard_filters');
         if (saved) {
             const filters = JSON.parse(saved);
-            dateFilterFrom = filters.dateFilterFrom;
-            dateFilterTo = filters.dateFilterTo;
-
-            const dateFromEl = document.getElementById('date-from');
-            const dateToEl = document.getElementById('date-to');
-            if (dateFromEl && dateFilterFrom) dateFromEl.value = dateFilterFrom;
+            dateFilterFrom = filters.dateFilterFrom || null;
+            dateFilterTo = filters.dateFilterTo || null;
+            athleteSportFilter = filters.athleteSportFilter || 'all';
+            athleteDataType = filters.athleteDataType || 'time';
             if (dateToEl && dateFilterTo) dateToEl.value = dateFilterTo;
         }
     }
@@ -306,6 +308,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loginButton) loginButton.addEventListener('click', redirectToStrava);
     if (logoutButton) logoutButton.addEventListener('click', logout);
     if (refreshButton) refreshButton.addEventListener('click', refreshActivities);
+
+    // --- ATHLETE FILTER LISTENERS (via custom event) ---
+    document.addEventListener('athlete-filters-changed', (e) => {
+        const { dateFilterFrom: newFrom, dateFilterTo: newTo, sportFilter, dataType, allActivities: activities } = e.detail;
+        athleteSportFilter = sportFilter;
+        athleteDataType = dataType;
+        dateFilterFrom = newFrom;
+        dateFilterTo = newTo;
+        saveFilterState();
+        renderAthleteTab(activities, dateFilterFrom, dateFilterTo, athleteSportFilter, athleteDataType);
+    });
 
     if (applyFilterButton) {
         applyFilterButton.addEventListener('click', () => {

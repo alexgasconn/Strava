@@ -18,6 +18,17 @@ export function renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo, sp
     // Ensure filters UI exists (will insert only once)
     addAthleteFilters();
 
+    // Update filter UI to reflect current state
+    const sportSelect = document.getElementById('athlete-sport-filter');
+    const dataTypeSelect = document.getElementById('athlete-data-type');
+    const dateFromInput = document.getElementById('athlete-date-from');
+    const dateToInput = document.getElementById('athlete-date-to');
+
+    if (sportSelect) sportSelect.value = sportFilter;
+    if (dataTypeSelect) dataTypeSelect.value = dataType;
+    if (dateFromInput) dateFromInput.value = dateFilterFrom || '';
+    if (dateToInput) dateToInput.value = dateFilterTo || '';
+
     // Apply filtering using the unified helper
     const filteredActivities = filterActivities(allActivities, dateFilterFrom, dateFilterTo, sportFilter);
 
@@ -1447,15 +1458,11 @@ function createUiChart(canvasId, config) {
 }
 
 function addAthleteFilters() {
-    const container = document.getElementById('athlete-tab');
-    if (!container) return;
+    const filterContainer = document.getElementById('athlete-filters');
+    if (!filterContainer) return;
 
     // Check if filters already exist
-    if (document.getElementById('athlete-filters')) return;
-
-    const filterDiv = document.createElement('div');
-    filterDiv.id = 'athlete-filters';
-    filterDiv.style = 'display:flex; gap:1rem; margin-bottom:1rem; align-items:center;';
+    if (document.getElementById('athlete-data-type')) return;
 
     // Get all activities to determine most practiced sports
     const allActivities = JSON.parse(localStorage.getItem('strava_activities') || '[]');
@@ -1476,10 +1483,15 @@ function addAthleteFilters() {
     const dataTypeSelect = document.createElement('select');
     dataTypeSelect.id = 'athlete-data-type';
     dataTypeSelect.innerHTML = `
-        <option value="count">Number of Activities</option>
         <option value="time">Time (hours)</option>
         <option value="distance">Distance (km)</option>
+        <option value="count">Number of Activities</option>
     `;
+
+    const dataTypeLabel = document.createElement('label');
+    dataTypeLabel.style = 'display: flex; align-items: center; gap: 0.5rem;';
+    dataTypeLabel.innerHTML = '<span>Data Type:</span>';
+    dataTypeLabel.appendChild(dataTypeSelect);
 
     const sportSelect = document.createElement('select');
     sportSelect.id = 'athlete-sport-filter';
@@ -1493,35 +1505,63 @@ function addAthleteFilters() {
 
     sportSelect.innerHTML = optionsHtml;
 
+    const sportLabel = document.createElement('label');
+    sportLabel.style = 'display: flex; align-items: center; gap: 0.5rem;';
+    sportLabel.innerHTML = '<span>Sport:</span>';
+    sportLabel.appendChild(sportSelect);
+
     const dateFromInput = document.createElement('input');
     dateFromInput.type = 'date';
     dateFromInput.id = 'athlete-date-from';
     dateFromInput.placeholder = 'From date';
+
+    const dateFromLabel = document.createElement('label');
+    dateFromLabel.style = 'display: flex; align-items: center; gap: 0.5rem;';
+    dateFromLabel.innerHTML = '<span>From:</span>';
+    dateFromLabel.appendChild(dateFromInput);
 
     const dateToInput = document.createElement('input');
     dateToInput.type = 'date';
     dateToInput.id = 'athlete-date-to';
     dateToInput.placeholder = 'To date';
 
+    const dateToLabel = document.createElement('label');
+    dateToLabel.style = 'display: flex; align-items: center; gap: 0.5rem;';
+    dateToLabel.innerHTML = '<span>To:</span>';
+    dateToLabel.appendChild(dateToInput);
+
     const applyButton = document.createElement('button');
+    applyButton.id = 'athlete-apply-filters';
     applyButton.textContent = 'Apply Filters';
-    applyButton.onclick = () => {
-        const dataType = dataTypeSelect.value;
-        const sport = sportSelect.value;
-        const from = dateFromInput.value;
-        const to = dateToInput.value;
-        // Re-render with filters
+
+    filterContainer.appendChild(dataTypeLabel);
+    filterContainer.appendChild(sportLabel);
+    filterContainer.appendChild(dateFromLabel);
+    filterContainer.appendChild(dateToLabel);
+    filterContainer.appendChild(applyButton);
+
+    filterContainer.style.cssText = 'display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;';
+
+    // Setup event listener for apply button
+    applyButton.addEventListener('click', () => {
         const allActivities = JSON.parse(localStorage.getItem('strava_activities') || '[]');
-        renderAthleteTab(allActivities, from, to, sport, dataType);
-    };
+        const selectedSport = sportSelect.value || 'all';
+        const selectedDataType = dataTypeSelect.value || 'time';
+        const selectedDateFrom = dateFromInput.value || null;
+        const selectedDateTo = dateToInput.value || null;
 
-    filterDiv.appendChild(dataTypeSelect);
-    filterDiv.appendChild(sportSelect);
-    filterDiv.appendChild(dateFromInput);
-    filterDiv.appendChild(dateToInput);
-    filterDiv.appendChild(applyButton);
-
-    container.insertBefore(filterDiv, container.firstChild);
+        // Dispatch custom event with filter values
+        const event = new CustomEvent('athlete-filters-changed', {
+            detail: {
+                dateFilterFrom: selectedDateFrom,
+                dateFilterTo: selectedDateTo,
+                sportFilter: selectedSport,
+                dataType: selectedDataType,
+                allActivities: allActivities
+            }
+        });
+        document.dispatchEvent(event);
+    });
 }
 
 function filterActivities(allActivities, dateFilterFrom, dateFilterTo, sportFilter = 'all') {
