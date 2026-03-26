@@ -139,13 +139,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- INITIALIZATION ---
     async function initializeApp(tokenData) {
-        showLoading('Loading activities... 0%');
+        const t0 = Date.now();
+        const elapsed = () => `${((Date.now() - t0) / 1000).toFixed(1)}s elapsed`;
+        showLoading('Preparing dashboard...', 2, elapsed());
         let progress = 0;
 
         try {
             // Phase 1: Load activities (0% -> 40%)
-            progress = 0;
-            showLoading(`Loading activities... ${progress}%`);
+            progress = 8;
+            showLoading('Checking local cache...', progress, elapsed());
 
             const cachedActivities = localStorage.getItem('strava_activities');
             const cachedActivitiesTimestamp = localStorage.getItem('strava_activities_timestamp');
@@ -156,11 +158,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (activitiesCacheValid) {
                 activities = JSON.parse(cachedActivities);
                 progress = 40;
-                showLoading(`✓ Activities loaded: ${activities.length} found (${progress}%)`);
+                showLoading(`Activities loaded from cache (${activities.length})`, progress, elapsed());
             } else {
+                showLoading('Downloading activities from Strava...', 18, elapsed());
                 activities = await fetchAllActivities();
                 progress = 40;
-                showLoading(`✓ Activities loaded: ${activities.length} found (${progress}%)`);
+                showLoading(`Activities downloaded (${activities.length})`, progress, elapsed());
                 localStorage.setItem('strava_activities', JSON.stringify(activities));
                 localStorage.setItem('strava_activities_timestamp', Date.now().toString());
             }
@@ -171,8 +174,8 @@ document.addEventListener('DOMContentLoaded', () => {
             let zones = null;
             let gears = [];
 
-            progress = 50;
-            showLoading(`Loading athlete & zones... ${progress}%`);
+            progress = 52;
+            showLoading('Loading athlete profile and zones...', progress, elapsed());
 
             try {
                 const [fetchedAthlete, fetchedZones] = await Promise.all([
@@ -182,25 +185,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 athlete = fetchedAthlete;
                 zones = fetchedZones;
                 progress = 65;
-                showLoading(`✓ Athlete data loaded (${progress}%)`);
+                showLoading('Athlete profile and zones ready', progress, elapsed());
             } catch (error) {
                 console.warn('Failed to load athlete/zones data, continuing without:', error);
                 athlete = null;
                 zones = null;
+                showLoading('Athlete/zones unavailable, continuing...', 65, elapsed());
             }
 
             // Try to load gears - also optional
             try {
                 if (athlete) {
+                    showLoading('Loading gear usage...', 72, elapsed());
                     gears = await fetchAllGears(athlete);
                 }
             } catch (error) {
                 console.warn('Failed to load gears, continuing without:', error);
                 gears = [];
+                showLoading('Gear unavailable, continuing...', 76, elapsed());
             }
 
             progress = 90;
-            showLoading(`Processing... ${progress}%`);
+            showLoading('Processing and enriching activities...', progress, elapsed());
 
             // Phase 3: Preprocess activities (90% -> 100%)
             const preprocessed = await preprocessActivities(activities, athlete, zones, gears);
@@ -208,7 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Preprocessed activities:', allActivities);
 
             progress = 100;
-            showLoading(`Done! ${progress}%`);
+            showLoading('Finalizing UI...', progress, elapsed());
 
             setupDashboard(allActivities);
             renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
@@ -222,17 +228,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function refreshActivities() {
-        showLoading('Refreshing activities...');
+        const t0 = Date.now();
+        const elapsed = () => `${((Date.now() - t0) / 1000).toFixed(1)}s elapsed`;
+        showLoading('Refreshing activities from Strava...', 20, elapsed());
         try {
             allActivities = await fetchAllActivities();
             localStorage.setItem('strava_activities', JSON.stringify(allActivities));
             localStorage.setItem('strava_activities_timestamp', Date.now().toString());
+            showLoading(`Rebuilding views (${allActivities.length} activities)...`, 80, elapsed());
 
             // Reset rendered state so tabs re-render with fresh data
             renderedTabs.clear();
             renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
             renderedTabs.add('analysis-tab');
             setupYearlySelector();
+            showLoading('Refresh completed', 100, elapsed());
         } catch (error) {
             handleError('Error refreshing activities', error);
         } finally {

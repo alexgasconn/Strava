@@ -4,6 +4,8 @@ import * as utils from './utils.js';
 // --- DOM REFERENCES  ---
 const loadingOverlay = document.getElementById('loading-overlay');
 const loadingMessage = document.getElementById('loading-message');
+const loadingProgressBar = document.getElementById('loading-progress-bar');
+const loadingMeta = document.getElementById('loading-meta');
 const athleteName = document.getElementById('athlete-name');
 const loginSection = document.getElementById('login-section');
 const appSection = document.getElementById('app-section');
@@ -11,9 +13,15 @@ const appSection = document.getElementById('app-section');
 
 
 // --- UI HELPERS ---
-export function showLoading(message) {
+export function showLoading(message, progress = null, meta = '') {
     if (loadingOverlay) {
         loadingMessage.textContent = message;
+        if (loadingProgressBar) {
+            loadingProgressBar.style.width = Number.isFinite(progress) ? `${Math.max(0, Math.min(100, progress))}%` : '0%';
+        }
+        if (loadingMeta) {
+            loadingMeta.textContent = meta || '';
+        }
         loadingOverlay.style.display = 'flex';
         loadingOverlay.classList.remove('hidden');
     }
@@ -21,6 +29,8 @@ export function showLoading(message) {
 
 export function hideLoading() {
     if (loadingOverlay) {
+        if (loadingProgressBar) loadingProgressBar.style.width = '0%';
+        if (loadingMeta) loadingMeta.textContent = '';
         loadingOverlay.style.display = 'none';
         loadingOverlay.classList.add('hidden');
     }

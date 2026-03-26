@@ -95,3 +95,15 @@ DONE
 🟢🩹[GENERAL]heatmap general com strava
 🟢[RUNS]boto de "show all runs" fora de la llista
 🟢🌈[GENERAL]MENU ocult
+
+
+
+Cachear athlete/zones/gears con TTL propio (p.ej. 24h) para no pedirlos en cada arranque.
+
+y arregla que cuando salgo de la tab Run y vuelvo a antrar, esta en blanco, algo de filtros creo que es...
+ y arregla tambien que ne athlete se queda en:
+Athlete Profile
+Loading profile...
+
+Training Zones
+Loading zones...

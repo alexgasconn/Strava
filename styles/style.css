@@ -256,6 +256,36 @@ main {
     animation: spin 1s linear infinite;
 }
 
+#loading-message {
+    margin: 14px 0 10px;
+    font-weight: 600;
+    color: #222;
+    text-align: center;
+}
+
+#loading-progress-track {
+    width: min(420px, 82vw);
+    height: 10px;
+    border-radius: 999px;
+    background: #eceff3;
+    overflow: hidden;
+    border: 1px solid #e1e4e8;
+}
+
+#loading-progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #ff7f3f 0%, #fc5200 100%);
+    transition: width 0.25s ease;
+}
+
+#loading-meta {
+    margin-top: 8px;
+    font-size: 0.86rem;
+    color: #666;
+    text-align: center;
+}
+
 @keyframes spin {
     0% {
         transform: rotate(0deg);
