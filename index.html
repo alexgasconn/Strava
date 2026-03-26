@@ -71,33 +71,35 @@
 
         <!-- MAIN APP SECTION -->
         <div id="app-section" class="hidden">
-            <header>
-                <h1 id="athlete-name"></h1>
-                <nav>
-                    <button id="settings-button" aria-label="Open settings">⚙️</button>
-                    <button id="refresh-button" aria-label="Refresh activities">Refresh Activities</button>
-                    <button id="logout-button" aria-label="Log out">Log Out</button>
-                </nav>
-            </header>
+            <div id="collapsible-header">
+                <header>
+                    <h1 id="athlete-name"></h1>
+                    <nav>
+                        <button id="settings-button" aria-label="Open settings">⚙️</button>
+                        <button id="refresh-button" aria-label="Refresh activities">Refresh Activities</button>
+                        <button id="logout-button" aria-label="Log out">Log Out</button>
+                    </nav>
+                </header>
 
-            <div id="settings-panel" class="settings-panel" style="display:none;">
-                <h4>Settings</h4>
-                <label>
-                    Units:
-                    <select id="units">
-                        <option value="metric">Metric</option>
-                        <option value="imperial">Imperial</option>
-                    </select>
-                </label>
-                <label>
-                    Age:
-                    <input type="number" id="age" min="0" value="25">
-                </label>
-                <label>
-                    Max HR:
-                    <input type="number" id="hr-max" min="100" max="230" value="190">
-                </label>
-                <button id="close-settings" aria-label="Close settings">Close</button>
+                <div id="settings-panel" class="settings-panel" style="display:none;">
+                    <h4>Settings</h4>
+                    <label>
+                        Units:
+                        <select id="units">
+                            <option value="metric">Metric</option>
+                            <option value="imperial">Imperial</option>
+                        </select>
+                    </label>
+                    <label>
+                        Age:
+                        <input type="number" id="age" min="0" value="25">
+                    </label>
+                    <label>
+                        Max HR:
+                        <input type="number" id="hr-max" min="100" max="230" value="190">
+                    </label>
+                    <button id="close-settings" aria-label="Close settings">Close</button>
+                </div>
             </div>
 
 
@@ -122,8 +124,7 @@
             <button class="tab-link" data-tab="wrapped-tab" data-tab="wrapped-tab" aria-controls="wrapped-tab"
                 aria-label="Wrapped - Your year in sport">🎁 Wrapped</button>
 
-
-
+            <button id="header-toggle" title="Show/hide top bar">▲ hide</button>
 
             <main>
                 <div id="analysis-tab" class="tab-content active">
@@ -848,6 +849,17 @@
     </div>
 
     <script type="module" src="js/main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const toggle = document.getElementById('header-toggle');
+            const panel = document.getElementById('collapsible-header');
+            if (!toggle || !panel) return;
+            toggle.addEventListener('click', () => {
+                const hidden = panel.classList.toggle('header-hidden');
+                toggle.textContent = hidden ? '▼ show' : '▲ hide';
+            });
+        });
+    </script>
 </body>
 
 </html>

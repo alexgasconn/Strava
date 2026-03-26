@@ -1257,11 +1257,11 @@ main {
 }
 
 .tab-link {
-    padding: 10px 20px;
+    padding: 5px 12px;
     cursor: pointer;
     border: none;
     background-color: transparent;
-    font-size: 1.1em;
+    font-size: 0.88em;
     font-weight: 500;
     color: #555;
     position: relative;
@@ -1280,6 +1280,45 @@ main {
     /* Color naranja de Strava */
     border-bottom-color: #FC5200;
     font-weight: bold;
+}
+
+/* ── Collapsible top bar ─────────────────────────────── */
+#collapsible-header {
+    overflow: hidden;
+    max-height: 200px;
+    transition: max-height 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
+    opacity: 1;
+}
+
+#collapsible-header.header-hidden {
+    max-height: 0;
+    opacity: 0;
+    margin: 0;
+    pointer-events: none;
+}
+
+#app-section header {
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.6rem;
+}
+
+#header-toggle {
+    display: block;
+    margin: 0 0 0.4rem auto;
+    padding: 2px 10px;
+    font-size: 0.75em;
+    color: #999;
+    background: transparent;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    cursor: pointer;
+    line-height: 1.6;
+    transition: color 0.2s;
+}
+
+#header-toggle:hover {
+    color: #555;
+    border-color: #bbb;
 }
 
 .tab-content {
