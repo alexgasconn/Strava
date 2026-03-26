@@ -109,8 +109,8 @@
             <button class="tab-link" data-tab="swim-tab" aria-controls="swim-tab" aria-label="Swim">🏊 Swim</button>
             <button class="tab-link" data-tab="athlete-tab" aria-controls="athlete-tab" aria-label="Athlete">👤
                 Athlete</button>
-            <button class="tab-link" data-tab="planner-tab" aria-controls="planner-tab"
-                aria-label="Planner and Tools">📅 Planner & Tools</button>
+            <button class="tab-link" data-tab="planner-tab" aria-controls="planner-tab" aria-label="Race Predictor">🎯
+                Race Predictor</button>
             <button class="tab-link" data-tab="gear-tab" aria-controls="gear-tab" aria-label="Gear">👟 Gear</button>
             <button class="tab-link" data-tab="activities-tab" aria-controls="activities-tab" aria-label="Activities">📝
                 Activities</button>
@@ -459,7 +459,12 @@
 
                     <!-- SECCIÓN DE PREDICCIÓN -->
                     <div class="chart-container">
-                        <h3>Race Time Predictions</h3>
+                        <div id="pb-section">
+                            <!-- PBs will be rendered here -->
+                        </div>
+                    </div>
+
+                    <div class="chart-container">
                         <div id="riegel-predictions">
                             <p>Select a mood and weights, then click "Update" to see your predicted race times.</p>
                         </div>
