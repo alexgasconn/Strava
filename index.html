@@ -423,38 +423,89 @@
                 <!-- ============================================= -->
                 <div id="planner-tab" class="tab-content">
                     <div id="prediction-controls" class="prediction-controls">
-                        <fieldset>
-                            <legend>Prediction Mood</legend>
-                            <div class="control-group">
-                                <label><input type="radio" name="prediction-mood" value="optimistic">
-                                    Optimistic</label>
-                                <label><input type="radio" name="prediction-mood" value="realistic" checked>
-                                    Realistic</label>
-                                <label><input type="radio" name="prediction-mood" value="conservative">
-                                    Conservative</label>
+
+                        <!-- MOOD SELECTOR -->
+                        <fieldset style="border:none; padding:0; margin-bottom:0.75rem;">
+                            <legend style="font-weight:600; margin-bottom:0.5rem;">🎭 Prediction Scenario</legend>
+                            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                                <label style="cursor:pointer;">
+                                    <input type="radio" name="prediction-mood" value="optimistic">
+                                    <span
+                                        style="display:inline-flex; align-items:center; gap:0.3rem; padding:0.35rem 0.8rem; border:1.5px solid #ccc; border-radius:20px; font-size:0.9em;">
+                                        🚀 Optimistic <small style="color:#888;">(peak day)</small>
+                                    </span>
+                                </label>
+                                <label style="cursor:pointer;">
+                                    <input type="radio" name="prediction-mood" value="realistic" checked>
+                                    <span
+                                        style="display:inline-flex; align-items:center; gap:0.3rem; padding:0.35rem 0.8rem; border:1.5px solid #ccc; border-radius:20px; font-size:0.9em;">
+                                        🎯 Realistic <small style="color:#888;">(typical race)</small>
+                                    </span>
+                                </label>
+                                <label style="cursor:pointer;">
+                                    <input type="radio" name="prediction-mood" value="conservative">
+                                    <span
+                                        style="display:inline-flex; align-items:center; gap:0.3rem; padding:0.35rem 0.8rem; border:1.5px solid #ccc; border-radius:20px; font-size:0.9em;">
+                                        🐢 Conservative <small style="color:#888;">(bad day)</small>
+                                    </span>
+                                </label>
                             </div>
                         </fieldset>
-                        <fieldset>
-                            <legend>Model Weights</legend>
-                            <div class="control-group sliders">
-                                <div>
-                                    <label for="riegel-weight">Riegel Formula: <span
-                                            id="riegel-weight-val">50%</span></label>
-                                    <input type="range" id="riegel-weight" min="0" max="100" value="50">
+
+                        <!-- MODEL WEIGHTS -->
+                        <fieldset style="border:none; padding:0; margin-bottom:0.75rem;">
+                            <legend style="font-weight:600; margin-bottom:0.5rem;">⚖️ Model Weights <small
+                                    style="color:#888; font-weight:400;">(auto-normalised to 100%)</small></legend>
+                            <div
+                                style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:0.6rem;">
+                                <div
+                                    style="background:#f9f9f9; padding:0.6rem 0.8rem; border-radius:8px; border:1px solid #e8e8e8;">
+                                    <div
+                                        style="display:flex; justify-content:space-between; font-size:0.88em; margin-bottom:0.3rem;">
+                                        <span>📐 Riegel Formula</span><strong id="riegel-weight-val">40%</strong>
+                                    </div>
+                                    <input class="model-weight-slider" type="range" id="riegel-weight" min="0" max="100"
+                                        value="40" style="width:100%;">
+                                    <div style="font-size:0.75em; color:#999; margin-top:0.2rem;">Exponential time
+                                        scaling from PBs</div>
                                 </div>
-                                <div>
-                                    <label for="ml-weight">Personal Curve (ML): <span
-                                            id="ml-weight-val">25%</span></label>
-                                    <input type="range" id="ml-weight" min="0" max="100" value="25">
+                                <div
+                                    style="background:#f9f9f9; padding:0.6rem 0.8rem; border-radius:8px; border:1px solid #e8e8e8;">
+                                    <div
+                                        style="display:flex; justify-content:space-between; font-size:0.88em; margin-bottom:0.3rem;">
+                                        <span>🧠 Personal Curve (ML)</span><strong id="ml-weight-val">25%</strong>
+                                    </div>
+                                    <input class="model-weight-slider" type="range" id="ml-weight" min="0" max="100"
+                                        value="25" style="width:100%;">
+                                    <div style="font-size:0.75em; color:#999; margin-top:0.2rem;">Quadratic fit on your
+                                        full race history</div>
                                 </div>
-                                <div>
-                                    <label for="pb-weight">Personal Bests (PBs): <span
-                                            id="pb-weight-val">40%</span></label>
-                                    <input type="range" id="pb-weight" min="0" max="100" value="40">
+                                <div
+                                    style="background:#f9f9f9; padding:0.6rem 0.8rem; border-radius:8px; border:1px solid #e8e8e8;">
+                                    <div
+                                        style="display:flex; justify-content:space-between; font-size:0.88em; margin-bottom:0.3rem;">
+                                        <span>🏆 Direct PBs</span><strong id="pb-weight-val">20%</strong>
+                                    </div>
+                                    <input class="model-weight-slider" type="range" id="pb-weight" min="0" max="100"
+                                        value="20" style="width:100%;">
+                                    <div style="font-size:0.75em; color:#999; margin-top:0.2rem;">Times from races at
+                                        that exact distance</div>
+                                </div>
+                                <div
+                                    style="background:#f9f9f9; padding:0.6rem 0.8rem; border-radius:8px; border:1px solid #e8e8e8;">
+                                    <div
+                                        style="display:flex; justify-content:space-between; font-size:0.88em; margin-bottom:0.3rem;">
+                                        <span>🫁 VDOT (Daniels)</span><strong id="vdot-weight-val">15%</strong>
+                                    </div>
+                                    <input class="model-weight-slider" type="range" id="vdot-weight" min="0" max="100"
+                                        value="15" style="width:100%;">
+                                    <div style="font-size:0.75em; color:#999; margin-top:0.2rem;">VO₂max-based race
+                                        equivalency tables</div>
                                 </div>
                             </div>
                         </fieldset>
-                        <button id="update-predictions-btn">Update Predictions</button>
+
+                        <button id="update-predictions-btn" style="margin-top:0.25rem;">🔄 Update Predictions</button>
                     </div>
 
                     <!-- SECCIÓN DE PREDICCIÓN -->

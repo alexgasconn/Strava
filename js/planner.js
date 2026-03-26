@@ -1,5 +1,5 @@
 ﻿// js/planner.js - Race Predictor and Performance Analyzer
-// Enhanced with PB display, ±3-5% margin bands, and improved prediction logic
+// Enhanced with PB display, ±3-5% margin bands, VDOT model, and improved prediction logic
 
 import * as utils from './utils.js';
 
@@ -8,32 +8,28 @@ import * as utils from './utils.js';
 // =====================================================
 
 export function renderPlannerTab(allActivities) {
-    const riegelWeightSlider = document.getElementById('riegel-weight');
-    const mlWeightSlider = document.getElementById('ml-weight');
-    const pbWeightSlider = document.getElementById('pb-weight');
-    const riegelWeightVal = document.getElementById('riegel-weight-val');
-    const mlWeightVal = document.getElementById('ml-weight-val');
-    const pbWeightVal = document.getElementById('pb-weight-val');
-    const updateBtn = document.getElementById('update-predictions-btn');
-    const moodRadios = document.querySelectorAll('input[name="prediction-mood"]');
-
     const runs = allActivities.filter(a => a.type && a.type.includes('Run'));
 
     // Render PB section first
     renderPersonalBestsSection(runs);
 
-    // Update predictions on change
+    // Wire up controls - they live in the HTML
+    const updateBtn = document.getElementById('update-predictions-btn');
+    const moodRadios = document.querySelectorAll('input[name="prediction-mood"]');
+    const sliders = document.querySelectorAll('.model-weight-slider');
+
     function updateUI() {
+        // Sync displayed percentages from sliders
+        document.querySelectorAll('.model-weight-slider').forEach(s => {
+            const valEl = document.getElementById(`${s.id}-val`);
+            if (valEl) valEl.textContent = `${s.value}%`;
+        });
         updatePredictions(runs);
     }
 
-    if (riegelWeightSlider) {
-        riegelWeightSlider.addEventListener('input', () => riegelWeightVal.textContent = `${riegelWeightSlider.value}%`);
-        mlWeightSlider.addEventListener('input', () => mlWeightVal.textContent = `${mlWeightSlider.value}%`);
-        pbWeightSlider.addEventListener('input', () => pbWeightVal.textContent = `${pbWeightSlider.value}%`);
-        updateBtn.addEventListener('click', updateUI);
-        moodRadios.forEach(radio => radio.addEventListener('change', updateUI));
-    }
+    sliders.forEach(s => s.addEventListener('input', updateUI));
+    if (updateBtn) updateBtn.addEventListener('click', updateUI);
+    moodRadios.forEach(r => r.addEventListener('change', updateUI));
 
     updateUI();
 }
@@ -56,12 +52,13 @@ function renderPersonalBestsSection(runs) {
         }
     }
 
+    // Use tight ±3-5% margin to find races that are actually close to target distance
     const targetDistances = [
-        { name: 'Mile', km: 1.609, margin: 0.10 },
-        { name: '5K', km: 5, margin: 0.15 },
-        { name: '10K', km: 10, margin: 0.15 },
-        { name: '21K (Half Marathon)', km: 21.097, margin: 0.20 },
-        { name: 'Marathon', km: 42.195, margin: 0.30 }
+        { name: 'Mile', km: 1.609, margin: 0.04 },
+        { name: '5K', km: 5, margin: 0.04 },
+        { name: '10K', km: 10, margin: 0.04 },
+        { name: '21K (Half Marathon)', km: 21.097, margin: 0.05 },
+        { name: 'Marathon', km: 42.195, margin: 0.05 }
     ];
 
     const pbs = getPBsWithMargin(runs, targetDistances);
@@ -72,34 +69,40 @@ function renderPersonalBestsSection(runs) {
             return `<tr><td>${target.name}</td><td colspan="5" style="text-align:center; color:#999;">No PB recorded</td></tr>`;
         }
 
-        const timeStr = utils.formatTime(pb.time);
-        const pace = utils.formatPace(pb.time, pb.km);
-        const minMargin = pb.time * 0.97; // -3%
-        const maxMargin = pb.time * 1.05; // +5%
-        const minTimeStr = utils.formatTime(minMargin);
-        const maxTimeStr = utils.formatTime(maxMargin);
-        const minPace = utils.formatPace(minMargin, pb.km);
-        const maxPace = utils.formatPace(maxMargin, pb.km);
+        // Adjust time to exactly target distance (pace * target_km) for fair comparison
+        const adjustedTime = (pb.time / pb.distance) * target.km;
+        const timeStr = utils.formatTime(adjustedTime);
+        const pace = utils.formatPace(adjustedTime, target.km);
+        // Show ±3% (realistic improvement) and +5% (conservative)
+        const fastTime = adjustedTime * 0.97;
+        const slowTime = adjustedTime * 1.03;
+        const fastTimeStr = utils.formatTime(fastTime);
+        const slowTimeStr = utils.formatTime(slowTime);
+        const fastPace = utils.formatPace(fastTime, target.km);
+        const slowPace = utils.formatPace(slowTime, target.km);
+        const dateStr = pb.date ? new Date(pb.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
 
         return `<tr>
             <td><strong>${target.name}</strong></td>
             <td>${timeStr}</td>
             <td>${pace}</td>
-            <td style="font-size:0.9em; color:#666;">-3%: ${minTimeStr} (${minPace})</td>
-            <td style="font-size:0.9em; color:#666;">+5%: ${maxTimeStr} (${maxPace})</td>
-            <td style="font-size:0.85em; color:#999;">${pb.runs} run(s)</td>
+            <td style="color:#28a745; font-size:0.9em;">▲ -3%: ${fastTimeStr} (${fastPace})</td>
+            <td style="color:#888; font-size:0.9em;">▼ +3%: ${slowTimeStr} (${slowPace})</td>
+            <td style="font-size:0.82em; color:#999;">${dateStr} · ${pb.runs} runs</td>
         </tr>`;
     }).join('');
 
     container.innerHTML = `
         <h3>🏆 Personal Bests</h3>
-        <p style="font-size:0.9em; color:#666; margin-bottom:1rem;">Your current PBs with realistic range estimates (±3-5%)</p>
+        <p style="font-size:0.9em; color:#666; margin-bottom:1rem;">Your fastest races at each distance (±3-5% search margin). The ±3% columns show your realistic improvement / bad-day range.</p>
+        <div style="overflow-x:auto;">
         <table class="df-table">
             <thead>
-                <tr><th>Distance</th><th>Best Time</th><th>Pace</th><th>Realistic Low (-3%)</th><th>Realistic High (+5%)</th><th>Source</th></tr>
+                <tr><th>Distance</th><th>Best Time</th><th>Pace</th><th>Goal (-3%)</th><th>Cushion (+3%)</th><th>Date · Runs</th></tr>
             </thead>
             <tbody>${pbRows}</tbody>
         </table>
+        </div>
     `;
 }
 
@@ -111,7 +114,9 @@ function getPBsWithMargin(allRuns, targetDistances) {
             .map(r => {
                 const distance = r.distance / 1000;
                 const seconds = r.moving_time;
-                return { date: r.start_date_local, distance, seconds, pace: seconds / distance, id: r.id };
+                // Pace normalised to target distance so we compare fairly across slightly different race lengths
+                const normPace = seconds / distance;
+                return { date: r.start_date_local, distance, seconds, pace: normPace, id: r.id };
             })
             .filter(r => r.distance >= min && r.distance <= max && r.seconds > 0 && r.pace > 0);
 
@@ -125,7 +130,7 @@ function getPBsWithMargin(allRuns, targetDistances) {
             pace: best.pace,
             date: best.date,
             runs: candidates.length,
-            distance: best.distance
+            distance: best.distance  // keep actual distance for time-normalisation
         });
     }
     return pbs;
@@ -148,27 +153,90 @@ function updatePredictions(runs) {
 
     const mood = document.querySelector('input[name="prediction-mood"]:checked')?.value || 'realistic';
     const weights = {
-        riegel: parseFloat(document.getElementById('riegel-weight')?.value || 50),
-        ml: parseFloat(document.getElementById('ml-weight')?.value || 25),
-        pb: parseFloat(document.getElementById('pb-weight')?.value || 40),
+        riegel: parseFloat(document.getElementById('riegel-weight')?.value ?? 40),
+        ml: parseFloat(document.getElementById('ml-weight')?.value ?? 25),
+        pb: parseFloat(document.getElementById('pb-weight')?.value ?? 30),
+        vdot: parseFloat(document.getElementById('vdot-weight')?.value ?? 20),
     };
 
-    // Normalize weights so they sum to 100
-    const totalWeight = weights.riegel + weights.ml + weights.pb;
-    if (totalWeight > 0) {
-        weights.riegel = weights.riegel / totalWeight * 100;
-        weights.ml = weights.ml / totalWeight * 100;
-        weights.pb = weights.pb / totalWeight * 100;
+    // Normalize weights so they always sum to 100
+    const totalW = Object.values(weights).reduce((s, v) => s + v, 0);
+    if (totalW > 0) {
+        for (const k of Object.keys(weights)) weights[k] = weights[k] / totalW * 100;
     }
 
     const bests = getBestPerformances(runs);
     const model = trainPersonalizedModel(bests);
-    const finalPredictions = calculateAllPredictions(bests, model, { mood, weights });
+    const vdot = estimateVDOT(runs);
+    const finalPredictions = calculateAllPredictions(bests, model, vdot, { mood, weights });
 
     renderResultsTableAndChart(container, finalPredictions, bests);
 }
 
-function calculateAllPredictions(bestPerformances, model, settings) {
+// =====================================================
+// VDOT MODEL (Daniels' Running Formula)
+// =====================================================
+
+/**
+ * Estimate VDOT from the athlete's best recent performances.
+ * Uses Jack Daniels' formula: VDOT = V / (0.182258 * (km*1000/t) + 0.000104 * ((km*1000/t)^2) - 4.6...)
+ * Simplified: we use the inverse — given a race time, compute VDOT, then predict other distances.
+ */
+function estimateVDOT(allRuns) {
+    // Use Daniels' percent VO2max curve: %VO2max = 0.8 + 0.1894393*e^(-0.012778*t) + 0.2989558*e^(-0.1932605*t)
+    // where t is time in minutes. Then VDOT = VO2 / %VO2max
+    // VO2 (ml/kg/min) from velocity: VO2 = -4.60 + 0.182258*v + 0.000104*v^2  (v in m/min)
+    const candidateRaces = allRuns
+        .filter(r => r.distance >= 3000 && r.moving_time > 0)
+        .map(r => {
+            const distM = r.distance;
+            const tMin = r.moving_time / 60;
+            const v = distM / tMin; // m/min
+            const vo2 = -4.60 + 0.182258 * v + 0.000104 * v * v;
+            const pct = 0.8 + 0.1894393 * Math.exp(-0.012778 * tMin) + 0.2989558 * Math.exp(-0.1932605 * tMin);
+            const vdot = pct > 0 ? vo2 / pct : 0;
+            return { vdot, distKm: distM / 1000, tMin };
+        })
+        .filter(r => r.vdot > 10 && r.vdot < 100);
+
+    if (candidateRaces.length === 0) return null;
+
+    // Use the top 3 races by VDOT and average to reduce noise
+    candidateRaces.sort((a, b) => b.vdot - a.vdot);
+    const top = candidateRaces.slice(0, Math.min(5, candidateRaces.length));
+    const avgVdot = top.reduce((s, r) => s + r.vdot, 0) / top.length;
+    return avgVdot;
+}
+
+/**
+ * Given a VDOT, predict finish time for a given distance (km) using Daniels' tables
+ * approximated with Newton's method: find t such that VDOT(t, dist) == vdot.
+ */
+function vdotPredict(vdot, km) {
+    if (!vdot || vdot <= 0) return null;
+    const distM = km * 1000;
+    let tMin = (distM / 1000) * 4.5; // initial guess: 4:30/km
+    for (let i = 0; i < 50; i++) {
+        const v = distM / tMin;
+        const vo2 = -4.60 + 0.182258 * v + 0.000104 * v * v;
+        const pct = 0.8 + 0.1894393 * Math.exp(-0.012778 * tMin) + 0.2989558 * Math.exp(-0.1932605 * tMin);
+        const f = pct > 0 ? vo2 / pct - vdot : -vdot;
+        // Derivative (numerical)
+        const dt = 0.001;
+        const tMin2 = tMin + dt;
+        const v2 = distM / tMin2;
+        const vo2_2 = -4.60 + 0.182258 * v2 + 0.000104 * v2 * v2;
+        const pct2 = 0.8 + 0.1894393 * Math.exp(-0.012778 * tMin2) + 0.2989558 * Math.exp(-0.1932605 * tMin2);
+        const f2 = pct2 > 0 ? vo2_2 / pct2 - vdot : -vdot;
+        const df = (f2 - f) / dt;
+        if (Math.abs(df) < 1e-10) break;
+        tMin = tMin - f / df;
+        if (tMin < 0.1) tMin = 0.1;
+    }
+    return tMin * 60; // return seconds
+}
+
+function calculateAllPredictions(bestPerformances, model, vdot, settings) {
     const targetDistances = [
         { name: 'Mile', km: 1.609 },
         { name: '5K', km: 5 },
@@ -210,6 +278,14 @@ function calculateAllPredictions(bestPerformances, model, settings) {
             bestPerformances[target.km].forEach(perf => {
                 allPredictions.push({ time: perf.seconds, weight: settings.weights.pb / 100, source: 'Exact PB' });
             });
+        }
+
+        // VDOT / Daniels prediction
+        if (vdot) {
+            const vdotTime = vdotPredict(vdot, target.km);
+            if (vdotTime && isFinite(vdotTime) && vdotTime > 0) {
+                allPredictions.push({ time: vdotTime, weight: settings.weights.vdot / 100, source: 'VDOT' });
+            }
         }
 
         if (allPredictions.length === 0) {
@@ -309,7 +385,7 @@ function renderResultsTableAndChart(container, predictions, bests) {
     container.innerHTML = `
         <h3>🎯 Race Time Predictions</h3>
         <div style="display: flex; gap: 2rem; align-items: flex-start; flex-wrap: wrap;">
-            <div style="flex: 1 1 400px; min-width: 300px;">
+            <div style="flex: 1 1 400px; min-width: 300px; overflow-x:auto;">
                 <table class="df-table">
                     <thead>
                         <tr><th>Distance</th><th>Predicted Time</th><th>Pace</th><th>Confidence</th><th>Based On</th></tr>
@@ -317,15 +393,17 @@ function renderResultsTableAndChart(container, predictions, bests) {
                     <tbody>${rows}</tbody>
                 </table>
             </div>
-            <div style="flex: 1 1 300px; min-width: 280px;">
-                <div class="chart-wrapper" style="position: relative; height: 300px; width: 100%;">
+            <div style="flex: 1 1 320px; min-width: 280px;">
+                <div class="chart-wrapper" style="position: relative; height: 320px; width: 100%;">
                     <canvas id="prediction-pace-chart"></canvas>
                 </div>
             </div>
         </div>
         <div class="disclaimer" style="font-size:0.85em; color:#666; margin-top:15px; padding:10px; background:#f5f5f5; border-radius:4px;">
-            <strong>How predictions work:</strong> Combines Riegel formula, your personal performance curve (ML), and actual PBs.
-            <strong>Confidence</strong> is higher when predictions align with your PBs and you have more data.
+            <strong>How predictions work:</strong> Combines 4 models — <em>Riegel</em> (exponential scaling from your PBs),
+            <em>ML Curve</em> (quadratic fit on your race history), <em>Exact PB</em> (direct times for that distance),
+            and <em>VDOT</em> (Daniels' VO₂max-based formula). Weights are set in the controls above.
+            <strong>Confidence</strong> is higher when models agree and you have more race data.
         </div>
     `;
 
@@ -355,21 +433,22 @@ function solve3x3(A, B) {
 }
 
 function getBestPerformances(allRuns) {
+    // Tight margin (4-5%) so we only pick races that are actually that distance
     const targetDistances = [
-        { name: 'Mile', km: 1.609 },
-        { name: '5K', km: 5 },
-        { name: '10K', km: 10 },
-        { name: 'Half Marathon', km: 21.097 },
-        { name: 'Marathon', km: 42.195 }
+        { name: 'Mile', km: 1.609, margin: 0.04 },
+        { name: '5K', km: 5, margin: 0.04 },
+        { name: '10K', km: 10, margin: 0.04 },
+        { name: 'Half Marathon', km: 21.097, margin: 0.05 },
+        { name: 'Marathon', km: 42.195, margin: 0.05 }
     ];
     const bestPerformances = {};
-    for (const { km } of targetDistances) {
-        const margin = 0.15;
+    for (const { km, margin } of targetDistances) {
         const min = km * (1 - margin), max = km * (1 + margin);
         const candidates = allRuns
             .map(r => ({ ...r, km: r.distance / 1000, seconds: r.moving_time }))
             .filter(r => r.km >= min && r.km <= max && r.seconds > 0);
         if (candidates.length === 0) continue;
+        // Sort by pace (s/km), best = lowest
         candidates.sort((a, b) => (a.seconds / a.km) - (b.seconds / b.km));
         bestPerformances[km] = candidates.slice(0, 3);
     }
@@ -405,10 +484,17 @@ function renderPaceChart(predictions) {
     const validPredictions = predictions.filter(p => p.combined && p.low && p.high);
     if (validPredictions.length === 0) return;
 
+    // Store pace as decimal minutes for Chart.js (will be formatted as mm:ss in callbacks)
     const toPace = (time, km) => (time / km) / 60;
     const mainPaces = validPredictions.map(p => ({ x: p.km, y: toPace(p.combined, p.km) }));
     const lowerPaces = validPredictions.map(p => ({ x: p.km, y: toPace(p.low, p.km) }));
     const upperPaces = validPredictions.map(p => ({ x: p.km, y: toPace(p.high, p.km) }));
+
+    const formatPaceLabel = (decimal) => {
+        const minutes = Math.floor(decimal);
+        const seconds = Math.round((decimal - minutes) * 60);
+        return `${minutes}:${seconds.toString().padStart(2, '0')} /km`;
+    };
 
     paceChartInstance = new Chart(ctx, {
         type: 'line',
@@ -449,12 +535,7 @@ function renderPaceChart(predictions) {
                 legend: { display: true, position: 'top' },
                 tooltip: {
                     callbacks: {
-                        label: function (context) {
-                            const paceDecimal = context.parsed.y;
-                            const minutes = Math.floor(paceDecimal);
-                            const seconds = Math.round((paceDecimal - minutes) * 60);
-                            return `${context.dataset.label}: ${minutes}:${seconds.toString().padStart(2, '0')} /km`;
-                        }
+                        label: (context) => `${context.dataset.label}: ${formatPaceLabel(context.parsed.y)}`
                     }
                 }
             },
@@ -468,7 +549,10 @@ function renderPaceChart(predictions) {
                 y: {
                     reverse: true,
                     title: { display: true, text: 'Pace (min/km)' },
-                    beginAtZero: false
+                    beginAtZero: false,
+                    ticks: {
+                        callback: (value) => formatPaceLabel(value)
+                    }
                 }
             }
         }
