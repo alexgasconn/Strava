@@ -520,6 +520,52 @@
                         </div>
                     </div>
 
+                    <div class="chart-container">
+                        <div id="prediction-history-panel">
+                            <h3>Prediction Evolution</h3>
+                            <p style="font-size:0.9em; color:#666;">Track how predicted race times changed over time
+                                using your historical runs.</p>
+                            <div
+                                style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:0.75rem; align-items:end; margin-bottom:1rem;">
+                                <label style="display:flex; flex-direction:column; gap:0.35rem; font-size:0.9em;">
+                                    <span>From</span>
+                                    <input type="date" id="prediction-history-from">
+                                </label>
+                                <label style="display:flex; flex-direction:column; gap:0.35rem; font-size:0.9em;">
+                                    <span>To</span>
+                                    <input type="date" id="prediction-history-to">
+                                </label>
+                                <label style="display:flex; flex-direction:column; gap:0.35rem; font-size:0.9em;">
+                                    <span>Granularity</span>
+                                    <select id="prediction-history-granularity">
+                                        <option value="month" selected>Monthly</option>
+                                        <option value="week">Weekly</option>
+                                        <option value="day">Daily</option>
+                                    </select>
+                                </label>
+                                <label style="display:flex; flex-direction:column; gap:0.35rem; font-size:0.9em;">
+                                    <span>Distances</span>
+                                    <select id="prediction-history-distances" multiple size="5">
+                                        <option value="1.609">Mile</option>
+                                        <option value="5" selected>5K</option>
+                                        <option value="10" selected>10K</option>
+                                        <option value="21.097">Half Marathon</option>
+                                        <option value="42.195">Marathon</option>
+                                    </select>
+                                </label>
+                            </div>
+                            <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:1rem;">
+                                <button id="prediction-history-apply">Update evolution</button>
+                                <button id="prediction-history-reset" type="button">Reset filters</button>
+                            </div>
+                            <div id="prediction-history-summary"
+                                style="font-size:0.9em; color:#666; margin-bottom:1rem;"></div>
+                            <div class="chart-wrapper" style="position: relative; height: 360px; width: 100%;">
+                                <canvas id="prediction-history-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- CALCULADORA VDOT -->
                     <div class="chart-container" id="calculator-container">
                         <h3>VDOT Race Time Calculator</h3>

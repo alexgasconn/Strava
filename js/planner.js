@@ -3,15 +3,36 @@
 
 import * as utils from './utils.js';
 
+const TARGET_DISTANCES = [
+    { name: 'Mile', km: 1.609, margin: 0.04 },
+    { name: '5K', km: 5, margin: 0.04 },
+    { name: '10K', km: 10, margin: 0.04 },
+    { name: '15K', km: 15, margin: 0.05 },
+    { name: 'Half Marathon', km: 21.097, margin: 0.05 },
+    { name: '30K', km: 30, margin: 0.05 },
+    { name: 'Marathon', km: 42.195, margin: 0.05 }
+];
+
+const HISTORY_DISTANCE_OPTIONS = TARGET_DISTANCES.filter(distance =>
+    [1.609, 5, 10, 21.097, 42.195].includes(distance.km)
+);
+
+const HISTORY_COLOR_PALETTE = ['#0B6E4F', '#D35400', '#1F618D', '#B03A2E', '#6C3483', '#117864'];
+
 // =====================================================
 // MAIN EXPORT - RENDERS THE TAB
 // =====================================================
 
 export function renderPlannerTab(allActivities) {
-    const runs = allActivities.filter(a => a.type && a.type.includes('Run'));
+    const runs = allActivities
+        .filter(a => a.type && a.type.includes('Run'))
+        .slice()
+        .sort((left, right) => new Date(left.start_date_local || 0) - new Date(right.start_date_local || 0));
 
     // Render PB section first
     renderPersonalBestsSection(runs);
+
+    initializePredictionHistoryControls(runs);
 
     // Wire up controls - they live in the HTML
     const updateBtn = document.getElementById('update-predictions-btn');
@@ -149,6 +170,7 @@ function getPBsWithMargin(allRuns, targetDistances) {
 // =====================================================
 
 let paceChartInstance = null;
+let predictionHistoryChartInstance = null;
 
 function updatePredictions(runs) {
     const container = document.getElementById('riegel-predictions');
@@ -179,6 +201,7 @@ function updatePredictions(runs) {
     const finalPredictions = calculateAllPredictions(bests, model, vdot, { mood, weights });
 
     renderResultsTableAndChart(container, finalPredictions, bests);
+    updatePredictionHistory(runs);
 }
 
 // =====================================================
@@ -245,16 +268,6 @@ function vdotPredict(vdot, km) {
 }
 
 function calculateAllPredictions(bestPerformances, model, vdot, settings) {
-    const targetDistances = [
-        { name: 'Mile', km: 1.609 },
-        { name: '5K', km: 5 },
-        { name: '10K', km: 10 },
-        { name: '15K', km: 15 },
-        { name: 'Half Marathon', km: 21.097 },
-        { name: '30K', km: 30 },
-        { name: 'Marathon', km: 42.195 }
-    ];
-
     const moodSettings = {
         optimistic: { start: 0.0, end: 0.40 },
         realistic: { start: 0.25, end: 0.75 },
@@ -262,7 +275,7 @@ function calculateAllPredictions(bestPerformances, model, vdot, settings) {
     };
     const trim = moodSettings[settings.mood];
 
-    return targetDistances.map(target => {
+    return TARGET_DISTANCES.map(target => {
         let allPredictions = [];
 
         // Riegel formula prediction
@@ -440,15 +453,8 @@ function solve3x3(A, B) {
 
 function getBestPerformances(allRuns) {
     // Tight margin (4-5%) so we only pick races that are actually that distance
-    const targetDistances = [
-        { name: 'Mile', km: 1.609, margin: 0.04 },
-        { name: '5K', km: 5, margin: 0.04 },
-        { name: '10K', km: 10, margin: 0.04 },
-        { name: 'Half Marathon', km: 21.097, margin: 0.05 },
-        { name: 'Marathon', km: 42.195, margin: 0.05 }
-    ];
     const bestPerformances = {};
-    for (const { km, margin } of targetDistances) {
+    for (const { km, margin } of TARGET_DISTANCES) {
         const min = km * (1 - margin), max = km * (1 + margin);
         const candidates = allRuns
             .map(r => ({ ...r, km: r.distance / 1000, seconds: r.moving_time }))
@@ -563,4 +569,288 @@ function renderPaceChart(predictions) {
             }
         }
     });
+}
+
+function initializePredictionHistoryControls(runs) {
+    const fromInput = document.getElementById('prediction-history-from');
+    const toInput = document.getElementById('prediction-history-to');
+    const granularitySelect = document.getElementById('prediction-history-granularity');
+    const distancesSelect = document.getElementById('prediction-history-distances');
+    const applyButton = document.getElementById('prediction-history-apply');
+    const resetButton = document.getElementById('prediction-history-reset');
+
+    if (!fromInput || !toInput || !granularitySelect || !distancesSelect || !applyButton || !resetButton) {
+        return;
+    }
+
+    const sortedRuns = runs.filter(run => run.start_date_local).slice().sort((left, right) => new Date(left.start_date_local) - new Date(right.start_date_local));
+    const minDate = sortedRuns[0]?.start_date_local?.slice(0, 10) || '';
+    const maxDate = sortedRuns[sortedRuns.length - 1]?.start_date_local?.slice(0, 10) || '';
+
+    if (!fromInput.dataset.initialized) {
+        fromInput.dataset.initialized = 'true';
+        fromInput.value = minDate;
+        toInput.value = maxDate;
+        fromInput.min = minDate;
+        fromInput.max = maxDate;
+        toInput.min = minDate;
+        toInput.max = maxDate;
+
+        const triggerUpdate = () => updatePredictionHistory(runs);
+        applyButton.addEventListener('click', triggerUpdate);
+        granularitySelect.addEventListener('change', triggerUpdate);
+        distancesSelect.addEventListener('change', triggerUpdate);
+        fromInput.addEventListener('change', triggerUpdate);
+        toInput.addEventListener('change', triggerUpdate);
+
+        resetButton.addEventListener('click', () => {
+            fromInput.value = minDate;
+            toInput.value = maxDate;
+            granularitySelect.value = 'month';
+            Array.from(distancesSelect.options).forEach(option => {
+                option.selected = ['5', '10'].includes(option.value);
+            });
+            updatePredictionHistory(runs);
+        });
+    } else {
+        fromInput.min = minDate;
+        fromInput.max = maxDate;
+        toInput.min = minDate;
+        toInput.max = maxDate;
+        if (!fromInput.value) fromInput.value = minDate;
+        if (!toInput.value) toInput.value = maxDate;
+    }
+}
+
+function updatePredictionHistory(runs) {
+    const chartCanvas = document.getElementById('prediction-history-chart');
+    const summary = document.getElementById('prediction-history-summary');
+    if (!chartCanvas || !summary) return;
+
+    const settings = readPredictionSettings();
+    const filters = readPredictionHistoryFilters(runs);
+    const filteredRuns = utils.filterActivitiesByDate(runs, filters.from, filters.to);
+
+    if (filteredRuns.length < 2) {
+        summary.textContent = 'Not enough runs in the selected date range to build an evolution chart.';
+        destroyPredictionHistoryChart();
+        return;
+    }
+
+    const historySeries = buildPredictionHistorySeries(filteredRuns, filters.granularity, settings, filters.selectedDistances);
+    if (!historySeries.points.length || !historySeries.series.some(series => series.values.length > 0)) {
+        summary.textContent = 'No historical predictions could be generated with the selected distances and date range.';
+        destroyPredictionHistoryChart();
+        return;
+    }
+
+    const selectedLabels = historySeries.series.map(series => series.name).join(', ');
+    summary.textContent = `${historySeries.points.length} snapshots from ${filters.from || 'the beginning'} to ${filters.to || 'today'} · ${selectedLabels}`;
+    renderPredictionHistoryChart(chartCanvas, historySeries);
+}
+
+function readPredictionSettings() {
+    const mood = document.querySelector('input[name="prediction-mood"]:checked')?.value || 'realistic';
+    const weights = {
+        riegel: parseFloat(document.getElementById('riegel-weight')?.value ?? 40),
+        ml: parseFloat(document.getElementById('ml-weight')?.value ?? 25),
+        pb: parseFloat(document.getElementById('pb-weight')?.value ?? 30),
+        vdot: parseFloat(document.getElementById('vdot-weight')?.value ?? 20)
+    };
+
+    const totalWeight = Object.values(weights).reduce((sum, value) => sum + value, 0);
+    if (totalWeight > 0) {
+        Object.keys(weights).forEach(key => {
+            weights[key] = (weights[key] / totalWeight) * 100;
+        });
+    }
+
+    return { mood, weights };
+}
+
+function readPredictionHistoryFilters(runs) {
+    const sortedRuns = runs.filter(run => run.start_date_local).slice().sort((left, right) => new Date(left.start_date_local) - new Date(right.start_date_local));
+    const firstDate = sortedRuns[0]?.start_date_local?.slice(0, 10) || '';
+    const lastDate = sortedRuns[sortedRuns.length - 1]?.start_date_local?.slice(0, 10) || '';
+    const from = document.getElementById('prediction-history-from')?.value || firstDate;
+    const to = document.getElementById('prediction-history-to')?.value || lastDate;
+    const granularity = document.getElementById('prediction-history-granularity')?.value || 'month';
+    const selectedDistances = Array.from(document.getElementById('prediction-history-distances')?.selectedOptions || [])
+        .map(option => Number(option.value))
+        .filter(value => Number.isFinite(value));
+
+    return {
+        from,
+        to,
+        granularity,
+        selectedDistances: selectedDistances.length ? selectedDistances : [5, 10]
+    };
+}
+
+function buildPredictionHistorySeries(runs, granularity, settings, selectedDistances) {
+    const buckets = createHistoryBuckets(runs, granularity);
+    const selectedDistanceSet = new Set(selectedDistances);
+    const series = HISTORY_DISTANCE_OPTIONS
+        .filter(distance => selectedDistanceSet.has(distance.km))
+        .map((distance, index) => ({
+            ...distance,
+            color: HISTORY_COLOR_PALETTE[index % HISTORY_COLOR_PALETTE.length],
+            values: [],
+            lows: [],
+            highs: []
+        }));
+
+    const points = [];
+    buckets.forEach(bucket => {
+        const runsUntilBucket = runs.filter(run => (run.start_date_local || '').slice(0, 10) <= bucket.endDate);
+        if (runsUntilBucket.length < 2) return;
+
+        const bests = getBestPerformances(runsUntilBucket);
+        const model = trainPersonalizedModel(bests);
+        const vdot = estimateVDOT(runsUntilBucket);
+        const predictions = calculateAllPredictions(bests, model, vdot, settings);
+        const predictionByDistance = new Map(predictions.map(prediction => [prediction.km, prediction]));
+
+        points.push(bucket.label);
+        series.forEach(distanceSeries => {
+            const prediction = predictionByDistance.get(distanceSeries.km);
+            distanceSeries.values.push(prediction?.combined ?? null);
+            distanceSeries.lows.push(prediction?.low ?? null);
+            distanceSeries.highs.push(prediction?.high ?? null);
+        });
+    });
+
+    return { points, series };
+}
+
+function createHistoryBuckets(runs, granularity) {
+    const buckets = new Map();
+    runs.forEach(run => {
+        const runDate = new Date(run.start_date_local);
+        if (Number.isNaN(runDate.getTime())) return;
+
+        const key = getHistoryBucketKey(runDate, granularity);
+        if (!buckets.has(key)) {
+            buckets.set(key, {
+                key,
+                endDate: run.start_date_local.slice(0, 10),
+                label: formatHistoryBucketLabel(runDate, granularity)
+            });
+        } else {
+            const bucket = buckets.get(key);
+            const runDateStr = run.start_date_local.slice(0, 10);
+            if (runDateStr > bucket.endDate) {
+                bucket.endDate = runDateStr;
+            }
+        }
+    });
+
+    return Array.from(buckets.values()).sort((left, right) => left.endDate.localeCompare(right.endDate));
+}
+
+function getHistoryBucketKey(date, granularity) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    if (granularity === 'day') return `${year}-${month}-${day}`;
+    if (granularity === 'week') return `${year}-W${String(utils.getISOWeek(date)).padStart(2, '0')}`;
+    return `${year}-${month}`;
+}
+
+function formatHistoryBucketLabel(date, granularity) {
+    if (granularity === 'day') {
+        return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: '2-digit' });
+    }
+    if (granularity === 'week') {
+        return `W${String(utils.getISOWeek(date)).padStart(2, '0')} ${date.getFullYear()}`;
+    }
+    return date.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' });
+}
+
+function renderPredictionHistoryChart(canvas, historySeries) {
+    if (typeof Chart === 'undefined') return;
+    const context = canvas.getContext('2d');
+    destroyPredictionHistoryChart();
+
+    const datasets = [];
+    historySeries.series.forEach(series => {
+        const rangeFillColor = `${series.color}22`;
+        datasets.push({
+            label: `${series.name} range low`,
+            data: series.lows,
+            borderColor: 'transparent',
+            backgroundColor: rangeFillColor,
+            pointRadius: 0,
+            spanGaps: true,
+            fill: '+1'
+        });
+        datasets.push({
+            label: `${series.name} range high`,
+            data: series.highs,
+            borderColor: 'transparent',
+            backgroundColor: rangeFillColor,
+            pointRadius: 0,
+            spanGaps: true,
+            fill: '-1'
+        });
+        datasets.push({
+            label: series.name,
+            data: series.values,
+            borderColor: series.color,
+            backgroundColor: series.color,
+            borderWidth: 2,
+            tension: 0.25,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            spanGaps: true,
+            fill: false
+        });
+    });
+
+    predictionHistoryChartInstance = new Chart(context, {
+        type: 'line',
+        data: {
+            labels: historySeries.points,
+            datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        filter: item => !item.text.includes('range low') && !item.text.includes('range high')
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: context => `${context.dataset.label}: ${utils.formatTime(context.parsed.y)}`
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    title: { display: true, text: 'Time' }
+                },
+                y: {
+                    title: { display: true, text: 'Predicted time' },
+                    ticks: {
+                        callback: value => utils.formatTime(value)
+                    }
+                }
+            }
+        }
+    });
+}
+
+function destroyPredictionHistoryChart() {
+    if (predictionHistoryChartInstance) {
+        predictionHistoryChartInstance.destroy();
+        predictionHistoryChartInstance = null;
+    }
 }
