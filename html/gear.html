@@ -17,7 +17,9 @@
 <body>
     <div class="container">
         <div style="margin-bottom: 1rem;">
-            <button onclick="window.history.back()" style="padding: 8px 16px; border: 1px solid #ddd; border-radius: 6px; background: #f8f9fa; cursor: pointer; font-size: 0.9rem;">← Back</button>
+            <button onclick="window.history.back()"
+                style="padding: 8px 16px; border: 1px solid #ddd; border-radius: 6px; background: #f8f9fa; cursor: pointer; font-size: 0.9rem;">←
+                Back</button>
         </div>
         <h1>Gear Details</h1>
 
@@ -51,12 +53,22 @@
 
         <!-- Pace Evolution & Cumulative Elevation Charts -->
         <div class="side-by-side-container">
+            <div id="gear-sport-type-section" class="data-section">
+                <h3>Sport Type Distribution</h3>
+                <div class="chart-container-inner">
+                    <canvas id="gear-sport-type-chart"></canvas>
+                </div>
+            </div>
             <div id="gear-pace-section" class="data-section">
                 <h3>Pace Evolution</h3>
                 <div class="chart-container-inner">
                     <canvas id="gear-pace-chart"></canvas>
                 </div>
             </div>
+        </div>
+
+        <!-- Cumulative Elevation -->
+        <div class="side-by-side-container">
             <div id="gear-elevation-section" class="data-section">
                 <h3>Cumulative Elevation</h3>
                 <div class="chart-container-inner">
@@ -74,7 +86,7 @@
     </div>
 
     <script type="module">
-        import { renderGearDetailPage } from '../js/gear.js';
+        import { renderGearDetailPage } from '../js/gear-analysis.js';
 
         // Get gear ID from URL params
         const urlParams = new URLSearchParams(window.location.search);

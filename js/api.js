@@ -58,9 +58,16 @@ function escapeHtml(str) {
 }
 
 async function handleApiResponse(response) {
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || 'API call failed');
+    if (!response.ok) {
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+            const result = await response.json();
+            throw new Error(result.error || `API call failed (${response.status})`);
+        }
+        throw new Error(`API call failed (${response.status} ${response.statusText})`);
+    }
 
+    const result = await response.json();
     if (result.tokens) {
         localStorage.setItem('strava_tokens', JSON.stringify(result.tokens));
     }
