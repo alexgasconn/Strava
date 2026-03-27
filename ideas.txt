@@ -21,8 +21,6 @@ IN PROGRESS
 🟡🚨[DASHBOARD]a dashboard, surt AthleteCount 1 quan he corregut amb martina... raro
 🟡🚨[ATHLETE]No es veu Monday a una matrix de Athlete
 🟡🚨[ATHLETE]grafiques de AThlete MALAMENT
-🟡⚠️[GEAR]imporve gear.html
-🟡🚧[GENERAL]esborrar codi inutil 
 🟡🚧[PREPROCESSING]carregar zonas, profile, gear, weather api... al iniciar app
 🟡🩹[WEATHER]weather api fer servir per predictions 
 🟡🩹[WEATHER]weather data -> % de "difficultat ambiental" AFEGIR A LA LLISTA DE RUNS DE WEATHER TAB
@@ -33,28 +31,20 @@ IN PROGRESS
 
 TO DO
 🔴⚠️[ATHLETE]arreglar custom matix a Athlete (no fa be les bar charts, les ha de fer el grups de 1 km)
-🔴🩹[GENERAL]fer mes html, estructura mes clara i dividida
 🔴🩹[ACTIVITY]coords streams in activity -> veure cap a on va el vent -> % de vent a favor, en contra, de costat...
 🔴🩹[WRAPPED]wrapped -> exportar captura pels fans 
 🔴🚧[ACTIVITY]text de alerta si no hi ha dades de HR/cadence, watts, time...
 🔴🚧[GENERAL]time zones???
 🔴🚧[GENERAL]miles or km...
-🔴🌈[GENERAL]reestructurar tot, molts mes .html, per cada pagina
 🔴🌈[GENERAL]idiomes
 🔴🌈[GENERAL]versio mobil
 🔴🌈[GENERAL]afegir chat IA
-🔴🌈[PREDICTIONS]afegir algun model ML a predicts
 🔴🌈[GENERAL]tenir una base de dades
 🔴[PREPROCESSING]calcular be el TSS, de ALL activities! fer servir duracio i HR. i un multiplicador per esport!! (si hi ha effort, ferlo sevrir (es nomes premium))
 🔴[ANALYSIS]el titol "Monthly Distance (Last Year)", que sigui "Monthly Distance"
-🔴[GEAR]tamany dades gear cards mes petites
-🔴[GEAR]grarfica de gear "usage over time" es fa gran cap abaix fins inifint, deixarli mida fixa
 🔴[ATHLETE]ahlete -> "Month vs Hour Heatmap" esta tot marcat, no agafa be les dades
-🔴[ATHLETE]filtres de esport, de fechas, i de tipus de dades (duracio, numero actiivitats o distancia(km)) a athlete, aplicar a totes les grafiques
 🔴[PREPROCESSING]TSS a TOTES les activitats... fins al dia de avui
 🔴[GENERAL]tenir un arxiu de config general (dades metriques/imperials, zona horaria, HR_MAX, edat...)
-🔴[GEAR]mostrar tambe (o no, toggle) les gears "retired"
-🔴[GEAR]reduir tamany lletra dades gear cards
 🔴[PREPROCESSING][WEATHER]get weather api en segon pla desde preprocessing.... NO al entrar a weatehr TAB
 
 
@@ -95,6 +85,13 @@ DONE
 🟢🩹[GENERAL]heatmap general com strava
 🟢[RUNS]boto de "show all runs" fora de la llista
 🟢🌈[GENERAL]MENU ocult
-
-
-
+🟢🌈[GENERAL]reestructurar tot, molts mes .html, per cada pagina
+🟢[GEAR]tamany dades gear cards mes petites
+🟢[GEAR]grarfica de gear "usage over time" es fa gran cap abaix fins inifint, deixarli mida fixa
+🟢🌈[PREDICTIONS]afegir algun model ML a predicts
+🟢🩹[GENERAL]fer mes html, estructura mes clara i dividida
+🟢⚠️[GEAR]imporve gear.html
+🟢🚧[GENERAL]esborrar codi inutil
+🟢[ATHLETE]filtres de esport, de fechas, i de tipus de dades (duracio, numero actiivitats o distancia(km)) a athlete, aplicar a totes les grafiques
+🟢[GEAR]mostrar tambe (o no, toggle) les gears "retired"
+🟢[GEAR]reduir tamany lletra dades gear cards

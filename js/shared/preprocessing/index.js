@@ -1,1 +1,1 @@
-export { preprocessActivities } from '../../preprocessing.js';
+export { preprocessActivities } from './core.js';
