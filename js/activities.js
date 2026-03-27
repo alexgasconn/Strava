@@ -1,22 +1,10 @@
 import * as utils from './utils.js';
 
-// ─── Sport metadata ───────────────────────────────────────────────────────────
-const SPORT_EMOJI = {
-    Run: '🏃', TrailRun: '🏔️', VirtualRun: '🏃',
-    Ride: '🚴', VirtualRide: '🚴', GravelRide: '🪨', MountainBikeRide: '🚵',
-    Swim: '🏊', OpenWaterSwim: '🌊',
-    Walk: '🚶', Hike: '🥾',
-    AlpineSki: '⛷️', NordicSki: '⛷️', Snowboard: '🏂',
-    Workout: '💪', WeightTraining: '🏋️', Yoga: '🧘',
-    Kayaking: '🚣', Rowing: '🚣',
-    IceSkate: '⛸️', Crossfit: '💥',
-};
-
 const RUN_TYPES = new Set(['Run', 'TrailRun', 'VirtualRun']);
 const SWIM_TYPES = new Set(['Swim', 'OpenWaterSwim']);
 const BIKE_TYPES = new Set(['Ride', 'VirtualRide', 'GravelRide', 'MountainBikeRide', 'EBikeRide']);
 
-function sportEmoji(type) { return SPORT_EMOJI[type] || '🏅'; }
+function sportEmoji(type) { return utils.sportEmoji(type); }
 function getType(a) { return (a.sport_type || a.type || 'Unknown').trim(); }
 
 // ─── Formatters ───────────────────────────────────────────────────────────────

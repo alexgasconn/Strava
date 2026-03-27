@@ -142,6 +142,39 @@ export function formatDate(date) {
     return `${day}/${month}/${year}`;
 }
 
+export const SPORT_EMOJI = {
+    Run: '🏃',
+    TrailRun: '🏔️',
+    VirtualRun: '🏃',
+    Ride: '🚴',
+    VirtualRide: '🚴',
+    GravelRide: '🪨',
+    MountainBikeRide: '🚵',
+    EBikeRide: '🚴',
+    Swim: '🏊',
+    OpenWaterSwim: '🌊',
+    Walk: '🚶',
+    Hike: '🥾',
+    Tennis: '🎾',
+    Padel: '🎾',
+    Soccer: '⚽',
+    Football: '⚽',
+    AlpineSki: '⛷️',
+    NordicSki: '⛷️',
+    Snowboard: '🏂',
+    Workout: '💪',
+    WeightTraining: '🏋️',
+    Yoga: '🧘',
+    Crossfit: '💥',
+    Kayaking: '🚣',
+    Rowing: '🚣',
+    IceSkate: '⛸️'
+};
+
+export function sportEmoji(type) {
+    return SPORT_EMOJI[type] || '🏅';
+}
+
 export function paceDecimalToTime(paceDecimal) {
     if (isNaN(paceDecimal) || paceDecimal <= 0) return "–";
 

@@ -13,24 +13,6 @@ const SPORT_PALETTE = {
     Crossfit: [0, 75], IceSkate: [220, 60],
 };
 
-const SPORT_EMOJI = {
-    Run: '🏃', TrailRun: '🏔️', VirtualRun: '🏃',
-    Ride: '🚴', VirtualRide: '🚴', GravelRide: '🪨', MountainBikeRide: '🚵',
-    Swim: '🏊', OpenWaterSwim: '🌊',
-    Walk: '🚶', Hike: '🥾',
-
-    Tennis: '🎾',
-    Padel: '🎾',
-    Soccer: '⚽',
-    Football: '⚽',
-
-    AlpineSki: '⛷️', NordicSki: '⛷️', Snowboard: '🏂',
-    Workout: '💪', WeightTraining: '🏋️', Yoga: '🧘',
-    Crossfit: '💥',
-
-    Kayaking: '🚣', Rowing: '🚣',
-    IceSkate: '⛸️'
-};
 
 const DAYS_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const MONTHS_FULL = ['January', 'February', 'March', 'April', 'May', 'June',
@@ -38,7 +20,7 @@ const MONTHS_FULL = ['January', 'February', 'March', 'April', 'May', 'June',
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function getType(a) { return (a.sport_type || a.type || 'Unknown').trim(); }
-function emoji(t) { return SPORT_EMOJI[t] || '🏅'; }
+function emoji(t) { return utils.sportEmoji(t); }
 
 /** Local-timezone YYYY-MM-DD string (avoids UTC offset bugs) */
 function toYMD(dt) {
@@ -237,12 +219,16 @@ export function renderCalendarTab(allActivities) {
 
         // Title
         const titleEl = root.querySelector('#cal-title');
-        if (state.view === 'month') titleEl.textContent = `${MONTHS_FULL[state.month]} ${state.year}`;
+        if (state.view === 'month') {
+            const start = new Date(state.year, state.month, 1);
+            const end = new Date(state.year, state.month + 1, 0);
+            titleEl.textContent = `${utils.formatDate(start)} - ${utils.formatDate(end)}`;
+        }
         else if (state.view === 'year') titleEl.textContent = `${state.year}`;
         else {
             const ws = mondayOf(state.weekOf);
             const we = new Date(+ws + 6 * 86400000);
-            titleEl.textContent = `${ws.getDate()} ${MONTHS_FULL[ws.getMonth()].slice(0, 3)} – ${we.getDate()} ${MONTHS_FULL[we.getMonth()].slice(0, 3)} ${we.getFullYear()}`;
+            titleEl.textContent = `${utils.formatDate(ws)} - ${utils.formatDate(we)}`;
         }
 
         renderStreaks(streaks, byDate);
@@ -348,7 +334,7 @@ export function renderCalendarTab(allActivities) {
             html += `<div class="cal-week-col${isToday ? ' cal-today' : ''}${isFuture ? ' cal-future' : ''}">
                 <div class="cal-week-day-header">
                     <span class="cal-week-dow">${DAYS_SHORT[i]}</span>
-                    <span class="cal-week-date">${dt.getDate()} ${MONTHS_FULL[dt.getMonth()].slice(0, 3)}</span>
+                    <span class="cal-week-date">${utils.formatDate(dt)}</span>
                     ${daySummary}
                 </div>
                 <div class="cal-week-acts">`;
@@ -416,7 +402,7 @@ export function renderCalendarTab(allActivities) {
                 const inYear = dt.getFullYear() === state.year;
 
                 if (!inYear || acts.length === 0)
-                    return `<div class="cal-year-cell cal-year-empty" title="${inYear ? dateStr : ''}"></div>`;
+                    return `<div class="cal-year-cell cal-year-empty" title="${inYear ? utils.formatDate(dateStr) : ''}"></div>`;
 
                 // Dominant sport by time
                 const byTime = {};
@@ -431,7 +417,7 @@ export function renderCalendarTab(allActivities) {
                 const bg = sportColor(dominant, intensity);
                 const km = acts.reduce((s, a) => s + (a.distance || 0), 0) / 1000;
                 const names = acts.map(a => `${emoji(getType(a))} ${a.name}`).join('\n');
-                const tip = `${dateStr}\n${names}\n${km.toFixed(1)} km · ${utils.formatTime(totalSec)}`;
+                const tip = `${utils.formatDate(dateStr)}\n${names}\n${km.toFixed(1)} km · ${utils.formatTime(totalSec)}`;
 
                 return `<div class="cal-year-cell" style="background:${bg}" data-date="${dateStr}" title="${tip}"></div>`;
             }).join('');
@@ -501,7 +487,7 @@ export function renderCalendarTab(allActivities) {
 
         panel.innerHTML = `
         <div class="cal-detail-header">
-            <strong>${DAYS_SHORT[(dt.getDay() + 6) % 7]}, ${dt.getDate()} ${MONTHS_FULL[dt.getMonth()]} ${dt.getFullYear()}</strong>
+            <strong>${DAYS_SHORT[(dt.getDay() + 6) % 7]}, ${utils.formatDate(dt)}</strong>
             <button class="cal-detail-close">✕</button>
         </div>
         <div class="cal-detail-rows">${rows}</div>`;
