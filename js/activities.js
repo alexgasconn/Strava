@@ -175,11 +175,11 @@ export function renderActivitiesTab(allActivities) {
                 </label>
                 <label class="act-filter-label">
                     Date from
-                    <input id="flt-date-from" type="date">
+                    <input id="flt-date-from" type="text" inputmode="numeric" placeholder="dd/mm/yyyy" title="Format: dd/mm/yyyy">
                 </label>
                 <label class="act-filter-label">
                     Date to
-                    <input id="flt-date-to" type="date">
+                    <input id="flt-date-to" type="text" inputmode="numeric" placeholder="dd/mm/yyyy" title="Format: dd/mm/yyyy">
                 </label>
                 <button id="flt-reset" class="act-reset-btn" title="Clear all filters">✕ Reset</button>
             </div>
@@ -227,8 +227,8 @@ export function renderActivitiesTab(allActivities) {
             const f = state.filters;
             f.type = document.getElementById('flt-type').value;
             f.name = document.getElementById('flt-name').value.trim().toLowerCase();
-            f.dateFrom = document.getElementById('flt-date-from').value;
-            f.dateTo = document.getElementById('flt-date-to').value;
+            f.dateFrom = utils.parseDateInputToIso(document.getElementById('flt-date-from').value);
+            f.dateTo = utils.parseDateInputToIso(document.getElementById('flt-date-to').value);
             f.distMin = document.getElementById('flt-dist-min').value;
             f.distMax = document.getElementById('flt-dist-max').value;
             f.durMin = document.getElementById('flt-dur-min').value;

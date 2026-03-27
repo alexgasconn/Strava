@@ -26,8 +26,8 @@ export function renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo, sp
 
     if (sportSelect) sportSelect.value = sportFilter;
     if (dataTypeSelect) dataTypeSelect.value = dataType;
-    if (dateFromInput) dateFromInput.value = dateFilterFrom || '';
-    if (dateToInput) dateToInput.value = dateFilterTo || '';
+    if (dateFromInput) dateFromInput.value = utils.isoToDisplayDate(dateFilterFrom);
+    if (dateToInput) dateToInput.value = utils.isoToDisplayDate(dateFilterTo);
 
     // Apply filtering using the unified helper
     const filteredActivities = filterActivities(allActivities, dateFilterFrom, dateFilterTo, sportFilter);
@@ -1511,9 +1511,11 @@ function addAthleteFilters() {
     sportLabel.appendChild(sportSelect);
 
     const dateFromInput = document.createElement('input');
-    dateFromInput.type = 'date';
+    dateFromInput.type = 'text';
     dateFromInput.id = 'athlete-date-from';
-    dateFromInput.placeholder = 'From date';
+    dateFromInput.placeholder = 'dd/mm/yyyy';
+    dateFromInput.inputMode = 'numeric';
+    dateFromInput.title = 'Format: dd/mm/yyyy';
 
     const dateFromLabel = document.createElement('label');
     dateFromLabel.style = 'display: flex; align-items: center; gap: 0.5rem;';
@@ -1521,9 +1523,11 @@ function addAthleteFilters() {
     dateFromLabel.appendChild(dateFromInput);
 
     const dateToInput = document.createElement('input');
-    dateToInput.type = 'date';
+    dateToInput.type = 'text';
     dateToInput.id = 'athlete-date-to';
-    dateToInput.placeholder = 'To date';
+    dateToInput.placeholder = 'dd/mm/yyyy';
+    dateToInput.inputMode = 'numeric';
+    dateToInput.title = 'Format: dd/mm/yyyy';
 
     const dateToLabel = document.createElement('label');
     dateToLabel.style = 'display: flex; align-items: center; gap: 0.5rem;';
@@ -1547,8 +1551,8 @@ function addAthleteFilters() {
         const allActivities = JSON.parse(localStorage.getItem('strava_activities') || '[]');
         const selectedSport = sportSelect.value || 'all';
         const selectedDataType = dataTypeSelect.value || 'time';
-        const selectedDateFrom = dateFromInput.value || null;
-        const selectedDateTo = dateToInput.value || null;
+        const selectedDateFrom = utils.parseDateInputToIso(dateFromInput.value) || null;
+        const selectedDateTo = utils.parseDateInputToIso(dateToInput.value) || null;
 
         // Dispatch custom event with filter values
         const event = new CustomEvent('athlete-filters-changed', {

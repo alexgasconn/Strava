@@ -142,6 +142,37 @@ export function formatDate(date) {
     return `${day}/${month}/${year}`;
 }
 
+export function parseDateInputToIso(value) {
+    const raw = (value || '').trim();
+    if (!raw) return '';
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+
+    const match = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!match) return '';
+
+    const day = Number(match[1]);
+    const month = Number(match[2]);
+    const year = Number(match[3]);
+    if (month < 1 || month > 12 || day < 1 || day > 31) return '';
+
+    const date = new Date(year, month - 1, day);
+    if (
+        date.getFullYear() !== year ||
+        date.getMonth() !== month - 1 ||
+        date.getDate() !== day
+    ) return '';
+
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+export function isoToDisplayDate(value) {
+    const iso = parseDateInputToIso(value);
+    if (!iso) return '';
+    const [year, month, day] = iso.split('-');
+    return `${day}/${month}/${year}`;
+}
+
 export const SPORT_EMOJI = {
     Run: '🏃',
     TrailRun: '🏔️',
