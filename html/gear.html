@@ -6,43 +6,47 @@
     <title>Gear Details</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="../styles/style.css">
-
-    <!-- Leaflet CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 </head>
 
 <body>
     <div class="container">
-        <div style="margin-bottom: 1rem;">
+        <div style="margin-bottom: 1.5rem;">
             <button onclick="window.history.back()"
-                style="padding: 8px 16px; border: 1px solid #ddd; border-radius: 6px; background: #f8f9fa; cursor: pointer; font-size: 0.9rem;">←
-                Back</button>
-        </div>
-        <h1>Gear Details</h1>
-
-        <div id="gear-details-row" class="activity-details-row">
-            <div id="gear-info" class="activity-details-col"></div>
-            <div id="gear-stats" class="activity-details-col"></div>
-            <div id="gear-advanced" class="activity-details-col"></div>
+                style="padding: 8px 16px; border: 1px solid #e2e8f0; border-radius: 8px; background: white; cursor: pointer; font-size: 0.875rem; color: #374151; font-weight: 500;">
+                ← Back
+            </button>
         </div>
 
-        <!-- Gear Durability / Health -->
+        <!-- Hero: icon, name, badges, top stats -->
+        <div id="gear-hero"></div>
+
+        <!-- Gear Health -->
         <div id="gear-health-section" class="data-section">
             <h3>Gear Health</h3>
             <div id="gear-health-content"></div>
         </div>
 
+        <!-- Stats + Patterns side by side -->
         <div class="side-by-side-container">
-            <!-- Columna Izquierda: Mapa de actividades con este gear -->
+            <div id="gear-stats-section" class="data-section">
+                <h3>Statistics</h3>
+                <div id="gear-stats-content"></div>
+            </div>
+            <div id="gear-advanced-section" class="data-section">
+                <h3>Patterns &amp; Records</h3>
+                <div id="gear-advanced-content"></div>
+            </div>
+        </div>
+
+        <!-- Map + Usage chart -->
+        <div class="side-by-side-container">
             <div id="gear-map-section" class="data-section">
                 <h3>Activities Map</h3>
-                <div id="gear-map" style="height: 400px;"></div>
+                <div id="gear-map" style="height: 380px; border-radius: 8px; overflow: hidden;"></div>
             </div>
-
-            <!-- Columna Derecha: Gráfico de uso por mes -->
             <div id="gear-usage-section" class="data-section">
                 <h3>Usage Over Time</h3>
                 <div class="chart-container-inner">
@@ -51,24 +55,14 @@
             </div>
         </div>
 
-        <!-- Pace Evolution & Cumulative Elevation Charts -->
+        <!-- Pace + Elevation -->
         <div class="side-by-side-container">
-            <div id="gear-sport-type-section" class="data-section">
-                <h3>Sport Type Distribution</h3>
-                <div class="chart-container-inner">
-                    <canvas id="gear-sport-type-chart"></canvas>
-                </div>
-            </div>
             <div id="gear-pace-section" class="data-section">
                 <h3>Pace Evolution</h3>
                 <div class="chart-container-inner">
                     <canvas id="gear-pace-chart"></canvas>
                 </div>
             </div>
-        </div>
-
-        <!-- Cumulative Elevation -->
-        <div class="side-by-side-container">
             <div id="gear-elevation-section" class="data-section">
                 <h3>Cumulative Elevation</h3>
                 <div class="chart-container-inner">
@@ -77,25 +71,23 @@
             </div>
         </div>
 
-        <!-- FILA 3: Lista de actividades (Full Width) -->
+        <!-- Activities list -->
         <div id="gear-activities-section" class="data-section">
             <h3>Activities with this Gear</h3>
             <div id="gear-activities-list"></div>
         </div>
-
     </div>
 
     <script type="module">
         import { renderGearDetailPage } from '../js/gear-analysis.js';
 
-        // Get gear ID from URL params
         const urlParams = new URLSearchParams(window.location.search);
         const gearId = urlParams.get('id');
 
         if (gearId) {
             renderGearDetailPage(gearId);
         } else {
-            document.body.innerHTML = '<p>No gear ID provided</p>';
+            document.body.innerHTML = '<div style="padding:2rem;text-align:center;"><h2>No gear ID provided</h2><button onclick="window.history.back()" style="margin-top:1rem;padding:8px 16px;border:1px solid #ddd;border-radius:6px;cursor:pointer;">← Back</button></div>';
         }
     </script>
 </body>

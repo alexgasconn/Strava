@@ -192,7 +192,7 @@ export function renderGearTab(allActivities) {
 
     addGearFilters(elements.section, runs);
     showElements(elements);
-    renderGearSection(runs, 'all', 'active', 'lastUse');
+    renderGearSection(runs, 'all', false);
     renderGearChart(runs, 'all');
     renderGearGanttChart(runs, 'all');
 }
@@ -206,53 +206,35 @@ function addGearFilters(container, runs) {
     filterDiv.id = 'gear-filters';
     filterDiv.innerHTML = `
         <div class="gear-filter-group">
-            <span class="filter-label">Type:</span>
             <button class="gear-filter-btn active" data-filter="all">All</button>
             <button class="gear-filter-btn" data-filter="shoe">👟 Shoes</button>
             <button class="gear-filter-btn" data-filter="bike">🚴 Bikes</button>
         </div>
-        <div class="gear-filter-group">
-            <span class="filter-label">Status:</span>
-            <button class="gear-status-btn active" data-status="active">Active</button>
-            <button class="gear-status-btn" data-status="all">All incl. Retired</button>
-        </div>
-        <div class="gear-filter-group">
-            <span class="filter-label">Sort:</span>
-            <button class="gear-sort-btn active" data-sort="lastUse">Last Used</button>
-            <button class="gear-sort-btn" data-sort="km">Distance</button>
-            <button class="gear-sort-btn" data-sort="health">Health %</button>
-            <button class="gear-sort-btn" data-sort="name">Name</button>
-        </div>
+        <label class="gear-retired-toggle">
+            <input type="checkbox" id="show-retired-check"> Show retired
+        </label>
     `;
     container.insertBefore(filterDiv, container.firstChild);
 
     let currentFilter = 'all';
-    let currentStatus = 'active';
-    let currentSort = 'lastUse';
-    const state = () => ({ filter: currentFilter, status: currentStatus, sort: currentSort });
+    const retiredCheck = filterDiv.querySelector('#show-retired-check');
 
     filterDiv.addEventListener('click', (e) => {
-        const btn = e.target.closest('button');
+        const btn = e.target.closest('button.gear-filter-btn');
         if (!btn) return;
-        if (btn.classList.contains('gear-filter-btn')) {
-            filterDiv.querySelectorAll('.gear-filter-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentFilter = btn.dataset.filter;
-        } else if (btn.classList.contains('gear-status-btn')) {
-            filterDiv.querySelectorAll('.gear-status-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentStatus = btn.dataset.status;
-        } else if (btn.classList.contains('gear-sort-btn')) {
-            filterDiv.querySelectorAll('.gear-sort-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentSort = btn.dataset.sort;
-        }
-        updateGearDisplay(runs, state());
+        filterDiv.querySelectorAll('.gear-filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        updateGearDisplay(runs, currentFilter, retiredCheck.checked);
+    });
+
+    retiredCheck.addEventListener('change', () => {
+        updateGearDisplay(runs, currentFilter, retiredCheck.checked);
     });
 }
 
-function updateGearDisplay(runs, { filter, status, sort } = {}) {
-    renderGearSection(runs, filter, status, sort);
+function updateGearDisplay(runs, filter, showRetired) {
+    renderGearSection(runs, filter, showRetired);
     renderGearChart(runs, filter);
     renderGearGanttChart(runs, filter);
 }
@@ -261,7 +243,7 @@ function updateGearDisplay(runs, { filter, status, sort } = {}) {
 // GEAR SECTION
 // ===================================================================
 
-async function renderGearSection(runs, filter = 'all', status = 'active', sort = 'lastUse') {
+async function renderGearSection(runs, filter = 'all', showRetired = false) {
     const listContainer = document.getElementById('gear-info-list');
     if (!listContainer) return;
 
@@ -286,10 +268,10 @@ async function renderGearSection(runs, filter = 'all', status = 'active', sort =
     }));
 
     if (filter !== 'all') combinedGearData = combinedGearData.filter(item => item.gear.type === filter);
-    if (status === 'active') combinedGearData = combinedGearData.filter(item => !item.gear.retired);
+    if (!showRetired) combinedGearData = combinedGearData.filter(item => !item.gear.retired);
 
     renderGearSummary(combinedGearData);
-    renderGearCards(combinedGearData, sort);
+    renderGearCards(combinedGearData);
 }
 
 // ===================================================================
@@ -341,12 +323,12 @@ function renderGearSummary(data) {
 // GEAR CARDS RENDERING
 // ===================================================================
 
-function renderGearCards(combinedGearData, sortKey = 'lastUse') {
+function renderGearCards(combinedGearData) {
     const listContainer = document.getElementById('gear-info-list');
     if (!listContainer) return;
 
     const isEditMode = localStorage.getItem('gearEditMode') === 'true';
-    const sortedData = sortGearData(combinedGearData, sortKey);
+    const sortedData = sortGearData(combinedGearData);
 
     listContainer.innerHTML = `
         <div class="gear-header">
@@ -360,7 +342,7 @@ function renderGearCards(combinedGearData, sortKey = 'lastUse') {
         </div>
     `;
 
-    attachEventListeners(isEditMode, sortedData, sortKey);
+    attachEventListeners(isEditMode, sortedData);
 }
 
 // ===================================================================
@@ -508,14 +490,14 @@ function createEditSection(gearId, price, durationKm) {
 // EVENT LISTENERS
 // ===================================================================
 
-function attachEventListeners(isEditMode, combinedGearData, sortKey) {
+function attachEventListeners(isEditMode, combinedGearData) {
     const toggleBtn = document.getElementById('toggle-gear-edit');
     if (toggleBtn) {
         toggleBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             const newMode = !isEditMode;
             localStorage.setItem('gearEditMode', String(newMode));
-            renderGearCards(combinedGearData, sortKey);
+            renderGearCards(combinedGearData);
         });
     }
 
@@ -523,13 +505,13 @@ function attachEventListeners(isEditMode, combinedGearData, sortKey) {
         document.querySelectorAll('.save-gear-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                handleSaveGear(btn, combinedGearData, sortKey);
+                handleSaveGear(btn, combinedGearData);
             });
         });
     }
 }
 
-function handleSaveGear(btn, combinedGearData, sortKey) {
+function handleSaveGear(btn, combinedGearData) {
     const gearId = btn.getAttribute('data-gearid');
     const priceInput = document.getElementById(`price-${gearId}`);
     const durationInput = document.getElementById(`duration-${gearId}`);
@@ -545,7 +527,7 @@ function handleSaveGear(btn, combinedGearData, sortKey) {
     localStorage.setItem(`gear-custom-${gearId}`, JSON.stringify({ price, durationKm }));
     btn.textContent = '✅';
     btn.classList.add('saved');
-    setTimeout(() => renderGearCards(combinedGearData, sortKey), 600);
+    setTimeout(() => renderGearCards(combinedGearData), 600);
     showNotification('Gear updated!', 'success');
 }
 
