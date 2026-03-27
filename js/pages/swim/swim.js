@@ -410,50 +410,6 @@ function renderStrokeBreakdown(activity) {
 }
 
 /**
- * Renders stroke breakdown if available
- */
-function renderStrokeBreakdown(activity) {
-    const section = document.getElementById('stroke-section');
-    if (!section || !activityStrokes || activityStrokes.length === 0) {
-        // Hide section if no strokes available
-        if (section) {
-            section.classList.add('hidden');
-        }
-        return;
-    }
-
-    section.classList.remove('hidden');
-
-    const strokeBreakdown = activityStrokes.map(stroke => {
-        const strokeTypes = {
-            0: 'Unknown',
-            1: 'Freestyle',
-            2: 'Backstroke',
-            3: 'Breaststroke',
-            4: 'Butterfly',
-            5: 'Mixed',
-            6: 'Drill'
-        };
-
-        const strokeName = strokeTypes[stroke.stroke_type] || 'Unknown';
-        const distance = (stroke.distance || 0).toFixed(0);
-        const duration = formatTime(stroke.duration || 0);
-        const avgPace = formatSwimPace(stroke.distance && stroke.duration ? stroke.distance / stroke.duration : 0);
-
-        return `
-            <div style="padding: 10px; margin: 5px 0; background: #f9f9f9; border-left: 4px solid #FC5200; border-radius: 4px;">
-                <b>${strokeName}</b> | ${distance}m | ${duration} | ${avgPace}
-            </div>
-        `;
-    }).join('');
-
-    section.innerHTML = `
-        <h3>Strokes Breakdown</h3>
-        ${strokeBreakdown}
-    `;
-}
-
-/**
  * Renders laps table for swimming
  */
 function renderLaps(laps) {
