@@ -1,6 +1,6 @@
 ﻿// js/gear-analysis.js — Individual Gear Detail Page
 
-import { formatPace, formatTime, formatDate } from './utils.js';
+import { formatPace, formatTime, formatDate } from '../../shared/utils/index.js';
 
 // ===================================================================
 // HELPERS
@@ -99,8 +99,8 @@ function renderGearHero(gear, activities) {
 
     const badgeStyle = (bg, color) => `display:inline-block;padding:0.2rem 0.6rem;border-radius:999px;font-size:0.7rem;font-weight:700;background:${bg};color:${color};text-transform:uppercase;letter-spacing:0.5px;`;
     const badges = [
-        gear.primary ? `<span style="${badgeStyle('#fef3c7','#92400e')}">Primary</span>` : '',
-        gear.retired ? `<span style="${badgeStyle('#fee2e2','#991b1b')}">Retired</span>` : '',
+        gear.primary ? `<span style="${badgeStyle('#fef3c7', '#92400e')}">Primary</span>` : '',
+        gear.retired ? `<span style="${badgeStyle('#fee2e2', '#991b1b')}">Retired</span>` : '',
     ].filter(Boolean).join(' ');
 
     const meta = [

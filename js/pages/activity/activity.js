@@ -4,7 +4,7 @@
  * Entry point: Query parameter ?id={activityId}
  */
 
-import { formatDate as sharedFormatDate, formatPace as sharedFormatPace } from './utils.js';
+import { formatDate as sharedFormatDate, formatPace as sharedFormatPace } from '../../shared/utils/index.js';
 
 // =====================================================
 // 1. INITIALIZATION & CONFIGURATION
@@ -75,47 +75,6 @@ const chartColors = {
     cadence: { primary: 'rgb(0, 116, 217)', secondary: 'rgba(0, 116, 217, 0.3)' },
     watts: { primary: 'rgb(155, 89, 182)', secondary: 'rgba(155, 89, 182, 0.3)' },
 };
-
-// Run classification result
-let currentRunClassification = null;
-
-/**
- * Gets chart colors based on run classification
- */
-function getClassificationBasedColors() {
-    if (!currentRunClassification || !currentRunClassification.top || currentRunClassification.top.length === 0) {
-        return chartColors; // Default colors
-    }
-
-    const primaryType = currentRunClassification.top[0].type;
-
-    // Define color schemes for different run types
-    const colorSchemes = {
-        'Race': {
-            heartrate: { primary: 'rgb(220, 20, 60)', secondary: 'rgba(220, 20, 60, 0.3)' }, // Crimson
-            pace: { primary: 'rgb(255, 69, 0)', secondary: 'rgba(255, 69, 0, 0.3)' }, // Red-Orange
-            altitude: { primary: 'rgb(105, 105, 105)', secondary: 'rgba(105, 105, 105, 0.3)' },
-            cadence: { primary: 'rgb(30, 144, 255)', secondary: 'rgba(30, 144, 255, 0.3)' }, // Dodger Blue
-            watts: { primary: 'rgb(138, 43, 226)', secondary: 'rgba(138, 43, 226, 0.3)' }, // Blue Violet
-        },
-        'Trail Run': {
-            heartrate: { primary: 'rgb(34, 139, 34)', secondary: 'rgba(34, 139, 34, 0.3)' }, // Forest Green
-            pace: { primary: 'rgb(160, 82, 45)', secondary: 'rgba(160, 82, 45, 0.3)' }, // Sienna
-            altitude: { primary: 'rgb(139, 69, 19)', secondary: 'rgba(139, 69, 19, 0.3)' }, // Saddle Brown
-            cadence: { primary: 'rgb(0, 100, 0)', secondary: 'rgba(0, 100, 0, 0.3)' }, // Dark Green
-            watts: { primary: 'rgb(85, 107, 47)', secondary: 'rgba(85, 107, 47, 0.3)' }, // Dark Olive Green
-        },
-        'Tempo Run': {
-            heartrate: { primary: 'rgb(255, 140, 0)', secondary: 'rgba(255, 140, 0, 0.3)' }, // Dark Orange
-            pace: { primary: 'rgb(255, 215, 0)', secondary: 'rgba(255, 215, 0, 0.3)' }, // Gold
-            altitude: { primary: 'rgb(136, 136, 136)', secondary: 'rgba(136, 136, 136, 0.3)' },
-            cadence: { primary: 'rgb(255, 165, 0)', secondary: 'rgba(255, 165, 0, 0.3)' }, // Orange
-            watts: { primary: 'rgb(184, 134, 11)', secondary: 'rgba(184, 134, 11, 0.3)' }, // Dark Goldenrod
-        }
-    };
-
-    return colorSchemes[primaryType] || chartColors;
-}
 
 // =====================================================
 // 2. UTILITY FUNCTIONS
@@ -954,11 +913,7 @@ function renderStreamCharts(streams, activity, smoothingLevel = 100) {
     };
 
     // Helper function to create individual stream charts
-    function createStreamChart(canvasId, label, data, colorKey, yAxisReverse = false) {
-        const colors = getClassificationBasedColors();
-        const color = colors[colorKey] ? colors[colorKey].primary : chartColors[colorKey].primary;
-        const bgColor = colors[colorKey] ? colors[colorKey].secondary : chartColors[colorKey].secondary;
-
+    function createStreamChart(canvasId, label, data, color, yAxisReverse = false) {
         createChart(canvasId, {
             type: 'line',
             data: {
@@ -967,7 +922,7 @@ function renderStreamCharts(streams, activity, smoothingLevel = 100) {
                     label: label,
                     data: data,
                     borderColor: color,
-                    backgroundColor: bgColor,
+                    backgroundColor: 'rgba(252, 82, 0, 0.07)',
                     fill: false,
                     pointRadius: 0,
                     borderWidth: 2,
@@ -989,7 +944,7 @@ function renderStreamCharts(streams, activity, smoothingLevel = 100) {
     // Altitude chart
     if (altitude && altitude.data) {
         const smoothAltitude = rollingMean(altitude.data, windowSizes.altitude);
-        createStreamChart('chart-altitude', 'Altitud (m)', smoothAltitude, 'altitude');
+        createStreamChart('chart-altitude', 'Altitud (m)', smoothAltitude, '#888');
     }
 
     // Pace chart
@@ -1008,10 +963,6 @@ function renderStreamCharts(streams, activity, smoothingLevel = 100) {
         const smoothPaceStreamData = rollingMean(paceStreamData, windowSizes.pace);
         const paceLabels = distLabels.slice(1);
 
-        const colors = getClassificationBasedColors();
-        const paceColor = colors.pace ? colors.pace.primary : chartColors.pace.primary;
-        const paceBgColor = colors.pace ? colors.pace.secondary : chartColors.pace.secondary;
-
         createChart('chart-pace-distance', {
             type: 'line',
             data: {
@@ -1019,8 +970,8 @@ function renderStreamCharts(streams, activity, smoothingLevel = 100) {
                 datasets: [{
                     label: 'Ritmo (min/km)',
                     data: smoothPaceStreamData,
-                    borderColor: paceColor,
-                    backgroundColor: paceBgColor,
+                    borderColor: '#FC5200',
+                    backgroundColor: 'rgba(252, 82, 0, 0.07)',
                     fill: false,
                     pointRadius: 0,
                     borderWidth: 2,
@@ -1042,21 +993,21 @@ function renderStreamCharts(streams, activity, smoothingLevel = 100) {
     // Heart rate chart
     if (heartrate && heartrate.data) {
         const smoothHeartrate = rollingMean(heartrate.data, windowSizes.heartrate);
-        createStreamChart('chart-heart-distance', 'FC (bpm)', smoothHeartrate, 'heartrate');
+        createStreamChart('chart-heart-distance', 'FC (bpm)', smoothHeartrate, 'red');
     }
 
     // Cadence chart
     if (cadence && cadence.data) {
         const cadenceData = activity.type === 'Run' ? cadence.data.map(c => c * 2) : cadence.data;
         const smoothCadence = rollingMean(cadenceData, windowSizes.cadence);
-        createStreamChart('chart-cadence-distance', 'Cadencia (spm)', smoothCadence, 'cadence');
+        createStreamChart('chart-cadence-distance', 'Cadencia (spm)', smoothCadence, '#0074D9');
     }
 
     // Power (watts) chart
     const watts = streams.watts;
     if (watts && watts.data && watts.data.some(w => w > 0)) {
         const smoothWatts = rollingMean(watts.data, windowSizes.watts);
-        createStreamChart('chart-watts-distance', 'Power (W)', smoothWatts, 'watts');
+        createStreamChart('chart-watts-distance', 'Power (W)', smoothWatts, '#9b59b6');
     }
 }
 
@@ -1555,9 +1506,6 @@ function renderPaceMinMaxAreaChart(streams, smoothingLevel = 100) {
 function renderClassifierResults(classificationData) {
     const container = document.getElementById('run-classifier-results');
     if (!container) return;
-
-    // Store classification for chart styling
-    currentRunClassification = classificationData;
 
     const results = classificationData ? classificationData.top : null;
 

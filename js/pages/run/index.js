@@ -1,1 +1,1 @@
-import '../../run.js';
+import './run.js';

@@ -1,1 +1,1 @@
-import '../../activity.js';
+import './activity.js';

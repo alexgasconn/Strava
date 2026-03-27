@@ -1,1 +1,1 @@
-import '../../bike.js';
+import './bike.js';

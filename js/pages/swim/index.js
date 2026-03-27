@@ -1,1 +1,1 @@
-import '../../swim.js';
+import './swim.js';

@@ -4,7 +4,7 @@
  * Entry point: Query parameter ?id={activityId}
  */
 
-import { formatDate as sharedFormatDate } from './utils.js';
+import { formatDate as sharedFormatDate } from '../../shared/utils/index.js';
 
 // =====================================================
 // 1. CONFIGURATION

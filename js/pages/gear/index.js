@@ -1,1 +1,1 @@
-export { renderGearDetailPage } from '../../gear-analysis.js';
+export { renderGearDetailPage } from './gear-analysis.js';
