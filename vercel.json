@@ -1,12 +1,32 @@
 {
   "rewrites": [
     {
+      "source": "/api/:path*",
+      "destination": "/api/:path*"
+    },
+    {
       "source": "/js/:path*",
       "destination": "/js/:path*"
     },
     {
-      "source": "/:path*",
-      "destination": "/:path*"
+      "source": "/styles/:path*",
+      "destination": "/styles/:path*"
+    },
+    {
+      "source": "/html/:path*",
+      "destination": "/html/:path*"
+    },
+    {
+      "source": "/activities/:path*",
+      "destination": "/activities/:path*"
+    },
+    {
+      "source": "/:tab(run|dashboard|bike|swim|athlete|planner|gear|activities|calendar|weather|map|wrapped)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/",
+      "destination": "/index.html"
     }
   ]
 }

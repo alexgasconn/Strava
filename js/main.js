@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Tab rendering config: maps tab id → { render function, uses date filters } ---
     const tabConfig = {
         'dashboard-tab': { render: () => renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
-        'run-tab': { render: () => renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
+        'analysis-tab': { render: () => renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
         'bike-tab': { render: () => renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
         'swim-tab': { render: () => renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
         'athlete-tab': { render: () => renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo, athleteSportFilter, athleteDataType), usesFilters: true },
@@ -93,22 +93,80 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabLinks = document.querySelectorAll('.tab-link');
     const tabContents = document.querySelectorAll('.tab-content');
 
+    const routeToTab = {
+        '/': 'analysis-tab',
+        '/run': 'analysis-tab',
+        '/dashboard': 'dashboard-tab',
+        '/bike': 'bike-tab',
+        '/swim': 'swim-tab',
+        '/athlete': 'athlete-tab',
+        '/planner': 'planner-tab',
+        '/gear': 'gear-tab',
+        '/activities': 'activities-tab',
+        '/calendar': 'calendar-tab',
+        '/weather': 'weather-tab',
+        '/map': 'map-tab',
+        '/wrapped': 'wrapped-tab'
+    };
+
+    const tabToRoute = {
+        'analysis-tab': '/run',
+        'dashboard-tab': '/dashboard',
+        'bike-tab': '/bike',
+        'swim-tab': '/swim',
+        'athlete-tab': '/athlete',
+        'planner-tab': '/planner',
+        'gear-tab': '/gear',
+        'activities-tab': '/activities',
+        'calendar-tab': '/calendar',
+        'weather-tab': '/weather',
+        'map-tab': '/map',
+        'wrapped-tab': '/wrapped'
+    };
+
+    function normalizePath(pathname) {
+        if (!pathname) return '/';
+        return pathname.length > 1 ? pathname.replace(/\/$/, '') : pathname;
+    }
+
+    function getTabIdFromPath(pathname) {
+        const normalized = normalizePath(pathname);
+        return routeToTab[normalized] || 'analysis-tab';
+    }
+
+    function activateTab(tabId, { updateUrl = false, replaceUrl = false } = {}) {
+        const link = document.querySelector(`.tab-link[data-tab="${tabId}"]`);
+        const content = document.getElementById(tabId);
+        if (!link || !content) return;
+
+        tabLinks.forEach(item => item.classList.remove('active'));
+        tabContents.forEach(item => item.classList.remove('active'));
+
+        link.classList.add('active');
+        content.classList.add('active');
+
+        // Lazy-render tabs on first visit
+        if (!renderedTabs.has(tabId) && tabConfig[tabId]) {
+            tabConfig[tabId].render();
+            renderedTabs.add(tabId);
+        }
+
+        if (updateUrl) {
+            const route = tabToRoute[tabId] || '/run';
+            const method = replaceUrl ? 'replaceState' : 'pushState';
+            window.history[method]({ tabId }, '', route);
+        }
+    }
+
     tabLinks.forEach(link => {
         link.addEventListener('click', () => {
             const tabId = link.getAttribute('data-tab');
-
-            tabLinks.forEach(item => item.classList.remove('active'));
-            tabContents.forEach(item => item.classList.remove('active'));
-
-            link.classList.add('active');
-            document.getElementById(tabId).classList.add('active');
-
-            // Lazy-render tabs on first visit
-            if (!renderedTabs.has(tabId) && tabConfig[tabId]) {
-                tabConfig[tabId].render();
-                renderedTabs.add(tabId);
-            }
+            activateTab(tabId, { updateUrl: true });
         });
+    });
+
+    window.addEventListener('popstate', () => {
+        activateTab(getTabIdFromPath(window.location.pathname));
     });
 
     // --- FILTER STATE PERSISTENCE ---
@@ -272,8 +330,11 @@ document.addEventListener('DOMContentLoaded', () => {
             setupDashboard(allActivities);
             loadFilterState();
             renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
-            renderedTabs.add('run-tab');
+            renderedTabs.add('analysis-tab');
             setupYearlySelector();
+
+            const initialTabId = getTabIdFromPath(window.location.pathname);
+            activateTab(initialTabId, { updateUrl: true, replaceUrl: true });
         } catch (error) {
             handleError('Could not initialize the app', error);
         } finally {
@@ -295,8 +356,9 @@ document.addEventListener('DOMContentLoaded', () => {
             renderedTabs.clear();
             loadFilterState();
             renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
-            renderedTabs.add('run-tab');
+            renderedTabs.add('analysis-tab');
             setupYearlySelector();
+            activateTab(getTabIdFromPath(window.location.pathname));
             showLoading('Refresh completed', 100, elapsed());
         } catch (error) {
             handleError('Error refreshing activities', error);
