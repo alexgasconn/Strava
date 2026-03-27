@@ -4,6 +4,8 @@
  * Entry point: Query parameter ?id={activityId}
  */
 
+import { formatDate as sharedFormatDate, formatPace as sharedFormatPace } from './utils.js';
+
 // =====================================================
 // 1. INITIALIZATION & CONFIGURATION
 // =====================================================
@@ -93,11 +95,7 @@ function formatTime(seconds) {
  * Formats date as DD/MM/YYYY
  */
 function formatDate(date) {
-    if (!(date instanceof Date)) date = new Date(date);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
+    return sharedFormatDate(date);
 }
 
 /**
@@ -117,10 +115,7 @@ function paceDecimalToTime(paceDecimal) {
  */
 function formatPace(speedInMps) {
     if (!speedInMps || speedInMps === 0) return '-';
-    const paceInSecPerKm = 1000 / speedInMps;
-    const min = Math.floor(paceInSecPerKm / 60);
-    const sec = Math.round(paceInSecPerKm % 60);
-    return `${min}:${sec.toString().padStart(2, '0')}`;
+    return sharedFormatPace(1000 / speedInMps, 1).replace(' /km', '');
 }
 
 /**
@@ -260,10 +255,10 @@ function createChart(canvasId, config) {
  */
 function applySmoothingToStreams(streams, smoothingLevel) {
     if (!streams) return null;
-    
+
     const smoothingFactor = smoothingLevel / 100;
     const smoothed = JSON.parse(JSON.stringify(streams)); // Deep copy
-    
+
     // Calculate window sizes based on smoothing level
     const windowSizes = {
         altitude: Math.max(1, Math.round(CONFIG.WINDOW_SIZES.altitude * smoothingFactor)),
@@ -278,7 +273,7 @@ function applySmoothingToStreams(streams, smoothingLevel) {
             smoothed[key].data = rollingMean(smoothed[key].data, windowSizes[key]);
         }
     });
-    
+
     return smoothed;
 }
 
@@ -288,22 +283,22 @@ function applySmoothingToStreams(streams, smoothingLevel) {
 function initSmoothingControl() {
     const slider = document.getElementById('smoothing-slider');
     const valueDisplay = document.getElementById('smoothing-value');
-    
+
     if (!slider || !valueDisplay) return;
 
     slider.addEventListener('input', (e) => {
         currentSmoothingLevel = parseInt(e.target.value, 10);
         valueDisplay.textContent = currentSmoothingLevel;
-        
+
         // Apply smoothing only to primary data and smoothing-dependent charts
         if (originalStreamData && lastActivityData) {
             const smoothedStreams = applySmoothingToStreams(originalStreamData, currentSmoothingLevel);
-            
+
             // Re-render stream and variability charts (affected by smoothing)
             renderStreamCharts(smoothedStreams, lastActivityData, currentSmoothingLevel);
             renderHrMinMaxAreaChart(smoothedStreams, currentSmoothingLevel);
             renderPaceMinMaxAreaChart(smoothedStreams, currentSmoothingLevel);
-            
+
             // Update dynamic chart data and re-render
             populateDynamicChartData(smoothedStreams);
             const primaryData = document.getElementById('dynamic-chart-primary-data');
@@ -314,7 +309,7 @@ function initSmoothingControl() {
                 const secondaryType = document.getElementById('dynamic-chart-secondary-type').value;
                 const secondaryShow = document.getElementById('dynamic-chart-secondary-show').checked;
                 const backgroundStat = document.getElementById('dynamic-chart-background-stat').value;
-                
+
                 // Primary uses smoothed data; secondary and background use original
                 renderDynamicChart(primaryData.value, primaryType, primaryShow, secondaryData, secondaryType, secondaryShow, backgroundStat);
             }
@@ -526,7 +521,7 @@ function drawEffortBackground(chart) {
     const ctx = chart.ctx;
     const xScale = chart.scales.x;
     const yScale = chart.scales.y;
-    
+
     if (!xScale || !yScale) return;
 
     const chartArea = chart.chartArea;
@@ -696,8 +691,8 @@ function renderActivityInfo(activity) {
     const description = activity.description || '';
     const date = formatDate(new Date(activity.start_date_local));
     const typeLabels = ['Workout', 'Race', 'Long Run', 'Workout'];
-    const activityType = activity.workout_type !== undefined 
-        ? typeLabels[activity.workout_type] || 'Other' 
+    const activityType = activity.workout_type !== undefined
+        ? typeLabels[activity.workout_type] || 'Other'
         : (activity.type || 'Other');
     const gear = activity.gear?.name || 'N/A';
     const kudos = activity.kudos_count || 0;
@@ -732,8 +727,8 @@ function renderActivityStats(activity) {
     const duration = formatTime(activity.moving_time);
     const pace = formatPace(activity.average_speed);
     const elevation = activity.total_elevation_gain !== undefined ? activity.total_elevation_gain : '-';
-    const elevationPerKm = activity.distance > 0 
-        ? (activity.total_elevation_gain / (activity.distance / 1000)).toFixed(2) 
+    const elevationPerKm = activity.distance > 0
+        ? (activity.total_elevation_gain / (activity.distance / 1000)).toFixed(2)
         : '-';
     const calories = activity.calories !== undefined ? activity.calories : '-';
     const hrAvg = activity.average_heartrate ? Math.round(activity.average_heartrate) : '-';
@@ -762,14 +757,14 @@ function renderActivityStats(activity) {
 function renderAdvancedStats(activity) {
     if (!DOM.advanced) return;
 
-    const elevationPerKm = activity.distance > 0 
-        ? (activity.total_elevation_gain / (activity.distance / 1000)).toFixed(2) 
+    const elevationPerKm = activity.distance > 0
+        ? (activity.total_elevation_gain / (activity.distance / 1000)).toFixed(2)
         : '-';
-    const moveRatio = activity.elapsed_time 
-        ? (activity.moving_time / activity.elapsed_time).toFixed(2) 
+    const moveRatio = activity.elapsed_time
+        ? (activity.moving_time / activity.elapsed_time).toFixed(2)
         : '-';
-    const effort = activity.suffer_score !== undefined 
-        ? activity.suffer_score 
+    const effort = activity.suffer_score !== undefined
+        ? activity.suffer_score
         : (activity.perceived_exertion !== undefined ? activity.perceived_exertion : '-');
     const vo2max = estimateVO2max(activity);
     const paceVariabilityLaps = activity.pace_variability_laps || '-';

@@ -4,6 +4,8 @@
  * Entry point: Query parameter ?id={activityId}
  */
 
+import { formatDate as sharedFormatDate } from './utils.js';
+
 // =====================================================
 // 1. INITIALIZATION & CONFIGURATION
 // =====================================================
@@ -82,11 +84,7 @@ function formatTime(seconds) {
  * Formats date as DD/MM/YYYY
  */
 function formatDate(date) {
-    if (!(date instanceof Date)) date = new Date(date);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
+    return sharedFormatDate(date);
 }
 
 /**
@@ -282,7 +280,7 @@ async function fetchActivityStreams(activityId, authPayload) {
  */
 function renderActivityInfo(activity) {
     if (!DOM.info) return;
-    
+
     console.log(activity);
     const name = activity.name;
     const description = activity.description || '';

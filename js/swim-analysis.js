@@ -39,13 +39,13 @@ const POOL_LENGTHS = [20, 25, 50, "25yd", "50yd"];
 
 // Tiempo realista por largo (segundos)
 function realisticLengthTime(poolLength, timePerLength) {
-    switch(poolLength) {
-        case 20:   return timePerLength >= 15 && timePerLength <= 35;
-        case 25:   return timePerLength >= 18 && timePerLength <= 45;
-        case 50:   return timePerLength >= 35 && timePerLength <= 120;
+    switch (poolLength) {
+        case 20: return timePerLength >= 15 && timePerLength <= 35;
+        case 25: return timePerLength >= 18 && timePerLength <= 45;
+        case 50: return timePerLength >= 35 && timePerLength <= 120;
         case "25yd": return timePerLength >= 15 && timePerLength <= 40;
         case "50yd": return timePerLength >= 35 && timePerLength <= 120;
-        default:   return false;
+        default: return false;
     }
 }
 
@@ -203,9 +203,7 @@ function renderSummaryCards(swims) {
 
 function formatPace(paceMin100) {
     if (!paceMin100) return "-";
-    const min = Math.floor(paceMin100);
-    const sec = Math.round((paceMin100 - min) * 60);
-    return `${min}:${sec.toString().padStart(2, '0')}`;
+    return utils.formatPace(paceMin100 * 60, 1).replace(' /km', '');
 }
 
 
@@ -707,7 +705,7 @@ function renderPoolLengthChart(swims) {
 
     swims.forEach(s => {
         if (s.swim_type === "pool") {
-            switch(s.pool_length) {
+            switch (s.pool_length) {
                 case 20: counts["20m"]++; break;
                 case 25: counts["25m"]++; break;
                 case 50: counts["50m"]++; break;
@@ -735,7 +733,7 @@ function renderPoolLengthChart(swims) {
 
     Object.entries(counts).forEach(([key, val]) => {
         if (val > 0) {
-            labels.push(key.replace("m"," m").replace("yd"," yd")); // formateo bonito
+            labels.push(key.replace("m", " m").replace("yd", " yd")); // formateo bonito
             data.push(val);
             backgroundColor.push(colorMap[key]);
         }

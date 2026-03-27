@@ -700,8 +700,8 @@ function renderStreaks(runs) {
     function formatDate(dateStr) {
         if (!dateStr) return '-';
         const [y, m, d] = dateStr.split('-');
-        if (d) return `${d}/${m}/${y}`;
-        if (m) return `${m}/${y}`;
+        if (d) return utils.formatDate(dateStr);
+        if (m) return `01/${m}/${y}`;
         return dateStr;
     }
 
