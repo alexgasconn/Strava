@@ -1,0 +1,1 @@
+export { renderGearDetailPage } from '../../gear-analysis.js';
