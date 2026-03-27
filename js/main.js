@@ -47,6 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const refreshButton = document.getElementById('refresh-button');
     const applyFilterButton = document.getElementById('apply-date-filter');
     const resetFilterButton = document.getElementById('reset-date-filter');
+    const dateFromEl = document.getElementById('date-from');
+    const dateToEl = document.getElementById('date-to');
     const settingsButton = document.getElementById('settings-button');
     const settingsPanel = document.getElementById('settings-panel');
     const closeSettings = document.getElementById('close-settings');
@@ -127,6 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
             dateFilterTo = filters.dateFilterTo || null;
             athleteSportFilter = filters.athleteSportFilter || 'all';
             athleteDataType = filters.athleteDataType || 'time';
+            if (dateFromEl && dateFilterFrom) dateFromEl.value = dateFilterFrom;
             if (dateToEl && dateFilterTo) dateToEl.value = dateFilterTo;
         }
     }
@@ -153,8 +156,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 dateFilterFrom = `${year}-01-01`;
                 dateFilterTo = `${year}-12-31`;
 
-                document.getElementById('date-from').value = dateFilterFrom;
-                document.getElementById('date-to').value = dateFilterTo;
+                if (dateFromEl) dateFromEl.value = dateFilterFrom;
+                if (dateToEl) dateToEl.value = dateFilterTo;
                 saveFilterState();
 
                 renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
@@ -323,8 +326,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (applyFilterButton) {
         applyFilterButton.addEventListener('click', () => {
             document.querySelectorAll('.year-btn').forEach(b => b.classList.remove('active'));
-            dateFilterFrom = document.getElementById('date-from').value || null;
-            dateFilterTo = document.getElementById('date-to').value || null;
+            dateFilterFrom = dateFromEl?.value || null;
+            dateFilterTo = dateToEl?.value || null;
             saveFilterState();
             renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
         });
@@ -334,8 +337,8 @@ document.addEventListener('DOMContentLoaded', () => {
         resetFilterButton.addEventListener('click', () => {
             dateFilterFrom = null;
             dateFilterTo = null;
-            document.getElementById('date-from').value = '';
-            document.getElementById('date-to').value = '';
+            if (dateFromEl) dateFromEl.value = '';
+            if (dateToEl) dateToEl.value = '';
             document.querySelectorAll('.year-btn').forEach(b => b.classList.remove('active'));
             saveFilterState();
             renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
