@@ -954,8 +954,13 @@ function renderTopRuns(runs) {
         .sort((a, b) => b.total_elevation_gain - a.total_elevation_gain)
         .slice(0, 10);
 
-    const topDuration = [...runs]
-        .sort((a, b) => b.moving_time - a.moving_time)
+    // Calculate pace (seconds per km) and sort by fastest (lowest pace)
+    const topFastest = [...runs]
+        .map(a => ({
+            ...a,
+            pace: a.distance > 0 ? (a.moving_time / (a.distance / 1000)) : Infinity
+        }))
+        .sort((a, b) => a.pace - b.pace)
         .slice(0, 10);
 
     const formatTime = s => {
@@ -988,9 +993,9 @@ function renderTopRuns(runs) {
             </div>
 
             <div class="top-box" style="padding: 1.5rem; background: #f9f9f9; border-radius: 8px;">
-                <h3 style="margin-top: 0;">⏱️ Longest Duration</h3>
+                <h3 style="margin-top: 0;">⚡ Fastest Races</h3>
                 <ol>
-                    ${topDuration.map(a => `<li>${a.name} – ${formatTime(a.moving_time)}</li>`).join("")}
+                    ${topFastest.map(a => `<li>${a.name} – ${formatPace(a.pace)}</li>`).join("")}
                 </ol>
             </div>
         </div>

@@ -47,10 +47,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginButton = document.getElementById('login-button');
     const logoutButton = document.getElementById('logout-button');
     const refreshButton = document.getElementById('refresh-button');
+    
+    // Run Tab
     const applyFilterButton = document.getElementById('apply-date-filter');
     const resetFilterButton = document.getElementById('reset-date-filter');
     const dateFromEl = document.getElementById('date-from');
     const dateToEl = document.getElementById('date-to');
+    
+    // Bike Tab
+    const bikeApplyFilterButton = document.getElementById('bike-apply-date-filter');
+    const bikeResetFilterButton = document.getElementById('bike-reset-date-filter');
+    const bikeDateFromEl = document.getElementById('bike-date-from');
+    const bikeDateToEl = document.getElementById('bike-date-to');
+    
+    // Swim Tab
+    const swimApplyFilterButton = document.getElementById('swim-apply-date-filter');
+    const swimResetFilterButton = document.getElementById('swim-reset-date-filter');
+    const swimDateFromEl = document.getElementById('swim-date-from');
+    const swimDateToEl = document.getElementById('swim-date-to');
+    
     const settingsButton = document.getElementById('settings-button');
     const settingsPanel = document.getElementById('settings-panel');
     const closeSettings = document.getElementById('close-settings');
@@ -136,6 +151,16 @@ document.addEventListener('DOMContentLoaded', () => {
         return routeToTab[normalized] || 'analysis-tab';
     }
 
+    function syncDateInputs() {
+        // Sync all date inputs with current filter state
+        if (dateFromEl) dateFromEl.value = dateFilterFrom || '';
+        if (dateToEl) dateToEl.value = dateFilterTo || '';
+        if (bikeDateFromEl) bikeDateFromEl.value = dateFilterFrom || '';
+        if (bikeDateToEl) bikeDateToEl.value = dateFilterTo || '';
+        if (swimDateFromEl) swimDateFromEl.value = dateFilterFrom || '';
+        if (swimDateToEl) swimDateToEl.value = dateFilterTo || '';
+    }
+
     function activateTab(tabId, { updateUrl = false, replaceUrl = false } = {}) {
         const link = document.querySelector(`.tab-link[data-tab="${tabId}"]`);
         const content = document.getElementById(tabId);
@@ -146,6 +171,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         link.classList.add('active');
         content.classList.add('active');
+
+        // Sync date inputs when switching tabs
+        syncDateInputs();
 
         // Lazy-render tabs on first visit
         if (!renderedTabs.has(tabId) && tabConfig[tabId]) {
@@ -197,32 +225,85 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- YEAR FILTER BUTTONS ---
     function setupYearlySelector() {
         const yearsToShow = 5;
-        const container = document.getElementById('year-filter-buttons');
-        if (!container || allActivities.length === 0) return;
+        
+        // Setup for Run Tab
+        const runContainer = document.getElementById('year-filter-buttons');
+        const bikeContainer = document.getElementById('bike-year-filter-buttons');
+        const swimContainer = document.getElementById('swim-year-filter-buttons');
+        
+        if ((runContainer || bikeContainer || swimContainer) && allActivities.length === 0) return;
 
         const years = [...new Set(allActivities.map(a => a.start_date_local.substring(0, 4)))]
             .sort((a, b) => b - a);
 
-        container.innerHTML = years.slice(0, yearsToShow).map(year =>
+        const yearButtonsHTML = years.slice(0, yearsToShow).map(year =>
             `<button class="year-btn" data-year="${year}">${year}</button>`
         ).join('');
 
-        container.querySelectorAll('.year-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                container.querySelectorAll('.year-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+        // Populate all three containers
+        if (runContainer) runContainer.innerHTML = yearButtonsHTML;
+        if (bikeContainer) bikeContainer.innerHTML = yearButtonsHTML;
+        if (swimContainer) swimContainer.innerHTML = yearButtonsHTML;
 
-                const year = btn.dataset.year;
-                dateFilterFrom = `${year}-01-01`;
-                dateFilterTo = `${year}-12-31`;
+        // Setup event listeners for Run Tab
+        if (runContainer) {
+            runContainer.querySelectorAll('.year-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    runContainer.querySelectorAll('.year-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
 
-                if (dateFromEl) dateFromEl.value = dateFilterFrom;
-                if (dateToEl) dateToEl.value = dateFilterTo;
-                saveFilterState();
+                    const year = btn.dataset.year;
+                    dateFilterFrom = `${year}-01-01`;
+                    dateFilterTo = `${year}-12-31`;
 
-                renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
+                    if (dateFromEl) dateFromEl.value = dateFilterFrom;
+                    if (dateToEl) dateToEl.value = dateFilterTo;
+                    saveFilterState();
+
+                    renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
+                });
             });
-        });
+        }
+
+        // Setup event listeners for Bike Tab
+        if (bikeContainer) {
+            bikeContainer.querySelectorAll('.year-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    bikeContainer.querySelectorAll('.year-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+
+                    const year = btn.dataset.year;
+                    dateFilterFrom = `${year}-01-01`;
+                    dateFilterTo = `${year}-12-31`;
+
+                    if (bikeDateFromEl) bikeDateFromEl.value = dateFilterFrom;
+                    if (bikeDateToEl) bikeDateToEl.value = dateFilterTo;
+                    saveFilterState();
+
+                    renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
+                });
+            });
+        }
+
+        // Setup event listeners for Swim Tab
+        if (swimContainer) {
+            swimContainer.querySelectorAll('.year-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    swimContainer.querySelectorAll('.year-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+
+                    const year = btn.dataset.year;
+                    dateFilterFrom = `${year}-01-01`;
+                    dateFilterTo = `${year}-12-31`;
+
+                    if (swimDateFromEl) swimDateFromEl.value = dateFilterFrom;
+                    if (swimDateToEl) swimDateToEl.value = dateFilterTo;
+                    saveFilterState();
+
+                    renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
+                });
+            });
+        }
     }
 
     // --- INITIALIZATION ---
@@ -389,7 +470,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (applyFilterButton) {
         applyFilterButton.addEventListener('click', () => {
-            document.querySelectorAll('.year-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#year-filter-buttons .year-btn').forEach(b => b.classList.remove('active'));
             dateFilterFrom = dateFromEl?.value || null;
             dateFilterTo = dateToEl?.value || null;
             saveFilterState();
@@ -403,9 +484,55 @@ document.addEventListener('DOMContentLoaded', () => {
             dateFilterTo = null;
             if (dateFromEl) dateFromEl.value = '';
             if (dateToEl) dateToEl.value = '';
-            document.querySelectorAll('.year-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#year-filter-buttons .year-btn').forEach(b => b.classList.remove('active'));
             saveFilterState();
             renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
+        });
+    }
+
+    // Bike Tab Filters
+    if (bikeApplyFilterButton) {
+        bikeApplyFilterButton.addEventListener('click', () => {
+            document.querySelectorAll('#bike-year-filter-buttons .year-btn').forEach(b => b.classList.remove('active'));
+            dateFilterFrom = bikeDateFromEl?.value || null;
+            dateFilterTo = bikeDateToEl?.value || null;
+            saveFilterState();
+            renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
+        });
+    }
+
+    if (bikeResetFilterButton) {
+        bikeResetFilterButton.addEventListener('click', () => {
+            dateFilterFrom = null;
+            dateFilterTo = null;
+            if (bikeDateFromEl) bikeDateFromEl.value = '';
+            if (bikeDateToEl) bikeDateToEl.value = '';
+            document.querySelectorAll('#bike-year-filter-buttons .year-btn').forEach(b => b.classList.remove('active'));
+            saveFilterState();
+            renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
+        });
+    }
+
+    // Swim Tab Filters
+    if (swimApplyFilterButton) {
+        swimApplyFilterButton.addEventListener('click', () => {
+            document.querySelectorAll('#swim-year-filter-buttons .year-btn').forEach(b => b.classList.remove('active'));
+            dateFilterFrom = swimDateFromEl?.value || null;
+            dateFilterTo = swimDateToEl?.value || null;
+            saveFilterState();
+            renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
+        });
+    }
+
+    if (swimResetFilterButton) {
+        swimResetFilterButton.addEventListener('click', () => {
+            dateFilterFrom = null;
+            dateFilterTo = null;
+            if (swimDateFromEl) swimDateFromEl.value = '';
+            if (swimDateToEl) swimDateToEl.value = '';
+            document.querySelectorAll('#swim-year-filter-buttons .year-btn').forEach(b => b.classList.remove('active'));
+            saveFilterState();
+            renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
         });
     }
 
