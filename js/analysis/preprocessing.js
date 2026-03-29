@@ -25,14 +25,18 @@ export class PreprocessingPipeline {
      */
     process(track) {
         let result = track;
+        console.log(`🧪 Preprocessing: Starting 5-stage pipeline on ${track.points.length} points...`);
 
         // 1. Clean GPS spikes
+        console.log(`  1️⃣ Removing GPS spikes...`);
         result = this._removeGPSSpikes(result);
 
         // 2. Fix altitude anomalies
+        console.log(`  2️⃣ Fixing altitude anomalies (Hampel filter)...`);
         result = this._fixAltitude(result);
 
         // 3. Remove speed spikes
+        console.log(`  3️⃣ Removing speed spikes...`);
         result = this._removeSpeedSpikes(result);
 
         // 4. Smooth elevation data
@@ -42,14 +46,17 @@ export class PreprocessingPipeline {
         result = this._smoothGrade(result);
 
         // 6. Smooth speed
+        console.log(`  4️⃣ Smoothing data (altitude, grade, speed)...`);
         result = this._smoothSpeed(result);
 
         // 7. Detect terrain types
+        console.log(`  5️⃣ Classifying terrain (flat/climb/descent/technical)...`);
         result = this._detectTerrain(result);
 
         // 8. Recalculate derived metrics
         result = this._recalculateDerivedMetrics(result);
 
+        console.log(`✅ Preprocessing complete: ${result.points.length} cleaned points`);
         return result;
     }
 

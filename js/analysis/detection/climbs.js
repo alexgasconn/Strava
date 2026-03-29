@@ -19,6 +19,7 @@ export class ClimbDetector {
      * Detect all climbs in an ActivityTrack
      */
     detect(track) {
+        console.log(`⛰️  Climb detection: scanning ${track.points.length} points (min: ${this.config.min_grade}%, ${this.config.min_elevation}m)...`);
         const climbs = [];
         let climbStart = null;
         let climbData = null;
@@ -69,7 +70,9 @@ export class ClimbDetector {
         }
 
         // Merge nearby climbs
-        return this._mergeClimbs(climbs);
+        const merged = this._mergeClimbs(climbs);
+        console.log(`✅ Found ${merged.length} climbs`);
+        return merged;
     }
 
     /**

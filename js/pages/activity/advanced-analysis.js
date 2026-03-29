@@ -38,7 +38,11 @@ export class AdvancedActivityAnalyzer {
             const streamsData = await streamsRes.json();
             this.streams = streamsData.streams;
 
-            console.log('✅ Activity data fetched');
+            console.log(`✅ Activity data fetched:`);
+            console.log(`   - Sport: ${this.metadata.sport_type}`);
+            console.log(`   - Distance: ${(this.metadata.distance / 1000).toFixed(1)}km`);
+            console.log(`   - Duration: ${Math.round(this.metadata.moving_time / 60)}min`);
+            console.log(`   - Streams collected: ${Object.keys(this.streams).join(', ')}`);
             return { metadata: this.metadata, streams: this.streams };
 
         } catch (error) {

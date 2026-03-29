@@ -1680,6 +1680,7 @@ function initAdvancedAnalysis() {
 
             // Run analysis
             const results = await analyzer.analyze(mode);
+            console.log(`📊 Analysis results:`, results);
 
             // Get summary data
             const summary = analyzer.getSummary();
@@ -1693,6 +1694,8 @@ function initAdvancedAnalysis() {
             ui.renderClimbs(results.climbs || []);
             ui.renderSegments(results.segments || {});
             ui.renderExports(analyzer);
+
+            console.log(`✅ Analysis results rendered successfully`);
 
             // Hide loading
             loading.style.display = 'none';

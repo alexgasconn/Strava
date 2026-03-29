@@ -7,6 +7,7 @@ export class InsightsGenerator {
      * Generate all insights from complete analysis
      */
     static generate(analysis_result, track, sport_type) {
+        console.log(`💡 Generating automatic insights...`);
         const insights = [];
 
         // Basic activity insights
@@ -44,6 +45,7 @@ export class InsightsGenerator {
         // Efficiency insights
         insights.push(...this._generateEfficiencyInsights(analysis_result));
 
+        console.log(`✅ Generated ${insights.length} insights`);
         return insights;
     }
 

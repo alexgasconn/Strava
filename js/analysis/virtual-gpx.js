@@ -19,8 +19,11 @@ export class VirtualGPXReconstructor {
             throw new Error('latlng stream is required to reconstruct GPX');
         }
 
+        console.log(`📍 Reconstructing GPX from ${streams.latlng.data.length} points...`);
         const points = this._buildTrackPoints(streams, metadata);
-        return new ActivityTrack(metadata, points);
+        const track = new ActivityTrack(metadata, points);
+        console.log(`✅ GPX reconstructed: ${points.length} TrackPoints with bearing, VAM, acceleration calculated`);
+        return track;
     }
 
     /**
