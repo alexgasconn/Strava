@@ -58,6 +58,8 @@ export function renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterT
 
     renderPowerVsSpeedChart(rides);
 
+    renderAccumulatedDistanceChart(rides);
+
     renderTopActivities(rides);
 
     renderActivitiesTable(rides);
@@ -646,4 +648,46 @@ export function renderConsistencyChart(rides) {
             });
         }
     }, 100);
+}
+
+export function renderAccumulatedDistanceChart(rides) {
+    if (!rides || rides.length === 0) return;
+
+    // 1. Aggregate distance per day (YYYY-MM-DD)
+    const distanceByDay = rides.reduce((acc, act) => {
+        const date = act.start_date_local.substring(0, 10);
+        acc[date] = (acc[date] || 0) + (act.distance ? act.distance / 1000 : 0);
+        return acc;
+    }, {});
+
+    // 2. Get all days from first to last activity
+    const allDays = Object.keys(distanceByDay).sort();
+    const startDate = new Date(allDays[0]);
+    const endDate = new Date(allDays[allDays.length - 1]);
+    const days = [];
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        days.push(d.toISOString().slice(0, 10));
+    }
+
+    // 3. Build daily distances (0 for days without activity)
+    const dailyDistances = days.map(date => distanceByDay[date] || 0);
+
+    // 4. Compute accumulated distance
+    const accumulated = [];
+    dailyDistances.reduce((acc, d, i) => accumulated[i] = acc + d, 0);
+
+    createChart('bike-accumulated-distance-chart', {
+        type: 'line',
+        data: {
+            labels: days,
+            datasets: [{
+                label: 'Accumulated Distance (km)',
+                data: accumulated,
+                borderColor: 'rgba(54,162,235,1)',
+                pointRadius: 0,
+                tension: 0.1
+            }]
+        },
+        options: { scales: { y: { title: { display: true, text: 'Distance (km)' } } } }
+    });
 }
