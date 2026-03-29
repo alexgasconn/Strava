@@ -675,11 +675,18 @@ export function renderRunsHeatmap(runs) {
 function renderSummaryCards(runs) {
     const summaryContainer = document.getElementById('summary-cards');
     if (summaryContainer) {
+        const totalDistance = runs.reduce((s, a) => s + a.distance, 0) / 1000;
+        const totalElevation = runs.reduce((s, a) => s + a.total_elevation_gain, 0);
+        const totalTime = runs.reduce((s, a) => s + a.moving_time, 0);
+        const avgPaceSeconds = totalDistance > 0 ? (totalTime / totalDistance) : 0;
+        const paceMin = Math.floor(avgPaceSeconds / 60);
+        const paceSec = Math.round(avgPaceSeconds % 60);
+        
         summaryContainer.innerHTML = `
-            <div class="card"><h3>Activities</h3><p>${runs.length}</p></div>
-            <div class="card"><h3>Total Distance</h3><p>${(runs.reduce((s, a) => s + a.distance, 0) / 1000).toFixed(0)} km</p></div>
-            <div class="card"><h3>Total Time</h3><p>${(runs.reduce((s, a) => s + a.moving_time, 0) / 3600).toFixed(1)} h</p></div>
-            <div class="card"><h3>Total Elevation</h3><p>${runs.reduce((s, a) => s + a.total_elevation_gain, 0).toLocaleString()} m</p></div>
+            <div class="card"><h3>Runs</h3><p>${runs.length}</p></div>
+            <div class="card"><h3>Total Distance</h3><p>${totalDistance.toFixed(0)} km</p></div>
+            <div class="card"><h3>Total Elevation</h3><p>${totalElevation.toLocaleString()} m</p></div>
+            <div class="card"><h3>Avg Pace</h3><p>${paceMin}:${paceSec.toString().padStart(2, '0')} /km</p></div>
         `;
     }
 }

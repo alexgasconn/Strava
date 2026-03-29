@@ -115,7 +115,7 @@ function renderSummaryCards(rides) {
 
         <div class="card">
             <h3>Total Distance</h3>
-            <p>${totalDistance.toFixed(0)} km</p>
+            <p>${totalDistance.toFixed(1)} km</p>
         </div>
 
         <div class="card">
@@ -124,7 +124,7 @@ function renderSummaryCards(rides) {
         </div>
 
         <div class="card">
-            <h3>Average Speed</h3>
+            <h3>Avg Speed</h3>
             <p>${avgSpeed.toFixed(1)} km/h</p>
         </div>
     `;
