@@ -94,7 +94,7 @@ function createChart(canvasId, config) {
 
 function renderSummaryCards(rides) {
 
-    const el = document.getElementById("summary-cards");
+    const el = document.getElementById("bike-summary-cards");
     if (!el) return;
 
     const totalDistance =

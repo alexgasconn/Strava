@@ -673,7 +673,7 @@ export function renderRunsHeatmap(runs) {
 
 
 function renderSummaryCards(runs) {
-    const summaryContainer = document.getElementById('summary-cards');
+    const summaryContainer = document.getElementById('run-summary-cards');
     if (summaryContainer) {
         const totalDistance = runs.reduce((s, a) => s + a.distance, 0) / 1000;
         const totalElevation = runs.reduce((s, a) => s + a.total_elevation_gain, 0);
