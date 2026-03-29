@@ -5,6 +5,8 @@
  */
 
 import { formatDate as sharedFormatDate, formatPace as sharedFormatPace } from '../../shared/utils/index.js';
+import { AdvancedActivityAnalyzer } from './advanced-analysis.js';
+import { AnalysisResultsUI } from './analysis-ui-components.js';
 
 // =====================================================
 // 1. INITIALIZATION & CONFIGURATION
@@ -1636,12 +1638,76 @@ async function main() {
         // Initialize dynamic chart controls
         initDynamicChartControls();
 
+        // Initialize advanced analysis button
+        initAdvancedAnalysis();
+
         if (DOM.streamCharts) DOM.streamCharts.style.display = '';
 
     } catch (error) {
         console.error('Failed to load activity page:', error);
         if (DOM.details) DOM.details.innerHTML = `<p><strong>Error loading activity:</strong> ${error.message}</p>`;
     }
+}
+
+/**
+ * Initialize advanced analysis button and handler
+ */
+function initAdvancedAnalysis() {
+    const btn = document.getElementById('advanced-analysis-btn');
+    if (!btn) return;
+
+    btn.addEventListener('click', async function() {
+        const mode = document.getElementById('analysis-mode')?.value || 'normal';
+        const container = document.getElementById('analysis-results-container');
+        const loading = document.getElementById('analysis-loading');
+        const content = document.getElementById('analysis-content');
+
+        if (!container || !loading || !content) return;
+
+        // Show loading state
+        container.style.display = 'block';
+        loading.style.display = 'block';
+        content.innerHTML = '';
+        btn.disabled = true;
+        btn.textContent = '⏳ Analyzing...';
+
+        try {
+            // Create analyzer instance
+            const analyzer = new AdvancedActivityAnalyzer(activityId);
+
+            // Fetch data from API
+            await analyzer.fetchActivityData();
+
+            // Run analysis
+            const results = await analyzer.analyze(mode);
+
+            // Get summary data
+            const summary = analyzer.getSummary();
+
+            // Create UI renderer
+            const ui = new AnalysisResultsUI(content);
+
+            // Render all components
+            ui.renderSummary(summary);
+            ui.renderInsights(results.insights || []);
+            ui.renderClimbs(results.climbs || []);
+            ui.renderSegments(results.segments || {});
+            ui.renderExports(analyzer);
+
+            // Hide loading
+            loading.style.display = 'none';
+
+        } catch (error) {
+            console.error('Analysis error:', error);
+            content.innerHTML = `<div style="padding: 15px; background-color: #fee; border: 1px solid #fcc; border-radius: 4px; color: #c00;">
+                <strong>❌ Analysis failed:</strong> ${error.message}
+            </div>`;
+            loading.style.display = 'none';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '🔬 Analyze Activity';
+        }
+    });
 }
 
 // Initialize on DOM ready
