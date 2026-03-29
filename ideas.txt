@@ -23,7 +23,6 @@ IN PROGRESS
 🟡🚨[ATHLETE]grafiques de AThlete MALAMENT
 🟡🚧[PREPROCESSING]carregar zonas, profile, gear, weather api... al iniciar app
 🟡🩹[WEATHER]weather api fer servir per predictions 
-🟡🩹[WEATHER]weather data -> % de "difficultat ambiental" AFEGIR A LA LLISTA DE RUNS DE WEATHER TAB
 🟡🩹[ANALYSIS]consistency map canvia al posar filre 2026??
 🟡⚠️[GENERAL]format del pace decimals-> time amb utils.paceDecimalToTime(pace)
 

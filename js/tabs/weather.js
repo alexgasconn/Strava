@@ -56,6 +56,8 @@ export async function renderWeatherTab(allActivities) {
         // Calculate environmental difficulty using utils helper
         const envDifficulty = utils.calculateEnvironmentalDifficulty({ weather: { temperature: temp, humidity: hum, wind_speed: wind, precipitation: wr.precipitation, pressure: wr.pressure } });
 
+        console.log(`🌧️ Run: "${run.name}" - Env Difficulty: ${envDifficulty}% (Temp: ${temp}°C, Wind: ${wind}km/h, Rain: ${wr.precipitation}mm)`);
+
         return {
             temperature: temp,
             precipitation: wr.precipitation,
@@ -765,7 +767,9 @@ function getUnit(metric) {
 function renderRunsList(tbodyElement, weatherResults) {
     tbodyElement.innerHTML = "";
 
-    weatherResults.forEach((item) => {
+    console.log(`📋 Rendering ${weatherResults.length} runs with environmental difficulty data...`);
+
+    weatherResults.forEach((item, idx) => {
         const { run, temperature, precipitation, wind_speed, humidity, pressure, cloudcover, weather_text, envDifficulty } = item;
 
         const row = tbodyElement.insertRow();
@@ -780,8 +784,23 @@ function renderRunsList(tbodyElement, weatherResults) {
         row.insertCell().textContent = `${pressure?.toFixed(0) ?? "–"} hPa`;
         row.insertCell().textContent = `${cloudcover?.toFixed(0) ?? "–"}%`;
         row.insertCell().textContent = weather_text || "–";
-        row.insertCell().textContent = `${envDifficulty ?? 0}%`;
+        
+        // Environmental difficulty cell with color coding
+        const difficultyCell = row.insertCell();
+        difficultyCell.textContent = `${envDifficulty ?? 0}%`;
+        
+        // Color code: green (easy) to red (hard)
+        const difficulty = envDifficulty ?? 0;
+        if (difficulty < 30) {
+            difficultyCell.style.color = '#28a745'; // Green - Easy
+        } else if (difficulty < 60) {
+            difficultyCell.style.color = '#ffc107'; // Yellow - Medium
+        } else {
+            difficultyCell.style.color = '#dc3545'; // Red - Hard
+        }
     });
+    
+    console.log(`✅ Rendered ${weatherResults.length} runs with environmental difficulty`);
 }
 
 
