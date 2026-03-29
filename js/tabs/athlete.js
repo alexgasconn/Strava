@@ -893,6 +893,13 @@ function renderMonthDayMatrix(runs, dataType = 'count') {
 
 
 function renderMonthHourMatrix(runs, dataType = 'count') {
+    if (!runs || runs.length === 0) {
+        console.warn('⚠️ No runs data for month-hour matrix');
+        return;
+    }
+
+    console.log(`📊 Rendering month-hour matrix with ${runs.length} activities (${dataType})...`);
+
     const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const hourLabels = Array.from({ length: 24 }, (_, i) => i); // 0–23
@@ -945,13 +952,15 @@ function renderMonthHourMatrix(runs, dataType = 'count') {
             data.push({
                 x: h,         // hour index (x-axis)
                 y: m,         // month index (y-axis)
-                val: val,
+                v: val,       // Fixed: use 'v' to match color mapping below
                 count: entry.count,
                 distance: entry.distance,
                 time: entry.time
             });
         }
     }
+
+    console.log(`  - Data points: ${data.length}, Max value: ${maxVal}`);
 
     function getColor(v) {
         if (v === 0) return 'rgba(255,255,255,0)';
@@ -965,68 +974,77 @@ function renderMonthHourMatrix(runs, dataType = 'count') {
         distance: 'Distance (km)'
     };
 
-    createUiChart('month-hour-matrix', {
-        type: 'matrix',
-        data: {
-            datasets: [{
-                label: labelMap[dataType],
-                data,
-                backgroundColor: data.map(d => getColor(d.v))
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        title: items => {
-                            const d = items[0].raw;
-                            return `${monthLabels[d.y]} - ${d.x}:00`;
-                        },
-                        label: item => {
-                            const d = item.raw;
-                            return [
-                                `Activities: ${d.count}`,
-                                `Distance: ${d.distance.toFixed(1)} km`,
-                                `Time: ${d.time.toFixed(1)} h`
-                            ];
+    try {
+        createUiChart('month-hour-matrix', {
+            type: 'matrix',
+            data: {
+                datasets: [{
+                    label: labelMap[dataType],
+                    data,
+                    backgroundColor: data.map(d => getColor(d.v))
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            title: items => {
+                                const d = items[0].raw;
+                                return `${monthLabels[d.y]} - ${d.x}:00`;
+                            },
+                            label: item => {
+                                const d = item.raw;
+                                return [
+                                    `Activities: ${d.count}`,
+                                    `Distance: ${d.distance.toFixed(1)} km`,
+                                    `Time: ${d.time.toFixed(1)} h`
+                                ];
+                            }
                         }
+                    },
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        type: 'linear',
+                        min: -0.5,
+                        max: 24,
+                        ticks: {
+                            stepSize: 2,
+                            callback: val => (val % 1 === 0 ? `${val}:00` : ''),
+                            color: '#333',
+                            font: { weight: 'bold' }
+                        },
+                        grid: { color: '#eee' },
+                        title: { display: true, text: 'Hour of Day', font: { weight: 'bold' } }
+                    },
+                    y: {
+                        type: 'linear',
+                        min: -1.5,
+                        max: 12,
+                        ticks: {
+                            stepSize: 1,
+                            callback: val => monthLabels[val] || '',
+                            color: '#333',
+                            font: { weight: 'bold' }
+                        },
+                        grid: { color: '#eee' },
+                        title: { display: true, text: 'Month', font: { weight: 'bold' } }
                     }
                 },
-                legend: { display: false }
-            },
-            scales: {
-                x: {
-                    type: 'linear',
-                    min: -0.5,
-                    max: 24,
-                    ticks: {
-                        stepSize: 2,
-                        callback: val => (val % 1 === 0 ? `${val}:00` : ''),
-                        color: '#333',
-                        font: { weight: 'bold' }
-                    },
-                    grid: { color: '#eee' },
-                    title: { display: true, text: 'Hour of Day', font: { weight: 'bold' } }
-                },
-                y: {
-                    type: 'linear',
-                    min: -1.5,
-                    max: 12,
-                    ticks: {
-                        stepSize: 1,
-                        callback: val => monthLabels[val] || '',
-                        color: '#333',
-                        font: { weight: 'bold' }
-                    },
-                    grid: { color: '#eee' },
-                    title: { display: true, text: 'Month', font: { weight: 'bold' } }
-                }
-            },
-            layout: { padding: 10 }
+                layout: { padding: 10 }
+            }
+        });
+        console.log(`✅ Month-hour matrix rendered successfully`);
+    } catch (error) {
+        console.error('❌ Error rendering month-hour matrix:', error);
+        const container = document.getElementById('month-hour-matrix')?.parentElement;
+        if (container) {
+            container.innerHTML = `<p style="color: red; padding: 20px;">Error rendering chart: ${error.message}</p>`;
         }
-    });
+    }
 }
 
 
@@ -1454,7 +1472,13 @@ function createUiChart(canvasId, config) {
     if (uiCharts[canvasId]) {
         uiCharts[canvasId].destroy();
     }
-    uiCharts[canvasId] = new Chart(canvas, config);
+    try {
+        uiCharts[canvasId] = new Chart(canvas, config);
+        console.log(`✅ Chart rendered: ${canvasId}`);
+    } catch (error) {
+        console.error(`❌ Error rendering chart ${canvasId}:`, error);
+        canvas.parentElement.innerHTML = `<p style="color: red; padding: 20px;">Error rendering chart: ${error.message}</p>`;
+    }
 }
 
 function addAthleteFilters() {
