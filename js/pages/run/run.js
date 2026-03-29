@@ -766,7 +766,7 @@ function renderActivityStats(activity) {
 
     const distanceKm = (activity.distance / 1000).toFixed(2);
     const duration = formatTime(activity.moving_time);
-    const pace = formatPace(activity.average_speed);
+    const avgSpeed = activity.average_speed ? (activity.average_speed * 3.6).toFixed(1) + ' km/h' : '-';
     const elevation = activity.total_elevation_gain !== undefined ? activity.total_elevation_gain : '-';
     const elevationPerKm = activity.distance > 0
         ? (activity.total_elevation_gain / (activity.distance / 1000)).toFixed(2)
@@ -781,7 +781,7 @@ function renderActivityStats(activity) {
         <ul>
             <li><b>Duration:</b> ${duration}</li>
             <li><b>Distance:</b> ${distanceKm} km</li>
-            <li><b>Pace:</b> ${pace}</li>
+            <li><b>Average Speed:</b> ${avgSpeed}</li>
             <li><b>Elevation Gain:</b> ${elevation} m</li>
             <li><b>Elevation per Km:</b> ${elevationPerKm} m</li>
             <li><b>Calories:</b> ${calories}</li>

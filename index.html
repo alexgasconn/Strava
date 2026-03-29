@@ -131,7 +131,7 @@
             <button class="tab-link" data-tab="athlete-tab" aria-controls="athlete-tab" aria-label="Athlete">👤
                 Athlete</button>
             <button class="tab-link" data-tab="planner-tab" aria-controls="planner-tab" aria-label="Race Predictor">🎯
-                Race Predictor</button>
+                Predictor</button>
             <button class="tab-link" data-tab="gear-tab" aria-controls="gear-tab" aria-label="Gear">👟 Gear</button>
             <button class="tab-link" data-tab="activities-tab" aria-controls="activities-tab" aria-label="Activities">📝
                 Activities</button>
@@ -167,14 +167,6 @@
 
 
                     <div class="charts-grid">
-                        <div class="chart-container full-width">
-                            <h3>Run Locations Heatmap</h3>
-                            <div id="runs-heatmap" style="height: 400px; width: 100%;"></div>
-                        </div>
-                        <div class="chart-container">
-                            <h3>Streaks</h3>
-                            <div id="streaks-info"></div>
-                        </div>
                         <div class="chart-container">
                             <h3>Activities by Type</h3>
                             <canvas id="activity-type-barchart"></canvas>
@@ -210,6 +202,10 @@
                             <canvas id="elevation-histogram"></canvas>
                         </div>
                     </div>
+
+                    <div id="run-top"></div>
+
+                    <div id="run-activities-table"></div>
 
                     <div id="export-buttons" style="display:flex; gap:1em; margin: 1.5em 0;">
                         <button id="download-csv-btn" aria-label="Download CSV">⬇️ Download CSV</button>

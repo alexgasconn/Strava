@@ -14,7 +14,6 @@ export function renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo
     const runs = filteredActivities.filter(a => a.type && a.type.includes('Run'));
 
     renderSummaryCards(runs);
-    renderStreaks(runs);
     renderActivityTypeChart(runs);
     renderMonthlyDistanceChart(runs);
     renderPaceVsDistanceChart(runs);
@@ -23,8 +22,9 @@ export function renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo
     renderRollingMeanDistanceChart(runs);
     renderDistanceVsElevationChart(runs);
     renderElevationHistogram(runs);
-    renderRunsHeatmap(runs);
     renderConsistencyChart(runs);
+    renderTopRuns(runs);
+    renderActivitiesTable(runs);
 }
 
 let charts = {};
@@ -932,5 +932,109 @@ function renderStreaks(runs) {
           </div>
         </div>
       </div>
+    `;
+}
+// --- TOP RUNS SECTION ---
+function renderTopRuns(runs) {
+    const el = document.getElementById("run-top");
+    if (!el) return;
+
+    const topDistance = [...runs]
+        .sort((a, b) => b.distance - a.distance)
+        .slice(0, 10);
+
+    const topElevation = [...runs]
+        .sort((a, b) => b.total_elevation_gain - a.total_elevation_gain)
+        .slice(0, 10);
+
+    const topDuration = [...runs]
+        .sort((a, b) => b.moving_time - a.moving_time)
+        .slice(0, 10);
+
+    const formatTime = s => {
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        return `${h}h ${m}m`;
+    };
+
+    const formatPace = paceDecimal => {
+        if (!paceDecimal || paceDecimal <= 0) return '-';
+        const min = Math.floor(paceDecimal);
+        const sec = Math.round((paceDecimal - min) * 60);
+        return `${min}:${sec.toString().padStart(2, '0')} /km`;
+    };
+
+    el.innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin: 2rem 0;">
+            <div class="top-box" style="padding: 1.5rem; background: #f9f9f9; border-radius: 8px;">
+                <h3 style="margin-top: 0;">🏃 Longest Runs</h3>
+                <ol>
+                    ${topDistance.map(a => `<li>${a.name} – ${(a.distance / 1000).toFixed(1)} km</li>`).join("")}
+                </ol>
+            </div>
+
+            <div class="top-box" style="padding: 1.5rem; background: #f9f9f9; border-radius: 8px;">
+                <h3 style="margin-top: 0;">⛰️ Most Elevation</h3>
+                <ol>
+                    ${topElevation.map(a => `<li>${a.name} – ${a.total_elevation_gain} m</li>`).join("")}
+                </ol>
+            </div>
+
+            <div class="top-box" style="padding: 1.5rem; background: #f9f9f9; border-radius: 8px;">
+                <h3 style="margin-top: 0;">⏱️ Longest Duration</h3>
+                <ol>
+                    ${topDuration.map(a => `<li>${a.name} – ${formatTime(a.moving_time)}</li>`).join("")}
+                </ol>
+            </div>
+        </div>
+    `;
+}
+
+// --- ACTIVITIES TABLE ---
+function renderActivitiesTable(runs) {
+    const el = document.getElementById("run-activities-table");
+    if (!el) return;
+
+    const formatPace = speedMps => {
+        if (!speedMps || speedMps <= 0) return '-';
+        const paceSeconds = 1000 / speedMps;
+        const min = Math.floor(paceSeconds / 60);
+        const sec = Math.round(paceSeconds % 60);
+        return `${min}:${sec.toString().padStart(2, '0')} /km`;
+    };
+
+    const rows = runs
+        .sort((a, b) => new Date(b.start_date) - new Date(a.start_date))
+        .map(a => {
+            const pace = formatPace(a.average_speed);
+            return `
+            <tr>
+                <td>${a.start_date_local.substring(0, 10)}</td>
+                <td>${a.name}</td>
+                <td>${(a.distance / 1000).toFixed(2)}</td>
+                <td>${a.total_elevation_gain || 0}</td>
+                <td>${pace}</td>
+                <td>${a.average_heartrate ? Math.round(a.average_heartrate) : "-"}</td>
+            </tr>
+            `;
+        })
+        .join("");
+
+    el.innerHTML = `
+        <table style="width: 100%; border-collapse: collapse; margin-top: 2rem;">
+            <thead>
+                <tr style="background-color: #f0f0f0;">
+                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Date</th>
+                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Activity</th>
+                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Distance (km)</th>
+                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Elevation (m)</th>
+                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Pace /km</th>
+                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Avg HR</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${rows}
+            </tbody>
+        </table>
     `;
 }

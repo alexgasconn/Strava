@@ -59,6 +59,7 @@ export async function renderWeatherTab(allActivities) {
         console.log(`🌧️ Run: "${run.name}" - Env Difficulty: ${envDifficulty}% (Temp: ${temp}°C, Wind: ${wind}km/h, Rain: ${wr.precipitation}mm)`);
 
         return {
+            run, // Include the full run object for table rendering
             temperature: temp,
             precipitation: wr.precipitation,
             wind_speed: wind,
@@ -183,7 +184,7 @@ export async function renderWeatherTab(allActivities) {
     const runsTableContainer = document.getElementById("runs-table-container");
 
     if (runsTableBody && toggleRunsButton && runsTableContainer) {
-        renderRunsList(runsTableBody, weatherResults); // Pasar el tbody
+        renderRunsList(runsTableBody, combinedWeatherData); // Pass combinedWeatherData with envDifficulty
         toggleRunsButton.addEventListener("click", () => {
             runsTableContainer.classList.toggle("hidden");
             toggleRunsButton.textContent = runsTableContainer.classList.contains("hidden") ? "Show/Hide Runs" : "Hide Runs";
