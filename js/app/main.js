@@ -1,9 +1,4 @@
 // js/app/main.js
-import { injectSpeedInsights } from '@vercel/speed-insights';
-
-// Initialize Vercel Speed Insights for performance monitoring
-injectSpeedInsights();
-
 import { redirectToStrava, logout, handleAuth } from './auth.js';
 import { setupDashboard, showLoading, hideLoading, handleError, } from './ui.js';
 import {
