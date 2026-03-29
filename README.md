@@ -201,4 +201,58 @@ Live demo: **[https://stravastats.vercel.app/](https://stravastats.vercel.app/)*
 
 GitHub repo: **[https://github.com/alexgasconn/strava-stats](https://github.com/alexgasconn/strava-stats)**
 
+---
+
+## Performance Monitoring with Vercel Speed Insights
+
+To monitor and optimize dashboard performance, the app integrates **Vercel Speed Insights** for real-time performance metrics.
+
+### Get Started
+
+To start collecting performance metrics, follow these steps:
+
+#### 1. Install our package
+
+Start by installing `@vercel/speed-insights` in your existing project:
+
+```bash
+npm i @vercel/speed-insights
+```
+
+#### 2. Use injectSpeedInsights()
+
+Import and call the `injectSpeedInsights()` function once on the client side:
+
+```javascript
+import { injectSpeedInsights } from '@vercel/speed-insights';
+
+injectSpeedInsights();
+```
+
+**Note:** For browser environments without a bundler, use the CDN script tag:
+
+```html
+<script defer src="https://cdn.jsdelivr.net/npm/@vercel/speed-insights@latest"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (window.SpeedInsights && window.SpeedInsights.init) {
+      window.SpeedInsights.init();
+    }
+  });
+</script>
+```
+
+#### 3. Deploy & Visit your Site
+
+Deploy your changes and visit the deployment to collect your first data points.
+
+If you don't see data after 30 seconds, please:
+- Check for content blockers in your browser
+- Try navigating between pages on your site
+- Check browser console for any errors
+
+For full examples and further reference, please refer to the [Vercel Speed Insights documentation](https://vercel.com/docs/speed-insights).
+
+---
+
 The app is actively evolving. Feedback is welcome through the repo.

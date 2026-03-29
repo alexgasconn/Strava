@@ -14,7 +14,13 @@
 
   <!-- Vercel Analytics & Speed Insights -->
   <script defer src="/_vercel/insights/script.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/@vercel/speed-insights@1.0.11"></script>
+  <!-- Polyfill for module (CommonJS compatibility in browser) -->
+  <script>
+    if (typeof module === 'undefined') {
+      window.module = { exports: {} };
+    }
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@vercel/speed-insights@latest"></script>
   <script defer>
     // Fallback: Manual Speed Insights initialization
     document.addEventListener('DOMContentLoaded', function() {
