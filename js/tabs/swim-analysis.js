@@ -613,15 +613,22 @@ export function renderConsistencyChart(swims) {
             durationValues[Math.floor(0.9 * durationValues.length)]
         ]
         : [0.25, 0.5, 0.75, 1.25, 2]; // horas
+    
+    // Obtener fecha mínima de las actividades
+    const minDate = new Date(
+        Math.min(...swims.map(a => new Date(a.start_date_local)))
+    );
 
     // Crear CalHeatmap con configuración correcta
     const cal = new CalHeatmap();
-    const today = new Date();
+    
+    // Año basado en los datos
+    const startOfYear = new Date(minDate.getFullYear(), 0, 1);
 
-    // Calcular el primer lunes del año
-    const startOfYear = new Date(today.getFullYear(), 0, 1);
-    const dayOfWeek = startOfYear.getDay(); // 0 = domingo, 1 = lunes, ...
+    // Primer lunes del año
+    const dayOfWeek = startOfYear.getDay(); // 0=domingo
     const daysUntilMonday = dayOfWeek === 0 ? 1 : (8 - dayOfWeek) % 7;
+
     const firstMonday = new Date(startOfYear);
     firstMonday.setDate(startOfYear.getDate() + daysUntilMonday);
 
