@@ -3463,6 +3463,17 @@ body {
     margin-top: 1rem;
 }
 
+.pmc-explainer-profile {
+    grid-column: 1 / -1;
+    padding: 0.75rem 0.9rem;
+    border-radius: 10px;
+    background: #fff6f1;
+    border: 1px solid #ffdcca;
+    color: #6c4a37;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
 .pmc-explainer-card {
     border: 1px solid #ececec;
     border-radius: 12px;

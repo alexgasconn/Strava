@@ -81,6 +81,69 @@ function getSportKey(type = '') {
     return 'Other';
 }
 
+function getValidLoadActivities(activities) {
+    return activities
+        .filter(activity =>
+            activity.tss != null &&
+            activity.atl != null &&
+            activity.ctl != null &&
+            activity.tsb != null &&
+            activity.injuryRisk != null
+        )
+        .sort((a, b) => new Date(a.start_date_local || 0) - new Date(b.start_date_local || 0));
+}
+
+function toDisplayTsb(rawTsb) {
+    return -(rawTsb || 0);
+}
+
+function percentileRank(values, value) {
+    const filtered = values.filter(v => Number.isFinite(v)).sort((a, b) => a - b);
+    if (!filtered.length) return 0.5;
+    let count = 0;
+    for (const current of filtered) {
+        if (current <= value) count += 1;
+    }
+    return count / filtered.length;
+}
+
+function getPmcProfile(loadActivities) {
+    const counts = loadActivities.reduce((acc, activity) => {
+        const key = getSportKey(activity.type || '');
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+    }, {});
+
+    const total = loadActivities.length || 1;
+    const sports = ['Run', 'Ride', 'Swim', 'Gym'];
+    const rankedSports = sports
+        .map(name => ({ name, count: counts[name] || 0, share: (counts[name] || 0) / total }))
+        .sort((a, b) => b.count - a.count);
+
+    const activeSports = rankedSports.filter(sport => sport.share >= 0.15);
+    const dominantSport = rankedSports[0]?.name || 'Run';
+    const gymShare = rankedSports.find(sport => sport.name === 'Gym')?.share || 0;
+
+    let label = `${dominantSport}-focused endurance`;
+    let thresholds = { deepFatigue: -18, fatigue: -8, balanced: 6, fresh: 18 };
+
+    if (activeSports.length >= 3) {
+        label = 'multisport endurance';
+        thresholds = { deepFatigue: -20, fatigue: -10, balanced: 6, fresh: 18 };
+    } else if (gymShare >= 0.25 && activeSports.length >= 2) {
+        label = 'hybrid endurance + gym';
+        thresholds = { deepFatigue: -14, fatigue: -6, balanced: 6, fresh: 16 };
+    } else if (dominantSport === 'Ride') {
+        thresholds = { deepFatigue: -24, fatigue: -12, balanced: 6, fresh: 20 };
+    } else if (dominantSport === 'Swim') {
+        thresholds = { deepFatigue: -16, fatigue: -8, balanced: 7, fresh: 16 };
+    } else if (dominantSport === 'Run') {
+        thresholds = { deepFatigue: -18, fatigue: -8, balanced: 5, fresh: 18 };
+    }
+
+    return { label, thresholds, dominantSport, rankedSports };
+}
+
 function renderDashboardTopline(filteredActivities, recentActivities, recentRuns, startDate, dateFilterFrom, dateFilterTo) {
     const container = document.getElementById('dashboard-topline');
     if (!container) return;
@@ -124,34 +187,35 @@ function renderDashboardTopline(filteredActivities, recentActivities, recentRuns
     `;
 }
 
-function describeCtl(value) {
-    if (value >= 80) return 'Very high long-term load. This usually means a large accumulated base and strong training tolerance.';
-    if (value >= 50) return 'Solid long-term load. You are carrying a meaningful aerobic base built over recent weeks.';
-    if (value >= 25) return 'Developing base. Training is accumulating, but fitness reserve is still building.';
-    return 'Low long-term load. This often means a restart, a recovery period, or limited recent consistency.';
+function describeCtl(value, context) {
+    if (context.ctlPercentile >= 0.85) return `High for your recent ${context.profile.label} baseline. You are near the top of your own rolling fitness range.`;
+    if (context.ctlPercentile >= 0.6) return `Solid for your recent ${context.profile.label} baseline. You are carrying a meaningful amount of accumulated work.`;
+    if (context.ctlPercentile >= 0.35) return `Moderate for your recent ${context.profile.label} baseline. Fitness is building, but not near your recent ceiling.`;
+    return `Low versus your recent ${context.profile.label} history. This usually means rebuilding, recovery, or lower training consistency.`;
 }
 
-function describeAtl(value, ctlValue) {
+function describeAtl(value, ctlValue, context) {
     const delta = value - ctlValue;
-    if (delta >= 15) return 'Recent load is far above your base. Expect heavy short-term fatigue and slower recovery.';
-    if (delta >= 5) return 'Recent load is above your base. This is a normal sign of a hard block or overload week.';
-    if (delta > -5) return 'Recent load is close to your base. Fatigue is present but broadly under control.';
-    return 'Recent load is below your base. You are relatively fresh, tapering, or simply doing less than usual.';
+    if (delta >= 18 || context.atlPercentile >= 0.9) return `Acute load is very high for your ${context.profile.label} pattern. Short-term fatigue should be expected.`;
+    if (delta >= 8 || context.atlPercentile >= 0.7) return `Acute load is meaningfully above base. This looks like a hard week or overload block.`;
+    if (delta > -4) return 'Acute load is close to your base. That usually means manageable fatigue and normal training continuity.';
+    return 'Acute load is below base. You are probably freshening up, tapering, or just carrying a lighter few days.';
 }
 
-function describeTsb(value) {
-    if (value <= -20) return 'Deeply negative form. Useful only for short overload phases; injury and burnout risk rise here.';
-    if (value <= -10) return 'Negative form. You are carrying fatigue from training and probably not fully fresh.';
-    if (value <= 5) return 'Balanced form. This is often a productive training zone for normal weeks.';
-    if (value <= 20) return 'Positive form. You are fresh enough for testing, intensity, or racing.';
-    return 'Very positive form. Freshness is high, but if it lasts too long it can signal detraining.';
+function describeTsb(value, context) {
+    const { deepFatigue, fatigue, balanced, fresh } = context.profile.thresholds;
+    if (value <= deepFatigue) return `Deep fatigue for a ${context.profile.label} profile. This can be useful briefly, but recovery cost and injury exposure rise here.`;
+    if (value <= fatigue) return `You are carrying notable fatigue for a ${context.profile.label} profile. Good for load accumulation, not ideal for peak performance.`;
+    if (value <= balanced) return `This is a productive training zone for your current ${context.profile.label} mix: enough stress to adapt without looking excessively buried.`;
+    if (value <= fresh) return `Fresh and usable. For your current profile this is the range where testing, intensity or racing tends to feel better.`;
+    return `Very fresh for your recent profile. If it persists, it may reflect under-loading rather than ideal tapering.`;
 }
 
-function describeInjuryRisk(value) {
-    if (value >= 75) return 'Very high estimated risk. The model reads your load balance as strongly overloaded.';
-    if (value >= 50) return 'Elevated estimated risk. Recovery quality matters and more load here should be deliberate.';
-    if (value >= 25) return 'Moderate estimated risk. Load is meaningful but not yet in the red zone.';
-    return 'Low estimated risk. Current balance looks manageable for most normal training days.';
+function describeInjuryRisk(value, context) {
+    if (value >= 75 || context.riskPercentile >= 0.9) return 'Very high estimated risk relative to your recent training history. More load here should be a conscious decision, not background noise.';
+    if (value >= 50 || context.riskPercentile >= 0.7) return 'Elevated estimated risk. Recovery quality, sleep and spacing of hard sessions matter more than usual.';
+    if (value >= 25) return 'Moderate estimated risk. Load is present, but still short of the zone where the model becomes strongly defensive.';
+    return 'Low estimated risk relative to your recent pattern. Current load balance looks broadly manageable.';
 }
 
 function renderPMCExplanation(sortedActivities) {
@@ -164,12 +228,22 @@ function renderPMCExplanation(sortedActivities) {
     }
 
     const last = sortedActivities[sortedActivities.length - 1];
+    const profile = getPmcProfile(sortedActivities);
     const ctlValue = last.ctl || 0;
     const atlValue = last.atl || 0;
-    const tsbValue = last.tsb || 0;
+    const tsbValue = toDisplayTsb(last.tsb || 0);
     const injuryRiskValue = last.injuryRisk || 0;
+    const context = {
+        profile,
+        ctlPercentile: percentileRank(sortedActivities.map(activity => activity.ctl), ctlValue),
+        atlPercentile: percentileRank(sortedActivities.map(activity => activity.atl), atlValue),
+        riskPercentile: percentileRank(sortedActivities.map(activity => activity.injuryRisk), injuryRiskValue)
+    };
 
     container.innerHTML = `
+        <div class="pmc-explainer-profile">
+            Interpreting the PMC as a <strong>${profile.label}</strong> profile based on your recent TSS-bearing activities.
+        </div>
         <div class="pmc-explainer-card pmc-explainer-ctl">
             <div class="pmc-explainer-header">
                 <span class="pmc-dot"></span>
@@ -177,7 +251,7 @@ function renderPMCExplanation(sortedActivities) {
                 <span class="pmc-explainer-value">${ctlValue.toFixed(1)}</span>
             </div>
             <p>Fitness or long-term load. It is an exponentially weighted view of roughly the last 42 days of TSS.</p>
-            <small>${describeCtl(ctlValue)}</small>
+            <small>${describeCtl(ctlValue, context)}</small>
         </div>
         <div class="pmc-explainer-card pmc-explainer-atl">
             <div class="pmc-explainer-header">
@@ -186,7 +260,7 @@ function renderPMCExplanation(sortedActivities) {
                 <span class="pmc-explainer-value">${atlValue.toFixed(1)}</span>
             </div>
             <p>Fatigue or short-term load. It reacts quickly because it weights roughly the last 7 days of TSS.</p>
-            <small>${describeAtl(atlValue, ctlValue)}</small>
+            <small>${describeAtl(atlValue, ctlValue, context)}</small>
         </div>
         <div class="pmc-explainer-card pmc-explainer-tsb">
             <div class="pmc-explainer-header">
@@ -195,7 +269,7 @@ function renderPMCExplanation(sortedActivities) {
                 <span class="pmc-explainer-value">${tsbValue.toFixed(1)}</span>
             </div>
             <p>Form or freshness. It is CTL minus ATL, so negative values mean fatigue and positive values mean freshness.</p>
-            <small>${describeTsb(tsbValue)}</small>
+            <small>${describeTsb(tsbValue, context)}</small>
         </div>
         <div class="pmc-explainer-card pmc-explainer-risk">
             <div class="pmc-explainer-header">
@@ -204,7 +278,7 @@ function renderPMCExplanation(sortedActivities) {
                 <span class="pmc-explainer-value">${injuryRiskValue.toFixed(0)}%</span>
             </div>
             <p>App estimate derived from load balance. It is not medical risk, only a warning proxy based on how deep fatigue gets.</p>
-            <small>${describeInjuryRisk(injuryRiskValue)}</small>
+            <small>${describeInjuryRisk(injuryRiskValue, context)}</small>
         </div>
     `;
 }
@@ -262,7 +336,7 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
 
     renderDashboardTopline(filteredActivities, recentActivities, recentRuns, startDate, dateFilterFrom, dateFilterTo);
 
-    renderTrainingLoadMetrics(recentRuns, allActivities);
+    renderTrainingLoadMetrics(recentActivities);
     renderPMCChart(recentActivities, allActivities);
     renderRecentActivitiesPreview(recentRuns);
     renderDashboardSummary(recentRuns, midRecentRuns);
@@ -391,36 +465,32 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
  * Renders Training Load Metrics (CTL, ATL, TSB, Injury Risk, Load)
  * Uses preprocessed activities with .tss, .atl, .ctl, .tsb, .injuryRisk
  */
-function renderTrainingLoadMetrics(runs, allActivities) {
+function renderTrainingLoadMetrics(activities) {
     const container = document.getElementById('training-load-metrics');
     if (!container) return;
 
     const now = new Date();
-    const validRuns = runs.filter(r =>
-        r.tss != null &&
-        r.atl != null &&
-        r.ctl != null &&
-        r.tsb != null &&
-        r.injuryRisk != null
-    );
+    const validActivities = getValidLoadActivities(activities);
 
-    if (validRuns.length === 0) {
+    if (validActivities.length === 0) {
         container.innerHTML = `<p style="color:#999;">No processed training load data.</p>`;
         return;
     }
 
+    const profile = getPmcProfile(validActivities);
+
     // Latest values
-    const last = validRuns[validRuns.length - 1];
+    const last = validActivities[validActivities.length - 1];
     const lastCTL = last.ctl;
     const lastATL = last.atl;
-    const lastTSB = last.tsb;
+    const lastTSB = toDisplayTsb(last.tsb);
     const lastInjuryRisk = last.injuryRisk;
 
     // Total load in visible range
-    const totalLoad = validRuns.reduce((sum, r) => sum + r.tss, 0).toFixed(0);
+    const totalLoad = validActivities.reduce((sum, r) => sum + r.tss, 0).toFixed(0);
 
     // Weekly load change (last 14 days)
-    const recent = validRuns.filter(r => {
+    const recent = validActivities.filter(r => {
         const actDate = new Date(r.start_date_local);
         return (now - actDate) / 86400000 <= 14;
     });
@@ -433,27 +503,28 @@ function renderTrainingLoadMetrics(runs, allActivities) {
     const loadChangePct = loadWeek2 > 0 ? ((loadWeek1 - loadWeek2) / loadWeek2) * 100 : 0;
     const trend = loadChangePct > 0 ? 'Up' : 'Down';
     const tsbColor = lastTSB > 0 ? '#2ECC40' : '#FF4136';
+    const fatigueThresholds = profile.thresholds;
 
     // Smart message
     let message = '';
     let color = '#333';
     let emoji = '';
 
-    if (lastTSB < -15) {
+    if (lastTSB < fatigueThresholds.deepFatigue) {
         emoji = 'Warning';
-        message = 'High fatigue — rest needed';
+        message = `Deep fatigue for your ${profile.label} mix — recovery is the priority`;
         color = '#FF4136';
-    } else if (lastTSB < -5) {
+    } else if (lastTSB < fatigueThresholds.fatigue) {
         emoji = 'Warning';
-        message = 'Moderate fatigue — monitor load';
+        message = `Productive overload for your ${profile.label} mix — monitor recovery closely`;
         color = '#FF851B';
-    } else if (lastTSB <= 5) {
+    } else if (lastTSB <= fatigueThresholds.balanced) {
         emoji = 'Checkmark';
-        message = 'Optimal balance';
+        message = `Balanced load for your ${profile.label} mix`;
         color = '#0074D9';
     } else {
         emoji = 'Muscle';
-        message = 'Ready for intensity';
+        message = `Fresh enough for intensity or a race-specific session`;
         color = '#2ECC40';
     }
 
@@ -468,15 +539,15 @@ function renderTrainingLoadMetrics(runs, allActivities) {
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:0.8rem;">
                 <div>
                     <p style="margin:0;font-size:1.4rem;font-weight:bold;color:#0074D9;">${lastCTL.toFixed(1)}</p>
-                    <small style="color:#666;">CTL (Chronic)</small>
+                    <small style="color:#666;">CTL (Fitness)</small>
                 </div>
                 <div>
                     <p style="margin:0;font-size:1.4rem;font-weight:bold;color:#FF4136;">${lastATL.toFixed(1)}</p>
-                    <small style="color:#666;">ATL (Acute)</small>
+                    <small style="color:#666;">ATL (Fatigue)</small>
                 </div>
                 <div>
                     <p style="margin:0;font-size:1.4rem;font-weight:bold;color:${tsbColor};">${lastTSB.toFixed(1)}</p>
-                    <small style="color:#666;">TSB (Balance)</small>
+                    <small style="color:#666;">TSB (Form)</small>
                 </div>
                 <div>
                     <p style="margin:0;font-size:1.4rem;font-weight:bold;color:#8E44AD;">${totalLoad}</p>
@@ -491,6 +562,9 @@ function renderTrainingLoadMetrics(runs, allActivities) {
             </div>
             <p style="text-align:center;margin:0.8rem 0 0.4rem;font-weight:600;color:${color};">
                 ${emoji} ${message}
+            </p>
+            <p style="text-align:center;margin:0 0 0.45rem;color:#666;font-size:0.9rem;">
+                Based on all TSS-bearing activities in this range, not just runs.
             </p>
             <p style="text-align:center;margin:0;font-weight:600;color:#e74c3c;">
                 Estimated Injury Risk: ~${lastInjuryRisk.toFixed(0)}%
@@ -540,7 +614,7 @@ function renderPMCChart(runs) {
 
     const ctl = sorted.map(r => r.ctl);
     const atl = sorted.map(r => r.atl);
-    const tsb = sorted.map(r => r.tsb);
+    const tsb = sorted.map(r => toDisplayTsb(r.tsb));
     const injuryRisk = sorted.map(r => r.injuryRisk);
     const maxLoadValue = Math.max(...ctl, ...atl, 10);
     const minTsb = Math.min(...tsb, -10);
