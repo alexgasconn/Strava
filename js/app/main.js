@@ -211,15 +211,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function loadFilterState() {
         const saved = localStorage.getItem('dashboard_filters');
+        let filters = {};
         if (saved) {
-            const filters = JSON.parse(saved);
-            dateFilterFrom = filters.dateFilterFrom || null;
-            dateFilterTo = filters.dateFilterTo || null;
-            athleteSportFilter = filters.athleteSportFilter || 'all';
-            athleteDataType = filters.athleteDataType || 'time';
-            if (dateFromEl && dateFilterFrom) dateFromEl.value = dateFilterFrom;
-            if (dateToEl && dateFilterTo) dateToEl.value = dateFilterTo;
+            try {
+                filters = JSON.parse(saved) || {};
+            } catch {
+                filters = {};
+            }
         }
+
+        // Always start with no date filter on app load.
+        dateFilterFrom = null;
+        dateFilterTo = null;
+        athleteSportFilter = filters.athleteSportFilter || 'all';
+        athleteDataType = filters.athleteDataType || 'time';
+
+        syncDateInputs();
+
+        // Persist the reset so a hard refresh also starts unfiltered.
+        localStorage.setItem('dashboard_filters', JSON.stringify({
+            dateFilterFrom,
+            dateFilterTo,
+            athleteSportFilter,
+            athleteDataType
+        }));
     }
 
     // --- YEAR FILTER BUTTONS ---
