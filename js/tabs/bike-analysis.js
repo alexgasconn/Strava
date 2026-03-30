@@ -23,6 +23,16 @@ function getBikeType(r) {
     return "road";
 }
 
+function getBikeTypeLabel(r) {
+    const bikeType = getBikeType(r);
+    if (bikeType === "mtb") return "MTB";
+    if (bikeType === "gravel") return "Gravel";
+    if (bikeType === "electric") return "Electric";
+    if (bikeType === "indoor") return "Indoor";
+    if (bikeType === "road") return "Road";
+    return "Outdoor";
+}
+
 
 // ------------------------
 // MAIN ENTRY
@@ -412,8 +422,13 @@ function renderTopActivities(rides) {
         .sort((a, b) => b.total_elevation_gain - a.total_elevation_gain)
         .slice(0, 10);
 
-    const topDuration = [...rides]
-        .sort((a, b) => b.moving_time - a.moving_time)
+    const topFastest = [...rides]
+        .filter(a => a.moving_time > 0 && a.distance > 0)
+        .map(a => ({
+            ...a,
+            speed: (a.distance / 1000) / (a.moving_time / 3600)
+        }))
+        .sort((a, b) => b.speed - a.speed)
         .slice(0, 10);
 
     const formatTime = s => {
@@ -426,7 +441,9 @@ function renderTopActivities(rides) {
 
     el.innerHTML = `
 
-        <div class="top-box">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin: 2rem 0;">
+
+        <div class="top-box" style="padding: 1.5rem; background: #f9f9f9; border-radius: 8px;">
 
             <h3>Longest Rides</h3>
 
@@ -438,7 +455,7 @@ function renderTopActivities(rides) {
 
         </div>
 
-        <div class="top-box">
+        <div class="top-box" style="padding: 1.5rem; background: #f9f9f9; border-radius: 8px;">
 
             <h3>Most Elevation</h3>
 
@@ -450,15 +467,17 @@ function renderTopActivities(rides) {
 
         </div>
 
-        <div class="top-box">
+        <div class="top-box" style="padding: 1.5rem; background: #f9f9f9; border-radius: 8px;">
 
-            <h3>Longest Duration</h3>
+            <h3>Fastest Rides</h3>
 
             <ol>
-                ${topDuration.map(a =>
-        `<li>${a.name} – ${formatTime(a.moving_time)}</li>`
+                ${topFastest.map(a =>
+        `<li>${a.name} – ${a.speed.toFixed(1)} km/h</li>`
     ).join("")}
             </ol>
+
+        </div>
 
         </div>
     `;
@@ -480,12 +499,19 @@ function renderActivitiesTable(rides) {
             const speed =
                 (a.distance / 1000) / (a.moving_time / 3600);
 
+            const elevPerKm =
+                a.distance > 0
+                    ? ((a.total_elevation_gain || 0) / (a.distance / 1000)).toFixed(1)
+                    : "-";
+
             return `
             <tr>
                 <td>${a.start_date_local.substring(0, 10)}</td>
                 <td>${a.name}</td>
+                <td>${getBikeTypeLabel(a)}</td>
                 <td>${(a.distance / 1000).toFixed(1)}</td>
                 <td>${a.total_elevation_gain || 0}</td>
+                <td>${elevPerKm}</td>
                 <td>${speed.toFixed(1)}</td>
                 <td>${a.average_watts || "-"}</td>
             </tr>
@@ -502,8 +528,10 @@ function renderActivitiesTable(rides) {
             <tr>
                 <th>Date</th>
                 <th>Activity</th>
+                <th>Type</th>
                 <th>km</th>
                 <th>Elev (m)</th>
+                <th>Elev/km</th>
                 <th>km/h</th>
                 <th>W</th>
             </tr>
