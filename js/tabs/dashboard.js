@@ -97,10 +97,6 @@ function toDisplayTsb(rawTsb) {
     return rawTsb || 0;
 }
 
-function toRiskPercent(rawRisk) {
-    return (rawRisk || 0) * 100;
-}
-
 function percentileRank(values, value) {
     const filtered = values.filter(v => Number.isFinite(v)).sort((a, b) => a - b);
     if (!filtered.length) return 0.5;
@@ -216,9 +212,9 @@ function describeTsb(value, context) {
 }
 
 function describeInjuryRisk(value, context) {
-    if (value >= 75 || context.riskPercentile >= 0.9) return 'Very high estimated risk relative to your recent training history. More load here should be a conscious decision, not background noise.';
-    if (value >= 50 || context.riskPercentile >= 0.7) return 'Elevated estimated risk. Recovery quality, sleep and spacing of hard sessions matter more than usual.';
-    if (value >= 25) return 'Moderate estimated risk. Load is present, but still short of the zone where the model becomes strongly defensive.';
+    if (value >= 0.75 || context.riskPercentile >= 0.9) return 'Very high estimated risk relative to your recent training history. More load here should be a conscious decision, not background noise.';
+    if (value >= 0.5 || context.riskPercentile >= 0.7) return 'Elevated estimated risk. Recovery quality, sleep and spacing of hard sessions matter more than usual.';
+    if (value >= 0.25) return 'Moderate estimated risk. Load is present, but still short of the zone where the model becomes strongly defensive.';
     return 'Low estimated risk relative to your recent pattern. Current load balance looks broadly manageable.';
 }
 
@@ -236,7 +232,7 @@ function renderPMCExplanation(sortedActivities) {
     const ctlValue = last.ctl || 0;
     const atlValue = last.atl || 0;
     const tsbValue = toDisplayTsb(last.tsb || 0);
-    const injuryRiskValue = toRiskPercent(last.injuryRisk);
+    const injuryRiskValue = last.injuryRisk || 0;
     const context = {
         profile,
         ctlPercentile: percentileRank(sortedActivities.map(activity => activity.ctl), ctlValue),
@@ -279,7 +275,7 @@ function renderPMCExplanation(sortedActivities) {
             <div class="pmc-explainer-header">
                 <span class="pmc-dot"></span>
                 <strong>Injury Risk</strong>
-                <span class="pmc-explainer-value">${injuryRiskValue.toFixed(0)}%</span>
+                <span class="pmc-explainer-value">${injuryRiskValue.toFixed(3)}</span>
             </div>
             <p>App estimate derived from load balance. It is not medical risk, only a warning proxy based on how deep fatigue gets.</p>
             <small>${describeInjuryRisk(injuryRiskValue, context)}</small>
@@ -387,7 +383,7 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
     const avgVO2 = avg(lastRuns.filter(r => r.vo2max).map(r => r.vo2max));
     const avgPace = avg(lastRuns.map(r => (r.moving_time / 60) / (r.distance / 1000)));
     const avgDistance = totalDistance / lastRuns.length || 0;
-    const injuryRisk = avg(lastRuns.map(r => toRiskPercent(r.injuryRisk)));
+    const injuryRisk = avg(lastRuns.map(r => r.injuryRisk || 0));
 
     // --- Métricas previas ---
     const prevDistance = sum(previousLastRuns, km);
@@ -397,7 +393,7 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
     const prevVO2 = avg(previousLastRuns.filter(r => r.vo2max).map(r => r.vo2max));
     const prevPace = avg(previousLastRuns.map(r => (r.moving_time / 60) / (r.distance / 1000)));
     const prevAvgDistance = prevDistance / previousLastRuns.length || 0;
-    const prevInjuryRisk = avg(previousLastRuns.map(r => toRiskPercent(r.injuryRisk)));
+    const prevInjuryRisk = avg(previousLastRuns.map(r => r.injuryRisk || 0));
 
     // --- Cambios porcentuales ---
     const distChange = calcChange(totalDistance, prevDistance);
@@ -438,7 +434,7 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
 
         <div class="card">
             <h3>⚠️ Injury Risk</h3>
-            <p style="font-size:2rem;font-weight:bold;color:#FF4136;">${injuryRisk.toFixed(1)}%</p>
+            <p style="font-size:2rem;font-weight:bold;color:#FF4136;">${injuryRisk.toFixed(3)}</p>
             <small><span style="color:${utils.metricColor('injury', injuryRiskChange)};">${utils.metricIcon('injury', injuryRiskChange)} ${injuryRiskChange}%</span></small>
         </div>
 
@@ -488,7 +484,7 @@ function renderTrainingLoadMetrics(activities) {
     const lastCTL = last.ctl;
     const lastATL = last.atl;
     const lastTSB = toDisplayTsb(last.tsb);
-    const lastInjuryRisk = toRiskPercent(last.injuryRisk);
+    const lastInjuryRisk = last.injuryRisk || 0;
 
     // Total load in visible range
     const totalLoad = validActivities.reduce((sum, r) => sum + r.tss, 0).toFixed(0);
@@ -571,7 +567,7 @@ function renderTrainingLoadMetrics(activities) {
                 Based on all TSS-bearing activities in this range, not just runs.
             </p>
             <p style="text-align:center;margin:0;font-weight:600;color:#e74c3c;">
-                Estimated Injury Risk: ~${lastInjuryRisk.toFixed(0)}%
+                Estimated Injury Risk: ~${lastInjuryRisk.toFixed(3)}
             </p>
         </div>
     `;
@@ -619,13 +615,13 @@ function renderPMCChart(runs) {
     const ctl = sorted.map(r => r.ctl);
     const atl = sorted.map(r => r.atl);
     const tsb = sorted.map(r => toDisplayTsb(r.tsb));
-    const injuryRisk = sorted.map(r => toRiskPercent(r.injuryRisk));
+    const injuryRisk = sorted.map(r => r.injuryRisk || 0);
     const maxLoadValue = Math.max(...ctl, ...atl, 10);
     const minTsb = Math.min(...tsb, -10);
     const maxTsb = Math.max(...tsb, 10);
     const tsbPadding = Math.max(6, Math.ceil((maxTsb - minTsb) * 0.12));
     const observedRiskMax = Math.max(...injuryRisk, 0);
-    const riskAxisMax = Math.min(100, Math.max(10, Math.ceil((observedRiskMax * 1.2) / 5) * 5));
+    const riskAxisMax = Math.min(1, Math.max(0.1, Math.ceil((observedRiskMax * 1.2) / 0.05) * 0.05));
 
     renderPMCExplanation(sorted);
 
@@ -671,7 +667,7 @@ function renderPMCChart(runs) {
                     hidden: false
                 },
                 {
-                    label: 'Injury Risk %',
+                    label: 'Injury Risk',
                     data: injuryRisk,
                     borderColor: '#B83B5E',
                     backgroundColor: 'rgba(184, 59, 94, 0.08)',
@@ -696,8 +692,8 @@ function renderPMCChart(runs) {
                     intersect: false,
                     callbacks: {
                         label(context) {
-                            const suffix = context.dataset.yAxisID === 'y2' ? '%' : '';
-                            return `${context.dataset.label}: ${context.parsed.y.toFixed(1)}${suffix}`;
+                            const decimals = context.dataset.yAxisID === 'y2' ? 3 : 1;
+                            return `${context.dataset.label}: ${context.parsed.y.toFixed(decimals)}`;
                         }
                     }
                 },
@@ -740,7 +736,7 @@ function renderPMCChart(runs) {
                 y2: {
                     type: 'linear',
                     position: 'right',
-                    title: { display: true, text: 'Risk %' },
+                    title: { display: true, text: 'Risk' },
                     grid: { drawOnChartArea: false },
                     min: 0,
                     max: riskAxisMax
