@@ -674,7 +674,7 @@ async function fetchActivityDetails(activityId, authPayload) {
  * Fetches activity stream data (distance, time, HR, altitude, cadence)
  */
 async function fetchActivityStreams(activityId, authPayload) {
-    const streamTypes = 'distance,time,heartrate,altitude,cadence,watts';
+    const streamTypes = 'distance,time,heartrate,altitude,cadence,watts,velocity_smooth';
     const result = await fetchFromApi(`/api/strava-streams?id=${activityId}&type=${streamTypes}`, authPayload);
     return result.streams;
 }
@@ -1510,6 +1510,7 @@ function renderClassifierResults(classificationData) {
     if (!container) return;
 
     const results = classificationData ? classificationData.top : null;
+    const confidence = classificationData?.confidence || null;
 
     if (!results || results.length === 0) {
         container.innerHTML = '<p>Could not classify this run.</p>';
@@ -1528,7 +1529,21 @@ function renderClassifierResults(classificationData) {
             </div>`;
     }).join('');
 
-    container.innerHTML = resultsHtml;
+    const confidenceColor = confidence?.level === 'high'
+        ? '#166534'
+        : confidence?.level === 'medium'
+            ? '#92400e'
+            : '#991b1b';
+
+    const confidenceHtml = confidence
+        ? `<div style="margin:0 0 10px 0; padding:8px 10px; border-radius:8px; background:#f8fafc; border:1px solid #e2e8f0; font-size:12px; color:#334155;">
+                <div style="font-weight:700; color:${confidenceColor};">Confidence: ${Math.round(confidence.score * 100)}% (${confidence.level})</div>
+                <div>Feature coverage: ${confidence.coverage}% · Top-class margin: ${confidence.margin}%</div>
+                ${confidence.missingFeatures?.length ? `<div style="margin-top:4px; color:#64748b;">Missing/weak signals: ${confidence.missingFeatures.join(', ')}</div>` : ''}
+           </div>`
+        : '';
+
+    container.innerHTML = confidenceHtml + resultsHtml;
 }
 
 // =====================================================
@@ -1656,7 +1671,7 @@ function initAdvancedAnalysis() {
     const btn = document.getElementById('advanced-analysis-btn');
     if (!btn) return;
 
-    btn.addEventListener('click', async function() {
+    btn.addEventListener('click', async function () {
         const mode = document.getElementById('analysis-mode')?.value || 'normal';
         const container = document.getElementById('analysis-results-container');
         const loading = document.getElementById('analysis-loading');
