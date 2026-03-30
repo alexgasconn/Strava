@@ -3377,18 +3377,8 @@ body {
 
 .dashboard-topline {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 0.8rem;
-}
-
-.dashboard-meta-pill {
-    background: #fff;
-    border: 1px solid #eee;
-    border-radius: 999px;
-    padding: 0.55rem 0.9rem;
-    font-size: 0.82rem;
-    color: #444;
-    align-self: center;
 }
 
 .dashboard-mini-card {
@@ -3425,6 +3415,8 @@ body {
 
 .dashboard-mini-card small {
     color: #777;
+    display: block;
+    line-height: 1.35;
 }
 
 .dashboard-summary-grid {
@@ -3462,6 +3454,71 @@ body {
     border-color: #fc5200;
     color: #fff;
     box-shadow: 0 3px 10px rgba(252, 82, 0, 0.24);
+}
+
+.pmc-explainer {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.9rem;
+    margin-top: 1rem;
+}
+
+.pmc-explainer-card {
+    border: 1px solid #ececec;
+    border-radius: 12px;
+    padding: 0.95rem 1rem;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfbfb 100%);
+}
+
+.pmc-explainer-header {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin-bottom: 0.55rem;
+    color: #222;
+}
+
+.pmc-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: currentColor;
+    flex: 0 0 auto;
+}
+
+.pmc-explainer-value {
+    margin-left: auto;
+    font-weight: 700;
+    color: #111;
+}
+
+.pmc-explainer-card p {
+    margin: 0 0 0.45rem;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    color: #444;
+}
+
+.pmc-explainer-card small {
+    display: block;
+    color: #666;
+    line-height: 1.45;
+}
+
+.pmc-explainer-ctl {
+    color: #0074D9;
+}
+
+.pmc-explainer-atl {
+    color: #FF7A45;
+}
+
+.pmc-explainer-tsb {
+    color: #2ECC40;
+}
+
+.pmc-explainer-risk {
+    color: #B83B5E;
 }
 
 @media (max-width: 840px) {

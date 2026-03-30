@@ -77,6 +77,7 @@ function getSportKey(type = '') {
     if (type.includes('Run')) return 'Run';
     if (type.includes('Ride')) return 'Ride';
     if (type.includes('Swim')) return 'Swim';
+    if (type.includes('WeightTraining') || type.includes('Workout')) return 'Gym';
     return 'Other';
 }
 
@@ -94,26 +95,16 @@ function renderDashboardTopline(filteredActivities, recentActivities, recentRuns
         return acc;
     }, {});
 
-    const sportMixText = ['Run', 'Ride', 'Swim']
+    const sportMixText = ['Run', 'Ride', 'Swim', 'Gym']
         .filter(key => sportCounts[key])
         .map(key => `${key}: ${sportCounts[key]}`)
         .join(' · ') || 'No recent activities in this period';
 
-    const dateContext = (dateFilterFrom || dateFilterTo)
-        ? `${dateFilterFrom || '...'} → ${dateFilterTo || 'today'}`
-        : `${utils.formatDate(startDate)} → today`;
-
     container.innerHTML = `
-        <div class="dashboard-meta-pill">
-            <strong>Range:</strong> ${getRangeLabel(selectedRangeDays)}
-        </div>
-        <div class="dashboard-meta-pill">
-            <strong>Filter:</strong> ${dateContext}
-        </div>
         <div class="dashboard-mini-card">
             <p class="dashboard-mini-label">Activities</p>
             <p class="dashboard-mini-value">${recentActivities.length}</p>
-            <small>${filteredActivities.length} in current global filter</small>
+            <small>${getRangeLabel(selectedRangeDays)} inside current dashboard view</small>
         </div>
         <div class="dashboard-mini-card">
             <p class="dashboard-mini-label">Volume</p>
@@ -128,7 +119,92 @@ function renderDashboardTopline(filteredActivities, recentActivities, recentRuns
         <div class="dashboard-mini-card dashboard-mini-card-wide">
             <p class="dashboard-mini-label">Sport Mix</p>
             <p class="dashboard-mini-value dashboard-mini-value-small">${sportMixText}</p>
-            <small>Dashboard metrics remain run-focused in this tab</small>
+            <small>PMC and load metrics depend on processed TSS values</small>
+        </div>
+    `;
+}
+
+function describeCtl(value) {
+    if (value >= 80) return 'Very high long-term load. This usually means a large accumulated base and strong training tolerance.';
+    if (value >= 50) return 'Solid long-term load. You are carrying a meaningful aerobic base built over recent weeks.';
+    if (value >= 25) return 'Developing base. Training is accumulating, but fitness reserve is still building.';
+    return 'Low long-term load. This often means a restart, a recovery period, or limited recent consistency.';
+}
+
+function describeAtl(value, ctlValue) {
+    const delta = value - ctlValue;
+    if (delta >= 15) return 'Recent load is far above your base. Expect heavy short-term fatigue and slower recovery.';
+    if (delta >= 5) return 'Recent load is above your base. This is a normal sign of a hard block or overload week.';
+    if (delta > -5) return 'Recent load is close to your base. Fatigue is present but broadly under control.';
+    return 'Recent load is below your base. You are relatively fresh, tapering, or simply doing less than usual.';
+}
+
+function describeTsb(value) {
+    if (value <= -20) return 'Deeply negative form. Useful only for short overload phases; injury and burnout risk rise here.';
+    if (value <= -10) return 'Negative form. You are carrying fatigue from training and probably not fully fresh.';
+    if (value <= 5) return 'Balanced form. This is often a productive training zone for normal weeks.';
+    if (value <= 20) return 'Positive form. You are fresh enough for testing, intensity, or racing.';
+    return 'Very positive form. Freshness is high, but if it lasts too long it can signal detraining.';
+}
+
+function describeInjuryRisk(value) {
+    if (value >= 75) return 'Very high estimated risk. The model reads your load balance as strongly overloaded.';
+    if (value >= 50) return 'Elevated estimated risk. Recovery quality matters and more load here should be deliberate.';
+    if (value >= 25) return 'Moderate estimated risk. Load is meaningful but not yet in the red zone.';
+    return 'Low estimated risk. Current balance looks manageable for most normal training days.';
+}
+
+function renderPMCExplanation(sortedActivities) {
+    const container = document.getElementById('pmc-explainer');
+    if (!container) return;
+
+    if (!sortedActivities.length) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const last = sortedActivities[sortedActivities.length - 1];
+    const ctlValue = last.ctl || 0;
+    const atlValue = last.atl || 0;
+    const tsbValue = last.tsb || 0;
+    const injuryRiskValue = last.injuryRisk || 0;
+
+    container.innerHTML = `
+        <div class="pmc-explainer-card pmc-explainer-ctl">
+            <div class="pmc-explainer-header">
+                <span class="pmc-dot"></span>
+                <strong>CTL</strong>
+                <span class="pmc-explainer-value">${ctlValue.toFixed(1)}</span>
+            </div>
+            <p>Fitness or long-term load. It is an exponentially weighted view of roughly the last 42 days of TSS.</p>
+            <small>${describeCtl(ctlValue)}</small>
+        </div>
+        <div class="pmc-explainer-card pmc-explainer-atl">
+            <div class="pmc-explainer-header">
+                <span class="pmc-dot"></span>
+                <strong>ATL</strong>
+                <span class="pmc-explainer-value">${atlValue.toFixed(1)}</span>
+            </div>
+            <p>Fatigue or short-term load. It reacts quickly because it weights roughly the last 7 days of TSS.</p>
+            <small>${describeAtl(atlValue, ctlValue)}</small>
+        </div>
+        <div class="pmc-explainer-card pmc-explainer-tsb">
+            <div class="pmc-explainer-header">
+                <span class="pmc-dot"></span>
+                <strong>TSB</strong>
+                <span class="pmc-explainer-value">${tsbValue.toFixed(1)}</span>
+            </div>
+            <p>Form or freshness. It is CTL minus ATL, so negative values mean fatigue and positive values mean freshness.</p>
+            <small>${describeTsb(tsbValue)}</small>
+        </div>
+        <div class="pmc-explainer-card pmc-explainer-risk">
+            <div class="pmc-explainer-header">
+                <span class="pmc-dot"></span>
+                <strong>Injury Risk</strong>
+                <span class="pmc-explainer-value">${injuryRiskValue.toFixed(0)}%</span>
+            </div>
+            <p>App estimate derived from load balance. It is not medical risk, only a warning proxy based on how deep fatigue gets.</p>
+            <small>${describeInjuryRisk(injuryRiskValue)}</small>
         </div>
     `;
 }
@@ -417,7 +493,7 @@ function renderTrainingLoadMetrics(runs, allActivities) {
                 ${emoji} ${message}
             </p>
             <p style="text-align:center;margin:0;font-weight:600;color:#e74c3c;">
-                Warning Injury Risk: ~${(lastInjuryRisk * 100).toFixed(0)}%
+                Estimated Injury Risk: ~${lastInjuryRisk.toFixed(0)}%
             </p>
         </div>
     `;
@@ -435,7 +511,7 @@ function getTrendColor(pct) {
 
 
 /**
- * Renders PMC Chart: CTL, ATL, TSB, Injury Risk + VO₂max (runs only)
+ * Renders PMC Chart using processed load values.
  */
 function renderPMCChart(runs) {
     const canvas = document.getElementById('pmc-chart');
@@ -453,6 +529,7 @@ function renderPMCChart(runs) {
         ctx.fillStyle = '#999';
         ctx.textAlign = 'center';
         ctx.fillText('No data to display', canvas.width / 2, canvas.height / 2);
+        renderPMCExplanation([]);
         return;
     }
 
@@ -464,7 +541,13 @@ function renderPMCChart(runs) {
     const ctl = sorted.map(r => r.ctl);
     const atl = sorted.map(r => r.atl);
     const tsb = sorted.map(r => r.tsb);
-    const injuryRisk = sorted.map(r => r.injuryRisk * 100);
+    const injuryRisk = sorted.map(r => r.injuryRisk);
+    const maxLoadValue = Math.max(...ctl, ...atl, 10);
+    const minTsb = Math.min(...tsb, -10);
+    const maxTsb = Math.max(...tsb, 10);
+    const tsbPadding = Math.max(6, Math.ceil((maxTsb - minTsb) * 0.12));
+
+    renderPMCExplanation(sorted);
 
     window.pmcChart = new Chart(ctx, {
         type: 'line',
@@ -472,45 +555,53 @@ function renderPMCChart(runs) {
             labels,
             datasets: [
                 {
-                    label: 'CTL (Chronic)',
+                    label: 'CTL (Fitness, ~42d)',
                     data: ctl,
                     borderColor: '#0074D9',
                     backgroundColor: 'rgba(0, 116, 217, 0.1)',
                     tension: 0.3,
                     yAxisID: 'y',
                     pointRadius: 0,
-                    hidden: true // 🔹 Oculto por defecto
+                    borderWidth: 3,
+                    fill: false,
+                    hidden: false
                 },
                 {
-                    label: 'ATL (Acute)',
+                    label: 'ATL (Fatigue, ~7d)',
                     data: atl,
-                    borderColor: '#FF4136',
-                    backgroundColor: 'rgba(255, 65, 54, 0.1)',
+                    borderColor: '#FF7A45',
+                    backgroundColor: 'rgba(255, 122, 69, 0.08)',
                     tension: 0.3,
                     yAxisID: 'y',
                     pointRadius: 0,
-                    hidden: true // 🔹 Oculto por defecto
+                    borderWidth: 2.5,
+                    fill: false,
+                    hidden: false
                 },
                 {
-                    label: 'TSB (Balance)',
+                    label: 'TSB (Form)',
                     data: tsb,
                     borderColor: '#2ECC40',
                     backgroundColor: 'rgba(46, 204, 64, 0.1)',
                     tension: 0.3,
                     yAxisID: 'y1',
                     pointRadius: 0,
-                    hidden: true // 🔹 Oculto por defecto
+                    borderWidth: 2.5,
+                    fill: false,
+                    hidden: false
                 },
                 {
                     label: 'Injury Risk %',
                     data: injuryRisk,
-                    borderColor: '#e74c3c',
-                    backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                    borderColor: '#B83B5E',
+                    backgroundColor: 'rgba(184, 59, 94, 0.08)',
                     tension: 0.3,
                     yAxisID: 'y2',
                     pointRadius: 0,
                     borderWidth: 2,
-                    hidden: false // 🔹 Visible al inicio
+                    borderDash: [6, 4],
+                    fill: false,
+                    hidden: false
                 }
             ]
         },
@@ -519,26 +610,52 @@ function renderPMCChart(runs) {
             maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             plugins: {
-                title: { display: true, text: 'Performance Management Chart', font: { size: 16 } },
-                tooltip: { mode: 'index', intersect: false },
-                legend: { position: 'top' }
+                title: { display: false },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        label(context) {
+                            const suffix = context.dataset.yAxisID === 'y2' ? '%' : '';
+                            return `${context.dataset.label}: ${context.parsed.y.toFixed(1)}${suffix}`;
+                        }
+                    }
+                },
+                legend: {
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        boxWidth: 10,
+                        padding: 16
+                    }
+                }
             },
             scales: {
-                x: { display: true, title: { display: true, text: 'Date' } },
+                x: {
+                    display: true,
+                    title: { display: true, text: 'Date' },
+                    ticks: { maxTicksLimit: 10 }
+                },
                 y: {
                     type: 'linear',
                     position: 'left',
-                    title: { display: true, text: 'TSS' },
+                    title: { display: true, text: 'Fitness / Fatigue (TSS/d)' },
                     min: 0,
-                    max: Math.max(...ctl, ...atl) * 1.2
+                    suggestedMax: Math.ceil(maxLoadValue * 1.15),
+                    grid: { color: 'rgba(0, 0, 0, 0.06)' }
                 },
                 y1: {
                     type: 'linear',
                     position: 'right',
                     title: { display: true, text: 'TSB' },
-                    grid: { drawOnChartArea: false },
-                    min: -40,
-                    max: 40
+                    grid: {
+                        drawOnChartArea: true,
+                        color(context) {
+                            return context.tick.value === 0 ? 'rgba(46, 204, 64, 0.28)' : 'rgba(0,0,0,0)';
+                        }
+                    },
+                    min: Math.floor(minTsb - tsbPadding),
+                    max: Math.ceil(maxTsb + tsbPadding)
                 },
                 y2: {
                     type: 'linear',
