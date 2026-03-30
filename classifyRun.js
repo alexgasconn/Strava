@@ -1,5 +1,5 @@
 // =================================================================
-//          CLASIFICADOR DE TIPO DE CARRERA MEJORADO
+//          RUN TYPE CLASSIFIER (SIMPLIFIED + ROBUST)
 // =================================================================
 
 window.classifyRun = function classifyRun(act = {}, streams = {}) {
@@ -35,18 +35,18 @@ window.classifyRun = function classifyRun(act = {}, streams = {}) {
         return Number.isFinite(parsed) ? parsed : 0;
     }
 
+    // Reduced class set:
+    // - Easy/Recovery (merged)
+    // - Speed Work (Intervals + Fartlek merged)
+    // - Progressive removed
     function emptyScores() {
         return {
-            'Recovery Run': 0,
-            'Easy Run': 0,
+            'Easy/Recovery Run': 0,
             'Long Run': 0,
-            'Race': 0,
             'Tempo Run': 0,
-            'Intervals': 0,
-            'Fartlek': 0,
-            'Progressive Run': 0,
-            'Hill Repeats': 0,
-            'Trail Run': 0
+            'Speed Work': 0,
+            Race: 0,
+            'Trail/Hills': 0
         };
     }
 
@@ -74,58 +74,45 @@ window.classifyRun = function classifyRun(act = {}, streams = {}) {
 
     function computeZoneBuckets(zones, hrData, timeData) {
         const pctZ = { low: 0, midlow: 0, midhigh: 0, high: 0 };
-        if (!zones.length || !Array.isArray(hrData) || !Array.isArray(timeData)) {
-            return pctZ;
-        }
+        if (!zones.length || !Array.isArray(hrData) || !Array.isArray(timeData)) return pctZ;
 
         const n = Math.min(hrData.length, timeData.length);
         if (n < 2) return pctZ;
 
-        const timePerZone = Array(zones.length).fill(0);
-
+        const tPerZone = Array(zones.length).fill(0);
         for (let i = 1; i < n; i++) {
             const dt = timeData[i] - timeData[i - 1];
             const hr = Number(hrData[i]);
             if (!Number.isFinite(dt) || dt <= 0 || !Number.isFinite(hr) || hr <= 0) continue;
-
             const idx = zones.findIndex(z => hr >= z.min && (z.max === -1 || hr < z.max));
-            if (idx >= 0) timePerZone[idx] += dt;
-            else if (hr >= zones[zones.length - 1].min) timePerZone[zones.length - 1] += dt;
+            if (idx >= 0) tPerZone[idx] += dt;
+            else if (hr >= zones[zones.length - 1].min) tPerZone[zones.length - 1] += dt;
         }
 
-        const total = sum(timePerZone) || 1;
-        const ratios = timePerZone.map(t => t / total * 100);
+        const total = sum(tPerZone) || 1;
+        const ratios = tPerZone.map(t => t / total * 100);
 
         if (ratios.length >= 5) {
             pctZ.low = (ratios[0] || 0) + (ratios[1] || 0);
             pctZ.midlow = ratios[2] || 0;
             pctZ.midhigh = ratios[3] || 0;
             pctZ.high = ratios.slice(4).reduce((a, b) => a + b, 0);
-            return pctZ;
-        }
-
-        if (ratios.length === 4) {
+        } else if (ratios.length === 4) {
             pctZ.low = ratios[0] || 0;
             pctZ.midlow = ratios[1] || 0;
             pctZ.midhigh = ratios[2] || 0;
             pctZ.high = ratios[3] || 0;
-            return pctZ;
-        }
-
-        if (ratios.length === 3) {
+        } else if (ratios.length === 3) {
             pctZ.low = ratios[0] || 0;
             pctZ.midlow = ratios[1] || 0;
             pctZ.high = ratios[2] || 0;
-            return pctZ;
-        }
-
-        if (ratios.length === 2) {
+        } else if (ratios.length === 2) {
             pctZ.low = ratios[0] || 0;
             pctZ.high = ratios[1] || 0;
-            return pctZ;
+        } else {
+            pctZ.midlow = ratios[0] || 0;
         }
 
-        pctZ.midlow = ratios[0] || 0;
         return pctZ;
     }
 
@@ -139,7 +126,6 @@ window.classifyRun = function classifyRun(act = {}, streams = {}) {
         const top1 = topResults[0]?.abs || 0;
         const top2 = topResults[1]?.abs || 0;
         const totalTop = topResults.reduce((s, r) => s + (r.abs || 0), 0) || 1;
-
         const margin = top1 > 0 ? (top1 - top2) / top1 : 0;
         const topShare = top1 / totalTop;
 
@@ -257,60 +243,70 @@ window.classifyRun = function classifyRun(act = {}, streams = {}) {
     };
 
     const scores = emptyScores();
+    const durationMin = movingTime / 60;
 
-    if (act.sport_type === 'TrailRun') addScores(scores, { 'Trail Run': 220, 'Hill Repeats': 40 });
-    if (act.workout_type === 1) addScores(scores, { Race: 260 });
-    if (act.name && /tempo|threshold|umbral/i.test(act.name)) addScores(scores, { 'Tempo Run': 90 });
-    if (act.name && /fartlek/i.test(act.name)) addScores(scores, { Fartlek: 120 });
-    if (act.name && /interval|series|repeats?/i.test(act.name)) addScores(scores, { Intervals: 120 });
-    if (act.name && /long run|tirada|fondo/i.test(act.name)) addScores(scores, { 'Long Run': 120 });
-    if (act.name && /recovery|easy|suave|regenerativo/i.test(act.name)) addScores(scores, { 'Recovery Run': 120, 'Easy Run': 40 });
+    // Name/workout hints
+    if (act.sport_type === 'TrailRun') addScores(scores, { 'Trail/Hills': 220 });
+    if (act.workout_type === 1) addScores(scores, { Race: 280 });
 
-    if (distKm >= 24) addScores(scores, { 'Long Run': 180, Race: 40, 'Recovery Run': -20 });
-    else if (distKm >= 16) addScores(scores, { 'Long Run': 140, 'Easy Run': 40 });
-    else if (distKm >= 10) addScores(scores, { 'Long Run': 60, 'Easy Run': 35, 'Tempo Run': 15 });
-    else if (distKm >= 6) addScores(scores, { 'Easy Run': 45, 'Tempo Run': 20 });
-    else if (distKm >= 3) addScores(scores, { 'Recovery Run': 55, 'Easy Run': 30, 'Long Run': -35 });
-    else addScores(scores, { 'Recovery Run': 65, 'Easy Run': 20, 'Long Run': -70 });
+    if (act.name && /tempo|threshold|umbral/i.test(act.name)) addScores(scores, { 'Tempo Run': 180 });
+    if (act.name && /fartlek|interval|series|repeats?|vo2|max/i.test(act.name)) addScores(scores, { 'Speed Work': 190 });
+    if (act.name && /long run|tirada|fondo/i.test(act.name)) addScores(scores, { 'Long Run': 160 });
+    if (act.name && /recovery|easy|suave|regenerativo/i.test(act.name)) addScores(scores, { 'Easy/Recovery Run': 170 });
+    if (act.name && /race|carrera|competition|test/i.test(act.name)) addScores(scores, { Race: 220 });
 
-    if (elevationPerKm > 45) addScores(scores, { 'Hill Repeats': 160, 'Trail Run': 120, Race: -20 });
-    else if (elevationPerKm > 25) addScores(scores, { 'Hill Repeats': 100, 'Trail Run': 70, 'Tempo Run': -10 });
-    else if (elevationPerKm > 12) addScores(scores, { 'Trail Run': 35, 'Hill Repeats': 25 });
-    else addScores(scores, { 'Trail Run': -10, 'Hill Repeats': -20 });
+    // Distance + duration
+    if (distKm >= 24 || durationMin >= 140) addScores(scores, { 'Long Run': 210, 'Easy/Recovery Run': -10 });
+    else if (distKm >= 16 || durationMin >= 95) addScores(scores, { 'Long Run': 160, 'Tempo Run': 25 });
+    else if (distKm >= 10 || durationMin >= 60) addScores(scores, { 'Long Run': 70, 'Tempo Run': 45 });
+    else if (distKm <= 4 && durationMin <= 30) addScores(scores, { 'Easy/Recovery Run': 60, 'Speed Work': 30 });
 
-    if (moveRatio < 0.65) addScores(scores, { 'Trail Run': 40, Fartlek: 20, Intervals: 15, Race: -25 });
-    else if (moveRatio < 0.8) addScores(scores, { 'Trail Run': 18, Fartlek: 10 });
+    // Terrain
+    if (elevationPerKm > 45) addScores(scores, { 'Trail/Hills': 190, 'Speed Work': 20, Race: -20 });
+    else if (elevationPerKm > 25) addScores(scores, { 'Trail/Hills': 130, 'Tempo Run': -10 });
+    else if (elevationPerKm > 12) addScores(scores, { 'Trail/Hills': 60 });
+    else addScores(scores, { 'Trail/Hills': -15 });
 
-    if (effortNorm > 0.78) addScores(scores, { Race: 90, Intervals: 70, 'Tempo Run': 35, 'Recovery Run': -50, 'Easy Run': -35 });
-    else if (effortNorm > 0.55) addScores(scores, { 'Tempo Run': 65, Fartlek: 35, 'Long Run': 30, Race: 20 });
-    else if (effortNorm > 0.25) addScores(scores, { 'Easy Run': 45, 'Long Run': 20 });
-    else addScores(scores, { 'Recovery Run': 85, 'Easy Run': 45, Race: -35 });
+    // Moving ratio (many stops tends away from pure tempo/race)
+    if (moveRatio < 0.7) addScores(scores, { 'Trail/Hills': 35, 'Speed Work': 20, Race: -20 });
+    else if (moveRatio > 0.95) addScores(scores, { 'Tempo Run': 35, Race: 20 });
 
+    // Effort signal (strong driver)
+    if (effortNorm >= 0.82) addScores(scores, { 'Speed Work': 120, Race: 90, 'Tempo Run': 40, 'Easy/Recovery Run': -70 });
+    else if (effortNorm >= 0.62) addScores(scores, { 'Tempo Run': 100, 'Speed Work': 55, Race: 25, 'Long Run': 20 });
+    else if (effortNorm >= 0.35) addScores(scores, { 'Easy/Recovery Run': 35, 'Long Run': 25, 'Tempo Run': 15 });
+    else addScores(scores, { 'Easy/Recovery Run': 130, Race: -40, 'Speed Work': -40 });
+
+    // Pace variability and pace level
+    if (paceCV > 20) addScores(scores, { 'Speed Work': 155, 'Tempo Run': -20 });
+    else if (paceCV > 12) addScores(scores, { 'Speed Work': 70, 'Tempo Run': 35 });
+    else if (paceCV < 7 && distKm >= 6) addScores(scores, { 'Tempo Run': 100, Race: 35, 'Easy/Recovery Run': -20 });
+
+    if (paceAvgMinKm > 0) {
+        if (paceAvgMinKm <= 4.1 && distKm >= 5) addScores(scores, { Race: 70, 'Tempo Run': 60, 'Speed Work': 20 });
+        else if (paceAvgMinKm <= 4.45 && distKm >= 6) addScores(scores, { 'Tempo Run': 55, Race: 20 });
+        else if (paceAvgMinKm >= 5.7 && effortNorm < 0.5) addScores(scores, { 'Easy/Recovery Run': 55 });
+    }
+
+    // HR zones if available
     if (featureAvailability.hrZones) {
-        if (pctZ.low > 68) addScores(scores, { 'Recovery Run': 130, 'Easy Run': 80, Intervals: -35, Race: -40, 'Tempo Run': -20 });
-        if (pctZ.low < 25) addScores(scores, { 'Recovery Run': -50, 'Easy Run': -35, 'Long Run': -20 });
-
-        if (pctZ.midlow > 45) addScores(scores, { 'Easy Run': 50, 'Long Run': 60, 'Tempo Run': 20 });
-        if (pctZ.midhigh > 35) addScores(scores, { 'Tempo Run': 95, Fartlek: 55, Intervals: 35, 'Recovery Run': -30 });
-        if (pctZ.high > 25) addScores(scores, { Intervals: 90, Race: 95, Fartlek: 45, 'Recovery Run': -55, 'Easy Run': -40 });
-        if (pctZ.high < 10) addScores(scores, { Race: -30, Intervals: -20, 'Recovery Run': 25 });
-
-        if (pctZ.high > 20 && pctZ.midhigh > 20) addScores(scores, { Fartlek: 40, Intervals: 20 });
-        if (pctZ.high < 8 && pctZ.low > 75) addScores(scores, { 'Recovery Run': 95, 'Easy Run': 40 });
+        if (pctZ.low >= 70) addScores(scores, { 'Easy/Recovery Run': 120, 'Long Run': 30, 'Speed Work': -50, Race: -45 });
+        if (pctZ.midhigh >= 33) addScores(scores, { 'Tempo Run': 110, 'Speed Work': 40, 'Easy/Recovery Run': -25 });
+        if (pctZ.high >= 20) addScores(scores, { 'Speed Work': 120, Race: 80, 'Tempo Run': 30, 'Easy/Recovery Run': -60 });
+        if (pctZ.high < 8 && pctZ.low > 65) addScores(scores, { 'Easy/Recovery Run': 55, Race: -20, 'Speed Work': -20 });
     }
 
-    if (paceCV > 24) addScores(scores, { Intervals: 120, Fartlek: 90, 'Progressive Run': -25 });
-    else if (paceCV > 14) addScores(scores, { Fartlek: 55, Intervals: 25, 'Progressive Run': 20 });
-    else if (paceCV < 6 && distKm >= 8) addScores(scores, { 'Tempo Run': 35, Race: 40, 'Recovery Run': -15 });
+    // HR variability signal
+    if (featureAvailability.hrStream) {
+        if (hrCV > 10) addScores(scores, { 'Speed Work': 35 });
+        if (hrCV < 5 && distKm >= 8) addScores(scores, { 'Tempo Run': 25, 'Long Run': 10 });
+    }
 
+    // Negative split supports tempo/race (instead of a dedicated progressive class)
     if (distKm >= 8 && hasNegativeSplit) {
-        if (negativeSplitRatio < 0.95) addScores(scores, { 'Progressive Run': 120, 'Tempo Run': 30, Race: 15 });
-        else if (negativeSplitRatio < 1.0) addScores(scores, { 'Progressive Run': 65, 'Tempo Run': 15 });
-        else if (negativeSplitRatio > 1.08) addScores(scores, { 'Progressive Run': -55, Race: -20, 'Recovery Run': 15 });
+        if (negativeSplitRatio < 0.97) addScores(scores, { 'Tempo Run': 60, Race: 30, 'Long Run': 20 });
+        else if (negativeSplitRatio > 1.08) addScores(scores, { 'Easy/Recovery Run': 25, Race: -20, 'Tempo Run': -15 });
     }
-
-    if (hrCV > 11 && featureAvailability.hrStream) addScores(scores, { Intervals: 30, Fartlek: 20 });
-    if (hrCV < 5 && featureAvailability.hrStream && distKm > 8) addScores(scores, { 'Tempo Run': 20, 'Long Run': 10 });
 
     const positives = Object.entries(scores)
         .map(([type, sc]) => ({ type, abs: Math.max(0, Math.round(sc)) }))
@@ -319,7 +315,7 @@ window.classifyRun = function classifyRun(act = {}, streams = {}) {
 
     const fallback = positives.length
         ? positives
-        : [{ type: distKm >= 12 ? 'Long Run' : 'Easy Run', abs: 100 }];
+        : [{ type: distKm >= 12 ? 'Long Run' : 'Easy/Recovery Run', abs: 100 }];
 
     const positiveTotal = sum(fallback.map(r => r.abs)) || 1;
     const results = fallback.map(r => ({
@@ -336,6 +332,7 @@ window.classifyRun = function classifyRun(act = {}, streams = {}) {
         confidence,
         diagnostics: {
             distKm: +distKm.toFixed(2),
+            durationMin: +durationMin.toFixed(1),
             paceAvgMinKm: +paceAvgMinKm.toFixed(2),
             paceCV: +paceCV.toFixed(1),
             hrAvg,

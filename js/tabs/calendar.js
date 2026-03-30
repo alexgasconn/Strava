@@ -159,11 +159,18 @@ export function renderCalendarTab(allActivities) {
             year: now.getFullYear(),
             month: now.getMonth(),
             weekOf: new Date(now),
-            filterType: 'all',
+            filterTypes: [],
         };
     }
     const state = root._calState;
-    const types = [...new Set(allActivities.map(getType))].sort();
+    const typeCounts = allActivities.reduce((acc, a) => {
+        const t = getType(a);
+        acc[t] = (acc[t] || 0) + 1;
+        return acc;
+    }, {});
+    const types = Object.entries(typeCounts)
+        .sort(([, a], [, b]) => b - a)
+        .map(([type]) => type);
 
     // ── Build shell HTML (done once) ─────────────────────────────────────────
     root.innerHTML = `
@@ -175,9 +182,8 @@ export function renderCalendarTab(allActivities) {
                     <button class="cal-view-btn" data-view="month">Month</button>
                     <button class="cal-view-btn" data-view="year">Year</button>
                 </div>
-                <select class="cal-type-filter">
-                    <option value="all">All sports</option>
-                    ${types.map(t => `<option value="${t}">${emoji(t)} ${t}</option>`).join('')}
+                <select class="cal-type-filter" multiple size="${Math.min(8, Math.max(4, types.length))}">
+                    ${types.map(t => `<option value="${t}">${emoji(t)} ${t} (${typeCounts[t]})</option>`).join('')}
                 </select>
             </div>
             <div class="cal-nav">
@@ -202,9 +208,13 @@ export function renderCalendarTab(allActivities) {
     root.querySelectorAll('.cal-view-btn').forEach(b =>
         b.addEventListener('click', () => { state.view = b.dataset.view; renderAll(); })
     );
-    root.querySelector('.cal-type-filter').value = state.filterType;
-    root.querySelector('.cal-type-filter').addEventListener('change', e => {
-        state.filterType = e.target.value; renderAll();
+    const typeFilter = root.querySelector('.cal-type-filter');
+    Array.from(typeFilter.options).forEach(opt => {
+        opt.selected = state.filterTypes.length === 0 || state.filterTypes.includes(opt.value);
+    });
+    typeFilter.addEventListener('change', e => {
+        state.filterTypes = Array.from(e.target.selectedOptions || []).map(opt => opt.value);
+        renderAll();
     });
     root.querySelector('#cal-prev').addEventListener('click', () => navigate(-1));
     root.querySelector('#cal-next').addEventListener('click', () => navigate(+1));
@@ -222,8 +232,11 @@ export function renderCalendarTab(allActivities) {
 
     // ── renderAll ────────────────────────────────────────────────────────────
     function renderAll() {
-        const filtered = state.filterType === 'all' ? allActivities
-            : allActivities.filter(a => getType(a) === state.filterType);
+        const selectedTypes = state.filterTypes || [];
+        const selectedSet = selectedTypes.length ? new Set(selectedTypes) : null;
+        const filtered = selectedSet
+            ? allActivities.filter(a => selectedSet.has(getType(a)))
+            : allActivities;
         const byDate = groupByDate(filtered);
         const streaks = computeStreaks(byDate);
 
@@ -232,7 +245,9 @@ export function renderCalendarTab(allActivities) {
             b.classList.toggle('active', b.dataset.view === state.view)
         );
         // Type filter sync
-        root.querySelector('.cal-type-filter').value = state.filterType;
+        Array.from(root.querySelector('.cal-type-filter').options).forEach(opt => {
+            opt.selected = !selectedSet || selectedSet.has(opt.value);
+        });
 
         // Title
         const titleEl = root.querySelector('#cal-title');

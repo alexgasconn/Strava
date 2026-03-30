@@ -135,7 +135,7 @@ export function renderActivitiesTab(allActivities) {
             sortCol: 'start_date_local',
             sortDir: 'desc',
             filters: {
-                type: 'all', name: '', dateFrom: '', dateTo: '',
+                type: [], name: '', dateFrom: '', dateTo: '',
                 distMin: '', distMax: '', durMin: '', durMax: '',
                 hrMin: '', hrMax: '', tssMin: '', tssMax: ''
             }
@@ -147,7 +147,14 @@ export function renderActivitiesTab(allActivities) {
     if (filterEl && !filterEl._built) {
         filterEl._built = true;
 
-        const types = [...new Set(allActivities.map(getType))].sort();
+        const typeCounts = allActivities.reduce((acc, a) => {
+            const t = getType(a);
+            acc[t] = (acc[t] || 0) + 1;
+            return acc;
+        }, {});
+        const types = Object.entries(typeCounts)
+            .sort(([, a], [, b]) => b - a)
+            .map(([type]) => type);
         const dists = allActivities.map(a => a.distance).filter(Boolean);
         const durs = allActivities.map(a => a.moving_time).filter(Boolean);
         const hrs = allActivities.map(a => a.average_heartrate).filter(Boolean);
@@ -164,9 +171,8 @@ export function renderActivitiesTab(allActivities) {
             <div class="act-filter-row">
                 <label class="act-filter-label">
                     Sport
-                    <select id="flt-type">
-                        <option value="all">All sports</option>
-                        ${types.map(t => `<option value="${t}">${sportEmoji(t)} ${t}</option>`).join('')}
+                    <select id="flt-type" multiple size="${Math.min(8, Math.max(4, types.length))}">
+                        ${types.map(t => `<option value="${t}">${sportEmoji(t)} ${t} (${typeCounts[t]})</option>`).join('')}
                     </select>
                 </label>
                 <label class="act-filter-label">
@@ -223,9 +229,12 @@ export function renderActivitiesTab(allActivities) {
             'flt-dist-min', 'flt-dist-max', 'flt-dur-min', 'flt-dur-max',
             'flt-hr-min', 'flt-hr-max', 'flt-tss-min', 'flt-tss-max'];
 
+        const typeSelect = document.getElementById('flt-type');
+        Array.from(typeSelect.options).forEach(opt => { opt.selected = true; });
+
         function readAndRender() {
             const f = state.filters;
-            f.type = document.getElementById('flt-type').value;
+            f.type = Array.from(document.getElementById('flt-type').selectedOptions || []).map(opt => opt.value);
             f.name = document.getElementById('flt-name').value.trim().toLowerCase();
             f.dateFrom = utils.parseDateInputToIso(document.getElementById('flt-date-from').value);
             f.dateTo = utils.parseDateInputToIso(document.getElementById('flt-date-to').value);
@@ -247,22 +256,25 @@ export function renderActivitiesTab(allActivities) {
         });
 
         document.getElementById('flt-reset').addEventListener('click', () => {
-            document.getElementById('flt-type').value = 'all';
+            const typeEl = document.getElementById('flt-type');
+            Array.from(typeEl.options).forEach(opt => { opt.selected = true; });
             ['flt-name', 'flt-date-from', 'flt-date-to',
                 'flt-dist-min', 'flt-dist-max', 'flt-dur-min', 'flt-dur-max',
                 'flt-hr-min', 'flt-hr-max', 'flt-tss-min', 'flt-tss-max'
             ].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
             const f = state.filters;
-            Object.keys(f).forEach(k => f[k] = k === 'type' ? 'all' : '');
+            Object.keys(f).forEach(k => f[k] = k === 'type' ? types.slice() : '');
             render();
         });
+
+        state.filters.type = types.slice();
     }
 
     // ── Filter logic ──────────────────────────────────────────────────────────
     function applyFilters(acts) {
         const f = state.filters;
         return acts.filter(a => {
-            if (f.type !== 'all' && getType(a) !== f.type) return false;
+            if (Array.isArray(f.type) && f.type.length > 0 && !f.type.includes(getType(a))) return false;
             if (f.name && !(a.name || '').toLowerCase().includes(f.name)) return false;
             const date = (a.start_date_local || '').slice(0, 10);
             if (f.dateFrom && date < f.dateFrom) return false;

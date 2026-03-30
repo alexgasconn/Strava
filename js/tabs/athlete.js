@@ -24,7 +24,15 @@ export function renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo, sp
     const dateFromInput = document.getElementById('athlete-date-from');
     const dateToInput = document.getElementById('athlete-date-to');
 
-    if (sportSelect) sportSelect.value = sportFilter;
+    if (sportSelect) {
+        const selectedSports = Array.isArray(sportFilter)
+            ? sportFilter
+            : (sportFilter && sportFilter !== 'all' ? [sportFilter] : []);
+
+        Array.from(sportSelect.options).forEach(opt => {
+            opt.selected = selectedSports.length === 0 || selectedSports.includes(opt.value);
+        });
+    }
     if (dataTypeSelect) dataTypeSelect.value = dataType;
     if (dateFromInput) dateFromInput.value = utils.isoToDisplayDate(dateFilterFrom);
     if (dateToInput) dateToInput.value = utils.isoToDisplayDate(dateFilterTo);
@@ -1498,10 +1506,9 @@ function addAthleteFilters() {
         sportCounts[sport] = (sportCounts[sport] || 0) + 1;
     });
 
-    // Sort sports by count (descending) and take top 10
+    // Sort sports by count (descending)
     const topSports = Object.entries(sportCounts)
         .sort(([, a], [, b]) => b - a)
-        .slice(0, 10)
         .map(([sport]) => sport);
 
     const dataTypeSelect = document.createElement('select');
@@ -1519,9 +1526,11 @@ function addAthleteFilters() {
 
     const sportSelect = document.createElement('select');
     sportSelect.id = 'athlete-sport-filter';
+    sportSelect.multiple = true;
+    sportSelect.size = Math.min(8, Math.max(4, topSports.length));
 
     // Build options HTML
-    let optionsHtml = '<option value="all">All Sports</option>';
+    let optionsHtml = '';
     topSports.forEach(sport => {
         const count = sportCounts[sport];
         optionsHtml += `<option value="${sport}">${sport} (${count})</option>`;
@@ -1531,7 +1540,7 @@ function addAthleteFilters() {
 
     const sportLabel = document.createElement('label');
     sportLabel.style = 'display: flex; align-items: center; gap: 0.5rem;';
-    sportLabel.innerHTML = '<span>Sport:</span>';
+    sportLabel.innerHTML = '<span>Sports:</span>';
     sportLabel.appendChild(sportSelect);
 
     const dateFromInput = document.createElement('input');
@@ -1573,7 +1582,7 @@ function addAthleteFilters() {
     // Setup event listener for apply button
     applyButton.addEventListener('click', () => {
         const allActivities = JSON.parse(localStorage.getItem('strava_activities') || '[]');
-        const selectedSport = sportSelect.value || 'all';
+        const selectedSports = Array.from(sportSelect.selectedOptions || []).map(opt => opt.value);
         const selectedDataType = dataTypeSelect.value || 'time';
         const selectedDateFrom = utils.parseDateInputToIso(dateFromInput.value) || null;
         const selectedDateTo = utils.parseDateInputToIso(dateToInput.value) || null;
@@ -1583,7 +1592,7 @@ function addAthleteFilters() {
             detail: {
                 dateFilterFrom: selectedDateFrom,
                 dateFilterTo: selectedDateTo,
-                sportFilter: selectedSport,
+                sportFilter: selectedSports,
                 dataType: selectedDataType,
                 allActivities: allActivities
             }
@@ -1599,8 +1608,13 @@ function filterActivities(allActivities, dateFilterFrom, dateFilterTo, sportFilt
         filtered = utils.filterActivitiesByDate(filtered, dateFilterFrom, dateFilterTo);
     }
 
-    if (sportFilter !== 'all') {
-        filtered = filtered.filter(a => a.type === sportFilter);
+    const selectedSports = Array.isArray(sportFilter)
+        ? sportFilter.filter(Boolean)
+        : (sportFilter && sportFilter !== 'all' ? [sportFilter] : []);
+
+    if (selectedSports.length > 0) {
+        const selectedSet = new Set(selectedSports);
+        filtered = filtered.filter(a => selectedSet.has(a.type));
     }
 
     return filtered;
