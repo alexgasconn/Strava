@@ -486,6 +486,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (logoutButton) logoutButton.addEventListener('click', logout);
     if (refreshButton) refreshButton.addEventListener('click', refreshActivities);
 
+    // --- SERVICE WORKER REGISTRATION (PWA) ---
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(registration => {
+                    console.log('Service Worker registrado exitosamente:', registration);
+                })
+                .catch(error => {
+                    console.log('Error registrando Service Worker:', error);
+                });
+        });
+    }
+
     // --- ATHLETE FILTER LISTENERS (via custom event) ---
     document.addEventListener('athlete-filters-changed', (e) => {
         const { dateFilterFrom: newFrom, dateFilterTo: newTo, sportFilter, dataType, allActivities: activities } = e.detail;

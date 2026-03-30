@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+    <!-- Fondo gradiente -->
+    <defs>
+        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#FC5200;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#FF9800;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+
+    <!-- Círculo de fondo -->
+    <circle cx="96" cy="96" r="96" fill="url(#grad1)"/>
+
+    <!-- Montaña (izquierda) -->
+    <polygon points="40,130 60,80 75,100 90,60 110,130" fill="#ffffff" opacity="0.9"/>
+
+    <!-- Persona corriendo (derecha) -->
+    <g opacity="0.95">
+        <!-- Cabeza -->
+        <circle cx="130" cy="65" r="10" fill="#ffffff"/>
+        <!-- Cuerpo -->
+        <line x1="130" y1="75" x2="130" y2="100" stroke="#ffffff" stroke-width="5" stroke-linecap="round"/>
+        <!-- Brazo izquierdo (arriba) -->
+        <line x1="130" y1="80" x2="110" y2="70" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+        <!-- Brazo derecho (abajo) -->
+        <line x1="130" y1="85" x2="150" y2="95" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+        <!-- Pierna izquierda (arriba) -->
+        <line x1="130" y1="100" x2="120" y2="125" stroke="#ffffff" stroke-width="5" stroke-linecap="round"/>
+        <!-- Pierna derecha (abajo) -->
+        <line x1="130" y1="100" x2="140" y2="130" stroke="#ffffff" stroke-width="5" stroke-linecap="round"/>
+    </g>
+</svg>

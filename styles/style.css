@@ -4429,6 +4429,288 @@ body {
     padding-right: 6px;
 }
 
+/* ================================================================= */
+/* MOBILE OPTIMIZATIONS - PWA (max-width: 480px)                   */
+/* ================================================================= */
+
+@media (max-width: 480px) {
+    :root {
+        --border-radius-lg: 12px;
+        --border-radius-md: 6px;
+    }
+
+    body {
+        font-size: 14px;
+        padding-bottom: 60px;
+        /* Space for bottom nav */
+    }
+
+    .container {
+        padding: 0.75rem;
+    }
+
+    /* Header optimizations */
+    #app-section header {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    #app-section header h1 {
+        font-size: 1.5rem;
+        width: 100%;
+    }
+
+    #app-section header button {
+        font-size: 0.85rem;
+        padding: 0.5rem 1rem;
+    }
+
+    /* Tab Navigation - Make it sticky bottom */
+    .tabs {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        display: flex;
+        gap: 0;
+        background: white;
+        border-top: 2px solid var(--border-color);
+        z-index: 999;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+        overflow-x: auto;
+        overflow-y: hidden;
+    }
+
+    .tab-link {
+        flex: 1;
+        padding: 0.75rem 0.5rem;
+        font-size: 0.75rem;
+        text-align: center;
+        min-width: 70px;
+        border: none;
+        border-radius: 0;
+    }
+
+    .tab-link.active {
+        border-top: 3px solid var(--strava-orange);
+        border-bottom: none;
+        background: #f9f9f9;
+    }
+
+    /* Cards */
+    .card,
+    .chart-container {
+        padding: 1rem 0.75rem;
+        margin-bottom: 1rem;
+        border-radius: 12px;
+    }
+
+    /* Grids */
+    .summary-grid {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .charts-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    /* Settings Panel */
+    .settings-panel {
+        position: fixed;
+        top: 0;
+        right: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        max-width: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        border: none;
+        border-radius: 0;
+        padding: 2rem 1rem 1rem;
+        display: none;
+        flex-direction: column;
+        z-index: 2000;
+        border-radius: 16px 16px 0 0;
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+
+    .settings-panel.show {
+        display: flex;
+        background: white;
+        top: auto;
+        bottom: 0;
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .settings-panel select,
+    .settings-panel input[type="number"] {
+        width: 100%;
+        padding: 0.5rem;
+    }
+
+    /* Buttons */
+    button {
+        padding: 0.6rem 1.2rem;
+        font-size: 0.9rem;
+        width: 100%;
+        margin: 0.5rem 0;
+    }
+
+    /* Forms */
+    input[type="date"],
+    input[type="text"],
+    input[type="number"],
+    select {
+        width: 100%;
+        padding: 0.6rem;
+        font-size: 16px;
+        /* iOS fix: prevents zoom on input focus */
+    }
+
+    /* Stats cards */
+    .stat-value {
+        font-size: 1.3rem;
+    }
+
+    .stat-label {
+        font-size: 0.8rem;
+    }
+
+    /* Charts */
+    canvas,
+    #global-map {
+        height: 400px !important;
+    }
+
+    /* Maps */
+    #global-map {
+        height: 500px !important;
+        border-radius: 12px;
+    }
+
+    .map-controls {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .map-controls .filter-group {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .map-controls button {
+        width: 100%;
+    }
+
+    /* Activity list */
+    .activity-item {
+        padding: 1rem 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+
+    /* Heatmap/Calendar */
+    .cal-heatmap {
+        width: 100% !important;
+        overflow-x: auto;
+    }
+
+    /* Tables */
+    table {
+        font-size: 0.85rem;
+    }
+
+    table th,
+    table td {
+        padding: 0.5rem;
+    }
+
+    /* Modal/Dialog */
+    .modal-content,
+    .dialog-box {
+        width: 90vw;
+        max-height: 90vh;
+        margin: auto;
+        padding: 1.5rem;
+        border-radius: 12px;
+    }
+
+    /* Text sizes */
+    h1 {
+        font-size: 1.3rem;
+    }
+
+    h2 {
+        font-size: 1.1rem;
+    }
+
+    h3 {
+        font-size: 1rem;
+    }
+
+    p {
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
+
+    /* Margins & Padding */
+    main {
+        padding-bottom: 80px;
+        /* Extra space for bottom nav */
+    }
+
+    .margin-top-section {
+        margin-top: 1rem;
+    }
+
+    /* Touch-friendly spacing */
+    a,
+    button {
+        min-height: 44px;
+        min-width: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Hide elements that clutter mobile */
+    .desktop-only {
+        display: none !important;
+    }
+
+    .mobile-only {
+        display: block !important;
+    }
+}
+
+/* Extra small devices (< 360px - old phones) */
+@media (max-width: 360px) {
+    .summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .tabs {
+        bottom: 0;
+    }
+
+    .tab-link {
+        font-size: 0.65rem;
+        padding: 0.5rem 0.3rem;
+    }
+
+    button {
+        padding: 0.5rem 1rem;
+        font-size: 0.8rem;
+    }
+}
+
 .btn-small {
     background: linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 100%);
     color: #fff;
