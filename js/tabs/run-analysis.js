@@ -22,7 +22,7 @@ export function renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo
     renderRollingMeanDistanceChart(runs);
     renderDistanceVsElevationChart(runs);
     renderElevationHistogram(runs);
-    renderConsistencyChart(runs);
+    renderConsistencyChart(runs, dateFilterFrom, dateFilterTo);
     renderTopRuns(runs);
     renderActivitiesTable(runs);
 }
@@ -45,7 +45,7 @@ function createChart(canvasId, config) {
 
 
 // --- CHART RENDERING FUNCTIONS ---
-export function renderConsistencyChart(runs) {
+export function renderConsistencyChart(runs, dateFilterFrom = null, dateFilterTo = null) {
     const container = document.getElementById('cal-heatmap-run');
     if (!container) return;
 
@@ -69,15 +69,9 @@ export function renderConsistencyChart(runs) {
         return;
     }
 
-    if (!runs || runs.length === 0) {
-        heatmapWrapper.innerHTML = `<p style="text-align:center; color:#8c8c8c;">
-            No hay datos de actividad para este período.
-        </p>`;
-        return;
-    }
-
     // Agregar datos y calcular umbrales
-    const aggregatedData = runs.reduce((acc, act) => {
+    const safeRuns = runs || [];
+    const aggregatedData = safeRuns.reduce((acc, act) => {
         const date = act.start_date_local.substring(0, 10);
         acc[date] = (acc[date] || 0) + (act.distance ? act.distance / 1000 : 0);
         return acc;
@@ -97,16 +91,58 @@ export function renderConsistencyChart(runs) {
         ]
         : [5, 10, 15, 21, 30]; // km
 
-    // Crear CalHeatmap con configuración correcta
     const cal = new CalHeatmap();
     const today = new Date();
+    const hasManualFilters = Boolean(dateFilterFrom || dateFilterTo);
 
-    // Calcular el primer lunes del año
-    const startOfYear = new Date(today.getFullYear(), 0, 1);
-    const dayOfWeek = startOfYear.getDay(); // 0 = domingo, 1 = lunes, ...
+    // Default: full current year (Jan-Dec). With filters: rolling last 365 days.
+    const periodStart = hasManualFilters
+        ? new Date(today.getFullYear(), today.getMonth(), today.getDate() - 364)
+        : new Date(today.getFullYear(), 0, 1);
+    const periodEnd = hasManualFilters
+        ? today
+        : new Date(today.getFullYear(), 11, 31);
+
+    const dayOfWeek = periodStart.getDay();
     const daysUntilMonday = dayOfWeek === 0 ? 1 : (8 - dayOfWeek) % 7;
-    const firstMonday = new Date(startOfYear);
-    firstMonday.setDate(startOfYear.getDate() + daysUntilMonday);
+    const firstMonday = new Date(periodStart);
+    firstMonday.setDate(periodStart.getDate() + daysUntilMonday);
+
+    const monthRange = hasManualFilters
+        ? ((periodEnd.getFullYear() - firstMonday.getFullYear()) * 12 + (periodEnd.getMonth() - firstMonday.getMonth()) + 1)
+        : 12;
+
+    const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+    function markTodayCell() {
+        const dayCells = heatmapWrapper.querySelectorAll('[data-day]');
+        dayCells.forEach(cell => {
+            const title = cell.getAttribute('title') || '';
+            const ariaLabel = cell.getAttribute('aria-label') || '';
+            const dataDate = cell.getAttribute('data-date') || '';
+            const dateText = `${title} ${ariaLabel} ${dataDate}`;
+            if (!dateText.includes(todayIso)) return;
+
+            cell.style.outline = '2px solid #111';
+            cell.style.outlineOffset = '1px';
+            if (!cell.querySelector('.today-marker-x')) {
+                const mark = document.createElement('span');
+                mark.className = 'today-marker-x';
+                mark.textContent = 'X';
+                mark.style.position = 'absolute';
+                mark.style.inset = '0';
+                mark.style.display = 'flex';
+                mark.style.alignItems = 'center';
+                mark.style.justifyContent = 'center';
+                mark.style.fontSize = '8px';
+                mark.style.fontWeight = '700';
+                mark.style.color = '#111';
+                mark.style.pointerEvents = 'none';
+                cell.style.position = 'relative';
+                cell.appendChild(mark);
+            }
+        });
+    }
 
     cal.paint({
         itemSelector: heatmapWrapper, // usamos wrapper
@@ -123,8 +159,8 @@ export function renderConsistencyChart(runs) {
             radius: 2,
             label: null
         },
-        date: { start: firstMonday, locale: { weekStart: 1 } }, // Semana empieza en lunes
-        range: 12, // 12 meses
+        date: { start: firstMonday, locale: { weekStart: 1 } },
+        range: Math.max(1, monthRange),
         data: {
             source: Object.entries(aggregatedData).map(([date, value]) => ({
                 date,
@@ -152,6 +188,8 @@ export function renderConsistencyChart(runs) {
 
     // Agregar etiquetas de días de la semana (solo primera columna)
     setTimeout(() => {
+        markTodayCell();
+
         const weekdayLabels = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
         const firstColumn = heatmapWrapper.querySelector('[data-week="1"]');
 
@@ -681,7 +719,7 @@ function renderSummaryCards(runs) {
         const avgPaceSeconds = totalDistance > 0 ? (totalTime / totalDistance) : 0;
         const paceMin = Math.floor(avgPaceSeconds / 60);
         const paceSec = Math.round(avgPaceSeconds % 60);
-        
+
         summaryContainer.innerHTML = `
             <div class="card"><h3>Runs</h3><p>${runs.length}</p></div>
             <div class="card"><h3>Total Distance</h3><p>${totalDistance.toFixed(0)} km</p></div>
