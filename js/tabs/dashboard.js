@@ -97,6 +97,10 @@ function toDisplayTsb(rawTsb) {
     return rawTsb || 0;
 }
 
+function toRiskPercent(rawRisk) {
+    return (rawRisk || 0) * 100;
+}
+
 function percentileRank(values, value) {
     const filtered = values.filter(v => Number.isFinite(v)).sort((a, b) => a - b);
     if (!filtered.length) return 0.5;
@@ -232,12 +236,12 @@ function renderPMCExplanation(sortedActivities) {
     const ctlValue = last.ctl || 0;
     const atlValue = last.atl || 0;
     const tsbValue = toDisplayTsb(last.tsb || 0);
-    const injuryRiskValue = last.injuryRisk || 0;
+    const injuryRiskValue = toRiskPercent(last.injuryRisk);
     const context = {
         profile,
         ctlPercentile: percentileRank(sortedActivities.map(activity => activity.ctl), ctlValue),
         atlPercentile: percentileRank(sortedActivities.map(activity => activity.atl), atlValue),
-        riskPercentile: percentileRank(sortedActivities.map(activity => activity.injuryRisk), injuryRiskValue)
+        riskPercentile: percentileRank(sortedActivities.map(activity => activity.injuryRisk), last.injuryRisk || 0)
     };
 
     container.innerHTML = `
@@ -383,7 +387,7 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
     const avgVO2 = avg(lastRuns.filter(r => r.vo2max).map(r => r.vo2max));
     const avgPace = avg(lastRuns.map(r => (r.moving_time / 60) / (r.distance / 1000)));
     const avgDistance = totalDistance / lastRuns.length || 0;
-    const injuryRisk = avg(lastRuns.map(r => r.injuryRisk || 0));
+    const injuryRisk = avg(lastRuns.map(r => toRiskPercent(r.injuryRisk)));
 
     // --- Métricas previas ---
     const prevDistance = sum(previousLastRuns, km);
@@ -393,7 +397,7 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
     const prevVO2 = avg(previousLastRuns.filter(r => r.vo2max).map(r => r.vo2max));
     const prevPace = avg(previousLastRuns.map(r => (r.moving_time / 60) / (r.distance / 1000)));
     const prevAvgDistance = prevDistance / previousLastRuns.length || 0;
-    const prevInjuryRisk = avg(previousLastRuns.map(r => r.injuryRisk || 0));
+    const prevInjuryRisk = avg(previousLastRuns.map(r => toRiskPercent(r.injuryRisk)));
 
     // --- Cambios porcentuales ---
     const distChange = calcChange(totalDistance, prevDistance);
@@ -484,7 +488,7 @@ function renderTrainingLoadMetrics(activities) {
     const lastCTL = last.ctl;
     const lastATL = last.atl;
     const lastTSB = toDisplayTsb(last.tsb);
-    const lastInjuryRisk = last.injuryRisk;
+    const lastInjuryRisk = toRiskPercent(last.injuryRisk);
 
     // Total load in visible range
     const totalLoad = validActivities.reduce((sum, r) => sum + r.tss, 0).toFixed(0);
@@ -615,11 +619,13 @@ function renderPMCChart(runs) {
     const ctl = sorted.map(r => r.ctl);
     const atl = sorted.map(r => r.atl);
     const tsb = sorted.map(r => toDisplayTsb(r.tsb));
-    const injuryRisk = sorted.map(r => r.injuryRisk);
+    const injuryRisk = sorted.map(r => toRiskPercent(r.injuryRisk));
     const maxLoadValue = Math.max(...ctl, ...atl, 10);
     const minTsb = Math.min(...tsb, -10);
     const maxTsb = Math.max(...tsb, 10);
     const tsbPadding = Math.max(6, Math.ceil((maxTsb - minTsb) * 0.12));
+    const observedRiskMax = Math.max(...injuryRisk, 0);
+    const riskAxisMax = Math.min(100, Math.max(10, Math.ceil((observedRiskMax * 1.2) / 5) * 5));
 
     renderPMCExplanation(sorted);
 
@@ -737,7 +743,7 @@ function renderPMCChart(runs) {
                     title: { display: true, text: 'Risk %' },
                     grid: { drawOnChartArea: false },
                     min: 0,
-                    max: 100
+                    max: riskAxisMax
                 }
             }
         }
