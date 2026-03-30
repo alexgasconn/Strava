@@ -45,7 +45,7 @@ export function handleError(message, error) {
 export function setupDashboard(activities) {
     loginSection.classList.add('hidden');
     appSection.classList.remove('hidden');
-    athleteName.textContent = `Running Dashboard`;
+    athleteName.textContent = `Strava Training Dashboard`;
 
     const dates = activities.map(a => a.start_date_local.substring(0, 10)).sort();
     if (dates.length > 0) {

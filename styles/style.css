@@ -3350,7 +3350,7 @@ body {
     border-color: #007bff;
 }
 
-#dashboard-tab {
+#dashboard-tab.active {
     display: flex;
     flex-direction: column;
     gap: 1rem;
