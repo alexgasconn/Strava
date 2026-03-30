@@ -1282,9 +1282,20 @@ main {
 
 .tab-nav {
     display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
     border-bottom: 2px solid #ddd;
     margin-bottom: 1.5em;
+    scrollbar-width: none;
+    /* Firefox */
 }
+
+.tab-nav::-webkit-scrollbar {
+    display: none;
+}
+
+/* Chrome/Safari */
 
 .tab-link {
     padding: 5px 12px;

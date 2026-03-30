@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="es-ES">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#FC5200">
-    <meta name="description" content="Análisis completo de actividades deportivas: correr, ciclismo, natación">
+    <meta name="description" content="Complete analysis of your sports activities: running, cycling, swimming">
     <title>Strava Dashboard</title>
 
     <!-- PWA Manifest -->
@@ -59,23 +59,8 @@
         }
     </style>
 
-    <!-- Vercel Analytics & Speed Insights -->
+    <!-- Vercel Analytics -->
     <script defer src="/_vercel/insights/script.js"></script>
-    <!-- Polyfill for module (CommonJS compatibility in browser) -->
-    <script>
-        if (typeof module === 'undefined') {
-            window.module = { exports: {} };
-        }
-    </script>
-    <script defer src="https://cdn.jsdelivr.net/npm/@vercel/speed-insights@latest"></script>
-    <script defer>
-        // Fallback: Manual Speed Insights initialization
-        document.addEventListener('DOMContentLoaded', function () {
-            if (window.SpeedInsights && window.SpeedInsights.init) {
-                window.SpeedInsights.init();
-            }
-        });
-    </script>
 </head>
 
 
@@ -128,29 +113,31 @@
             </div>
 
 
-            <!-- BARRA DE NAVEGACIÓN DE PESTAÑAS -->
-            <button class="tab-link" data-tab="dashboard-tab" aria-controls="dashboard-tab" aria-label="Dashboard">📈
-                Dashboard</button>
-            <button class="tab-link active" data-tab="analysis-tab" aria-controls="analysis-tab" aria-label="Run"> 🏃
-                Run</button>
-            <button class="tab-link" data-tab="bike-tab" aria-controls="bike-tab" aria-label="Bike">🚴 Bike</button>
-            <button class="tab-link" data-tab="swim-tab" aria-controls="swim-tab" aria-label="Swim">🏊 Swim</button>
-            <button class="tab-link" data-tab="athlete-tab" aria-controls="athlete-tab" aria-label="Athlete">👤
-                Athlete</button>
-            <button class="tab-link" data-tab="planner-tab" aria-controls="planner-tab" aria-label="Race Predictor">🎯
-                Predictor</button>
-            <button class="tab-link" data-tab="gear-tab" aria-controls="gear-tab" aria-label="Gear">👟 Gear</button>
-            <button class="tab-link" data-tab="activities-tab" aria-controls="activities-tab" aria-label="Activities">📝
-                Activities</button>
-            <button class="tab-link" data-tab="calendar-tab" aria-controls="calendar-tab" aria-label="Calendar">📅
-                Calendar</button>
-            <button class="tab-link" data-tab="weather-tab" aria-controls="weather-tab" aria-label="Weather">🌤
-                Weather</button>
-            <button class="tab-link" data-tab="map-tab" aria-controls="map-tab" aria-label="Map">🗺️ Map</button>
-            <button class="tab-link" data-tab="wrapped-tab" data-tab="wrapped-tab" aria-controls="wrapped-tab"
-                aria-label="Wrapped - Your year in sport">🎁 Wrapped</button>
-            <button class="tab-link" data-tab="ai-chat-tab" aria-controls="ai-chat-tab" aria-label="AI Coach">🤖 AI
-                Coach</button>
+            <!-- TAB NAVIGATION -->
+            <nav class="tab-nav tabs">
+                <button class="tab-link" data-tab="dashboard-tab" aria-controls="dashboard-tab"
+                    aria-label="Dashboard">📈 Dashboard</button>
+                <button class="tab-link active" data-tab="analysis-tab" aria-controls="analysis-tab" aria-label="Run">🏃
+                    Run</button>
+                <button class="tab-link" data-tab="bike-tab" aria-controls="bike-tab" aria-label="Bike">🚴 Bike</button>
+                <button class="tab-link" data-tab="swim-tab" aria-controls="swim-tab" aria-label="Swim">🏊 Swim</button>
+                <button class="tab-link" data-tab="athlete-tab" aria-controls="athlete-tab" aria-label="Athlete">👤
+                    Athlete</button>
+                <button class="tab-link" data-tab="planner-tab" aria-controls="planner-tab"
+                    aria-label="Race Predictor">🎯 Predictor</button>
+                <button class="tab-link" data-tab="gear-tab" aria-controls="gear-tab" aria-label="Gear">👟 Gear</button>
+                <button class="tab-link" data-tab="activities-tab" aria-controls="activities-tab"
+                    aria-label="Activities">📝 Activities</button>
+                <button class="tab-link" data-tab="calendar-tab" aria-controls="calendar-tab" aria-label="Calendar">📅
+                    Calendar</button>
+                <button class="tab-link" data-tab="weather-tab" aria-controls="weather-tab" aria-label="Weather">🌤
+                    Weather</button>
+                <button class="tab-link" data-tab="map-tab" aria-controls="map-tab" aria-label="Map">🗺️ Map</button>
+                <button class="tab-link" data-tab="wrapped-tab" aria-controls="wrapped-tab"
+                    aria-label="Wrapped - Your year in sport">🎁 Wrapped</button>
+                <button class="tab-link" data-tab="ai-chat-tab" aria-controls="ai-chat-tab" aria-label="AI Coach">🤖 AI
+                    Coach</button>
+            </nav>
 
             <button id="header-toggle" title="Show/hide top bar">▲ hide</button>
 
@@ -158,8 +145,8 @@
                 <div id="analysis-tab" class="tab-content active">
                     <div id="date-controls" class="date-controls-container">
                         <div class="filter-group">
-                            <label>From: <input type="date" id="date-from" lang="es-ES"></label>
-                            <label>To: <input type="date" id="date-to" lang="es-ES"></label>
+                            <label>From: <input type="date" id="date-from"></label>
+                            <label>To: <input type="date" id="date-to"></label>
                             <button id="apply-date-filter">Apply</button>
                             <button id="reset-date-filter">Reset</button>
                         </div>
@@ -226,8 +213,8 @@
 
                     <div id="bike-date-controls" class="date-controls-container">
                         <div class="filter-group">
-                            <label>From: <input type="date" id="bike-date-from" lang="es-ES"></label>
-                            <label>To: <input type="date" id="bike-date-to" lang="es-ES"></label>
+                            <label>From: <input type="date" id="bike-date-from"></label>
+                            <label>To: <input type="date" id="bike-date-to"></label>
                             <button id="bike-apply-date-filter">Apply</button>
                             <button id="bike-reset-date-filter">Reset</button>
                         </div>
@@ -295,8 +282,8 @@
 
                     <div id="swim-date-controls" class="date-controls-container">
                         <div class="filter-group">
-                            <label>From: <input type="date" id="swim-date-from" lang="es-ES"></label>
-                            <label>To: <input type="date" id="swim-date-to" lang="es-ES"></label>
+                            <label>From: <input type="date" id="swim-date-from"></label>
+                            <label>To: <input type="date" id="swim-date-to"></label>
                             <button id="swim-apply-date-filter">Apply</button>
                             <button id="swim-reset-date-filter">Reset</button>
                         </div>
@@ -587,11 +574,11 @@
                                 style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:0.75rem; align-items:end; margin-bottom:1rem;">
                                 <label style="display:flex; flex-direction:column; gap:0.35rem; font-size:0.9em;">
                                     <span>From</span>
-                                    <input type="date" id="prediction-history-from" lang="es-ES">
+                                    <input type="date" id="prediction-history-from">
                                 </label>
                                 <label style="display:flex; flex-direction:column; gap:0.35rem; font-size:0.9em;">
                                     <span>To</span>
-                                    <input type="date" id="prediction-history-to" lang="es-ES">
+                                    <input type="date" id="prediction-history-to">
                                 </label>
                                 <label style="display:flex; flex-direction:column; gap:0.35rem; font-size:0.9em;">
                                     <span>Granularity</span>
@@ -688,7 +675,7 @@
                             <h3>🌤️ Weather Predictor</h3>
                             <div class="predictor-controls">
                                 <label for="predictor-date">Enter Date:</label>
-                                <input type="date" id="predictor-date" lang="es-ES">
+                                <input type="date" id="predictor-date">
                                 <button id="predict-weather-btn">Predict Weather</button>
                             </div>
                             <div id="prediction-result"></div>

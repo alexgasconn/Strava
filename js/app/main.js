@@ -1,4 +1,5 @@
 // js/app/main.js
+import '../shared/utils/speed-insights.js';
 import { redirectToStrava, logout, handleAuth } from './auth.js';
 import { setupDashboard, showLoading, hideLoading, handleError, } from './ui.js';
 import {

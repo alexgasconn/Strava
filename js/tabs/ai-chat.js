@@ -217,9 +217,9 @@ export function renderAIChatTab(allActivities) {
                 <div class="ai-chat-welcome">
                     <p>👋 Ask me anything about your training! For example:</p>
                     <div class="ai-chat-suggestions">
-                        <button class="ai-suggestion-btn">¿Cuál es mi mejor racha de entrenamiento?</button>
+                        <button class="ai-suggestion-btn">What is my best training streak?</button>
                         <button class="ai-suggestion-btn">How has my running pace evolved this year?</button>
-                        <button class="ai-suggestion-btn">¿Qué deporte practico más y cuándo?</button>
+                        <button class="ai-suggestion-btn">Which sport do I do most and when?</button>
                         <button class="ai-suggestion-btn">Give me a training plan for next month</button>
                         <button class="ai-suggestion-btn">What are my weakest training months?</button>
                     </div>

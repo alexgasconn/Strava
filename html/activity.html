@@ -12,23 +12,8 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- Vercel Analytics & Speed Insights -->
+  <!-- Vercel Analytics -->
   <script defer src="/_vercel/insights/script.js"></script>
-  <!-- Polyfill for module (CommonJS compatibility in browser) -->
-  <script>
-    if (typeof module === 'undefined') {
-      window.module = { exports: {} };
-    }
-  </script>
-  <script defer src="https://cdn.jsdelivr.net/npm/@vercel/speed-insights@latest"></script>
-  <script defer>
-    // Fallback: Manual Speed Insights initialization
-    document.addEventListener('DOMContentLoaded', function() {
-      if (window.SpeedInsights && window.SpeedInsights.init) {
-        window.SpeedInsights.init();
-      }
-    });
-  </script>
 </head>
 
 <body>
@@ -286,18 +271,21 @@
          ====================================== -->
     <div class="data-section">
       <h3>🔬 Advanced Activity Analysis</h3>
-      <p style="margin-bottom: 15px; font-size: 0.9em; color: #666;">Deep sport-specific analysis with automatic insights, climb detection, and fatigue analysis</p>
-      
+      <p style="margin-bottom: 15px; font-size: 0.9em; color: #666;">Deep sport-specific analysis with automatic
+        insights, climb detection, and fatigue analysis</p>
+
       <div style="margin-bottom: 20px;">
         <label style="display: block; margin-bottom: 8px; font-weight: bold;">Analysis Mode:</label>
-        <select id="analysis-mode" style="width: 100%; max-width: 300px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.95em;">
+        <select id="analysis-mode"
+          style="width: 100%; max-width: 300px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.95em;">
           <option value="quick">⚡ Quick (500ms) - Climbs only</option>
           <option value="normal" selected>🔍 Normal (1-2s) - Full analysis</option>
           <option value="deep">🧠 Deep (3-5s) - All engines (fatigue, aero, physiology)</option>
         </select>
       </div>
-      
-      <button id="advanced-analysis-btn" class="btn btn-primary" style="margin-bottom: 15px;">🔬 Analyze Activity</button>
+
+      <button id="advanced-analysis-btn" class="btn btn-primary" style="margin-bottom: 15px;">🔬 Analyze
+        Activity</button>
     </div>
 
     <!-- Results Container -->
