@@ -47,25 +47,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginButton = document.getElementById('login-button');
     const logoutButton = document.getElementById('logout-button');
     const refreshButton = document.getElementById('refresh-button');
-    
+
     // Run Tab
     const applyFilterButton = document.getElementById('apply-date-filter');
     const resetFilterButton = document.getElementById('reset-date-filter');
     const dateFromEl = document.getElementById('date-from');
     const dateToEl = document.getElementById('date-to');
-    
+
     // Bike Tab
     const bikeApplyFilterButton = document.getElementById('bike-apply-date-filter');
     const bikeResetFilterButton = document.getElementById('bike-reset-date-filter');
     const bikeDateFromEl = document.getElementById('bike-date-from');
     const bikeDateToEl = document.getElementById('bike-date-to');
-    
+
     // Swim Tab
     const swimApplyFilterButton = document.getElementById('swim-apply-date-filter');
     const swimResetFilterButton = document.getElementById('swim-reset-date-filter');
     const swimDateFromEl = document.getElementById('swim-date-from');
     const swimDateToEl = document.getElementById('swim-date-to');
-    
+
     const settingsButton = document.getElementById('settings-button');
     const settingsPanel = document.getElementById('settings-panel');
     const closeSettings = document.getElementById('close-settings');
@@ -225,12 +225,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- YEAR FILTER BUTTONS ---
     function setupYearlySelector() {
         const yearsToShow = 5;
-        
+
         // Setup for Run Tab
         const runContainer = document.getElementById('year-filter-buttons');
         const bikeContainer = document.getElementById('bike-year-filter-buttons');
         const swimContainer = document.getElementById('swim-year-filter-buttons');
-        
+
         if ((runContainer || bikeContainer || swimContainer) && allActivities.length === 0) return;
 
         const years = [...new Set(allActivities.map(a => a.start_date_local.substring(0, 4)))]
@@ -430,7 +430,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const elapsed = () => `${((Date.now() - t0) / 1000).toFixed(1)}s elapsed`;
         showLoading('Refreshing activities from Strava...', 20, elapsed());
         try {
-            allActivities = await fetchAllActivities();
+            const activities = await fetchAllActivities();
+            const athlete = await fetchAthleteData();
+            const zones = await fetchTrainingZones();
+            let gears = [];
+
+            try {
+                gears = athlete ? await fetchAllGears(athlete) : [];
+                setCachedGears(gears);
+            } catch (error) {
+                console.warn('Failed to load gears during refresh, continuing without:', error);
+                gears = [];
+            }
+
+            // Keep refresh aligned with initial load: reuse preprocessed fields (including activity.tss).
+            allActivities = await preprocessActivities(activities, athlete, zones, gears);
             localStorage.setItem('strava_activities', JSON.stringify(allActivities));
             localStorage.setItem('strava_activities_timestamp', Date.now().toString());
             showLoading(`Rebuilding views (${allActivities.length} activities)...`, 80, elapsed());

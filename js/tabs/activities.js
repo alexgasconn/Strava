@@ -111,7 +111,7 @@ const COLUMNS = [
     },
     {
         key: 'tss', label: 'TSS',
-        format: v => typeof v === 'number' && v > 0 ? Math.round(v) : '–'
+        format: v => typeof v === 'number' ? Math.round(v) : '–'
     },
 ];
 

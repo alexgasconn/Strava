@@ -69,6 +69,23 @@ function mondayOf(dt) {
     return d;
 }
 
+function buildPeriodSummary(activities) {
+    const count = activities.length;
+    const totalKm = (activities.reduce((s, a) => s + (a.distance || 0), 0) / 1000).toFixed(0);
+    const totalH = (activities.reduce((s, a) => s + (a.moving_time || 0), 0) / 3600).toFixed(0);
+    const daysActive = new Set(activities.map(a => (a.start_date_local || '').slice(0, 10)).filter(Boolean)).size;
+    const totalTSS = activities.reduce((s, a) => s + (typeof a.tss === 'number' ? a.tss : 0), 0).toFixed(0);
+
+    return `
+        <div class="cal-year-summary">
+            <span>${count} activities</span>
+            <span>${totalKm} km</span>
+            <span>${totalH} h</span>
+            <span>${daysActive} active days</span>
+            <span>${totalTSS} TSS</span>
+        </div>`;
+}
+
 // ─── Streak calculation ───────────────────────────────────────────────────────
 function computeStreaks(byDate) {
     const dates = Object.keys(byDate).sort();
@@ -277,6 +294,7 @@ export function renderCalendarTab(allActivities) {
         const lastDay = new Date(state.year, state.month + 1, 0);
         const todayStr = toYMD(new Date());
         const startDow = (firstDay.getDay() + 6) % 7; // Mon=0
+        const monthActs = [];
 
         let html = `<div class="cal-month-grid">
             ${DAYS_SHORT.map(d => `<div class="cal-dow-header">${d}</div>`).join('')}`;
@@ -287,6 +305,7 @@ export function renderCalendarTab(allActivities) {
             const dt = new Date(state.year, state.month, day);
             const dateStr = toYMD(dt);
             const acts = byDate[dateStr] || [];
+            monthActs.push(...acts);
             const isToday = dateStr === todayStr;
             const isFuture = dt > new Date();
 
@@ -298,12 +317,14 @@ export function renderCalendarTab(allActivities) {
                 const t = getType(a);
                 const bg = sportColor(t, actIntensity(a));
                 const km = a.distance ? `${(a.distance / 1000).toFixed(1)} km` : '';
-                html += `<div class="cal-pill" style="background:${bg};color:${sportColorDark(t)}" title="${a.name}">${emoji(t)} ${km}</div>`;
+                const tss = typeof a.tss === 'number' ? `TSS ${Math.round(a.tss)}` : '';
+                const stats = [km, tss].filter(Boolean).join(' · ');
+                html += `<div class="cal-pill" style="background:${bg};color:${sportColorDark(t)}" title="${a.name}">${emoji(t)} ${stats}</div>`;
             }
             if (acts.length > 4) html += `<div class="cal-pill cal-pill-more">+${acts.length - 4} more</div>`;
             html += `</div></div>`;
         }
-        html += `</div>`;
+        html += `</div>${buildPeriodSummary(monthActs)}`;
         el.innerHTML = html;
 
         el.querySelectorAll('.cal-day[data-date]').forEach(c =>
@@ -315,6 +336,7 @@ export function renderCalendarTab(allActivities) {
     function renderWeek(el, byDate) {
         const wStart = mondayOf(state.weekOf);
         const todayStr = toYMD(new Date());
+        const weekActs = [];
 
         let html = `<div class="cal-week-grid">`;
 
@@ -322,6 +344,7 @@ export function renderCalendarTab(allActivities) {
             const dt = new Date(+wStart + i * 86400000);
             const dateStr = toYMD(dt);
             const acts = byDate[dateStr] || [];
+            weekActs.push(...acts);
             const isToday = dateStr === todayStr;
             const isFuture = dt > new Date();
 
@@ -348,7 +371,7 @@ export function renderCalendarTab(allActivities) {
                     const km = a.distance ? `${(a.distance / 1000).toFixed(1)} km` : '';
                     const dur = a.moving_time ? utils.formatTime(a.moving_time) : '';
                     const hr = a.average_heartrate ? `${Math.round(a.average_heartrate)} bpm` : '';
-                    const tss = a.tss ? `TSS ${Math.round(a.tss)}` : '';
+                    const tss = typeof a.tss === 'number' ? `TSS ${Math.round(a.tss)}` : '';
                     html += `<a class="cal-week-activity" href="html/activity-router.html?id=${a.id}" target="_blank"
                         style="background:${bg};border-left:3px solid ${sportColorDark(t)}">
                         <div class="cal-week-act-sport">${emoji(t)} ${t}</div>
@@ -359,7 +382,7 @@ export function renderCalendarTab(allActivities) {
             }
             html += `</div></div>`;
         }
-        html += `</div>`;
+        html += `</div>${buildPeriodSummary(weekActs)}`;
         el.innerHTML = html;
     }
 
@@ -426,10 +449,6 @@ export function renderCalendarTab(allActivities) {
 
         // Year summary
         const yActs = filteredActs.filter(a => (a.start_date_local || '').startsWith(`${state.year}`));
-        const totalKm = (yActs.reduce((s, a) => s + (a.distance || 0), 0) / 1000).toFixed(0);
-        const totalH = (yActs.reduce((s, a) => s + (a.moving_time || 0), 0) / 3600).toFixed(0);
-        const totalTSS = yActs.reduce((s, a) => s + (a.tss || 0), 0).toFixed(0);
-        const daysActive = new Set(yActs.map(a => (a.start_date_local || '').slice(0, 10))).size;
 
         el.innerHTML = `
         <div class="cal-year-outer">
@@ -440,14 +459,7 @@ export function renderCalendarTab(allActivities) {
                 <div class="cal-year-months-row" style="position:relative;height:18px;margin-bottom:3px;font-size:.62rem;color:var(--text-light)">${monthsHtml}</div>
                 <div class="cal-year-weeks">${weeksHtml}</div>
             </div>
-        </div>
-        <div class="cal-year-summary">
-            <span>${yActs.length} activities</span>
-            <span>${totalKm} km</span>
-            <span>${totalH} h</span>
-            <span>${daysActive} active days</span>
-            <span>${totalTSS} TSS</span>
-        </div>`;
+        </div>${buildPeriodSummary(yActs)}`;
 
         el.querySelectorAll('.cal-year-cell[data-date]').forEach(c =>
             c.addEventListener('click', () => showDayDetail(c.dataset.date, byDate[c.dataset.date] || []))
@@ -476,7 +488,7 @@ export function renderCalendarTab(allActivities) {
             const dur = a.moving_time ? utils.formatTime(a.moving_time) : '';
             const hr = a.average_heartrate ? `${Math.round(a.average_heartrate)} bpm` : '';
             const ele = a.total_elevation_gain ? `↑${a.total_elevation_gain.toFixed(0)} m` : '';
-            const tss = a.tss ? `TSS ${Math.round(a.tss)}` : '';
+            const tss = typeof a.tss === 'number' ? `TSS ${Math.round(a.tss)}` : '';
             return `<a class="cal-detail-row" href="html/activity-router.html?id=${a.id}" target="_blank"
                 style="border-left:3px solid ${sportColorDark(t)}">
                 <span class="cal-detail-sport">${emoji(t)} ${t}</span>
