@@ -5019,51 +5019,6 @@ body {
     }
 }
 
-.margin-top-section {
-    margin-top: 1rem;
-}
-
-/* Touch-friendly spacing */
-a,
-button {
-    min-height: 44px;
-    min-width: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* Hide elements that clutter mobile */
-.desktop-only {
-    display: none !important;
-}
-
-.mobile-only {
-    display: block !important;
-}
-}
-
-/* Extra small devices (< 360px - old phones) */
-@media (max-width: 360px) {
-    .summary-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .tabs {
-        bottom: 0;
-    }
-
-    .tab-link {
-        font-size: 0.65rem;
-        padding: 0.5rem 0.3rem;
-    }
-
-    button {
-        padding: 0.5rem 1rem;
-        font-size: 0.8rem;
-    }
-}
-
 .btn-small {
     background: linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 100%);
     color: #fff;
