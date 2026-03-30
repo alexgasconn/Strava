@@ -238,7 +238,8 @@ function calculatePMC(tssSeries) {
     for (let i = 0; i < tssSeries.length; i++) {
         const a = atl[i];
         const c = ctl[i];
-        tsb.push(+(a - c).toFixed(1));
+        // Canonical TSB sign: form = CTL - ATL (negative means fatigue, positive means freshness)
+        tsb.push(+(c - a).toFixed(1));
 
         if (i > 0) {
             rampRate.push(+(c - ctl[i - 1]).toFixed(1));

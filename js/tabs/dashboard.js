@@ -94,7 +94,7 @@ function getValidLoadActivities(activities) {
 }
 
 function toDisplayTsb(rawTsb) {
-    return -(rawTsb || 0);
+    return rawTsb || 0;
 }
 
 function percentileRank(values, value) {
