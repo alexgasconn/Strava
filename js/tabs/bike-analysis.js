@@ -33,6 +33,12 @@ function getBikeTypeLabel(r) {
     return "Outdoor";
 }
 
+function bikeTypeBadge(r) {
+    const bikeType = getBikeType(r);
+    const label = getBikeTypeLabel(r);
+    return `<span class="bike-type-badge bike-type-${bikeType}">${label}</span>`;
+}
+
 
 // ------------------------
 // MAIN ENTRY
@@ -508,7 +514,7 @@ function renderActivitiesTable(rides) {
             <tr>
                 <td>${a.start_date_local.substring(0, 10)}</td>
                 <td>${a.name}</td>
-                <td>${getBikeTypeLabel(a)}</td>
+                <td>${bikeTypeBadge(a)}</td>
                 <td>${(a.distance / 1000).toFixed(1)}</td>
                 <td>${a.total_elevation_gain || 0}</td>
                 <td>${elevPerKm}</td>

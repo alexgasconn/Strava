@@ -5194,3 +5194,32 @@ th {
 .pool-unknown {
     background-color: #9ca3af;
 }
+
+.bike-type-badge {
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: white;
+    display: inline-block;
+}
+
+.bike-type-road {
+    background-color: #fc5200;
+}
+
+.bike-type-mtb {
+    background-color: #2e7d32;
+}
+
+.bike-type-indoor {
+    background-color: #1976d2;
+}
+
+.bike-type-gravel {
+    background-color: #b58600;
+}
+
+.bike-type-electric {
+    background-color: #7c3aed;
+}
