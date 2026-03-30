@@ -1,81 +1,38 @@
 import * as utils from './utils.js';
 
 let selectedRangeDays = 'last30'; // rango inicial
+const RANGE_OPTIONS = [
+    { label: 'This Week', type: 'week' },
+    { label: 'Last 7 Days', type: 'last7' },
+    { label: 'This Month', type: 'month' },
+    { label: 'Last 30 Days', type: 'last30' },
+    { label: 'Last 3 Months', type: 'last3m' },
+    { label: 'Last 6 Months', type: 'last6m' },
+    { label: 'This Year', type: 'year' },
+    { label: 'Last 365 Days', type: 'last365' }
+];
 
-export function renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo) {
-    const container = document.getElementById('dashboard-tab');
-    if (container && !document.getElementById('range-selector')) {
-        const rangeDiv = document.createElement('div');
-        rangeDiv.id = 'range-selector';
-        rangeDiv.style = 'display:flex;gap:.5rem;margin-bottom:1rem;';
-        container.prepend(rangeDiv);
-    }
-
-    renderRangeSelector(allActivities, dateFilterFrom, dateFilterTo);
-}
-
-function renderRangeSelector(allActivities, dateFilterFrom, dateFilterTo) {
-    const container = document.getElementById('range-selector');
-    if (!container) return;
-
-    const ranges = [
-        { label: 'This Week', type: 'week' },
-        { label: 'Last 7 Days', type: 'last7' },
-        { label: 'This Month', type: 'month' },
-        { label: 'Last 30 Days', type: 'last30' },
-        { label: 'Last 3 Months', type: 'last3m' },
-        { label: 'Last 6 Months', type: 'last6m' },
-        { label: 'This Year', type: 'year' },
-        { label: 'Last 365 Days', type: 'last365' }
-    ];
-
-    container.innerHTML = ranges.map(r => `
-        <button 
-            class="range-btn ${r.type === selectedRangeDays ? 'active' : ''}" 
-            data-type="${r.type}">
-            ${r.label}
-        </button>
-    `).join('');
-
-    container.querySelectorAll('.range-btn').forEach(btn => {
-        btn.onclick = () => {
-            selectedRangeDays = btn.dataset.type;
-            renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo);
-            renderRangeSelector(allActivities, dateFilterFrom, dateFilterTo);
-        };
-    });
-
-    renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo);
-}
-
-
-function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
-    const filteredActivities = utils.filterActivitiesByDate(allActivities, dateFilterFrom, dateFilterTo);
-    const runs = filteredActivities.filter(a => a.type && a.type.includes('Run'));
-    runs.sort((a, b) => new Date(a.start_date_local || 0) - new Date(b.start_date_local || 0));
-
+function getRangeStartDate(rangeType) {
     const now = new Date();
     let startDate;
 
-    switch (selectedRangeDays) {
+    switch (rangeType) {
         case 'week': {
-            // Obtener lunes de la semana actual (lunes = 1, domingo = 0)
             const currentDay = now.getDay();
-            const diffToMonday = currentDay === 0 ? -6 : 1 - currentDay; // si es domingo, retrocede 6
+            const diffToMonday = currentDay === 0 ? -6 : 1 - currentDay;
             startDate = new Date(now);
             startDate.setDate(now.getDate() + diffToMonday);
             startDate.setHours(0, 0, 0, 0);
             break;
         }
-
         case 'month': {
             startDate = new Date(now.getFullYear(), now.getMonth(), 1);
             startDate.setHours(0, 0, 0, 0);
             break;
         }
-
         case 'year': {
             startDate = new Date(now.getFullYear(), 0, 1);
+            startDate.setHours(0, 0, 0, 0);
             break;
         }
         case 'last7': {
@@ -109,17 +66,125 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
         }
     }
 
+    return startDate;
+}
+
+function getRangeLabel(rangeType) {
+    return RANGE_OPTIONS.find(r => r.type === rangeType)?.label || 'Last 30 Days';
+}
+
+function getSportKey(type = '') {
+    if (type.includes('Run')) return 'Run';
+    if (type.includes('Ride')) return 'Ride';
+    if (type.includes('Swim')) return 'Swim';
+    return 'Other';
+}
+
+function renderDashboardTopline(filteredActivities, recentActivities, recentRuns, startDate, dateFilterFrom, dateFilterTo) {
+    const container = document.getElementById('dashboard-topline');
+    if (!container) return;
+
+    const totalDistanceKm = recentActivities.reduce((sum, a) => sum + ((a.distance || 0) / 1000), 0);
+    const totalMovingTime = recentActivities.reduce((sum, a) => sum + (a.moving_time || 0), 0);
+    const longestRunKm = recentRuns.reduce((max, run) => Math.max(max, (run.distance || 0) / 1000), 0);
+
+    const sportCounts = recentActivities.reduce((acc, a) => {
+        const key = getSportKey(a.type || '');
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+    }, {});
+
+    const sportMixText = ['Run', 'Ride', 'Swim']
+        .filter(key => sportCounts[key])
+        .map(key => `${key}: ${sportCounts[key]}`)
+        .join(' · ') || 'No recent activities in this period';
+
+    const dateContext = (dateFilterFrom || dateFilterTo)
+        ? `${dateFilterFrom || '...'} → ${dateFilterTo || 'today'}`
+        : `${utils.formatDate(startDate)} → today`;
+
+    container.innerHTML = `
+        <div class="dashboard-meta-pill">
+            <strong>Range:</strong> ${getRangeLabel(selectedRangeDays)}
+        </div>
+        <div class="dashboard-meta-pill">
+            <strong>Filter:</strong> ${dateContext}
+        </div>
+        <div class="dashboard-mini-card">
+            <p class="dashboard-mini-label">Activities</p>
+            <p class="dashboard-mini-value">${recentActivities.length}</p>
+            <small>${filteredActivities.length} in current global filter</small>
+        </div>
+        <div class="dashboard-mini-card">
+            <p class="dashboard-mini-label">Volume</p>
+            <p class="dashboard-mini-value">${totalDistanceKm.toFixed(1)} km</p>
+            <small>${utils.formatTime(totalMovingTime)} total moving time</small>
+        </div>
+        <div class="dashboard-mini-card">
+            <p class="dashboard-mini-label">Longest Run</p>
+            <p class="dashboard-mini-value">${longestRunKm.toFixed(1)} km</p>
+            <small>Within selected range</small>
+        </div>
+        <div class="dashboard-mini-card dashboard-mini-card-wide">
+            <p class="dashboard-mini-label">Sport Mix</p>
+            <p class="dashboard-mini-value dashboard-mini-value-small">${sportMixText}</p>
+            <small>Dashboard metrics remain run-focused in this tab</small>
+        </div>
+    `;
+}
+
+export function renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo) {
+    const container = document.getElementById('dashboard-tab');
+    if (container && !document.getElementById('range-selector')) {
+        const rangeDiv = document.createElement('div');
+        rangeDiv.id = 'range-selector';
+        rangeDiv.style = 'display:flex;gap:.5rem;margin-bottom:1rem;';
+        container.prepend(rangeDiv);
+    }
+
+    renderRangeSelector(allActivities, dateFilterFrom, dateFilterTo);
+}
+
+function renderRangeSelector(allActivities, dateFilterFrom, dateFilterTo) {
+    const container = document.getElementById('range-selector');
+    if (!container) return;
+
+    container.innerHTML = RANGE_OPTIONS.map(r => `
+        <button 
+            class="range-btn ${r.type === selectedRangeDays ? 'active' : ''}" 
+            data-type="${r.type}">
+            ${r.label}
+        </button>
+    `).join('');
+
+    container.querySelectorAll('.range-btn').forEach(btn => {
+        btn.onclick = () => {
+            selectedRangeDays = btn.dataset.type;
+            renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo);
+            renderRangeSelector(allActivities, dateFilterFrom, dateFilterTo);
+        };
+    });
+
+    renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo);
+}
+
+
+function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
+    const filteredActivities = utils.filterActivitiesByDate(allActivities, dateFilterFrom, dateFilterTo);
+    const runs = filteredActivities.filter(a => a.type && a.type.includes('Run'));
+    runs.sort((a, b) => new Date(a.start_date_local || 0) - new Date(b.start_date_local || 0));
+
+    const startDate = getRangeStartDate(selectedRangeDays);
+
     const recentRuns = runs.filter(r => new Date(r.start_date_local) >= startDate);
     const midRecentRuns = runs.filter(r => {
         const d = new Date(r.start_date_local);
         return d < startDate && d >= new Date(startDate.getTime() - 30 * 24 * 3600 * 1000);
     });
 
-    const recentActivities = allActivities.filter(r => new Date(r.start_date_local) >= startDate);
-    const midRecentActivities = allActivities.filter(r => {
-        const d = new Date(r.start_date_local);
-        return d < startDate && d >= new Date(startDate.getTime() - 30 * 24 * 3600 * 1000);
-    });
+    const recentActivities = filteredActivities.filter(r => new Date(r.start_date_local) >= startDate);
+
+    renderDashboardTopline(filteredActivities, recentActivities, recentRuns, startDate, dateFilterFrom, dateFilterTo);
 
     renderTrainingLoadMetrics(recentRuns, allActivities);
     renderPMCChart(recentActivities, allActivities);

@@ -34,15 +34,32 @@ TO DO
 🔴🩹[WRAPPED]wrapped -> exportar captura pels fans 
 🔴🚧[ACTIVITY]text de alerta si no hi ha dades de HR/cadence, watts, time...
 🔴🚧[GENERAL]time zones???
+116 x 6
+1 Hidden Terminal
+Voy a revisar cómo está construida la pestaña de dashboard (HTML, lógica y estilos) para proponer una mejora visual y funcional alineada con lo que la app ya soporta hoy. Después aplico cambios directamente en código y valido que no rompan nada.
+
+Ya identifiqué los puntos clave: el dashboard funciona, pero mezcla mucho estilo inline y no tiene una capa de “resumen rápido” clara al entrar. Voy a aplicar una mejora de UX enfocada en estructura visual, legibilidad y contexto, sin inventar datos que la app no calcula.
+
+Voy a editar tres archivos: mejorar estructura del bloque dashboard en el HTML, añadir un “topline” de contexto en la lógica del tab y aplicar estilos específicos para que quede más limpio y responsive sin tocar features fuera de lo que ya calcula la app.
+
+Edited
+dashboard.js+127-62
+La lógica del dashboard ya quedó mejorada con contexto de rango/filtro y corrigiendo el uso del filtro global para actividades recientes. Ahora voy con HTML/CSS para que la tab se vea más cuidada y consistente.
+
+Estoy validando los cambios con un diff final para resumirte exactamente qué mejoró en dashboard y asegurar que no haya efectos colaterales.
+
+He mejorado la tab Dashboard con foco en UX y claridad, manteniendo lo que la app realmente calcula hoy (sin inventar nuevas métricas).
+
+Cambios principales
+
+Nueva cabecera visual del Dashboard con contexto claro.
+Añadí un bloque de entrada más limpio y descriptivo en index.html:338.
+
 🔴🚧[GENERAL]miles or km...
 🔴🌈[GENERAL]idiomes
 🔴🌈[GENERAL]versio mobil
 🔴🌈[GENERAL]afegir chat IA
 🔴🌈[GENERAL]tenir una base de dades
-🔴[PREPROCESSING]calcular be el TSS, de ALL activities! fer servir duracio i HR. i un multiplicador per esport!! (si hi ha effort, ferlo sevrir (es nomes premium))
-🔴[ANALYSIS]el titol "Monthly Distance (Last Year)", que sigui "Monthly Distance"
-🔴[ATHLETE]ahlete -> "Month vs Hour Heatmap" esta tot marcat, no agafa be les dades
-🔴[PREPROCESSING]TSS a TOTES les activitats... fins al dia de avui
 🔴[GENERAL]tenir un arxiu de config general (dades metriques/imperials, zona horaria, HR_MAX, edat...)
 🔴[PREPROCESSING][WEATHER]get weather api en segon pla desde preprocessing.... NO al entrar a weatehr TAB
 
@@ -94,3 +111,7 @@ DONE
 🟢[ATHLETE]filtres de esport, de fechas, i de tipus de dades (duracio, numero actiivitats o distancia(km)) a athlete, aplicar a totes les grafiques
 🟢[GEAR]mostrar tambe (o no, toggle) les gears "retired"
 🟢[GEAR]reduir tamany lletra dades gear cards
+🟢[PREPROCESSING]calcular be el TSS, de ALL activities! fer servir duracio i HR. i un multiplicador per esport!! (si hi ha effort, ferlo sevrir (es nomes premium))
+🟢[ANALYSIS]el titol "Monthly Distance (Last Year)", que sigui "Monthly Distance"
+🟢[ATHLETE]ahlete -> "Month vs Hour Heatmap" esta tot marcat, no agafa be les dades
+🟢[PREPROCESSING]TSS a TOTES les activitats... fins al dia de avui

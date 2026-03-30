@@ -3346,8 +3346,128 @@ body {
 
 .range-btn.active {
     background: #007bff;
-    color: #0b0b0b;
+    color: #fff;
     border-color: #007bff;
+}
+
+#dashboard-tab {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.dashboard-hero {
+    padding: 1.25rem 1.2rem;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #fff4ec 0%, #ffffff 65%);
+    border: 1px solid #ffe4d6;
+}
+
+.dashboard-hero h2 {
+    margin: 0;
+    font-size: 1.6rem;
+    color: #2c2c2c;
+}
+
+.dashboard-hero p {
+    margin: 0.4rem 0 0;
+    color: #555;
+    font-size: 0.95rem;
+}
+
+.dashboard-topline {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 0.8rem;
+}
+
+.dashboard-meta-pill {
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 999px;
+    padding: 0.55rem 0.9rem;
+    font-size: 0.82rem;
+    color: #444;
+    align-self: center;
+}
+
+.dashboard-mini-card {
+    background: #fff;
+    border: 1px solid #f1f1f1;
+    border-radius: 12px;
+    padding: 0.8rem 0.95rem;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.05);
+}
+
+.dashboard-mini-card-wide {
+    grid-column: span 2;
+}
+
+.dashboard-mini-label {
+    margin: 0;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #707070;
+}
+
+.dashboard-mini-value {
+    margin: 0.35rem 0 0.2rem;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #1b1b1b;
+}
+
+.dashboard-mini-value-small {
+    font-size: 1rem;
+    line-height: 1.25;
+}
+
+.dashboard-mini-card small {
+    color: #777;
+}
+
+.dashboard-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.2rem;
+}
+
+#dashboard-tab .dashboard-range-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.2rem;
+}
+
+#dashboard-tab .range-btn {
+    padding: 0.42rem 0.82rem;
+    border: 1px solid #d8d8d8;
+    border-radius: 999px;
+    background: #fff;
+    cursor: pointer;
+    color: #333;
+    font-size: 0.88rem;
+    transition: all 0.18s ease;
+}
+
+#dashboard-tab .range-btn:hover {
+    border-color: #fc5200;
+    color: #fc5200;
+}
+
+#dashboard-tab .range-btn.active {
+    background: #fc5200;
+    border-color: #fc5200;
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(252, 82, 0, 0.24);
+}
+
+@media (max-width: 840px) {
+    .dashboard-mini-card-wide {
+        grid-column: span 1;
+    }
 }
 
 
