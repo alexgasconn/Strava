@@ -21,7 +21,7 @@
       "destination": "/activities/:path*"
     },
     {
-      "source": "/:tab(run|dashboard|bike|swim|athlete|planner|gear|activities|calendar|weather|map|wrapped)",
+      "source": "/:tab(run|dashboard|bike|swim|athlete|planner|gear|activities|calendar|weather|map|wrapped|ai-coach)",
       "destination": "/index.html"
     },
     {

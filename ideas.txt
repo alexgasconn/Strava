@@ -23,7 +23,7 @@ IN PROGRESS
 🟡🩹[WEATHER]weather api fer servir per predictions 
 🟡🩹[ANALYSIS]consistency map canvia al posar filre 2026??
 🟡⚠️[GENERAL]format del pace decimals-> time amb utils.paceDecimalToTime(pace)
-
+🟡🌈[GENERAL]afegir chat IA
 
 
 TO DO
@@ -34,8 +34,6 @@ TO DO
 🔴🚧[GENERAL]time zones???
 🔴🚧[GENERAL]miles or km...
 🔴🌈[GENERAL]idiomes
-🔴🌈[GENERAL]versio mobil
-🔴🌈[GENERAL]afegir chat IA
 🔴🌈[GENERAL]tenir una base de dades
 🔴[GENERAL]tenir un arxiu de config general (dades metriques/imperials, zona horaria, HR_MAX, edat...)
 🔴[PREPROCESSING][WEATHER]get weather api en segon pla desde preprocessing.... NO al entrar a weatehr TAB
@@ -95,3 +93,4 @@ DONE
 🟢🚨[DASHBOARD]a dashboard, surt AthleteCount 1 quan he corregut amb martina... raro
 🟢🚨[ATHLETE]No es veu Monday a una matrix de Athlete
 🟢🚨[ATHLETE]grafiques de AThlete MALAMENT
+🟢🌈[GENERAL]versio mobil

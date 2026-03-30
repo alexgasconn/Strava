@@ -10,3 +10,4 @@ export { renderActivitiesTab } from './activities.js';
 export { renderCalendarTab } from './calendar.js';
 export { renderWrappedTab } from './wrapped.js';
 export { renderMapTab } from './maps.js';
+export { renderAIChatTab } from './ai-chat.js';

@@ -14,6 +14,7 @@ import {
     renderCalendarTab,
     renderWrappedTab,
     renderMapTab,
+    renderAIChatTab,
 } from '../tabs/index.js';
 import { fetchAllActivities, fetchAthleteData, fetchTrainingZones, fetchAllGears, setCachedGears } from '../services/index.js';
 import { preprocessActivities } from '../shared/preprocessing/index.js';
@@ -40,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'weather-tab': { render: () => renderWeatherTab(allActivities) },
         'map-tab': { render: () => renderMapTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
         'wrapped-tab': { render: () => renderWrappedTab(allActivities) },
+        'ai-chat-tab': { render: () => renderAIChatTab(allActivities) },
     };
     const renderedTabs = new Set();
 
@@ -123,7 +125,8 @@ document.addEventListener('DOMContentLoaded', () => {
         '/calendar': 'calendar-tab',
         '/weather': 'weather-tab',
         '/map': 'map-tab',
-        '/wrapped': 'wrapped-tab'
+        '/wrapped': 'wrapped-tab',
+        '/ai-coach': 'ai-chat-tab'
     };
 
     const tabToRoute = {
@@ -138,7 +141,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'calendar-tab': '/calendar',
         'weather-tab': '/weather',
         'map-tab': '/map',
-        'wrapped-tab': '/wrapped'
+        'wrapped-tab': '/wrapped',
+        'ai-chat-tab': '/ai-coach'
     };
 
     function normalizePath(pathname) {
