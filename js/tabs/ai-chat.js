@@ -1,7 +1,7 @@
 // ai-chat.js — AI Chat tab powered by Google Gemini 2.0 Flash (free tier)
 // The user provides their own API key (stored in localStorage). No server cost.
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent';
 const STORAGE_KEY = 'gemini_api_key';
 const HISTORY_KEY = 'ai_chat_history';
 
