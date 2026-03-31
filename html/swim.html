@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Strava Swimming Activity Details</title>
+    <title>Strava Swim Performance Deck</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="../styles/style.css">
 
@@ -16,7 +16,7 @@
 
 <body>
     <div class="container">
-        <h1>🏊 Swimming Activity Details</h1>
+        <h1>🏊 Swim Performance Deck</h1>
 
         <!-- ======================================
          SECTION 1: OVERVIEW & QUICK STATS
@@ -27,11 +27,17 @@
             <div id="activity-advanced" class="activity-details-col"></div>
         </div>
 
+        <div class="data-section" style="margin-top: 16px; background: #eef9ff; border: 1px solid #bfe3f7;">
+            <h3>🌊 Swim Focus</h3>
+            <p style="margin: 0; color: #0c4a6e; font-size: 0.92em;">This page prioritizes stroke rhythm, lap control,
+                pacing by 100m and cardio response specific to swim sessions.</p>
+        </div>
+
         <!-- ======================================
          SECTION 2: HEART RATE ZONES
          ====================================== -->
         <div class="data-section">
-            <h3>⚕️ Time in Heart Rate Zones</h3>
+            <h3>⚕️ Cardio Zones in Water</h3>
             <div class="chart-container-inner">
                 <canvas id="hr-zones-chart"></canvas>
             </div>
@@ -56,7 +62,7 @@
          SECTION 5: LAPS CHART
          ====================================== -->
         <div id="laps-chart-section" class="data-section hidden">
-            <h3>Lap Pace Visualization</h3>
+            <h3>Lap Pace Distribution</h3>
             <div class="chart-container-inner">
                 <canvas id="laps-chart"></canvas>
             </div>

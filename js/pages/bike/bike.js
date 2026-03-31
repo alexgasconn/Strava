@@ -196,6 +196,18 @@ function calculatePowerCurve(wattsData) {
     });
 }
 
+function calculateBestAveragePower(wattsData, durationSec) {
+    if (!Array.isArray(wattsData) || wattsData.length < durationSec || durationSec <= 0) return null;
+    let best = 0;
+    for (let i = 0; i <= wattsData.length - durationSec; i++) {
+        let sum = 0;
+        for (let j = 0; j < durationSec; j++) sum += (wattsData[i + j] || 0);
+        const avg = sum / durationSec;
+        if (avg > best) best = avg;
+    }
+    return Math.round(best);
+}
+
 /**
  * Applies smoothing to a copy of stream data
  */
@@ -554,6 +566,134 @@ function renderPowerCurveChart(streams) {
             }
         }
     });
+}
+
+function renderPowerProfile(streams, activity) {
+    const section = document.getElementById('bike-power-profile');
+    const container = document.getElementById('bike-power-metrics');
+    if (!section || !container) return;
+
+    if (!streams?.watts?.data?.some(w => w > 0)) {
+        section.style.display = 'none';
+        return;
+    }
+
+    section.style.display = '';
+    const watts = streams.watts.data.filter(w => w !== null && isFinite(w) && w >= 0);
+    const np = activity?.weighted_average_watts ? Math.round(activity.weighted_average_watts) : calculateNormalizedPower(watts);
+    const best5s = calculateBestAveragePower(watts, 5);
+    const best1m = calculateBestAveragePower(watts, 60);
+    const best5m = calculateBestAveragePower(watts, 300);
+    const best20m = calculateBestAveragePower(watts, 1200);
+    const ftpEst = best20m ? Math.round(best20m * 0.95) : null;
+
+    const cards = [
+        { label: 'Normalized Power', value: np ? `${np} W` : 'N/A' },
+        { label: 'Best 5s', value: best5s ? `${best5s} W` : 'N/A' },
+        { label: 'Best 1min', value: best1m ? `${best1m} W` : 'N/A' },
+        { label: 'Best 5min', value: best5m ? `${best5m} W` : 'N/A' },
+        { label: 'Best 20min', value: best20m ? `${best20m} W` : 'N/A' },
+        { label: 'Estimated FTP', value: ftpEst ? `${ftpEst} W` : 'N/A' },
+    ];
+
+    container.innerHTML = cards.map(card => `
+        <div style="border:1px solid #e5e7eb; border-radius:8px; padding:10px 12px; background:#fff;">
+            <div style="font-size:0.78rem; color:#6b7280; margin-bottom:4px;">${card.label}</div>
+            <div style="font-size:1.1rem; font-weight:700; color:#111827;">${card.value}</div>
+        </div>
+    `).join('');
+}
+
+function getClimbCategory(elevation, distanceKm) {
+    if (elevation > 1000 || distanceKm > 20) return 'HC';
+    if (elevation >= 500 || distanceKm >= 10) return 'Cat 1';
+    if (elevation >= 250 || distanceKm >= 5) return 'Cat 2';
+    if (elevation >= 100 || distanceKm >= 2) return 'Cat 3';
+    return 'Cat 4';
+}
+
+function detectClimbsFromStreams(streams) {
+    const distance = streams?.distance?.data;
+    const altitude = streams?.altitude?.data;
+    const time = streams?.time?.data;
+    if (!distance || !altitude || distance.length < 3 || altitude.length < 3) return [];
+
+    const climbs = [];
+    let current = null;
+
+    for (let i = 1; i < distance.length; i++) {
+        const dDist = distance[i] - distance[i - 1];
+        if (dDist < 5) continue;
+        const dElev = altitude[i] - altitude[i - 1];
+        const grade = (dElev / dDist) * 100;
+
+        if (grade >= 3 && dElev > 0) {
+            if (!current) {
+                current = {
+                    startIdx: i - 1,
+                    endIdx: i,
+                    elevationGain: Math.max(0, dElev),
+                    distanceM: dDist,
+                };
+            } else {
+                current.endIdx = i;
+                current.elevationGain += Math.max(0, dElev);
+                current.distanceM += dDist;
+            }
+            continue;
+        }
+
+        if (current) {
+            const distanceKm = current.distanceM / 1000;
+            const avgGrade = current.distanceM > 0 ? (current.elevationGain / current.distanceM) * 100 : 0;
+            if (distanceKm >= 0.3 && current.elevationGain >= 20 && avgGrade >= 3) {
+                const durationSec = (time && time[current.endIdx] != null && time[current.startIdx] != null)
+                    ? time[current.endIdx] - time[current.startIdx]
+                    : null;
+                const vam = durationSec && durationSec > 0 ? Math.round(current.elevationGain / (durationSec / 3600)) : null;
+                climbs.push({
+                    distanceKm,
+                    elevationGain: Math.round(current.elevationGain),
+                    avgGrade: +avgGrade.toFixed(1),
+                    durationSec,
+                    vam,
+                    category: getClimbCategory(current.elevationGain, distanceKm),
+                });
+            }
+            current = null;
+        }
+    }
+
+    return climbs.sort((a, b) => b.elevationGain - a.elevationGain);
+}
+
+function renderClimbInsights(streams) {
+    const section = document.getElementById('climbs-section');
+    const container = document.getElementById('climbs-list');
+    if (!section || !container) return;
+
+    const climbs = detectClimbsFromStreams(streams);
+    if (!climbs.length) {
+        section.classList.add('hidden');
+        return;
+    }
+
+    section.classList.remove('hidden');
+    container.innerHTML = climbs.slice(0, 8).map((climb, index) => `
+        <div style="border:1px solid #e5e7eb; border-left:4px solid #FC5200; border-radius:8px; padding:10px 12px; background:#fff;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <strong>Climb ${index + 1}</strong>
+                <span style="font-size:0.78rem; background:#FC5200; color:white; border-radius:999px; padding:2px 8px;">${climb.category}</span>
+            </div>
+            <div style="font-size:0.86rem; color:#374151; line-height:1.45;">
+                <div>Distance: ${climb.distanceKm.toFixed(2)} km</div>
+                <div>Elevation: +${climb.elevationGain} m</div>
+                <div>Avg Grade: ${climb.avgGrade}%</div>
+                <div>Duration: ${climb.durationSec ? formatTime(climb.durationSec) : 'N/A'}</div>
+                <div>VAM: ${climb.vam ? `${climb.vam} m/h` : 'N/A'}</div>
+            </div>
+        </div>
+    `).join('');
 }
 
 // =====================================================
@@ -1003,6 +1143,8 @@ async function main() {
         renderActivityMap(activityData);
         renderSplitsCharts(activityData);
         renderStreamCharts(initialSmoothed, activityData, currentSmoothingLevel);
+        renderClimbInsights(streamData);
+        renderPowerProfile(streamData, activityData);
         renderPowerCurveChart(streamData);
         renderCadenceSpeedChart(streamData);
         renderHrZoneDistributionChart(streamData);

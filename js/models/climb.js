@@ -31,6 +31,7 @@ export class Climb extends Segment {
      * HC: >20 km or >1000m
      */
     categorizeClimb() {
+        console.log("classifyClimb: length=", this.distance, "km, elevation_gain=", this.elevation_gain, "m");
         const length = this.distance;  // km
         const elevation = this.elevation_gain;  // m
         

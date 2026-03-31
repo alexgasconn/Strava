@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Strava Cycling Activity Details</title>
+    <title>Strava Bike Performance Lab</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="../styles/style.css">
 
@@ -18,7 +18,7 @@
 
 <body>
     <div class="container">
-        <h1>🚴 Cycling Activity Details</h1>
+        <h1>🚵 Bike Performance Lab</h1>
 
         <!-- ======================================
          SECTION 1: OVERVIEW & QUICK STATS
@@ -34,18 +34,29 @@
          ====================================== -->
         <div class="side-by-side-container">
             <div id="bike-classifier-section" class="data-section">
-                <h3>Bike Type Analysis</h3>
+                <h3>Ride DNA Classifier</h3>
                 <div id="bike-classifier-results">
                     <p>Analyzing bike data...</p>
                 </div>
             </div>
 
             <div id="hr-zones-section" class="data-section">
-                <h3>Time in Heart Rate Zones</h3>
+                <h3>Heart Rate Distribution</h3>
                 <div class="chart-container-inner">
                     <canvas id="hr-zones-chart"></canvas>
                 </div>
             </div>
+        </div>
+
+        <!-- ======================================
+         SECTION 2B: CLIMBING ANALYSIS
+         ====================================== -->
+        <div id="climbs-section" class="data-section hidden">
+            <h3>⛰️ Climbing Analysis</h3>
+            <p style="margin-bottom: 12px; font-size: 0.9em; color: #666;">Detected climbs from elevation profile and
+                grade evolution.</p>
+            <div id="climbs-list"
+                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;"></div>
         </div>
 
         <!-- ======================================
@@ -213,6 +224,12 @@
         <!-- ======================================
          SECTION 6: POWER CURVE
          ====================================== -->
+        <div id="bike-power-profile" class="data-section">
+            <h3>🔋 Power Profile Snapshot</h3>
+            <div id="bike-power-metrics"
+                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;"></div>
+        </div>
+
         <div id="power-curve-section" class="data-section">
             <h3>⚡ Estimated Power Curve</h3>
             <div class="chart-container">
