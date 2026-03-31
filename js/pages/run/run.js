@@ -339,6 +339,7 @@ function initSmoothingControl() {
             renderStreamCharts(smoothedStreams, lastActivityData, currentSmoothingLevel);
             renderHrMinMaxAreaChart(smoothedStreams, currentSmoothingLevel);
             renderPaceMinMaxAreaChart(smoothedStreams, currentSmoothingLevel);
+            syncSideBySideContainers();
 
             // Update dynamic chart data and re-render
             populateDynamicChartData(smoothedStreams);
@@ -401,6 +402,33 @@ function initDynamicChartControls() {
     // Initial render if primary data is pre-selected
     if (primaryDataSelect.value) {
         updateDynamicChart();
+    }
+}
+
+function isSectionVisible(el) {
+    if (!el) return false;
+    return !el.classList.contains('hidden') && el.style.display !== 'none';
+}
+
+function syncSideBySideContainers() {
+    const containers = document.querySelectorAll('.side-by-side-container');
+    containers.forEach(container => {
+        const sections = Array.from(container.querySelectorAll(':scope > .data-section'));
+        if (!sections.length) return;
+        const hasVisible = sections.some(isSectionVisible);
+        container.style.display = hasVisible ? '' : 'none';
+    });
+}
+
+function moveAndHideCustomChartSection() {
+    const section = document.getElementById('dynamic-chart-section');
+    if (!section) return;
+
+    section.classList.add('hidden');
+    const container = section.closest('.container');
+    const closeBtn = container?.querySelector('button[onclick="window.close()"]');
+    if (container && closeBtn) {
+        container.insertBefore(section, closeBtn);
     }
 }
 
@@ -986,14 +1014,36 @@ function renderStreamCharts(streams, activity, smoothingLevel = 100) {
         });
     }
 
+    function setChartContainerVisibility(canvasId, visible) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas || !canvas.parentElement) return;
+        canvas.parentElement.style.display = visible ? '' : 'none';
+    }
+
+    const hasAltitude = !!(altitude && altitude.data && altitude.data.length > 0);
+    const hasPace = !!(time && time.data && distance && distance.data && distance.data.length > 1);
+    const hasHeartrate = !!(heartrate && heartrate.data && heartrate.data.length > 0);
+    const hasCadence = !!(cadence && cadence.data && cadence.data.length > 0);
+    const watts = streams.watts;
+    const hasWatts = !!(watts && watts.data && watts.data.some(w => w > 0));
+
+    setChartContainerVisibility('chart-altitude', hasAltitude);
+    setChartContainerVisibility('chart-pace-distance', hasPace);
+    setChartContainerVisibility('chart-heart-distance', hasHeartrate);
+    setChartContainerVisibility('chart-cadence-distance', hasCadence);
+    setChartContainerVisibility('chart-watts-distance', hasWatts);
+
+    const visibleCharts = [hasAltitude, hasPace, hasHeartrate, hasCadence, hasWatts].filter(Boolean).length;
+    DOM.streamCharts.style.display = visibleCharts > 0 ? 'grid' : 'none';
+
     // Altitude chart
-    if (altitude && altitude.data) {
+    if (hasAltitude) {
         const smoothAltitude = rollingMean(altitude.data, windowSizes.altitude);
         createStreamChart('chart-altitude', 'Altitud (m)', smoothAltitude, 'altitude');
     }
 
     // Pace chart
-    if (time && time.data) {
+    if (hasPace) {
         const paceStreamData = [];
         for (let i = 1; i < distance.data.length; i++) {
             const deltaDist = distance.data[i] - distance.data[i - 1];
@@ -1040,21 +1090,20 @@ function renderStreamCharts(streams, activity, smoothingLevel = 100) {
     }
 
     // Heart rate chart
-    if (heartrate && heartrate.data) {
+    if (hasHeartrate) {
         const smoothHeartrate = rollingMean(heartrate.data, windowSizes.heartrate);
         createStreamChart('chart-heart-distance', 'FC (bpm)', smoothHeartrate, 'heartrate');
     }
 
     // Cadence chart
-    if (cadence && cadence.data) {
+    if (hasCadence) {
         const cadenceData = activity.type === 'Run' ? cadence.data.map(c => c * 2) : cadence.data;
         const smoothCadence = rollingMean(cadenceData, windowSizes.cadence);
         createStreamChart('chart-cadence-distance', 'Cadencia (spm)', smoothCadence, 'cadence');
     }
 
     // Power (watts) chart
-    const watts = streams.watts;
-    if (watts && watts.data && watts.data.some(w => w > 0)) {
+    if (hasWatts) {
         const smoothWatts = rollingMean(watts.data, windowSizes.watts);
         createStreamChart('chart-watts-distance', 'Power (W)', smoothWatts, 'watts');
     }
@@ -1275,7 +1324,13 @@ function renderSegments(segments) {
  */
 function renderHrZoneDistributionChart(streams) {
     const canvas = document.getElementById('hr-zones-chart');
-    if (!canvas || !streams.heartrate || !streams.time) return;
+    const section = document.getElementById('hr-zones-section');
+    if (!canvas || !section) return;
+    if (!streams.heartrate || !streams.time) {
+        section.style.display = 'none';
+        return;
+    }
+    section.style.display = '';
 
     const zonesDataText = localStorage.getItem('strava_training_zones');
     if (!zonesDataText) {
@@ -1618,6 +1673,8 @@ async function main() {
     }
 
     try {
+        moveAndHideCustomChartSection();
+
         if (DOM.streamCharts) DOM.streamCharts.style.display = 'grid';
 
         // Fetch activity data in parallel
@@ -1696,6 +1753,7 @@ async function main() {
         renderHrZoneDistributionChart(streamData);
         renderHrMinMaxAreaChart(initialSmoothedStreams, currentSmoothingLevel);
         renderPaceMinMaxAreaChart(initialSmoothedStreams, currentSmoothingLevel);
+        syncSideBySideContainers();
 
         // Initialize smoothing slider control
         initSmoothingControl();

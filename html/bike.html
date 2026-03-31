@@ -67,6 +67,15 @@
             <div id="activity-map"></div>
         </div>
 
+        <div id="bike-profile-section" class="data-section hidden">
+            <h3>📈 Elevation Profile</h3>
+            <p style="margin-bottom: 12px; font-size: 0.9em; color: #666;">Route profile by distance with smoothed
+                elevation trace.</p>
+            <div class="chart-container">
+                <canvas id="bike-profile-chart"></canvas>
+            </div>
+        </div>
+
         <!-- ======================================
          SECTION 4: KM SPLITS
          ====================================== -->
@@ -106,7 +115,7 @@
         <!-- ======================================
          SECTION 4C: DYNAMIC CUSTOM CHART
          ====================================== -->
-        <div id="dynamic-chart-section" class="data-section">
+        <div id="dynamic-chart-section" class="data-section hidden">
             <h3>Custom Data Visualization</h3>
             <p style="margin-bottom: 15px; font-size: 0.9em; color: #666;">Create custom charts by selecting data to
                 plot</p>
@@ -297,6 +306,14 @@
                     <table id="segments-table" class="df-table"></table>
                 </div>
             </div>
+        </div>
+
+        <div class="data-section" style="margin-top: 16px;">
+            <details>
+                <summary style="cursor: pointer; font-weight: 600;">Custom chart builder</summary>
+                <p style="margin: 10px 0 0 0; color: #666; font-size: 0.9em;">Open this panel only when you need ad-hoc
+                    chart combinations.</p>
+            </details>
         </div>
 
         <!-- Close Button -->

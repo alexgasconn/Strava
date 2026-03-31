@@ -27,16 +27,10 @@
             <div id="activity-advanced" class="activity-details-col"></div>
         </div>
 
-        <div class="data-section" style="margin-top: 16px; background: #eef9ff; border: 1px solid #bfe3f7;">
-            <h3>🌊 Swim Focus</h3>
-            <p style="margin: 0; color: #0c4a6e; font-size: 0.92em;">This page prioritizes stroke rhythm, lap control,
-                pacing by 100m and cardio response specific to swim sessions.</p>
-        </div>
-
         <!-- ======================================
          SECTION 2: HEART RATE ZONES
          ====================================== -->
-        <div class="data-section">
+        <div id="hr-zones-section" class="data-section">
             <h3>⚕️ Cardio Zones in Water</h3>
             <div class="chart-container-inner">
                 <canvas id="hr-zones-chart"></canvas>
@@ -55,7 +49,9 @@
          ====================================== -->
         <div id="laps-section" class="data-section hidden">
             <h3>🏁 Laps</h3>
-            <div id="laps-table"></div>
+            <div class="table-container">
+                <table id="laps-table" class="df-table"></table>
+            </div>
         </div>
 
         <!-- ======================================

@@ -488,6 +488,81 @@ function createStreamChart(canvasId, label, data, colorKey, labels) {
     });
 }
 
+function setChartContainerVisibility(canvasId, visible) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || !canvas.parentElement) return;
+    canvas.parentElement.style.display = visible ? '' : 'none';
+}
+
+function moveAndHideCustomChartSection() {
+    const section = document.getElementById('dynamic-chart-section');
+    if (!section) return;
+
+    section.classList.add('hidden');
+    const container = section.closest('.container');
+    const closeBtn = container?.querySelector('button[onclick="window.close()"]');
+    if (container && closeBtn) {
+        container.insertBefore(section, closeBtn);
+    }
+}
+
+function isSectionVisible(el) {
+    if (!el) return false;
+    return !el.classList.contains('hidden') && el.style.display !== 'none';
+}
+
+function syncSideBySideContainers() {
+    const containers = document.querySelectorAll('.side-by-side-container');
+    containers.forEach(container => {
+        const sections = Array.from(container.querySelectorAll(':scope > .data-section'));
+        if (!sections.length) return;
+        const hasVisible = sections.some(isSectionVisible);
+        container.style.display = hasVisible ? '' : 'none';
+    });
+}
+
+function renderBikeProfileChart(streams, smoothingLevel = 100) {
+    const section = document.getElementById('bike-profile-section');
+    if (!section) return;
+
+    if (!streams?.distance?.data?.length || !streams?.altitude?.data?.length) {
+        section.classList.add('hidden');
+        return;
+    }
+
+    section.classList.remove('hidden');
+    const f = smoothingLevel / 100;
+    const window = Math.max(1, Math.round(CONFIG.WINDOW_SIZES.altitude * f));
+    const labels = streams.distance.data.map(d => (d / 1000).toFixed(2));
+    const altitude = rollingMean(streams.altitude.data, window);
+
+    createChart('bike-profile-chart', {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Elevation (m)',
+                data: altitude,
+                borderColor: '#4b5563',
+                backgroundColor: 'rgba(75, 85, 99, 0.22)',
+                fill: true,
+                tension: 0.25,
+                pointRadius: 0,
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { title: { display: true, text: 'Distance (km)' } },
+                y: { title: { display: true, text: 'Elevation (m)' }, beginAtZero: false }
+            }
+        }
+    });
+}
+
 function renderStreamCharts(streams, activity, smoothingLevel = 100) {
     if (!DOM.streamCharts) return;
     if (!streams?.distance?.data?.length) {
@@ -507,11 +582,23 @@ function renderStreamCharts(streams, activity, smoothingLevel = 100) {
     const { distance, time, heartrate, altitude, cadence, watts } = streams;
     const distLabels = distance.data.map(d => (d / 1000).toFixed(2));
 
-    if (altitude?.data) {
+    const hasAltitude = !!altitude?.data?.length;
+    const hasSpeed = !!(time?.data?.length && distance?.data?.length);
+    const hasHeartrate = !!heartrate?.data?.length;
+    const hasCadence = !!cadence?.data?.length;
+    const hasWatts = !!watts?.data?.some(w => w > 0);
+
+    setChartContainerVisibility('chart-altitude', hasAltitude);
+    setChartContainerVisibility('chart-speed-distance', hasSpeed);
+    setChartContainerVisibility('chart-heart-distance', hasHeartrate);
+    setChartContainerVisibility('chart-cadence-distance', hasCadence);
+    setChartContainerVisibility('chart-watts-distance', hasWatts);
+
+    if (hasAltitude) {
         createStreamChart('chart-altitude', 'Altitude (m)', rollingMean(altitude.data, ws.altitude), 'altitude', distLabels);
     }
 
-    if (time?.data && distance?.data) {
+    if (hasSpeed) {
         const speedKmh = [null];
         for (let i = 1; i < distance.data.length; i++) {
             const dD = distance.data[i] - distance.data[i - 1];
@@ -521,15 +608,15 @@ function renderStreamCharts(streams, activity, smoothingLevel = 100) {
         createStreamChart('chart-speed-distance', 'Speed (km/h)', rollingMean(speedKmh, ws.speed), 'speed', distLabels);
     }
 
-    if (heartrate?.data) {
+    if (hasHeartrate) {
         createStreamChart('chart-heart-distance', 'Heart Rate (bpm)', rollingMean(heartrate.data, ws.heartrate), 'heartrate', distLabels);
     }
 
-    if (cadence?.data) {
+    if (hasCadence) {
         createStreamChart('chart-cadence-distance', 'Cadence (rpm)', rollingMean(cadence.data, ws.cadence), 'cadence', distLabels);
     }
 
-    if (watts?.data?.some(w => w > 0)) {
+    if (hasWatts) {
         createStreamChart('chart-watts-distance', 'Power (W)', rollingMean(watts.data, ws.watts), 'watts', distLabels);
     }
 }
@@ -745,7 +832,13 @@ function renderCadenceSpeedChart(streams) {
 
 function renderHrZoneDistributionChart(streams) {
     const canvas = document.getElementById('hr-zones-chart');
-    if (!canvas || !streams?.heartrate || !streams?.time) return;
+    const section = document.getElementById('hr-zones-section');
+    if (!canvas || !section) return;
+    if (!streams?.heartrate || !streams?.time) {
+        section.style.display = 'none';
+        return;
+    }
+    section.style.display = '';
 
     const zonesDataText = localStorage.getItem('strava_training_zones');
     if (!zonesDataText) return;
@@ -1083,9 +1176,11 @@ function initSmoothingControl() {
         if (originalStreamData && lastActivityData) {
             const smoothed = applySmoothingToStreams(originalStreamData, currentSmoothingLevel);
             renderStreamCharts(smoothed, lastActivityData, currentSmoothingLevel);
+            renderBikeProfileChart(smoothed, currentSmoothingLevel);
             renderHrMinMaxAreaChart(smoothed, currentSmoothingLevel);
             renderSpeedMinMaxAreaChart(smoothed, currentSmoothingLevel);
             populateDynamicChartData(smoothed, false);
+            syncSideBySideContainers();
 
             const primarySel = document.getElementById('dynamic-chart-primary-data');
             if (primarySel?.value) {
@@ -1120,6 +1215,8 @@ async function main() {
     }
 
     try {
+        moveAndHideCustomChartSection();
+
         if (DOM.streamCharts) DOM.streamCharts.style.display = 'grid';
 
         const [activityData, streamData] = await Promise.all([
@@ -1141,6 +1238,7 @@ async function main() {
         renderActivityStats(activityData, streamData);
         renderAdvancedStats(activityData);
         renderActivityMap(activityData);
+        renderBikeProfileChart(initialSmoothed, currentSmoothingLevel);
         renderSplitsCharts(activityData);
         renderStreamCharts(initialSmoothed, activityData, currentSmoothingLevel);
         renderClimbInsights(streamData);
@@ -1155,6 +1253,7 @@ async function main() {
         renderSegments(activityData.segment_efforts);
         renderBestEfforts(activityData.best_efforts);
         renderBikeClassifier(activityData, streamData);
+        syncSideBySideContainers();
 
         initSmoothingControl();
         initDynamicChartControls();

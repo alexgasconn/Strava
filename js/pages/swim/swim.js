@@ -529,7 +529,13 @@ function renderLapsChart(laps) {
  * Renders HR zones distribution
  */
 function renderHRZones(activity, zones) {
-    if (!DOM.hrZonesChart || !lastStreamData || !lastStreamData.heartrate) return;
+    const section = document.getElementById('hr-zones-section');
+    if (!DOM.hrZonesChart || !section) return;
+    if (!lastStreamData || !lastStreamData.heartrate || !lastStreamData.time) {
+        section.style.display = 'none';
+        return;
+    }
+    section.style.display = '';
 
     const heartrateStream = lastStreamData.heartrate;
     const timeStream = lastStreamData.time;
@@ -583,6 +589,12 @@ function renderHRZones(activity, zones) {
 function renderStreamCharts(streams, activity) {
     if (!DOM.streamCharts) return;
 
+    function setChartContainerVisibility(canvasId, visible) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas || !canvas.parentElement) return;
+        canvas.parentElement.style.display = visible ? '' : 'none';
+    }
+
     const numSegments = CONFIG.NUM_SEGMENTS;
     let distance = streams.distance?.data || [];
     let heartrate = streams.heartrate?.data || [];
@@ -592,9 +604,15 @@ function renderStreamCharts(streams, activity) {
     const segmentedDistance = distance.filter((_, i) => i % step === 0);
     const segmentedHR = heartrate.filter((_, i) => i % step === 0);
     const segmentedCadence = cadence.filter((_, i) => i % step === 0);
+    const hasHR = heartrate.length > 0 && segmentedHR.some(v => v !== null);
+    const hasCadence = cadence.length > 0 && segmentedCadence.some(v => v !== null);
+
+    setChartContainerVisibility('chart-heartrate', hasHR);
+    setChartContainerVisibility('chart-cadence', hasCadence);
+    DOM.streamCharts.style.display = (hasHR || hasCadence) ? 'grid' : 'none';
 
     // HR Chart
-    if (heartrate.length > 0 && segmentedHR.some(v => v !== null)) {
+    if (hasHR) {
         createChart('chart-heartrate', {
             type: 'line',
             data: {
@@ -621,7 +639,7 @@ function renderStreamCharts(streams, activity) {
     }
 
     // Cadence Chart
-    if (cadence.length > 0 && segmentedCadence.some(v => v !== null)) {
+    if (hasCadence) {
         createChart('chart-cadence', {
             type: 'line',
             data: {
