@@ -502,7 +502,7 @@ function renderGearActivitiesList(activities) {
         const ach = a.achievement_count > 0 ? `<span style="font-size:0.75rem;color:#f59e0b;margin-left:0.25rem;">🏆${a.achievement_count}</span>` : '';
 
         return `
-            <div onclick="window.open('../activity.html?id=${a.id}', '_blank')"
+            <div onclick="window.open('activity-router.html?id=${a.id}', '_blank')"
                  style="display:flex;align-items:center;gap:0.75rem;padding:0.7rem 0.9rem;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;background:white;transition:background 0.15s;margin-bottom:0.4rem;"
                  onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
                 <span style="font-size:1.3rem;width:24px;text-align:center;flex-shrink:0;">${typeIcon(type)}</span>

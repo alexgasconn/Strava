@@ -14,7 +14,7 @@ export { GravelMTBAnalyzer } from './gravel-mtb.js';
  */
 export function getAnalyzerForSport(sport_type, track) {
     console.log(`🏃 Loading analyzer for sport: ${sport_type}...`);
-    const type = sport_type.toLowerCase();
+    const type = (sport_type || '').toLowerCase();
 
     if (type.includes('run')) {
         if (type.includes('trail')) {
@@ -32,7 +32,7 @@ export function getAnalyzerForSport(sport_type, track) {
     }
 
     if (type.includes('ride') || type.includes('bike') || type.includes('mtb')) {
-        if (type.includes('gravel') || type.includes('mtb')) {
+        if (type.includes('gravel') || type.includes('mtb') || type.includes('mountainbike')) {
             return import('./gravel-mtb.js').then(m => {
                 const analyzer = new m.GravelMTBAnalyzer(track);
                 console.log(`✅ Analyzer loaded: GravelMTBAnalyzer`);

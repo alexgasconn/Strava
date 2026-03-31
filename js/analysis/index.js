@@ -71,8 +71,9 @@ export class ActivityAnalysisEngine {
             }
 
             // 5. Sport-specific analysis
-            console.log(`🏃 Running ${metadata.sport_type} analysis...`);
-            const analyzer = await getAnalyzerForSport(metadata.sport_type, result.track);
+            const sportType = metadata.sport_type || metadata.type || 'Unknown';
+            console.log(`🏃 Running ${sportType} analysis...`);
+            const analyzer = await getAnalyzerForSport(sportType, result.track);
             result.sport_analysis = await analyzer.analyze();
 
             // Merge climb and stop data
@@ -141,7 +142,7 @@ export class ActivityAnalysisEngine {
      */
     async analyzeDeep(metadata, streams, athlete_profile = null) {
         const oldConfig = { ...this.config };
-        
+
         this.config.enable_preprocessing = true;
         this.config.enable_climb_detection = true;
         this.config.enable_stop_detection = true;

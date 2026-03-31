@@ -28,7 +28,7 @@ export class AdvancedActivityAnalyzer {
             this.metadata = activityData.activity;
 
             // Determine required streams based on sport type
-            const streamTypes = this._getRequiredStreams(this.metadata.sport_type);
+            const streamTypes = this._getRequiredStreams(this.metadata.sport_type || this.metadata.type);
 
             // Fetch streams
             const streamsRes = await fetch(
@@ -83,7 +83,7 @@ export class AdvancedActivityAnalyzer {
      */
     _getRequiredStreams(sport_type) {
         const baseStreams = ['time', 'latlng', 'distance', 'altitude', 'velocity_smooth', 'grade_smooth', 'moving'];
-        
+
         const sport = (sport_type || '').toLowerCase();
 
         if (sport.includes('run')) {
