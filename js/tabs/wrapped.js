@@ -524,26 +524,65 @@ function renderSummarySection(container, year, current, previous) {
 }
 
 function renderSportsSection(container, current, previous) {
+    const categoryAggCurrent = CATEGORY_ORDER.reduce((acc, category) => {
+        acc[category] = { hours: 0, km: 0, elevation: 0, sessions: 0 };
+        return acc;
+    }, {});
+    const categoryAggPrevious = CATEGORY_ORDER.reduce((acc, category) => {
+        acc[category] = { hours: 0, km: 0, elevation: 0, sessions: 0 };
+        return acc;
+    }, {});
+
+    current.forEach(activity => {
+        const type = getType(activity);
+        const category = getCategory(type);
+        categoryAggCurrent[category].hours += (Number(activity.moving_time) || 0) / 3600;
+        categoryAggCurrent[category].km += (Number(activity.distance) || 0) / 1000;
+        categoryAggCurrent[category].elevation += Number(activity.total_elevation_gain) || 0;
+        categoryAggCurrent[category].sessions += 1;
+    });
+
+    previous.forEach(activity => {
+        const type = getType(activity);
+        const category = getCategory(type);
+        categoryAggPrevious[category].hours += (Number(activity.moving_time) || 0) / 3600;
+        categoryAggPrevious[category].km += (Number(activity.distance) || 0) / 1000;
+        categoryAggPrevious[category].elevation += Number(activity.total_elevation_gain) || 0;
+        categoryAggPrevious[category].sessions += 1;
+    });
+
     const byTypeCurrent = summarizeByType(current);
     const byTypePrevious = summarizeByType(previous);
     const previousMap = new Map(byTypePrevious.map(item => [item.type, item]));
 
-    const categoryCards = byTypeCurrent
-        .filter(sport => (sport.moving_time / 3600) >= 1)
-        .map(sport => {
-            const currentHours = sport.moving_time / 3600;
-            const currentKm = (sport.distance || 0) / 1000;
-            const currentElevation = sport.elevation || 0;
-            const prevHours = (previousMap.get(sport.type)?.moving_time || 0) / 3600;
+    const categoryCards = CATEGORY_ORDER
+        .map(category => ({ category, ...categoryAggCurrent[category] }))
+        .filter(item => item.hours >= 1)
+        .sort((a, b) => b.hours - a.hours)
+        .map(item => {
+            const category = item.category;
+            const currentHours = categoryAggCurrent[category].hours;
+            const currentKm = categoryAggCurrent[category].km;
+            const currentElevation = categoryAggCurrent[category].elevation;
+            const currentSessions = categoryAggCurrent[category].sessions;
+            const prevHours = categoryAggPrevious[category].hours;
             const change = pctChange(currentHours, prevHours);
-            const icon = typeof utils.sportEmoji === 'function' ? utils.sportEmoji(sport.type) : '🏅';
+            const icon = category === 'Run'
+                ? '🏃'
+                : category === 'Ride'
+                    ? '🚴'
+                    : category === 'Swim'
+                        ? '🏊'
+                        : category === 'Gym'
+                            ? '🏋️'
+                            : '🎯';
 
             return `
                 <div class="sport-card fade-in-up">
                     <div class="sport-card-header">
                         <div class="sport-icon">${icon}</div>
                         <div class="sport-title">
-                            <h4>${sport.type}</h4>
+                            <h4>${category}</h4>
                             <span class="sport-count">${currentHours.toFixed(1)} h</span>
                         </div>
                     </div>
@@ -558,7 +597,7 @@ function renderSportsSection(container, current, previous) {
                         </div>
                         <div class="metric">
                             <div class="metric-label">Sessions</div>
-                            <div class="metric-value">${sport.count}</div>
+                            <div class="metric-value">${currentSessions}</div>
                         </div>
                     </div>
                     <div class="metric-change">${formatChange(change)}</div>
@@ -567,15 +606,17 @@ function renderSportsSection(container, current, previous) {
         })
         .join('');
 
-    const topTypes = byTypeCurrent.slice(0, 12).map((sport, index) => {
-        const previousSport = previousMap.get(sport.type);
-        const currentHours = sport.moving_time / 3600;
-        const prevHours = (previousSport?.moving_time || 0) / 3600;
-        const change = pctChange(currentHours, prevHours);
-        const hueSat = SPORT_PALETTE[sport.type] || [210, 60];
-        const accent = `hsl(${hueSat[0]} ${hueSat[1]}% 46%)`;
+    const topTypes = byTypeCurrent
+        .filter(sport => (sport.moving_time / 3600) >= 1)
+        .map((sport, index) => {
+            const previousSport = previousMap.get(sport.type);
+            const currentHours = sport.moving_time / 3600;
+            const prevHours = (previousSport?.moving_time || 0) / 3600;
+            const change = pctChange(currentHours, prevHours);
+            const hueSat = SPORT_PALETTE[sport.type] || [210, 60];
+            const accent = `hsl(${hueSat[0]} ${hueSat[1]}% 46%)`;
 
-        return `
+            return `
             <div class="chart-row fade-in-up" style="animation-delay:${Math.min(index * 0.03, 0.35)}s; align-items:center;">
                 <div style="width:170px; font-weight:600; color:#1f2937;">${sport.type}</div>
                 <div class="chart-bar-container chart-bar-container-sm" style="flex:1; display:flex; align-items:center;">
@@ -585,12 +626,13 @@ function renderSportsSection(container, current, previous) {
                 <div style="width:96px; text-align:right; font-size:.85rem;">${formatChange(change)}</div>
             </div>
         `;
-    }).join('');
+        })
+        .join('');
 
     container.innerHTML = `
         <div class="section-header">
             <h3>⏱️ Hours by Sport</h3>
-            <p class="section-subtitle">Same sport groups as Calendar and Activities tabs, with year-over-year change.</p>
+            <p class="section-subtitle">Category cards first, then detailed sport types (all with 1h+ this year).</p>
         </div>
 
         <div class="sport-breakdown">${categoryCards || '<p>No sports over 1 hour in this year.</p>'}</div>
