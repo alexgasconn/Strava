@@ -167,22 +167,19 @@ function renderDashboardTopline(filteredActivities, recentActivities, recentRuns
         <div class="dashboard-mini-card">
             <p class="dashboard-mini-label">Activities</p>
             <p class="dashboard-mini-value">${recentActivities.length}</p>
-            <small>${getRangeLabel(selectedRangeDays)} inside current dashboard view</small>
         </div>
         <div class="dashboard-mini-card">
             <p class="dashboard-mini-label">Volume</p>
             <p class="dashboard-mini-value">${totalDistanceKm.toFixed(1)} km</p>
-            <small>${utils.formatTime(totalMovingTime)} total moving time</small>
+            <p class="dashboard-mini-subvalue">${utils.formatTime(totalMovingTime)}</p>
         </div>
         <div class="dashboard-mini-card">
             <p class="dashboard-mini-label">Longest Run</p>
             <p class="dashboard-mini-value">${longestRunKm.toFixed(1)} km</p>
-            <small>Within selected range</small>
         </div>
         <div class="dashboard-mini-card dashboard-mini-card-wide">
             <p class="dashboard-mini-label">Sport Mix</p>
             <p class="dashboard-mini-value dashboard-mini-value-small">${sportMixText}</p>
-            <small>PMC and load metrics depend on processed TSS values</small>
         </div>
     `;
 }
@@ -321,25 +318,41 @@ function renderRangeSelector(allActivities, dateFilterFrom, dateFilterTo) {
 
 function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
     const filteredActivities = utils.filterActivitiesByDate(allActivities, dateFilterFrom, dateFilterTo);
-    const runs = filteredActivities.filter(a => a.type && a.type.includes('Run'));
-    runs.sort((a, b) => new Date(a.start_date_local || 0) - new Date(b.start_date_local || 0));
+    const runs = filteredActivities
+        .filter(a => a.type && a.type.includes('Run'))
+        .sort((a, b) => new Date(a.start_date_local || 0) - new Date(b.start_date_local || 0));
 
+    const now = new Date();
     const startDate = getRangeStartDate(selectedRangeDays);
+    const windowMs = Math.max(24 * 3600 * 1000, now.getTime() - startDate.getTime());
+    const previousStartDate = new Date(startDate.getTime() - windowMs);
 
-    const recentRuns = runs.filter(r => new Date(r.start_date_local) >= startDate);
-    const midRecentRuns = runs.filter(r => {
+    const recentRuns = runs.filter(r => {
         const d = new Date(r.start_date_local);
-        return d < startDate && d >= new Date(startDate.getTime() - 30 * 24 * 3600 * 1000);
+        return d >= startDate && d <= now;
     });
 
-    const recentActivities = filteredActivities.filter(r => new Date(r.start_date_local) >= startDate);
+    const previousRuns = runs.filter(r => {
+        const d = new Date(r.start_date_local);
+        return d >= previousStartDate && d < startDate;
+    });
+
+    const recentActivities = filteredActivities.filter(activity => {
+        const d = new Date(activity.start_date_local);
+        return d >= startDate && d <= now;
+    });
+
+    const previousActivities = filteredActivities.filter(activity => {
+        const d = new Date(activity.start_date_local);
+        return d >= previousStartDate && d < startDate;
+    });
 
     renderDashboardTopline(filteredActivities, recentActivities, recentRuns, startDate, dateFilterFrom, dateFilterTo);
 
     renderTrainingLoadMetrics(recentActivities);
     renderPMCChart(recentActivities, allActivities);
     renderRecentActivitiesPreview(recentRuns);
-    renderDashboardSummary(recentRuns, midRecentRuns);
+    renderDashboardSummary(recentActivities, previousActivities, recentRuns, previousRuns);
     renderTSSBarChart(recentActivities, selectedRangeDays);
     renderGoalsSectionAdvanced(allActivities);
 }
@@ -360,50 +373,85 @@ function createDashboardChart(canvasId, config) {
 
 
 
-function renderDashboardSummary(lastRuns, previousLastRuns) {
+function renderDashboardSummary(currentActivities, previousActivities, currentRuns, previousRuns) {
     const container = document.getElementById('dashboard-summary');
     if (!container) return;
-    if (!lastRuns.length) {
+    if (!currentActivities.length) {
         container.innerHTML = "<p>Not enough data.</p>";
         return;
     }
 
-    // --- Helpers ---
-    const km = r => r.distance / 1000;
-    const h = r => r.moving_time / 3600;
-    const sum = (arr, fn) => arr.reduce((s, r) => s + fn(r), 0);
-    const avg = arr => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
-    const calcChange = (curr, prev) => prev > 0 ? ((curr - prev) / prev * 100).toFixed(1) : 'N/A';
+    const safeDistanceKm = activity => (activity.distance || 0) / 1000;
+    const safeHours = activity => (activity.moving_time || 0) / 3600;
+    const sum = (arr, fn) => arr.reduce((acc, item) => acc + fn(item), 0);
+    const avg = values => values.length ? values.reduce((acc, value) => acc + value, 0) / values.length : null;
+    const numeric = values => values.filter(value => Number.isFinite(value));
 
-    // --- Métricas actuales ---
-    const totalDistance = sum(lastRuns, km);
-    const totalTime = sum(lastRuns, h);
-    const totalElevation = sum(lastRuns, r => r.total_elevation_gain || 0);
-    const avgHR = avg(lastRuns.filter(r => r.average_heartrate).map(r => r.average_heartrate));
-    const avgVO2 = avg(lastRuns.filter(r => r.vo2max).map(r => r.vo2max));
-    const avgPace = avg(lastRuns.map(r => (r.moving_time / 60) / (r.distance / 1000)));
-    const avgDistance = totalDistance / lastRuns.length || 0;
-    const injuryRisk = avg(lastRuns.map(r => r.injuryRisk || 0));
+    const calcChange = (current, previous) => {
+        if (!Number.isFinite(current) || !Number.isFinite(previous) || previous === 0) return null;
+        return ((current - previous) / previous) * 100;
+    };
 
-    // --- Métricas previas ---
-    const prevDistance = sum(previousLastRuns, km);
-    const prevTime = sum(previousLastRuns, h);
-    const prevElevation = sum(previousLastRuns, r => r.total_elevation_gain || 0);
-    const prevHR = avg(previousLastRuns.filter(r => r.average_heartrate).map(r => r.average_heartrate));
-    const prevVO2 = avg(previousLastRuns.filter(r => r.vo2max).map(r => r.vo2max));
-    const prevPace = avg(previousLastRuns.map(r => (r.moving_time / 60) / (r.distance / 1000)));
-    const prevAvgDistance = prevDistance / previousLastRuns.length || 0;
-    const prevInjuryRisk = avg(previousLastRuns.map(r => r.injuryRisk || 0));
+    const trendVisual = (metric, change) => {
+        if (!Number.isFinite(change)) {
+            return { icon: '•', color: '#888', label: 'N/A' };
+        }
 
-    // --- Cambios porcentuales ---
+        const lowerIsBetter = ['pace', 'hr', 'injury'].includes(metric);
+        const improved = lowerIsBetter ? change < 0 : change > 0;
+        const icon = change === 0 ? '•' : (improved ? '▲' : '▼');
+        const color = change === 0 ? '#888' : (improved ? '#2ECC40' : '#FF4136');
+        return { icon, color, label: `${change > 0 ? '+' : ''}${change.toFixed(1)}%` };
+    };
+
+    const totalDistance = sum(currentActivities, safeDistanceKm);
+    const totalTime = sum(currentActivities, safeHours);
+    const totalElevation = sum(currentActivities, activity => activity.total_elevation_gain || 0);
+
+    const prevDistance = sum(previousActivities, safeDistanceKm);
+    const prevTime = sum(previousActivities, safeHours);
+    const prevElevation = sum(previousActivities, activity => activity.total_elevation_gain || 0);
+
+    const currentAvgHR = avg(numeric(currentActivities.map(activity => activity.average_heartrate)));
+    const previousAvgHR = avg(numeric(previousActivities.map(activity => activity.average_heartrate)));
+
+    const currentAvgVO2 = avg(numeric(currentActivities.map(activity => activity.vo2max)));
+    const previousAvgVO2 = avg(numeric(previousActivities.map(activity => activity.vo2max)));
+
+    const currentInjury = avg(numeric(currentActivities.map(activity => activity.injuryRisk)));
+    const previousInjury = avg(numeric(previousActivities.map(activity => activity.injuryRisk)));
+
+    const currentPaceValues = numeric(currentRuns.map(run => {
+        const distanceKm = safeDistanceKm(run);
+        return distanceKm > 0 && run.moving_time ? (run.moving_time / 60) / distanceKm : NaN;
+    }));
+    const previousPaceValues = numeric(previousRuns.map(run => {
+        const distanceKm = safeDistanceKm(run);
+        return distanceKm > 0 && run.moving_time ? (run.moving_time / 60) / distanceKm : NaN;
+    }));
+    const avgPace = avg(currentPaceValues);
+    const prevPace = avg(previousPaceValues);
+
+    const avgDistance = currentRuns.length ? sum(currentRuns, safeDistanceKm) / currentRuns.length : null;
+    const prevAvgDistance = previousRuns.length ? sum(previousRuns, safeDistanceKm) / previousRuns.length : null;
+
     const distChange = calcChange(totalDistance, prevDistance);
     const timeChange = calcChange(totalTime, prevTime);
     const elevChange = calcChange(totalElevation, prevElevation);
     const paceChange = calcChange(avgPace, prevPace);
-    const hrChange = calcChange(avgHR, prevHR);
-    const vo2Change = calcChange(avgVO2, prevVO2);
+    const hrChange = calcChange(currentAvgHR, previousAvgHR);
+    const vo2Change = calcChange(currentAvgVO2, previousAvgVO2);
     const avgDistChange = calcChange(avgDistance, prevAvgDistance);
-    const injuryRiskChange = calcChange(injuryRisk, prevInjuryRisk);
+    const injuryRiskChange = calcChange(currentInjury, previousInjury);
+
+    const distTrend = trendVisual('distance', distChange);
+    const timeTrend = trendVisual('time', timeChange);
+    const elevTrend = trendVisual('elevation', elevChange);
+    const vo2Trend = trendVisual('vo2', vo2Change);
+    const injuryTrend = trendVisual('injury', injuryRiskChange);
+    const paceTrend = trendVisual('pace', paceChange);
+    const hrTrend = trendVisual('hr', hrChange);
+    const avgDistTrend = trendVisual('distance', avgDistChange);
 
 
     // --- Renderizado ---
@@ -411,49 +459,49 @@ function renderDashboardSummary(lastRuns, previousLastRuns) {
         <div class="card">
             <h3>📏 Total Distance</h3>
             <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${totalDistance.toFixed(1)} km</p>
-            <small><span style="color:${utils.metricColor('distance', distChange)};">${utils.metricIcon('distance', distChange)} ${distChange}%</span></small>
+            <small><span style="color:${distTrend.color};">${distTrend.icon} ${distTrend.label}</span></small>
         </div>
 
         <div class="card">
             <h3>🕒 Total Time</h3>
             <p style="font-size:2rem;font-weight:bold;color:#B10DC9;">${totalTime.toFixed(1)} h</p>
-            <small><span style="color:${utils.metricColor('time', timeChange)};">${utils.metricIcon('time', timeChange)} ${timeChange}%</span></small>
+            <small><span style="color:${timeTrend.color};">${timeTrend.icon} ${timeTrend.label}</span></small>
         </div>
 
         <div class="card">
             <h3>⛰️ Elevation</h3>
             <p style="font-size:2rem;font-weight:bold;color:#2ECC40;">${totalElevation.toFixed(0)} m</p>
-            <small><span style="color:${utils.metricColor('elevation', elevChange)};">${utils.metricIcon('elevation', elevChange)} ${elevChange}%</span></small>
+            <small><span style="color:${elevTrend.color};">${elevTrend.icon} ${elevTrend.label}</span></small>
         </div>
 
         <div class="card">
             <h3>🫁 VO₂max</h3>
-            <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${avgVO2 ? avgVO2.toFixed(1) : '–'}</p>
-            <small><span style="color:${utils.metricColor('vo2', vo2Change)};">${utils.metricIcon('vo2', vo2Change)} ${vo2Change}%</span></small>
+            <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${Number.isFinite(currentAvgVO2) ? currentAvgVO2.toFixed(1) : '–'}</p>
+            <small><span style="color:${vo2Trend.color};">${vo2Trend.icon} ${vo2Trend.label}</span></small>
         </div>
 
         <div class="card">
             <h3>⚠️ Injury Risk</h3>
-            <p style="font-size:2rem;font-weight:bold;color:#FF4136;">${injuryRisk.toFixed(3)}</p>
-            <small><span style="color:${utils.metricColor('injury', injuryRiskChange)};">${utils.metricIcon('injury', injuryRiskChange)} ${injuryRiskChange}%</span></small>
+            <p style="font-size:2rem;font-weight:bold;color:#FF4136;">${Number.isFinite(currentInjury) ? currentInjury.toFixed(3) : '–'}</p>
+            <small><span style="color:${injuryTrend.color};">${injuryTrend.icon} ${injuryTrend.label}</span></small>
         </div>
 
         <div class="card">
             <h3>⚡ Average Pace</h3>
-            <p style="font-size:2rem;font-weight:bold;color:#B10DC9;"> ${utils.paceDecimalToTime(avgPace)} </p>
-            <small><span style="color:${utils.metricColor('pace', paceChange)};">${utils.metricIcon('pace', paceChange)} ${paceChange}%</small>
+            <p style="font-size:2rem;font-weight:bold;color:#B10DC9;"> ${Number.isFinite(avgPace) ? utils.paceDecimalToTime(avgPace) : '–'} </p>
+            <small><span style="color:${paceTrend.color};">${paceTrend.icon} ${paceTrend.label}</span></small>
         </div>
 
         <div class="card">
             <h3>❤️ Average HR</h3>
-            <p style="font-size:2rem;font-weight:bold;color:#FF4136;">${avgHR ? avgHR.toFixed(0) : '–'} bpm</p>
-            <small><span style="color:${utils.metricColor('hr', hrChange)};">${utils.metricIcon('hr', hrChange)} ${hrChange}%</span></small>
+            <p style="font-size:2rem;font-weight:bold;color:#FF4136;">${Number.isFinite(currentAvgHR) ? currentAvgHR.toFixed(0) : '–'} bpm</p>
+            <small><span style="color:${hrTrend.color};">${hrTrend.icon} ${hrTrend.label}</span></small>
         </div>
 
         <div class="card">
             <h3>🏃‍♂️ Average Distance</h3>
-            <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${avgDistance.toFixed(1)} km</p>
-            <small><span style="color:${utils.metricColor('distance', avgDistChange)};">${utils.metricIcon('distance', avgDistChange)} ${avgDistChange}%</span></small>
+            <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${Number.isFinite(avgDistance) ? avgDistance.toFixed(1) : '–'} km</p>
+            <small><span style="color:${avgDistTrend.color};">${avgDistTrend.icon} ${avgDistTrend.label}</span></small>
         </div>
         
     `;
