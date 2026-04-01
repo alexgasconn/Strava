@@ -6,7 +6,7 @@ const BIKE_TYPES = new Set(['Ride', 'VirtualRide', 'GravelRide', 'GravelBikeRide
 const GYM_TYPES = new Set(['Workout', 'WeightTraining', 'Crossfit', 'Yoga']);
 
 const CATEGORY_ORDER = ['Run', 'Ride', 'Swim', 'Gym', 'Other'];
-const WEEKDAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const WEEKDAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 let reportCharts = {};
 
@@ -42,7 +42,7 @@ function parseLocalDate(dateLike) {
 }
 
 function dateKey(dateLike) {
-    const date = parseLocalDate(dateLike);
+    const date = dateLike instanceof Date ? dateLike : parseLocalDate(dateLike);
     if (Number.isNaN(date.getTime())) return '';
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -208,50 +208,24 @@ function groupMonthlyHours(activities, year) {
 }
 
 function groupWeekdayHours(activities) {
-    const weekday = Array(7).fill(0);
+    const weekdaySundayFirst = Array(7).fill(0);
     activities.forEach(activity => {
         const date = parseLocalDate(activity.start_date_local || activity.start_date);
         if (Number.isNaN(date.getTime())) return;
-        weekday[date.getDay()] += (Number(activity.moving_time) || 0) / 3600;
+        weekdaySundayFirst[date.getDay()] += (Number(activity.moving_time) || 0) / 3600;
     });
-    return weekday;
+    return [
+        weekdaySundayFirst[1],
+        weekdaySundayFirst[2],
+        weekdaySundayFirst[3],
+        weekdaySundayFirst[4],
+        weekdaySundayFirst[5],
+        weekdaySundayFirst[6],
+        weekdaySundayFirst[0]
+    ];
 }
 
 function drawAnnualCharts(current, previous, selectedYear, previousYear) {
-    const currentByCategory = summarizeByCategory(current);
-    const previousByCategory = summarizeByCategory(previous);
-
-    createReportChart('annual-sport-hours-chart', {
-        type: 'bar',
-        data: {
-            labels: CATEGORY_ORDER,
-            datasets: [
-                {
-                    label: `${selectedYear} hours`,
-                    data: CATEGORY_ORDER.map(category => +((currentByCategory[category] || 0) / 3600).toFixed(1)),
-                    backgroundColor: 'rgba(59,130,246,0.72)',
-                    borderColor: 'rgba(59,130,246,1)',
-                    borderWidth: 1
-                },
-                {
-                    label: previousYear ? `${previousYear} hours` : 'Previous year',
-                    data: CATEGORY_ORDER.map(category => +((previousByCategory[category] || 0) / 3600).toFixed(1)),
-                    backgroundColor: 'rgba(148,163,184,0.55)',
-                    borderColor: 'rgba(148,163,184,1)',
-                    borderWidth: 1,
-                    hidden: !previousYear
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { position: 'top' } },
-            scales: {
-                y: { title: { display: true, text: 'Hours' }, beginAtZero: true }
-            }
-        }
-    });
-
     const monthlyCurrent = groupMonthlyHours(current, selectedYear);
     const monthlyPrevious = previousYear ? groupMonthlyHours(previous, previousYear) : [];
 
@@ -493,30 +467,30 @@ function renderSummarySection(container, year, current, previous) {
 
         <div class="stats-grid">
             <div class="stat-card fade-in-up" style="animation-delay:0.05s">
-                <div class="stat-value">${current.length}</div>
+                <div class="stat-value" style="white-space:nowrap;font-size:clamp(1.2rem,2.4vw,2rem);">${current.length}</div>
                 <div class="stat-label">Activities</div>
             </div>
             <div class="stat-card fade-in-up" style="animation-delay:0.1s">
-                <div class="stat-value">${utils.formatDistance(totalDistance)}</div>
+                <div class="stat-value" style="white-space:nowrap;font-size:clamp(1.2rem,2.4vw,2rem);">${utils.formatDistance(totalDistance)}</div>
                 <div class="stat-label">Distance</div>
                 <div style="font-size:.85rem;">${formatChange(pctChange(totalDistance, prevDistance))}</div>
             </div>
             <div class="stat-card fade-in-up" style="animation-delay:0.15s">
-                <div class="stat-value">${utils.formatTime(totalTime)}</div>
+                <div class="stat-value" style="white-space:nowrap;font-size:clamp(1.2rem,2.4vw,2rem);">${utils.formatTime(totalTime)}</div>
                 <div class="stat-label">Moving Time</div>
                 <div style="font-size:.85rem;">${formatChange(pctChange(totalTime, prevTime))}</div>
             </div>
             <div class="stat-card fade-in-up" style="animation-delay:0.2s">
-                <div class="stat-value">${Math.round(totalElevation).toLocaleString()} m</div>
+                <div class="stat-value" style="white-space:nowrap;font-size:clamp(1.2rem,2.4vw,2rem);">${Math.round(totalElevation).toLocaleString()} m</div>
                 <div class="stat-label">Elevation Gain</div>
                 <div style="font-size:.85rem;">${formatChange(pctChange(totalElevation, prevElevation))}</div>
             </div>
             <div class="stat-card fade-in-up" style="animation-delay:0.25s">
-                <div class="stat-value">${activeDays}</div>
+                <div class="stat-value" style="white-space:nowrap;font-size:clamp(1.2rem,2.4vw,2rem);">${activeDays}</div>
                 <div class="stat-label">Active Days</div>
             </div>
             <div class="stat-card fade-in-up" style="animation-delay:0.3s">
-                <div class="stat-value">${longestStreak}d</div>
+                <div class="stat-value" style="white-space:nowrap;font-size:clamp(1.2rem,2.4vw,2rem);">${longestStreak}d</div>
                 <div class="stat-label">Longest Streak</div>
             </div>
         </div>
@@ -550,25 +524,41 @@ function renderSummarySection(container, year, current, previous) {
 }
 
 function renderSportsSection(container, current, previous) {
-    const categoryCurrent = summarizeByCategory(current);
-    const categoryPrevious = summarizeByCategory(previous);
-
     const byTypeCurrent = summarizeByType(current);
     const byTypePrevious = summarizeByType(previous);
     const previousMap = new Map(byTypePrevious.map(item => [item.type, item]));
 
-    const categoryCards = CATEGORY_ORDER
-        .map(category => {
-            const currentHours = (categoryCurrent[category] || 0) / 3600;
-            const prevHours = (categoryPrevious[category] || 0) / 3600;
+    const categoryCards = byTypeCurrent
+        .filter(sport => (sport.moving_time / 3600) >= 1)
+        .map(sport => {
+            const currentHours = sport.moving_time / 3600;
+            const currentKm = (sport.distance || 0) / 1000;
+            const currentElevation = sport.elevation || 0;
+            const prevHours = (previousMap.get(sport.type)?.moving_time || 0) / 3600;
             const change = pctChange(currentHours, prevHours);
+            const icon = typeof utils.sportEmoji === 'function' ? utils.sportEmoji(sport.type) : '🏅';
+
             return `
                 <div class="sport-card fade-in-up">
                     <div class="sport-card-header">
-                        <div class="sport-icon">${category === 'Run' ? '🏃' : category === 'Ride' ? '🚴' : category === 'Swim' ? '🏊' : category === 'Gym' ? '🏋️' : '🎯'}</div>
+                        <div class="sport-icon">${icon}</div>
                         <div class="sport-title">
-                            <h4>${category}</h4>
+                            <h4>${sport.type}</h4>
                             <span class="sport-count">${currentHours.toFixed(1)} h</span>
+                        </div>
+                    </div>
+                    <div class="sport-metrics">
+                        <div class="metric">
+                            <div class="metric-label">Distance</div>
+                            <div class="metric-value">${currentKm.toFixed(1)} km</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Elevation</div>
+                            <div class="metric-value">${Math.round(currentElevation)} m</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Sessions</div>
+                            <div class="metric-value">${sport.count}</div>
                         </div>
                     </div>
                     <div class="metric-change">${formatChange(change)}</div>
@@ -603,12 +593,7 @@ function renderSportsSection(container, current, previous) {
             <p class="section-subtitle">Same sport groups as Calendar and Activities tabs, with year-over-year change.</p>
         </div>
 
-        <div class="chart-section">
-            <h4 class="chart-title">Sport Hours Comparison (YoY)</h4>
-            <canvas id="annual-sport-hours-chart" height="120"></canvas>
-        </div>
-
-        <div class="sport-breakdown">${categoryCards}</div>
+        <div class="sport-breakdown">${categoryCards || '<p>No sports over 1 hour in this year.</p>'}</div>
 
         <div class="chart-section">
             <h4 class="chart-title">Detailed Sport Types</h4>
@@ -619,8 +604,8 @@ function renderSportsSection(container, current, previous) {
 
 function renderTemporalSection(container, current) {
     const monthly = {};
-    const weekday = Array(7).fill(0);
-    const hourBuckets = Array(24).fill(0);
+    const weekday = Array(7).fill(0); // Monday-first
+    const hourBuckets = Array(24).fill(0); // hours by start hour
 
     current.forEach(activity => {
         const date = parseLocalDate(activity.start_date_local || activity.start_date);
@@ -628,8 +613,11 @@ function renderTemporalSection(container, current) {
 
         const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         monthly[month] = (monthly[month] || 0) + ((Number(activity.moving_time) || 0) / 3600);
-        weekday[date.getDay()] += (Number(activity.moving_time) || 0) / 3600;
-        hourBuckets[date.getHours()] += 1;
+        const movingHours = (Number(activity.moving_time) || 0) / 3600;
+        const dayIdxSundayFirst = date.getDay();
+        const dayIdxMondayFirst = dayIdxSundayFirst === 0 ? 6 : dayIdxSundayFirst - 1;
+        weekday[dayIdxMondayFirst] += movingHours;
+        hourBuckets[date.getHours()] += movingHours;
     });
 
     const monthlyRows = Object.entries(monthly)
@@ -648,11 +636,10 @@ function renderTemporalSection(container, current) {
             `;
         }).join('');
 
-    const weekdayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const maxWeekday = Math.max(...weekday, 1);
     const weekdayRows = weekday.map((hours, i) => `
         <div class="chart-row fade-in-up" style="animation-delay:${Math.min(i * 0.03, 0.2)}s">
-            <div class="chart-label-sm" style="width:54px;">${weekdayNames[i]}</div>
+            <div class="chart-label-sm" style="width:54px;">${WEEKDAY_NAMES[i]}</div>
             <div class="chart-bar-container chart-bar-container-sm" style="flex:1;">
                 <div class="chart-bar" style="width:${(hours / maxWeekday) * 100}%;"></div>
             </div>
@@ -681,7 +668,7 @@ function renderTemporalSection(container, current) {
             <div class="chart-bar-container chart-bar-container-sm" style="flex:1;">
                 <div class="chart-bar" style="width:${(period.count / maxPeriod) * 100}%;"></div>
             </div>
-            <span class="chart-value-sm">${period.count}</span>
+            <span class="chart-value-sm">${period.count.toFixed(1)} h</span>
         </div>
     `).join('');
 
@@ -782,21 +769,14 @@ function renderRecordsSection(container, current) {
 
 function renderTopActivitiesSection(container, current) {
     const scored = current
-        .map(activity => {
-            const distanceKm = (Number(activity.distance) || 0) / 1000;
-            const timeHours = (Number(activity.moving_time) || 0) / 3600;
-            const elevation = Number(activity.total_elevation_gain) || 0;
-            const tss = Number(activity.tss) || 0;
-            const score = distanceKm + (elevation / 100) + (timeHours * 2) + (tss / 10);
-            return { ...activity, _annualScore: score };
-        })
-        .sort((a, b) => b._annualScore - a._annualScore)
+        .filter(activity => Number.isFinite(activity.tss))
+        .sort((a, b) => (Number(b.tss) || 0) - (Number(a.tss) || 0))
         .slice(0, 10);
 
     container.innerHTML = `
         <div class="section-header">
             <h3>🔥 Top 10 Sessions</h3>
-            <p class="section-subtitle">Ranked by volume + elevation + time + TSS.</p>
+            <p class="section-subtitle">Ranked by TSS.</p>
         </div>
 
         <div class="efforts-list efforts-list-compact">
@@ -807,7 +787,7 @@ function renderTopActivitiesSection(container, current) {
                         <h4 class="effort-title-compact">${activityLink(activity, activity.name || 'Untitled')}</h4>
                         <div class="effort-meta-compact">${getType(activity)} · ${utils.formatDate(activity.start_date_local || activity.start_date)}</div>
                     </div>
-                    <div class="effort-score-compact">${Math.round(activity._annualScore)}</div>
+                    <div class="effort-score-compact">${Math.round(Number(activity.tss) || 0)}</div>
                 </div>
             `).join('')}
         </div>
@@ -850,6 +830,37 @@ function renderActivitiesTable(container, current, year) {
                     `).join('')}
                 </tbody>
             </table>
+        </div>
+    `;
+}
+
+function renderSoloVsGroupSection(current) {
+    const withAthleteCount = current.filter(activity => Number.isFinite(Number(activity.athlete_count)));
+    const solo = withAthleteCount.filter(activity => Number(activity.athlete_count) === 1);
+    const group = withAthleteCount.filter(activity => Number(activity.athlete_count) > 1);
+
+    if (!withAthleteCount.length) {
+        return `
+            <div class="insight-card">
+                <div class="insight-content">
+                    <div class="insight-label">Solo vs Group</div>
+                    <div class="insight-value">N/A</div>
+                    <div class="insight-detail">No athlete_count data available.</div>
+                </div>
+            </div>
+        `;
+    }
+
+    const soloPct = (solo.length / withAthleteCount.length) * 100;
+    const groupPct = 100 - soloPct;
+
+    return `
+        <div class="insight-card">
+            <div class="insight-content">
+                <div class="insight-label">Solo vs Group</div>
+                <div class="insight-value">${soloPct.toFixed(1)}% solo</div>
+                <div class="insight-detail">${solo.length} solo · ${group.length} group (${groupPct.toFixed(1)}%)</div>
+            </div>
         </div>
     `;
 }
@@ -924,6 +935,7 @@ export async function renderWrappedTab(allActivities, options = {}) {
             <p class="section-subtitle">A compact executive view for ${selectedYear}.</p>
         </div>
         <div class="insights-grid">
+            ${renderSoloVsGroupSection(current)}
             <div class="insight-card">
                 <div class="insight-content">
                     <div class="insight-label">Sport Types Used</div>
