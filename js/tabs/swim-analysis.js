@@ -159,11 +159,22 @@ export function renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterT
 
 function buildWeeklyDistanceSeries(activities, distanceGetter) {
     const weeklyTotals = {};
+    const parseLocalDate = (isoDateLike) => {
+        const datePart = String(isoDateLike).substring(0, 10);
+        const [y, m, d] = datePart.split('-').map(Number);
+        return new Date(y, (m || 1) - 1, d || 1);
+    };
+    const toLocalDateKey = (date) => {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    };
 
     activities.forEach(activity => {
         if (!activity?.start_date_local) return;
 
-        const date = new Date(activity.start_date_local);
+        const date = parseLocalDate(activity.start_date_local);
         if (Number.isNaN(date.getTime())) return;
 
         const weekStart = new Date(date);
@@ -171,7 +182,7 @@ function buildWeeklyDistanceSeries(activities, distanceGetter) {
         weekStart.setDate(weekStart.getDate() - daysSinceMonday);
         weekStart.setHours(0, 0, 0, 0);
 
-        const key = weekStart.toISOString().slice(0, 10);
+        const key = toLocalDateKey(weekStart);
         const km = Number(distanceGetter(activity)) || 0;
         weeklyTotals[key] = (weeklyTotals[key] || 0) + km;
     });
@@ -183,11 +194,11 @@ function buildWeeklyDistanceSeries(activities, distanceGetter) {
 
     const labels = [];
     const weeklyKm = [];
-    const firstWeek = new Date(weekStarts[0]);
-    const lastWeek = new Date(weekStarts[weekStarts.length - 1]);
+    const firstWeek = parseLocalDate(weekStarts[0]);
+    const lastWeek = parseLocalDate(weekStarts[weekStarts.length - 1]);
 
     for (let d = new Date(firstWeek); d <= lastWeek; d.setDate(d.getDate() + 7)) {
-        const key = d.toISOString().slice(0, 10);
+        const key = toLocalDateKey(d);
         labels.push(key);
         weeklyKm.push(+((weeklyTotals[key] || 0).toFixed(2)));
     }
@@ -883,7 +894,7 @@ export function renderWeeklyDistanceTrendChart(swims) {
     if (!swims || swims.length === 0) return;
 
     const { labels, weeklyKm } = buildWeeklyDistanceSeries(swims, a => a.distance_km || 0);
-    const rollingWindowWeeks = 4;
+    const rollingWindowWeeks = 5;
     const rolling = utils.rollingMean(weeklyKm, rollingWindowWeeks).map(v => +v.toFixed(2));
 
     createChart('swim-weekly-distance-trend-chart', {
@@ -894,18 +905,23 @@ export function renderWeeklyDistanceTrendChart(swims) {
                 {
                     label: 'Weekly distance (km)',
                     data: weeklyKm,
-                    borderColor: 'rgba(54,162,235,0.65)',
-                    backgroundColor: 'rgba(54,162,235,0.15)',
-                    pointRadius: 2,
-                    tension: 0.2
+                    type: 'bar',
+                    backgroundColor: 'rgba(54,162,235,0.20)',
+                    borderColor: 'rgba(54,162,235,0.35)',
+                    borderWidth: 1,
+                    hidden: true,
+                    order: 2
                 },
                 {
                     label: `Rolling mean (${rollingWindowWeeks} weeks)`,
                     data: rolling,
+                    type: 'line',
                     borderColor: 'rgba(255,99,132,1)',
+                    backgroundColor: 'rgba(255,99,132,0.18)',
                     pointRadius: 0,
-                    borderWidth: 3,
-                    tension: 0.25
+                    borderWidth: 4,
+                    tension: 0.25,
+                    order: 1
                 }
             ]
         },
