@@ -711,7 +711,7 @@ export function renderRollingMeanDistanceChart(runs) {
         },
         options: {
             scales: {
-                x: { title: { display: true, text: 'Week start (ISO)' } },
+                x: { title: { display: true} },
                 y: { title: { display: true, text: 'Distance (km)' } }
             }
         }
