@@ -6,6 +6,9 @@ const BIKE_TYPES = new Set(['Ride', 'VirtualRide', 'GravelRide', 'GravelBikeRide
 const GYM_TYPES = new Set(['Workout', 'WeightTraining', 'Crossfit', 'Yoga']);
 
 const CATEGORY_ORDER = ['Run', 'Ride', 'Swim', 'Gym', 'Other'];
+const WEEKDAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+let reportCharts = {};
 
 const SPORT_PALETTE = {
     Run: [16, 90], TrailRun: [25, 85], VirtualRun: [12, 80],
@@ -77,6 +80,28 @@ function formatChange(change, lowerIsBetter = false) {
 function formatHours(seconds) {
     const hours = (Number(seconds) || 0) / 3600;
     return `${hours.toFixed(1)} h`;
+}
+
+function destroyReportCharts() {
+    Object.values(reportCharts).forEach(chart => {
+        if (chart && typeof chart.destroy === 'function') {
+            chart.destroy();
+        }
+    });
+    reportCharts = {};
+}
+
+function createReportChart(canvasId, config) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || typeof Chart === 'undefined') return null;
+
+    if (reportCharts[canvasId]) {
+        reportCharts[canvasId].destroy();
+    }
+
+    const chart = new Chart(canvas.getContext('2d'), config);
+    reportCharts[canvasId] = chart;
+    return chart;
 }
 
 function monthLabel(monthKey) {
@@ -161,6 +186,227 @@ function summarizeByType(activities) {
     return Object.entries(map)
         .map(([type, data]) => ({ type, ...data }))
         .sort((a, b) => b.moving_time - a.moving_time);
+}
+
+function groupMonthlyHours(activities, year) {
+    const map = {};
+    for (let month = 1; month <= 12; month++) {
+        map[`${year}-${String(month).padStart(2, '0')}`] = 0;
+    }
+
+    activities.forEach(activity => {
+        const date = parseLocalDate(activity.start_date_local || activity.start_date);
+        if (Number.isNaN(date.getTime())) return;
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        if (map[key] == null) return;
+        map[key] += (Number(activity.moving_time) || 0) / 3600;
+    });
+
+    return Object.entries(map)
+        .map(([month, hours]) => ({ month, hours }))
+        .sort((a, b) => a.month.localeCompare(b.month));
+}
+
+function groupWeekdayHours(activities) {
+    const weekday = Array(7).fill(0);
+    activities.forEach(activity => {
+        const date = parseLocalDate(activity.start_date_local || activity.start_date);
+        if (Number.isNaN(date.getTime())) return;
+        weekday[date.getDay()] += (Number(activity.moving_time) || 0) / 3600;
+    });
+    return weekday;
+}
+
+function drawAnnualCharts(current, previous, selectedYear, previousYear) {
+    const currentByCategory = summarizeByCategory(current);
+    const previousByCategory = summarizeByCategory(previous);
+
+    createReportChart('annual-sport-hours-chart', {
+        type: 'bar',
+        data: {
+            labels: CATEGORY_ORDER,
+            datasets: [
+                {
+                    label: `${selectedYear} hours`,
+                    data: CATEGORY_ORDER.map(category => +((currentByCategory[category] || 0) / 3600).toFixed(1)),
+                    backgroundColor: 'rgba(59,130,246,0.72)',
+                    borderColor: 'rgba(59,130,246,1)',
+                    borderWidth: 1
+                },
+                {
+                    label: previousYear ? `${previousYear} hours` : 'Previous year',
+                    data: CATEGORY_ORDER.map(category => +((previousByCategory[category] || 0) / 3600).toFixed(1)),
+                    backgroundColor: 'rgba(148,163,184,0.55)',
+                    borderColor: 'rgba(148,163,184,1)',
+                    borderWidth: 1,
+                    hidden: !previousYear
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'top' } },
+            scales: {
+                y: { title: { display: true, text: 'Hours' }, beginAtZero: true }
+            }
+        }
+    });
+
+    const monthlyCurrent = groupMonthlyHours(current, selectedYear);
+    const monthlyPrevious = previousYear ? groupMonthlyHours(previous, previousYear) : [];
+
+    createReportChart('annual-monthly-hours-chart', {
+        type: 'line',
+        data: {
+            labels: monthlyCurrent.map(item => monthLabel(item.month)),
+            datasets: [
+                {
+                    label: `${selectedYear} monthly hours`,
+                    data: monthlyCurrent.map(item => +item.hours.toFixed(1)),
+                    borderColor: 'rgba(244,114,182,1)',
+                    backgroundColor: 'rgba(244,114,182,0.14)',
+                    tension: 0.3,
+                    pointRadius: 2,
+                    fill: true
+                },
+                {
+                    label: previousYear ? `${previousYear} monthly hours` : 'Previous year',
+                    data: monthlyPrevious.map(item => +item.hours.toFixed(1)),
+                    borderColor: 'rgba(148,163,184,1)',
+                    backgroundColor: 'rgba(148,163,184,0.12)',
+                    borderDash: [6, 4],
+                    tension: 0.25,
+                    pointRadius: 0,
+                    fill: false,
+                    hidden: !previousYear
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'top' } },
+            scales: { y: { beginAtZero: true, title: { display: true, text: 'Hours' } } }
+        }
+    });
+
+    createReportChart('annual-weekday-hours-chart', {
+        type: 'bar',
+        data: {
+            labels: WEEKDAY_NAMES,
+            datasets: [{
+                label: `${selectedYear} weekday hours`,
+                data: groupWeekdayHours(current).map(value => +value.toFixed(1)),
+                backgroundColor: 'rgba(16,185,129,0.75)',
+                borderColor: 'rgba(16,185,129,1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, title: { display: true, text: 'Hours' } } }
+        }
+    });
+}
+
+function ensureExportControls(selectedYear, current, previousYear) {
+    const controlsHost = document.getElementById('wrapped-year-selector');
+    if (!controlsHost) return;
+
+    let wrap = document.getElementById('annual-report-export-controls');
+    if (!wrap) {
+        wrap = document.createElement('div');
+        wrap.id = 'annual-report-export-controls';
+        wrap.style.display = 'flex';
+        wrap.style.gap = '0.6rem';
+        wrap.style.marginTop = '0.75rem';
+        wrap.innerHTML = `
+            <button id="annual-report-export-image" type="button">Export Image</button>
+            <button id="annual-report-export-pdf" type="button">Export PDF</button>
+        `;
+        controlsHost.appendChild(wrap);
+    }
+
+    const exportImageBtn = document.getElementById('annual-report-export-image');
+    const exportPdfBtn = document.getElementById('annual-report-export-pdf');
+
+    if (exportImageBtn) {
+        exportImageBtn.onclick = async () => {
+            if (typeof html2canvas === 'undefined') {
+                alert('html2canvas is not available.');
+                return;
+            }
+
+            const reportEl = document.getElementById('wrapped-tab');
+            if (!reportEl) return;
+
+            const canvas = await html2canvas(reportEl, { scale: 2, backgroundColor: '#ffffff' });
+            const link = document.createElement('a');
+            link.href = canvas.toDataURL('image/png');
+            link.download = `annual-report-${selectedYear}.png`;
+            link.click();
+        };
+    }
+
+    if (exportPdfBtn) {
+        exportPdfBtn.onclick = async () => {
+            if (typeof html2canvas === 'undefined') {
+                alert('html2canvas is not available.');
+                return;
+            }
+
+            if (!window.jspdf || !window.jspdf.jsPDF) {
+                alert('jsPDF library is not available.');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const reportEl = document.getElementById('wrapped-tab');
+            if (!reportEl) return;
+
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const totalDistance = sum(current, activity => Number(activity.distance) || 0);
+            const totalTime = sum(current, activity => Number(activity.moving_time) || 0);
+            const totalElevation = sum(current, activity => Number(activity.total_elevation_gain) || 0);
+
+            pdf.setFillColor(15, 23, 42);
+            pdf.rect(0, 0, 210, 297, 'F');
+            pdf.setTextColor(255, 255, 255);
+            pdf.setFontSize(28);
+            pdf.text('Annual Report', 18, 42);
+            pdf.setFontSize(18);
+            pdf.text(String(selectedYear), 18, 56);
+            pdf.setFontSize(12);
+            pdf.text(`Activities: ${current.length}`, 18, 80);
+            pdf.text(`Distance: ${utils.formatDistance(totalDistance)}`, 18, 90);
+            pdf.text(`Moving time: ${utils.formatTime(totalTime)}`, 18, 100);
+            pdf.text(`Elevation: ${Math.round(totalElevation).toLocaleString()} m`, 18, 110);
+            pdf.text(`YoY baseline: ${previousYear || 'N/A'}`, 18, 120);
+            pdf.text(`Generated: ${new Date().toLocaleString()}`, 18, 130);
+
+            const canvas = await html2canvas(reportEl, { scale: 2, backgroundColor: '#ffffff' });
+            const imageData = canvas.toDataURL('image/png');
+            const pageWidth = 190;
+            const pageHeight = 277;
+            const imageHeight = (canvas.height * pageWidth) / canvas.width;
+
+            let heightLeft = imageHeight;
+            let position = 0;
+
+            pdf.addPage();
+            pdf.addImage(imageData, 'PNG', 10, 10 + position, pageWidth, imageHeight);
+            heightLeft -= pageHeight;
+
+            while (heightLeft > 0) {
+                position -= pageHeight;
+                pdf.addPage();
+                pdf.addImage(imageData, 'PNG', 10, 10 + position, pageWidth, imageHeight);
+                heightLeft -= pageHeight;
+            }
+
+            pdf.save(`annual-report-${selectedYear}.pdf`);
+        };
+    }
 }
 
 function findRecords(currentYearActivities) {
@@ -357,6 +603,11 @@ function renderSportsSection(container, current, previous) {
             <p class="section-subtitle">Same sport groups as Calendar and Activities tabs, with year-over-year change.</p>
         </div>
 
+        <div class="chart-section">
+            <h4 class="chart-title">Sport Hours Comparison (YoY)</h4>
+            <canvas id="annual-sport-hours-chart" height="120"></canvas>
+        </div>
+
         <div class="sport-breakdown">${categoryCards}</div>
 
         <div class="chart-section">
@@ -438,6 +689,17 @@ function renderTemporalSection(container, current) {
         <div class="section-header">
             <h3>📈 Trends and Habits</h3>
             <p class="section-subtitle">Monthly volume, weekday preference and training time profile.</p>
+        </div>
+
+        <div class="charts-grid" style="margin-bottom:1rem;">
+            <div class="chart-section">
+                <h4 class="chart-title">Monthly Hours Trend</h4>
+                <canvas id="annual-monthly-hours-chart" height="120"></canvas>
+            </div>
+            <div class="chart-section">
+                <h4 class="chart-title">Weekday Hours</h4>
+                <canvas id="annual-weekday-hours-chart" height="120"></canvas>
+            </div>
         </div>
 
         <div class="temporal-charts-combined">
@@ -594,6 +856,7 @@ function renderActivitiesTable(container, current, year) {
 
 export async function renderWrappedTab(allActivities, options = {}) {
     const activities = options.fullActivities || allActivities || [];
+    destroyReportCharts();
 
     const ids = {
         summary: 'wrapped-summary',
@@ -690,4 +953,6 @@ export async function renderWrappedTab(allActivities, options = {}) {
     `;
 
     renderActivitiesTable(allEl, current, selectedYear);
+    drawAnnualCharts(current, previous, selectedYear, previousYear);
+    ensureExportControls(selectedYear, current, previousYear);
 }
