@@ -75,12 +75,51 @@ export function renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterT
     renderPowerVsSpeedChart(rides);
 
     renderAccumulatedDistanceChart(rides);
+    renderWeeklyDistanceTrendChart(rides);
 
     renderTopActivities(rides);
 
     renderActivitiesTable(rides);
 
     renderConsistencyChart(rides, dateFilterFrom, dateFilterTo);
+}
+
+function buildWeeklyDistanceSeries(activities, distanceGetter) {
+    const weeklyTotals = {};
+
+    activities.forEach(activity => {
+        if (!activity?.start_date_local) return;
+
+        const date = new Date(activity.start_date_local);
+        if (Number.isNaN(date.getTime())) return;
+
+        const weekStart = new Date(date);
+        const daysSinceMonday = (weekStart.getDay() + 6) % 7;
+        weekStart.setDate(weekStart.getDate() - daysSinceMonday);
+        weekStart.setHours(0, 0, 0, 0);
+
+        const key = weekStart.toISOString().slice(0, 10);
+        const km = Number(distanceGetter(activity)) || 0;
+        weeklyTotals[key] = (weeklyTotals[key] || 0) + km;
+    });
+
+    const weekStarts = Object.keys(weeklyTotals).sort();
+    if (weekStarts.length === 0) {
+        return { labels: [], weeklyKm: [] };
+    }
+
+    const labels = [];
+    const weeklyKm = [];
+    const firstWeek = new Date(weekStarts[0]);
+    const lastWeek = new Date(weekStarts[weekStarts.length - 1]);
+
+    for (let d = new Date(firstWeek); d <= lastWeek; d.setDate(d.getDate() + 7)) {
+        const key = d.toISOString().slice(0, 10);
+        labels.push(key);
+        weeklyKm.push(+((weeklyTotals[key] || 0).toFixed(2)));
+    }
+
+    return { labels, weeklyKm };
 }
 
 // ------------------------
@@ -759,5 +798,44 @@ export function renderAccumulatedDistanceChart(rides) {
             }]
         },
         options: { scales: { y: { title: { display: true, text: 'Distance (km)' } } } }
+    });
+}
+
+export function renderWeeklyDistanceTrendChart(rides) {
+    if (!rides || rides.length === 0) return;
+
+    const { labels, weeklyKm } = buildWeeklyDistanceSeries(rides, a => (a.distance || 0) / 1000);
+    const rollingWindowWeeks = 4;
+    const rolling = utils.rollingMean(weeklyKm, rollingWindowWeeks).map(v => +v.toFixed(2));
+
+    createChart('bike-weekly-distance-trend-chart', {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Weekly distance (km)',
+                    data: weeklyKm,
+                    borderColor: 'rgba(54,162,235,0.65)',
+                    backgroundColor: 'rgba(54,162,235,0.15)',
+                    pointRadius: 2,
+                    tension: 0.2
+                },
+                {
+                    label: `Rolling mean (${rollingWindowWeeks} weeks)`,
+                    data: rolling,
+                    borderColor: 'rgba(255,99,132,1)',
+                    pointRadius: 0,
+                    borderWidth: 3,
+                    tension: 0.25
+                }
+            ]
+        },
+        options: {
+            scales: {
+                x: { title: { display: true, text: 'Week start (ISO)' } },
+                y: { title: { display: true, text: 'Distance (km)' } }
+            }
+        }
     });
 }

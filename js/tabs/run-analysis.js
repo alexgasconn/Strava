@@ -1,6 +1,5 @@
 // js/analysis.js
 import * as utils from './utils.js';
-import { calculateFitness, rollingMean as calculateRollingMean } from './utils.js';
 import { getCachedGears } from './api.js';
 
 function getGears() {
@@ -25,6 +24,44 @@ export function renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo
     renderConsistencyChart(runs, dateFilterFrom, dateFilterTo);
     renderTopRuns(runs);
     renderActivitiesTable(runs);
+}
+
+function buildWeeklyDistanceSeries(activities, distanceGetter) {
+    const weeklyTotals = {};
+
+    activities.forEach(activity => {
+        if (!activity?.start_date_local) return;
+
+        const date = new Date(activity.start_date_local);
+        if (Number.isNaN(date.getTime())) return;
+
+        const weekStart = new Date(date);
+        const daysSinceMonday = (weekStart.getDay() + 6) % 7;
+        weekStart.setDate(weekStart.getDate() - daysSinceMonday);
+        weekStart.setHours(0, 0, 0, 0);
+
+        const key = weekStart.toISOString().slice(0, 10);
+        const km = Number(distanceGetter(activity)) || 0;
+        weeklyTotals[key] = (weeklyTotals[key] || 0) + km;
+    });
+
+    const weekStarts = Object.keys(weeklyTotals).sort();
+    if (weekStarts.length === 0) {
+        return { labels: [], weeklyKm: [] };
+    }
+
+    const labels = [];
+    const weeklyKm = [];
+    const firstWeek = new Date(weekStarts[0]);
+    const lastWeek = new Date(weekStarts[weekStarts.length - 1]);
+
+    for (let d = new Date(firstWeek); d <= lastWeek; d.setDate(d.getDate() + 7)) {
+        const key = d.toISOString().slice(0, 10);
+        labels.push(key);
+        weeklyKm.push(+((weeklyTotals[key] || 0).toFixed(2)));
+    }
+
+    return { labels, weeklyKm };
 }
 
 let charts = {};
@@ -627,18 +664,41 @@ export function renderAccumulatedDistanceChart(runs) {
 }
 
 export function renderRollingMeanDistanceChart(runs) {
-    const sorted = [...runs].sort((a, b) => new Date(a.start_date_local) - new Date(b.start_date_local));
-    const labels = sorted.map(a => a.start_date_local.substring(0, 10));
-    const distances = sorted.map(a => a.distance / 1000);
-    const rolling = calculateRollingMean(distances, 10); // Window of 10 runs
+    if (!runs || runs.length === 0) return;
+
+    const { labels, weeklyKm } = buildWeeklyDistanceSeries(runs, a => (a.distance || 0) / 1000);
+    const rollingWindowWeeks = 4;
+    const rolling = utils.rollingMean(weeklyKm, rollingWindowWeeks).map(v => +v.toFixed(2));
 
     createChart('rolling-mean-distance-chart', {
         type: 'line',
         data: {
             labels,
-            datasets: [{ label: 'Rolling Mean Distance (10 runs)', data: rolling, borderColor: 'rgba(255,99,132,1)', pointRadius: 0, tension: 0.1 }]
+            datasets: [
+                {
+                    label: 'Weekly distance (km)',
+                    data: weeklyKm,
+                    borderColor: 'rgba(54,162,235,0.65)',
+                    backgroundColor: 'rgba(54,162,235,0.15)',
+                    pointRadius: 2,
+                    tension: 0.2
+                },
+                {
+                    label: `Rolling mean (${rollingWindowWeeks} weeks)`,
+                    data: rolling,
+                    borderColor: 'rgba(255,99,132,1)',
+                    pointRadius: 0,
+                    borderWidth: 3,
+                    tension: 0.25
+                }
+            ]
         },
-        options: { scales: { y: { title: { display: true, text: 'Distance (km)' } } } }
+        options: {
+            scales: {
+                x: { title: { display: true, text: 'Week start (ISO)' } },
+                y: { title: { display: true, text: 'Distance (km)' } }
+            }
+        }
     });
 }
 
