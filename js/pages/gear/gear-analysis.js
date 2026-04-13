@@ -69,13 +69,13 @@ export async function renderGearDetailPage(gearId) {
 
     renderGearHero(gear, gearActivities);
     renderGearHealth(gear, gearActivities);
-    renderGearStats(gearActivities);
+    renderGearStats(gearActivities, gear.type);
     renderGearAdvanced(gear, gearActivities);
     renderGearMap(gearActivities);
     renderGearUsageChart(gearActivities);
     renderGearPaceEvolutionChart(gearActivities, gear.type);
     renderGearCumulativeElevationChart(gearActivities);
-    renderGearActivitiesList(gearActivities);
+    renderGearActivitiesList(gearActivities, gear.type);
 }
 
 // ===================================================================
@@ -123,7 +123,7 @@ function renderGearHero(gear, activities) {
                     ${statCell(totalKm.toFixed(0) + ' km', 'Total Distance')}
                     ${statCell(activities.length, 'Activities')}
                     ${statCell(totalHours.toFixed(1) + ' h', 'Total Time')}
-                    ${avgPaceSec > 0 && gear.type !== 'bike' ? statCell(formatPace(avgPaceSec, 1000), 'Avg Pace') : ''}
+                    ${avgPaceSec > 0 && gear.type !== 'bike' ? statCell(formatPace(avgPaceSec, 1), 'Avg Pace') : ''}
                     ${avgPaceSec > 0 && gear.type === 'bike' ? statCell((totalKm / totalHours).toFixed(1) + ' km/h', 'Avg Speed') : ''}
                 </div>
             </div>
@@ -215,7 +215,7 @@ function renderGearHealth(gear, activities) {
 // STATISTICS GRID
 // ===================================================================
 
-function renderGearStats(activities) {
+function renderGearStats(activities, gearType) {
     const container = document.getElementById('gear-stats-content');
     if (!container) return;
 
@@ -237,6 +237,11 @@ function renderGearStats(activities) {
     const daysSpan = Math.max(1, Math.ceil((lastUse - firstUse) / 86400000));
     const weeksSpan = Math.max(1, daysSpan / 7);
 
+    const avgSpeedKmh = totalHours > 0 ? (totalKm / totalHours) : 0;
+    const effortMetric = gearType === 'bike'
+        ? statCell(avgSpeedKmh.toFixed(1) + ' km/h', 'Avg Speed')
+        : statCell(formatPace(avgPaceSec, 1), 'Avg Pace');
+
     container.innerHTML = `
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:0.65rem;">
             ${statCell(activities.length, 'Activities')}
@@ -245,7 +250,7 @@ function renderGearStats(activities) {
             ${statCell(totalElev.toFixed(0) + ' m', 'Total Elevation')}
             ${statCell(avgKm.toFixed(1) + ' km', 'Avg Distance')}
             ${statCell(avgElev.toFixed(0) + ' m', 'Avg Elevation')}
-            ${statCell(formatPace(avgPaceSec, 1000), 'Avg Pace')}
+            ${effortMetric}
             ${statCell((totalKm / weeksSpan).toFixed(1) + ' km', 'km / week')}
             ${statCell(formatDate(firstUse), 'First Use')}
             ${statCell(formatDate(lastUse), 'Last Use')}
@@ -313,7 +318,7 @@ function renderGearAdvanced(gear, activities) {
             <div>
                 <p style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;margin:0 0 0.6rem;">Personal Bests</p>
                 ${statRow('Longest activity', bestKm.toFixed(1) + ' km')}
-                ${bestPaceSec > 0 ? statRow('Best pace', formatPace(bestPaceSec, 1000)) : ''}
+                ${gear.type !== 'bike' && bestPaceSec > 0 ? statRow('Best pace', formatPace(bestPaceSec, 1)) : ''}
                 ${statRow('Biggest climb', bestClimb.toFixed(0) + ' m')}
             </div>
         </div>
@@ -481,7 +486,7 @@ function renderGearCumulativeElevationChart(activities) {
 // ACTIVITIES LIST
 // ===================================================================
 
-function renderGearActivitiesList(activities) {
+function renderGearActivitiesList(activities, gearType) {
     const container = document.getElementById('gear-activities-list');
     if (!container) return;
 
@@ -495,7 +500,11 @@ function renderGearActivitiesList(activities) {
     const rows = activities.map(a => {
         const km = (a.distance / 1000).toFixed(1);
         const time = formatTime(a.moving_time);
-        const pace = a.distance > 0 ? formatPace((a.moving_time / 60) / (a.distance / 1000) * 60, 1000) : '—';
+        const pace = a.distance > 0 ? formatPace((a.moving_time || 0), (a.distance || 0) / 1000) : '—';
+        const speed = (a.moving_time > 0 && a.distance > 0)
+            ? `${(((a.distance || 0) / 1000) / ((a.moving_time || 0) / 3600)).toFixed(1)} km/h`
+            : '—';
+        const effortValue = gearType === 'bike' ? speed : pace;
         const elev = a.total_elevation_gain > 0 ? `<span style="color:#64748b;">↑${a.total_elevation_gain.toFixed(0)} m</span>` : '';
         const hr = a.average_heartrate ? `<span style="color:#ef4444;">♥ ${Math.round(a.average_heartrate)}</span>` : '';
         const type = a.sport_type || a.type || '';
@@ -515,7 +524,7 @@ function renderGearActivitiesList(activities) {
                 <div style="display:flex;gap:0.9rem;font-size:0.85rem;font-weight:500;color:#374151;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
                     <span>${km} km</span>
                     <span>${time}</span>
-                    <span>${pace}</span>
+                    <span>${effortValue}</span>
                     ${elev}
                     ${hr}
                 </div>

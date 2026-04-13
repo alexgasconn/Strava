@@ -41,6 +41,24 @@ function parseLocalDate(dateLike) {
     return new Date(y, (m || 1) - 1, d || 1);
 }
 
+function parseLocalDateTime(dateLike) {
+    if (!dateLike) return new Date('Invalid Date');
+    const raw = String(dateLike);
+    const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2})(?::(\d{2}))?(?::(\d{2}))?)?/);
+
+    if (match) {
+        const year = Number(match[1]);
+        const month = Number(match[2]);
+        const day = Number(match[3]);
+        const hours = Number(match[4] || 0);
+        const minutes = Number(match[5] || 0);
+        const seconds = Number(match[6] || 0);
+        return new Date(year, month - 1, day, hours, minutes, seconds);
+    }
+
+    return new Date(raw);
+}
+
 function dateKey(dateLike) {
     const date = dateLike instanceof Date ? dateLike : parseLocalDate(dateLike);
     if (Number.isNaN(date.getTime())) return '';
@@ -119,7 +137,7 @@ function isoWeekStart(dateLike) {
     return dateKey(weekStart);
 }
 
-function computeStreaks(activities) {
+function computeStreaks(activities, referenceDateLike = null) {
     if (!activities.length) return { current: 0, longest: 0 };
 
     const keys = Array.from(new Set(activities.map(a => dateKey(a.start_date_local || a.start_date)).filter(Boolean))).sort();
@@ -141,13 +159,16 @@ function computeStreaks(activities) {
         prev = current;
     });
 
-    let current = 1;
-    for (let i = keys.length - 1; i > 0; i--) {
-        const now = parseLocalDate(keys[i]);
-        const before = parseLocalDate(keys[i - 1]);
-        const diffDays = Math.round((now - before) / 86400000);
-        if (diffDays === 1) current += 1;
-        else break;
+    const activeKeySet = new Set(keys);
+    const referenceDate = referenceDateLike ? parseLocalDate(referenceDateLike) : new Date();
+    let current = 0;
+
+    if (!Number.isNaN(referenceDate.getTime())) {
+        const cursor = new Date(referenceDate);
+        while (activeKeySet.has(dateKey(cursor))) {
+            current += 1;
+            cursor.setDate(cursor.getDate() - 1);
+        }
     }
 
     return { current, longest };
@@ -456,7 +477,9 @@ function renderSummarySection(container, year, current, previous) {
     const prevElevation = sum(previous, a => Number(a.total_elevation_gain) || 0);
 
     const activeDays = new Set(current.map(a => dateKey(a.start_date_local || a.start_date)).filter(Boolean)).size;
-    const { current: currentStreak, longest: longestStreak } = computeStreaks(current);
+    const currentYear = new Date().getFullYear();
+    const streakReference = year === currentYear ? new Date() : `${year}-12-31`;
+    const { current: currentStreak, longest: longestStreak } = computeStreaks(current, streakReference);
     const { topWeek, topMonth } = bestWeekAndMonth(current);
 
     container.innerHTML = `
@@ -624,7 +647,7 @@ function renderTemporalSection(container, current) {
     const hourBuckets = Array(24).fill(0); // hours by start hour
 
     current.forEach(activity => {
-        const date = parseLocalDate(activity.start_date_local || activity.start_date);
+        const date = parseLocalDateTime(activity.start_date_local || activity.start_date);
         if (Number.isNaN(date.getTime())) return;
 
         const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
