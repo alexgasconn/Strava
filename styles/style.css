@@ -4360,6 +4360,24 @@ body {
     text-align: left;
 }
 
+.sport-hours {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: 2rem;
+    line-height: 1;
+    font-weight: 800;
+    color: #111827;
+}
+
+.sport-hours-caption {
+    display: block;
+    margin-top: 0.2rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #6b7280;
+}
+
 
 /* Hour Chart Compact */
 .hour-chart-compact {
