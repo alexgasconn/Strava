@@ -8,9 +8,11 @@ function getGears() {
     return JSON.parse(localStorage.getItem('strava_gears') || '[]');
 }
 
-export function renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo) {
+export function renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, gearFilter = 'all') {
     const filteredActivities = utils.filterActivitiesByDate(allActivities, dateFilterFrom, dateFilterTo);
-    const runs = filteredActivities.filter(a => a.type && a.type.includes('Run'));
+    const runs = filteredActivities
+        .filter(a => a.type && a.type.includes('Run'))
+        .filter(a => gearFilter === 'all' || a.gear_id === gearFilter);
 
     renderSummaryCards(runs);
     renderActivityTypeChart(runs);
@@ -711,7 +713,7 @@ export function renderRollingMeanDistanceChart(runs) {
         },
         options: {
             scales: {
-                x: { title: { display: true} },
+                x: { title: { display: true } },
                 y: { title: { display: true, text: 'Distance (km)' } }
             }
         }

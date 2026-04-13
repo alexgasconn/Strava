@@ -27,12 +27,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let dateFilterTo = null;
     let athleteSportFilter = 'all';
     let athleteDataType = 'time';
+    let runGearFilter = 'all';
+    let bikeGearFilter = 'all';
 
     // --- Tab rendering config: maps tab id → { render function, uses date filters } ---
     const tabConfig = {
         'dashboard-tab': { render: () => renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
-        'analysis-tab': { render: () => renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
-        'bike-tab': { render: () => renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
+        'analysis-tab': { render: () => renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, runGearFilter), usesFilters: true },
+        'bike-tab': { render: () => renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, bikeGearFilter), usesFilters: true },
         'swim-tab': { render: () => renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
         'athlete-tab': { render: () => renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo, athleteSportFilter, athleteDataType), usesFilters: true },
         'planner-tab': { render: () => renderPlannerTab(allActivities) },
@@ -56,12 +58,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const resetFilterButton = document.getElementById('reset-date-filter');
     const dateFromEl = document.getElementById('date-from');
     const dateToEl = document.getElementById('date-to');
+    const runGearFilterEl = document.getElementById('run-gear-filter');
 
     // Bike Tab
     const bikeApplyFilterButton = document.getElementById('bike-apply-date-filter');
     const bikeResetFilterButton = document.getElementById('bike-reset-date-filter');
     const bikeDateFromEl = document.getElementById('bike-date-from');
     const bikeDateToEl = document.getElementById('bike-date-to');
+    const bikeGearFilterEl = document.getElementById('bike-gear-filter');
 
     // Swim Tab
     const swimApplyFilterButton = document.getElementById('swim-apply-date-filter');
@@ -164,6 +168,60 @@ document.addEventListener('DOMContentLoaded', () => {
         if (bikeDateToEl) bikeDateToEl.value = dateFilterTo || '';
         if (swimDateFromEl) swimDateFromEl.value = dateFilterFrom || '';
         if (swimDateToEl) swimDateToEl.value = dateFilterTo || '';
+        if (runGearFilterEl) runGearFilterEl.value = runGearFilter || 'all';
+        if (bikeGearFilterEl) bikeGearFilterEl.value = bikeGearFilter || 'all';
+    }
+
+    function getGearNameMap() {
+        const gears = JSON.parse(localStorage.getItem('strava_gears') || '[]');
+        return new Map(gears.map(gear => {
+            const label = gear.name || [gear.brand_name, gear.model_name].filter(Boolean).join(' ') || gear.id;
+            return [gear.id, label];
+        }));
+    }
+
+    function populateGearFilters() {
+        const gearNameMap = getGearNameMap();
+
+        const buildOptions = (activities) => {
+            const uniqueGearIds = [...new Set(
+                activities
+                    .map(activity => activity.gear_id)
+                    .filter(Boolean)
+            )];
+
+            return [
+                { value: 'all', label: 'All' },
+                ...uniqueGearIds.map(gearId => ({ value: gearId, label: gearNameMap.get(gearId) || gearId }))
+            ];
+        };
+
+        const runActivities = allActivities.filter(activity => activity.type && activity.type.includes('Run'));
+        const bikeActivities = allActivities.filter(activity =>
+            activity.type === 'Ride' ||
+            activity.sport_type === 'Ride' ||
+            activity.sport_type === 'MountainBikeRide'
+        );
+
+        const runOptions = buildOptions(runActivities);
+        const bikeOptions = buildOptions(bikeActivities);
+
+        const setOptions = (selectEl, options) => {
+            if (!selectEl) return;
+            selectEl.innerHTML = options
+                .map(option => `<option value="${option.value}">${option.label}</option>`)
+                .join('');
+        };
+
+        setOptions(runGearFilterEl, runOptions);
+        setOptions(bikeGearFilterEl, bikeOptions);
+
+        const runValues = new Set(runOptions.map(option => option.value));
+        const bikeValues = new Set(bikeOptions.map(option => option.value));
+        if (!runValues.has(runGearFilter)) runGearFilter = 'all';
+        if (!bikeValues.has(bikeGearFilter)) bikeGearFilter = 'all';
+
+        syncDateInputs();
     }
 
     function activateTab(tabId, { updateUrl = false, replaceUrl = false } = {}) {
@@ -210,7 +268,9 @@ document.addEventListener('DOMContentLoaded', () => {
             dateFilterFrom,
             dateFilterTo,
             athleteSportFilter,
-            athleteDataType
+            athleteDataType,
+            runGearFilter,
+            bikeGearFilter
         }));
     }
 
@@ -230,6 +290,8 @@ document.addEventListener('DOMContentLoaded', () => {
         dateFilterTo = null;
         athleteSportFilter = filters.athleteSportFilter || 'all';
         athleteDataType = filters.athleteDataType || 'time';
+        runGearFilter = filters.runGearFilter || 'all';
+        bikeGearFilter = filters.bikeGearFilter || 'all';
 
         syncDateInputs();
 
@@ -238,7 +300,9 @@ document.addEventListener('DOMContentLoaded', () => {
             dateFilterFrom,
             dateFilterTo,
             athleteSportFilter,
-            athleteDataType
+            athleteDataType,
+            runGearFilter,
+            bikeGearFilter
         }));
     }
 
@@ -278,9 +342,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (dateFromEl) dateFromEl.value = dateFilterFrom;
                     if (dateToEl) dateToEl.value = dateFilterTo;
+                    runGearFilter = runGearFilterEl?.value || runGearFilter || 'all';
                     saveFilterState();
 
-                    renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
+                    renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, runGearFilter);
                 });
             });
         }
@@ -298,9 +363,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (bikeDateFromEl) bikeDateFromEl.value = dateFilterFrom;
                     if (bikeDateToEl) bikeDateToEl.value = dateFilterTo;
+                    bikeGearFilter = bikeGearFilterEl?.value || bikeGearFilter || 'all';
                     saveFilterState();
 
-                    renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
+                    renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, bikeGearFilter);
                 });
             });
         }
@@ -432,7 +498,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             setupDashboard(allActivities);
             loadFilterState();
-            renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
+            populateGearFilters();
+            renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, runGearFilter);
             renderedTabs.add('analysis-tab');
             setupYearlySelector();
 
@@ -472,7 +539,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Reset rendered state so tabs re-render with fresh data
             renderedTabs.clear();
             loadFilterState();
-            renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
+            populateGearFilters();
+            renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, runGearFilter);
             renderedTabs.add('analysis-tab');
             setupYearlySelector();
             activateTab(getTabIdFromPath(window.location.pathname));
@@ -520,8 +588,9 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('#year-filter-buttons .year-btn').forEach(b => b.classList.remove('active'));
             dateFilterFrom = dateFromEl?.value || null;
             dateFilterTo = dateToEl?.value || null;
+            runGearFilter = runGearFilterEl?.value || 'all';
             saveFilterState();
-            renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
+            renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, runGearFilter);
         });
     }
 
@@ -531,9 +600,19 @@ document.addEventListener('DOMContentLoaded', () => {
             dateFilterTo = null;
             if (dateFromEl) dateFromEl.value = '';
             if (dateToEl) dateToEl.value = '';
+            runGearFilter = 'all';
+            if (runGearFilterEl) runGearFilterEl.value = 'all';
             document.querySelectorAll('#year-filter-buttons .year-btn').forEach(b => b.classList.remove('active'));
             saveFilterState();
-            renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
+            renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, runGearFilter);
+        });
+    }
+
+    if (runGearFilterEl) {
+        runGearFilterEl.addEventListener('change', () => {
+            runGearFilter = runGearFilterEl.value || 'all';
+            saveFilterState();
+            renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, runGearFilter);
         });
     }
 
@@ -543,8 +622,9 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('#bike-year-filter-buttons .year-btn').forEach(b => b.classList.remove('active'));
             dateFilterFrom = bikeDateFromEl?.value || null;
             dateFilterTo = bikeDateToEl?.value || null;
+            bikeGearFilter = bikeGearFilterEl?.value || 'all';
             saveFilterState();
-            renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
+            renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, bikeGearFilter);
         });
     }
 
@@ -554,9 +634,19 @@ document.addEventListener('DOMContentLoaded', () => {
             dateFilterTo = null;
             if (bikeDateFromEl) bikeDateFromEl.value = '';
             if (bikeDateToEl) bikeDateToEl.value = '';
+            bikeGearFilter = 'all';
+            if (bikeGearFilterEl) bikeGearFilterEl.value = 'all';
             document.querySelectorAll('#bike-year-filter-buttons .year-btn').forEach(b => b.classList.remove('active'));
             saveFilterState();
-            renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
+            renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, bikeGearFilter);
+        });
+    }
+
+    if (bikeGearFilterEl) {
+        bikeGearFilterEl.addEventListener('change', () => {
+            bikeGearFilter = bikeGearFilterEl.value || 'all';
+            saveFilterState();
+            renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, bikeGearFilter);
         });
     }
 

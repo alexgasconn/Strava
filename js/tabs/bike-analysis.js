@@ -44,16 +44,18 @@ function bikeTypeBadge(r) {
 // MAIN ENTRY
 // ------------------------
 
-export function renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterTo) {
+export function renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, gearFilter = 'all') {
 
     const filteredActivities =
         utils.filterActivitiesByDate(allActivities, dateFilterFrom, dateFilterTo);
 
-    const rides = filteredActivities.filter(a =>
-        a.type === "Ride" ||
-        a.sport_type === "Ride" ||
-        a.sport_type === "MountainBikeRide"
-    );
+    const rides = filteredActivities
+        .filter(a =>
+            a.type === "Ride" ||
+            a.sport_type === "Ride" ||
+            a.sport_type === "MountainBikeRide"
+        )
+        .filter(a => gearFilter === 'all' || a.gear_id === gearFilter);
 
     console.log("Rendering bike analysis for", rides.length, "rides");
     console.log(rides);
