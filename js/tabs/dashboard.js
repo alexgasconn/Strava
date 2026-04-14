@@ -215,6 +215,64 @@ function describeInjuryRisk(value, context) {
     return 'Low estimated risk relative to your recent pattern. Current load balance looks broadly manageable.';
 }
 
+function getCtlStatus(value, activities, profile) {
+    const ctlValues = activities.map(activity => activity.ctl).filter(Number.isFinite);
+    const ctlPercentile = percentileRank(ctlValues, value);
+
+    if (ctlPercentile >= 0.9) {
+        return { label: 'Peak fitness', color: '#1f9d55' };
+    }
+    if (ctlPercentile >= 0.7) {
+        return { label: 'High fitness', color: '#27ae60' };
+    }
+    if (ctlPercentile >= 0.45) {
+        return { label: 'Productive', color: '#0074D9' };
+    }
+    if (ctlPercentile >= 0.25) {
+        return { label: 'Maintaining', color: '#f39c12' };
+    }
+    return { label: `Rebuilding (${profile.label})`, color: '#f39c12' };
+}
+
+function getAtlStatus(atlValue, ctlValue) {
+    const delta = atlValue - ctlValue;
+
+    if (delta >= 22) {
+        return { label: 'Strained', color: '#e74c3c' };
+    }
+    if (delta >= 12) {
+        return { label: 'Overload', color: '#FF851B' };
+    }
+    if (delta >= 4) {
+        return { label: 'Build', color: '#f39c12' };
+    }
+    if (delta > -6) {
+        return { label: 'Productive', color: '#27ae60' };
+    }
+    return { label: 'Recovery', color: '#0074D9' };
+}
+
+function getTsbStatus(tsbValue, profile) {
+    const thresholds = profile.thresholds;
+
+    if (tsbValue <= thresholds.deepFatigue) {
+        return { label: 'Strained', color: '#e74c3c' };
+    }
+    if (tsbValue <= thresholds.fatigue) {
+        return { label: 'Heavy load', color: '#FF851B' };
+    }
+    if (tsbValue <= thresholds.balanced) {
+        return { label: 'Productive', color: '#27ae60' };
+    }
+    if (tsbValue <= thresholds.fresh) {
+        return { label: 'Race-ready', color: '#0074D9' };
+    }
+    if (tsbValue <= thresholds.fresh + 8) {
+        return { label: 'Recovery', color: '#6c757d' };
+    }
+    return { label: 'Underload', color: '#8e44ad' };
+}
+
 function renderPMCExplanation(sortedActivities) {
     const container = document.getElementById('pmc-explainer');
     if (!container) return;
@@ -230,6 +288,9 @@ function renderPMCExplanation(sortedActivities) {
     const atlValue = last.atl || 0;
     const tsbValue = toDisplayTsb(last.tsb || 0);
     const injuryRiskValue = last.injuryRisk || 0;
+    const ctlStatus = getCtlStatus(ctlValue, sortedActivities, profile);
+    const atlStatus = getAtlStatus(atlValue, ctlValue);
+    const tsbStatus = getTsbStatus(tsbValue, profile);
     const context = {
         profile,
         ctlPercentile: percentileRank(sortedActivities.map(activity => activity.ctl), ctlValue),
@@ -238,14 +299,11 @@ function renderPMCExplanation(sortedActivities) {
     };
 
     container.innerHTML = `
-        <div class="pmc-explainer-profile">
-            Interpreting the PMC as a <strong>${profile.label}</strong> profile based on your recent TSS-bearing activities.
-        </div>
         <div class="pmc-explainer-card pmc-explainer-ctl">
             <div class="pmc-explainer-header">
                 <span class="pmc-dot"></span>
                 <strong>CTL</strong>
-                <span class="pmc-explainer-value">${ctlValue.toFixed(1)}</span>
+                <span class="pmc-explainer-value" style="color:${ctlStatus.color};">${ctlValue.toFixed(1)} · ${ctlStatus.label}</span>
             </div>
             <p>Fitness or long-term load. It is an exponentially weighted view of roughly the last 42 days of TSS.</p>
             <small>${describeCtl(ctlValue, context)}</small>
@@ -254,7 +312,7 @@ function renderPMCExplanation(sortedActivities) {
             <div class="pmc-explainer-header">
                 <span class="pmc-dot"></span>
                 <strong>ATL</strong>
-                <span class="pmc-explainer-value">${atlValue.toFixed(1)}</span>
+                <span class="pmc-explainer-value" style="color:${atlStatus.color};">${atlValue.toFixed(1)} · ${atlStatus.label}</span>
             </div>
             <p>Fatigue or short-term load. It reacts quickly because it weights roughly the last 7 days of TSS.</p>
             <small>${describeAtl(atlValue, ctlValue, context)}</small>
@@ -263,7 +321,7 @@ function renderPMCExplanation(sortedActivities) {
             <div class="pmc-explainer-header">
                 <span class="pmc-dot"></span>
                 <strong>TSB</strong>
-                <span class="pmc-explainer-value">${tsbValue.toFixed(1)}</span>
+                <span class="pmc-explainer-value" style="color:${tsbStatus.color};">${tsbValue.toFixed(1)} · ${tsbStatus.label}</span>
             </div>
             <p>Form or freshness. It is CTL minus ATL, so negative values mean fatigue and positive values mean freshness.</p>
             <small>${describeTsb(tsbValue, context)}</small>
@@ -533,6 +591,9 @@ function renderTrainingLoadMetrics(activities) {
     const lastATL = last.atl;
     const lastTSB = toDisplayTsb(last.tsb);
     const lastInjuryRisk = last.injuryRisk || 0;
+    const ctlStatus = getCtlStatus(lastCTL, validActivities, profile);
+    const atlStatus = getAtlStatus(lastATL, lastCTL);
+    const tsbStatus = getTsbStatus(lastTSB, profile);
 
     // Total load in visible range
     const totalLoad = validActivities.reduce((sum, r) => sum + r.tss, 0).toFixed(0);
@@ -550,7 +611,6 @@ function renderTrainingLoadMetrics(activities) {
     const loadWeek2 = week2.reduce((a, b) => a + b.tss, 0);
     const loadChangePct = loadWeek2 > 0 ? ((loadWeek1 - loadWeek2) / loadWeek2) * 100 : 0;
     const trend = loadChangePct > 0 ? 'Up' : 'Down';
-    const tsbColor = lastTSB > 0 ? '#2ECC40' : '#FF4136';
     const fatigueThresholds = profile.thresholds;
 
     // Smart message
@@ -586,16 +646,16 @@ function renderTrainingLoadMetrics(activities) {
             <h3 style="margin:0 0 0.8rem;font-size:1.1rem;color:#1a1a1a;">Training Load</h3>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:0.8rem;">
                 <div>
-                    <p style="margin:0;font-size:1.4rem;font-weight:bold;color:#0074D9;">${lastCTL.toFixed(1)}</p>
-                    <small style="color:#666;">CTL (Fitness)</small>
+                    <p style="margin:0;font-size:1.4rem;font-weight:bold;color:${ctlStatus.color};">${lastCTL.toFixed(1)}</p>
+                    <small style="color:${ctlStatus.color};">CTL (Fitness) · ${ctlStatus.label}</small>
                 </div>
                 <div>
-                    <p style="margin:0;font-size:1.4rem;font-weight:bold;color:#FF4136;">${lastATL.toFixed(1)}</p>
-                    <small style="color:#666;">ATL (Fatigue)</small>
+                    <p style="margin:0;font-size:1.4rem;font-weight:bold;color:${atlStatus.color};">${lastATL.toFixed(1)}</p>
+                    <small style="color:${atlStatus.color};">ATL (Fatigue) · ${atlStatus.label}</small>
                 </div>
                 <div>
-                    <p style="margin:0;font-size:1.4rem;font-weight:bold;color:${tsbColor};">${lastTSB.toFixed(1)}</p>
-                    <small style="color:#666;">TSB (Form)</small>
+                    <p style="margin:0;font-size:1.4rem;font-weight:bold;color:${tsbStatus.color};">${lastTSB.toFixed(1)}</p>
+                    <small style="color:${tsbStatus.color};">TSB (Form) · ${tsbStatus.label}</small>
                 </div>
                 <div>
                     <p style="margin:0;font-size:1.4rem;font-weight:bold;color:#8E44AD;">${totalLoad}</p>
@@ -682,12 +742,12 @@ function renderPMCChart(runs) {
                     label: 'CTL (Fitness, ~42d)',
                     data: ctl,
                     borderColor: '#0074D9',
-                    backgroundColor: 'rgba(0, 116, 217, 0.1)',
+                    backgroundColor: 'rgba(0, 116, 217, 0.22)',
                     tension: 0.3,
                     yAxisID: 'y',
                     pointRadius: 0,
                     borderWidth: 3,
-                    fill: false,
+                    fill: true,
                     hidden: false
                 },
                 {
@@ -725,7 +785,7 @@ function renderPMCChart(runs) {
                     borderWidth: 2,
                     borderDash: [6, 4],
                     fill: false,
-                    hidden: false
+                    hidden: true
                 }
             ]
         },
