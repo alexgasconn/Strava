@@ -120,7 +120,40 @@ function getSportMultiplier(activity) {
     return SPORT_TSS_MULTIPLIER[sportType] ?? 0.80;
 }
 
-function calculateTSS(activity, maxHr = MAX_HR_DEFAULT) {
+// Zone-weighted intensity factor using athlete's actual HR zones from Strava.
+// Each zone gets a physiological weight that reflects the exponential cost of
+// training at higher %maxHR.  If the athlete's average HR sits inside zone N,
+// the weight for that zone is used as the squared-IF equivalent.
+//
+// Strava zones format: [{min, max}, ...] (5 zones, zone 5 max = -1 meaning ∞)
+//
+// Zone weights (loosely mapped to TRIMP zone factors):
+//   Z1  0.40   Recovery / very easy
+//   Z2  0.55   Endurance / aerobic
+//   Z3  0.72   Tempo
+//   Z4  0.88   Threshold
+//   Z5  1.05   VO2max / anaerobic
+const ZONE_WEIGHTS = [0.40, 0.55, 0.72, 0.88, 1.05];
+
+function hrZoneIntensity(avgHR, hrZones) {
+    if (!hrZones || !hrZones.length || !avgHR) return null;
+
+    for (let i = 0; i < hrZones.length; i++) {
+        const zoneMax = hrZones[i].max === -1 ? Infinity : hrZones[i].max;
+        if (avgHR >= hrZones[i].min && avgHR < zoneMax) {
+            const weight = ZONE_WEIGHTS[i] ?? ZONE_WEIGHTS[ZONE_WEIGHTS.length - 1];
+            // Interpolate within the zone for finer resolution
+            const zoneRange = (zoneMax === Infinity) ? 20 : (zoneMax - hrZones[i].min);
+            const posInZone = zoneRange > 0 ? (avgHR - hrZones[i].min) / zoneRange : 0.5;
+            const nextWeight = ZONE_WEIGHTS[Math.min(i + 1, ZONE_WEIGHTS.length - 1)];
+            return weight + posInZone * (nextWeight - weight);
+        }
+    }
+    // Above all zones → cap at Z5 weight
+    return ZONE_WEIGHTS[ZONE_WEIGHTS.length - 1];
+}
+
+function calculateTSS(activity, maxHr = MAX_HR_DEFAULT, hrZones = null) {
     const minutes = (activity.moving_time || 0) / 60;
     if (minutes <= 0) {
         activity.tss = 0;
@@ -140,11 +173,19 @@ function calculateTSS(activity, maxHr = MAX_HR_DEFAULT) {
         method = 'power';
     }
 
-    // --- Secondary: HR-based (preferred for most sports) ---
+    // --- Secondary: HR-based using athlete zones when available ---
     if (method === 'none' && activity.average_heartrate > 0) {
-        const hrRatio = activity.average_heartrate / maxHr;
-        tss = hours * hrRatio * hrRatio * 100 * sportMult;
-        method = 'heartrate';
+        const zoneIF = hrZoneIntensity(activity.average_heartrate, hrZones);
+        if (zoneIF !== null) {
+            // Zone-weighted: the zoneIF already represents an IF²-equivalent
+            tss = hours * zoneIF * 100 * sportMult;
+            method = 'heartrate_zones';
+        } else {
+            // Fallback: simple ratio² against maxHR
+            const hrRatio = activity.average_heartrate / maxHr;
+            tss = hours * hrRatio * hrRatio * 100 * sportMult;
+            method = 'heartrate';
+        }
     }
 
     // --- Tertiary: suffer_score ---
@@ -357,8 +398,10 @@ export async function preprocessActivities(activities, userProfile = {}, zones =
 
     // Derive maxHR from zones if available (last zone's max), fallback to profile, then default
     let maxHr = MAX_HR_DEFAULT;
+    let hrZones = null;
+
     if (zones?.heart_rate?.zones) {
-        const hrZones = zones.heart_rate.zones;
+        hrZones = zones.heart_rate.zones;
         const lastZoneMax = hrZones[hrZones.length - 1]?.max;
         if (lastZoneMax && lastZoneMax > 0 && lastZoneMax !== -1) {
             maxHr = lastZoneMax;
@@ -368,7 +411,7 @@ export async function preprocessActivities(activities, userProfile = {}, zones =
         maxHr = userProfile.max_hr;
     }
 
-    activities.forEach(a => calculateTSS(a, maxHr));
+    activities.forEach(a => calculateTSS(a, maxHr, hrZones));
 
     const daily = await groupByDay(activities);
     const { dates, tssValues } = getTimeSeries(daily);
