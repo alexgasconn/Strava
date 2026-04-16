@@ -3480,6 +3480,95 @@ body {
     margin-top: 1rem;
 }
 
+.acute-load-chart-container {
+    position: relative;
+}
+
+.acute-load-chart-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.acute-load-chart-header h3 {
+    margin-bottom: 0.2rem;
+}
+
+.acute-load-chart-header p {
+    margin: 0;
+    color: #666;
+    font-size: 0.92rem;
+}
+
+.acute-load-explainer {
+    margin-top: 1rem;
+}
+
+.acute-load-summary-card {
+    border: 1px solid #ececec;
+    border-radius: 12px;
+    padding: 1rem;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfbfb 100%);
+}
+
+.acute-load-summary-topline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.85rem;
+}
+
+.acute-load-kicker {
+    font-size: 0.84rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #666;
+}
+
+.acute-load-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.28rem 0.7rem;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+
+.acute-load-summary-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 0.9rem;
+    margin-bottom: 0.85rem;
+}
+
+.acute-load-summary-metrics div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.18rem;
+}
+
+.acute-load-summary-metrics strong {
+    font-size: 1.05rem;
+    color: #222;
+}
+
+.acute-load-summary-metrics span {
+    color: #666;
+    font-size: 0.86rem;
+}
+
+.acute-load-summary-card p {
+    margin: 0;
+    color: #444;
+    line-height: 1.5;
+}
+
 .pmc-explainer-profile {
     grid-column: 1 / -1;
     padding: 0.75rem 0.9rem;

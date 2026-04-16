@@ -273,6 +273,103 @@ function getTsbStatus(tsbValue, profile) {
     return { label: 'Underload', color: '#8e44ad' };
 }
 
+function getAcuteLoadBand(profile, ctlValue) {
+    const lower = Math.max(0, ctlValue - profile.thresholds.fresh);
+    const upper = Math.max(lower + 4, ctlValue - profile.thresholds.fatigue);
+
+    return {
+        lower: +lower.toFixed(1),
+        upper: +upper.toFixed(1)
+    };
+}
+
+function getAcuteLoadStatus(atlValue, band) {
+    const tolerance = 1.5;
+
+    if (atlValue < band.lower - tolerance) {
+        return {
+            label: 'Below range',
+            color: '#0074D9',
+            tone: 'low'
+        };
+    }
+
+    if (atlValue > band.upper + tolerance) {
+        return {
+            label: 'Above range',
+            color: '#e74c3c',
+            tone: 'high'
+        };
+    }
+
+    return {
+        label: 'In range',
+        color: '#1f9d55',
+        tone: 'balanced'
+    };
+}
+
+function describeAcuteLoadStatus(atlValue, band, profile, status) {
+    if (status.tone === 'high') {
+        return `Your acute load is above the ideal band for a ${profile.label} profile. This is a valid overload signal, but it usually demands intentional recovery.`;
+    }
+
+    if (status.tone === 'low') {
+        return `Your acute load is below the ideal band for a ${profile.label} profile. This normally reflects a recovery week, taper, or a softer block than your base can currently support.`;
+    }
+
+    return `Your acute load is sitting inside the ideal band for a ${profile.label} profile. This is the closest equivalent here to Garmin's productive acute-load zone.`;
+}
+
+function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, currentStatus) {
+    const container = document.getElementById('acute-load-explainer');
+    if (!container) return;
+
+    if (!sortedActivities.length) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const last = sortedActivities[sortedActivities.length - 1];
+    const atlValue = last.atl || 0;
+    const ctlValue = last.ctl || 0;
+    const deltaToTop = currentBand.upper - atlValue;
+    const deltaToBottom = atlValue - currentBand.lower;
+    const gapText = currentStatus.tone === 'high'
+        ? `${(atlValue - currentBand.upper).toFixed(1)} above the band`
+        : currentStatus.tone === 'low'
+            ? `${(currentBand.lower - atlValue).toFixed(1)} below the band`
+            : `${Math.min(deltaToTop, deltaToBottom).toFixed(1)} away from the nearest edge`;
+
+    container.innerHTML = `
+        <div class="acute-load-summary-card">
+            <div class="acute-load-summary-topline">
+                <span class="acute-load-kicker">Current acute load</span>
+                <span class="acute-load-status" style="color:${currentStatus.color};border-color:${currentStatus.color}33;background:${currentStatus.color}12;">${currentStatus.label}</span>
+            </div>
+            <div class="acute-load-summary-metrics">
+                <div>
+                    <strong>${atlValue.toFixed(1)}</strong>
+                    <span>ATL now</span>
+                </div>
+                <div>
+                    <strong>${currentBand.lower.toFixed(1)} - ${currentBand.upper.toFixed(1)}</strong>
+                    <span>Ideal range</span>
+                </div>
+                <div>
+                    <strong>${ctlValue.toFixed(1)}</strong>
+                    <span>CTL base</span>
+                </div>
+                <div>
+                    <strong>${gapText}</strong>
+                    <span>Relative position</span>
+                </div>
+            </div>
+            <p>${describeAcuteLoadStatus(atlValue, currentBand, profile, currentStatus)}</p>
+        </div>
+    `;
+}
+
 function renderPMCExplanation(sortedActivities) {
     const container = document.getElementById('pmc-explainer');
     if (!container) return;
@@ -408,6 +505,7 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
     renderDashboardTopline(filteredActivities, recentActivities, recentRuns, startDate, dateFilterFrom, dateFilterTo);
 
     renderTrainingLoadMetrics(recentActivities);
+    renderAcuteLoadChart(recentActivities);
     renderPMCChart(recentActivities, allActivities);
     renderRecentActivitiesPreview(recentRuns);
     renderDashboardSummary(recentActivities, previousActivities, recentRuns, previousRuns);
@@ -848,6 +946,156 @@ function renderPMCChart(runs) {
                     grid: { drawOnChartArea: false },
                     min: 0,
                     max: riskAxisMax
+                }
+            }
+        }
+    });
+}
+
+function renderAcuteLoadChart(activities) {
+    const canvas = document.getElementById('acute-load-chart');
+    const explainer = document.getElementById('acute-load-explainer');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (dashboardCharts['acute-load-chart']) {
+        dashboardCharts['acute-load-chart'].destroy();
+    }
+
+    const sorted = getValidLoadActivities(activities);
+    if (!sorted.length) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.font = '16px sans-serif';
+        ctx.fillStyle = '#999';
+        ctx.textAlign = 'center';
+        ctx.fillText('No acute load data to display', canvas.width / 2, canvas.height / 2);
+        if (explainer) explainer.innerHTML = '';
+        return;
+    }
+
+    const profile = getPmcProfile(sorted);
+    const labels = sorted.map(activity => {
+        const date = new Date(activity.start_date_local);
+        return `${date.getMonth() + 1}/${date.getDate()}`;
+    });
+    const atl = sorted.map(activity => activity.atl);
+    const ctl = sorted.map(activity => activity.ctl);
+    const idealBand = sorted.map(activity => getAcuteLoadBand(profile, activity.ctl));
+    const bandLower = idealBand.map(band => band.lower);
+    const bandUpper = idealBand.map(band => band.upper);
+    const lastBand = idealBand[idealBand.length - 1];
+    const lastStatus = getAcuteLoadStatus(atl[atl.length - 1], lastBand);
+    const currentPoint = atl.map((value, index) => (index === atl.length - 1 ? value : null));
+    const maxY = Math.max(...bandUpper, ...atl, ...ctl, 10);
+
+    renderAcuteLoadExplanation(sorted, profile, lastBand, lastStatus);
+
+    dashboardCharts['acute-load-chart'] = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Ideal range floor',
+                    data: bandLower,
+                    borderColor: 'rgba(97, 181, 102, 0)',
+                    backgroundColor: 'rgba(97, 181, 102, 0)',
+                    pointRadius: 0,
+                    pointHoverRadius: 0,
+                    borderWidth: 0,
+                    fill: false,
+                    tension: 0.28
+                },
+                {
+                    label: 'Ideal acute load range',
+                    data: bandUpper,
+                    borderColor: 'rgba(49, 163, 84, 0.45)',
+                    backgroundColor: 'rgba(76, 175, 80, 0.18)',
+                    pointRadius: 0,
+                    pointHoverRadius: 0,
+                    borderWidth: 1.5,
+                    fill: '-1',
+                    tension: 0.28
+                },
+                {
+                    label: 'Base load (CTL)',
+                    data: ctl,
+                    borderColor: 'rgba(0, 116, 217, 0.7)',
+                    backgroundColor: 'rgba(0, 116, 217, 0)',
+                    pointRadius: 0,
+                    borderWidth: 1.75,
+                    borderDash: [6, 4],
+                    tension: 0.28,
+                    fill: false
+                },
+                {
+                    label: 'Acute load (ATL)',
+                    data: atl,
+                    borderColor: '#fc5200',
+                    backgroundColor: 'rgba(252, 82, 0, 0.12)',
+                    pointRadius: 0,
+                    borderWidth: 3,
+                    tension: 0.28,
+                    fill: false
+                },
+                {
+                    label: 'Today',
+                    data: currentPoint,
+                    borderColor: '#fc5200',
+                    backgroundColor: lastStatus.color,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    showLine: false
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        boxWidth: 10,
+                        padding: 16,
+                        filter(item) {
+                            return item.text !== 'Ideal range floor';
+                        }
+                    }
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        label(context) {
+                            if (context.dataset.label === 'Ideal range floor') {
+                                return null;
+                            }
+
+                            if (context.dataset.label === 'Ideal acute load range') {
+                                const lower = bandLower[context.dataIndex];
+                                const upper = bandUpper[context.dataIndex];
+                                return `Ideal range: ${lower.toFixed(1)} - ${upper.toFixed(1)}`;
+                            }
+
+                            return `${context.dataset.label}: ${context.parsed.y.toFixed(1)}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    title: { display: true, text: 'Date' },
+                    ticks: { maxTicksLimit: 10 },
+                    grid: { display: false }
+                },
+                y: {
+                    beginAtZero: true,
+                    suggestedMax: Math.ceil(maxY * 1.12),
+                    title: { display: true, text: 'Load (TSS/d)' },
+                    grid: { color: 'rgba(0, 0, 0, 0.06)' }
                 }
             }
         }
