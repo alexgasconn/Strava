@@ -329,9 +329,9 @@ function getTsbStatus(tsbValue, profile) {
 function getAcuteLoadBand(profile, ctlValue, mode = acuteLoadBandMode) {
     const weeklyBase = Math.max(10, ctlValue * 7);
 
-    // Garmin uses roughly 0.8×baseline – 1.3×baseline as the productive zone.
-    // Conservative  → 0.85 – 1.10  (narrower, lower ceiling)
-    // Aggressive    → 0.75 – 1.30  (wider, allows bigger overloads)
+    // Garmin uses roughly 0.8�baseline � 1.3�baseline as the productive zone.
+    // Conservative  �  0.85 � 1.10  (narrower, lower ceiling)
+    // Aggressive    �  0.75 � 1.30  (wider, allows bigger overloads)
     const config = mode === 'aggressive'
         ? { lo: 0.75, hi: 1.30, minWidth: 30 }
         : { lo: 0.85, hi: 1.10, minWidth: 20 };
@@ -528,7 +528,7 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
     const week1Load = recent14.filter(a => (now - new Date(a.start_date_local)) / 86400000 <= 7).reduce((s, a) => s + (a.tss || 0), 0);
     const week2Load = recent14.filter(a => (now - new Date(a.start_date_local)) / 86400000 > 7).reduce((s, a) => s + (a.tss || 0), 0);
     const weekDeltaPct = week2Load > 0 ? ((week1Load - week2Load) / week2Load) * 100 : 0;
-    const weekTrend = weekDeltaPct > 0 ? `▲ ${Math.abs(weekDeltaPct).toFixed(0)}%` : `▼ ${Math.abs(weekDeltaPct).toFixed(0)}%`;
+    const weekTrend = weekDeltaPct > 0 ? `�� ${Math.abs(weekDeltaPct).toFixed(0)}%` : `�� ${Math.abs(weekDeltaPct).toFixed(0)}%`;
     const weekTrendColor = getTrendColor(weekDeltaPct);
 
     // Ideal ranges
@@ -555,7 +555,7 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
                     <span>7d TSS</span>
                 </div>
                 <div>
-                    <strong>${currentBand.lower.toFixed(1)} – ${currentBand.upper.toFixed(1)}</strong>
+                    <strong>${currentBand.lower.toFixed(1)} � ${currentBand.upper.toFixed(1)}</strong>
                     <span>Ideal range (${acuteLoadBandMode === 'aggressive' ? 'aggr.' : 'cons.'})</span>
                 </div>
                 <div>
@@ -568,7 +568,7 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
                 </div>
                 <div>
                     <strong style="color:${weekTrendColor}">${weekTrend}</strong>
-                    <span>Week Δ</span>
+                    <span>Week �</span>
                 </div>
             </div>
             <p style="margin-bottom:.3rem;">${describeAcuteLoadStatus(currentLoad, currentBand, profile, currentStatus)}</p>
@@ -579,7 +579,7 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
                 <strong>CTL</strong> <small style="opacity:.65;">Fitness · ~42d</small>
                 <span class="pmc-explainer-value" style="color:${ctlStatus.color};">${currentCtl.toFixed(1)} · ${ctlStatus.label}</span>
             </div>
-            <small>${describeCtl(currentCtl, context)} <span style="opacity:.6;">Ideal: ${ctlIdealLow}–${ctlIdealHigh} (your recent range).</span></small>
+            <small>${describeCtl(currentCtl, context)} <span style="opacity:.6;">Ideal: ${ctlIdealLow}�${ctlIdealHigh} (your recent range).</span></small>
         </div>
         <div class="pmc-explainer-card pmc-explainer-atl">
             <div class="pmc-explainer-header">
@@ -587,12 +587,12 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
                 <strong>ATL</strong> <small style="opacity:.65;">Fatigue · ~7d</small>
                 <span class="pmc-explainer-value" style="color:${atlStatus.color};">${currentAtl.toFixed(1)} · ${atlStatus.label}</span>
             </div>
-            <small>${describeAtl(currentAtl, currentCtl, context)} <span style="opacity:.6;">Productive range: ${atlIdealLow}–${atlIdealHigh} (0.8–1.5× CTL).</span></small>
+            <small>${describeAtl(currentAtl, currentCtl, context)} <span style="opacity:.6;">Productive range: ${atlIdealLow}�${atlIdealHigh} (0.8�1.5� CTL).</span></small>
         </div>
         <div class="pmc-explainer-card pmc-explainer-tsb">
             <div class="pmc-explainer-header">
                 <span class="pmc-dot"></span>
-                <strong>TSB</strong> <small style="opacity:.65;">Form · CTL−ATL</small>
+                <strong>TSB</strong> <small style="opacity:.65;">Form · CTL��ATL</small>
                 <span class="pmc-explainer-value" style="color:${tsbStatus.color};">${currentTsb.toFixed(1)} · ${tsbStatus.label}</span>
             </div>
             <small>${describeTsb(currentTsb, context)} <span style="opacity:.6;">Productive zone: ${tsbIdealLow} to ${tsbIdealHigh} for ${profile.label}.</span></small>
@@ -680,7 +680,6 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
     renderDashboardTopline(filteredActivities, recentActivities, recentRuns, startDate, dateFilterFrom, dateFilterTo);
 
     renderAcuteLoadChart(recentActivities, startDate, endDate);
-    renderRecentActivitiesPreview(recentRuns);
     renderDashboardSummary(recentActivities, previousActivities, recentRuns, previousRuns);
     renderTSSBarChart(recentActivities, selectedRangeDays);
     renderGoalsSectionAdvanced(allActivities);
@@ -723,12 +722,12 @@ function renderDashboardSummary(currentActivities, previousActivities, currentRu
 
     const trendVisual = (metric, change) => {
         if (!Number.isFinite(change)) {
-            return { icon: '•', color: '#888', label: 'N/A' };
+            return { icon: '⬢', color: '#888', label: 'N/A' };
         }
 
         const lowerIsBetter = ['pace', 'hr', 'injury'].includes(metric);
         const improved = lowerIsBetter ? change < 0 : change > 0;
-        const icon = change === 0 ? '•' : (improved ? '▲' : '▼');
+        const icon = change === 0 ? '⬢' : (improved ? '��' : '��');
         const color = change === 0 ? '#888' : (improved ? '#2ECC40' : '#FF4136');
         return { icon, color, label: `${change > 0 ? '+' : ''}${change.toFixed(1)}%` };
     };
@@ -786,50 +785,50 @@ function renderDashboardSummary(currentActivities, previousActivities, currentRu
     // --- Renderizado ---
     container.innerHTML = `
         <div class="card">
-            <h3>📏 Total Distance</h3>
+            <h3>�x� Total Distance</h3>
             <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${totalDistance.toFixed(1)} km</p>
             <small><span style="color:${distTrend.color};">${distTrend.icon} ${distTrend.label}</span></small>
         </div>
 
         <div class="card">
-            <h3>🕒 Total Time</h3>
+            <h3>�x" Total Time</h3>
             <p style="font-size:2rem;font-weight:bold;color:#B10DC9;">${totalTime.toFixed(1)} h</p>
             <small><span style="color:${timeTrend.color};">${timeTrend.icon} ${timeTrend.label}</span></small>
         </div>
 
         <div class="card">
-            <h3>⛰️ Elevation</h3>
+            <h3>�:�️ Elevation</h3>
             <p style="font-size:2rem;font-weight:bold;color:#2ECC40;">${totalElevation.toFixed(0)} m</p>
             <small><span style="color:${elevTrend.color};">${elevTrend.icon} ${elevTrend.label}</span></small>
         </div>
 
         <div class="card">
-            <h3>🫁 VO₂max</h3>
-            <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${Number.isFinite(currentAvgVO2) ? currentAvgVO2.toFixed(1) : '–'}</p>
+            <h3>�x�� VO�max</h3>
+            <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${Number.isFinite(currentAvgVO2) ? currentAvgVO2.toFixed(1) : '�'}</p>
             <small><span style="color:${vo2Trend.color};">${vo2Trend.icon} ${vo2Trend.label}</span></small>
         </div>
 
         <div class="card">
-            <h3>⚠️ Injury Risk</h3>
-            <p style="font-size:2rem;font-weight:bold;color:#FF4136;">${Number.isFinite(currentInjury) ? currentInjury.toFixed(3) : '–'}</p>
+            <h3>�a�️ Injury Risk</h3>
+            <p style="font-size:2rem;font-weight:bold;color:#FF4136;">${Number.isFinite(currentInjury) ? currentInjury.toFixed(3) : '�'}</p>
             <small><span style="color:${injuryTrend.color};">${injuryTrend.icon} ${injuryTrend.label}</span></small>
         </div>
 
         <div class="card">
-            <h3>⚡ Average Pace</h3>
-            <p style="font-size:2rem;font-weight:bold;color:#B10DC9;"> ${Number.isFinite(avgPace) ? utils.paceDecimalToTime(avgPace) : '–'} </p>
+            <h3>�a� Average Pace</h3>
+            <p style="font-size:2rem;font-weight:bold;color:#B10DC9;"> ${Number.isFinite(avgPace) ? utils.paceDecimalToTime(avgPace) : '�'} </p>
             <small><span style="color:${paceTrend.color};">${paceTrend.icon} ${paceTrend.label}</span></small>
         </div>
 
         <div class="card">
             <h3>❤️ Average HR</h3>
-            <p style="font-size:2rem;font-weight:bold;color:#FF4136;">${Number.isFinite(currentAvgHR) ? currentAvgHR.toFixed(0) : '–'} bpm</p>
+            <p style="font-size:2rem;font-weight:bold;color:#FF4136;">${Number.isFinite(currentAvgHR) ? currentAvgHR.toFixed(0) : '�'} bpm</p>
             <small><span style="color:${hrTrend.color};">${hrTrend.icon} ${hrTrend.label}</span></small>
         </div>
 
         <div class="card">
-            <h3>🏃‍♂️ Average Distance</h3>
-            <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${Number.isFinite(avgDistance) ? avgDistance.toFixed(1) : '–'} km</p>
+            <h3>�x��⬍�"️ Average Distance</h3>
+            <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${Number.isFinite(avgDistance) ? avgDistance.toFixed(1) : '�'} km</p>
             <small><span style="color:${avgDistTrend.color};">${avgDistTrend.icon} ${avgDistTrend.label}</span></small>
         </div>
         
@@ -930,7 +929,7 @@ function renderAcuteLoadChart(activities, rangeStart, rangeEnd) {
                     yAxisID: 'y'
                 },
                 {
-                    label: 'Base load (CTL × 7)',
+                    label: 'Base load (CTL � 7)',
                     data: ctl7dBase,
                     borderColor: 'rgba(0, 116, 217, 0.7)',
                     backgroundColor: 'rgba(0, 116, 217, 0)',
@@ -995,7 +994,7 @@ function renderAcuteLoadChart(activities, rangeStart, rangeEnd) {
                             if (context.dataset.label === 'Ideal acute load range') {
                                 const lower = bandLower[context.dataIndex];
                                 const upper = bandUpper[context.dataIndex];
-                                return `Ideal range: ${lower.toFixed(1)} – ${upper.toFixed(1)}`;
+                                return `Ideal range: ${lower.toFixed(1)} � ${upper.toFixed(1)}`;
                             }
 
                             return `${context.dataset.label}: ${context.parsed.y.toFixed(1)}`;
@@ -1037,421 +1036,9 @@ function renderAcuteLoadChart(activities, rangeStart, rangeEnd) {
 
 
 
-function renderRecentActivitiesPreview(runs) {
-    const container = document.getElementById('recent-activities-preview');
-    if (!container) return;
-
-    // Load HR zones from Strava profile, fallback to percentage-based
-    const zonesData = JSON.parse(localStorage.getItem('strava_training_zones') || 'null');
-    const hrZones = zonesData?.heart_rate?.zones || null;
-    const settings = JSON.parse(localStorage.getItem('dashboard_settings') || '{}');
-    const USER_MAX_HR = settings.hrMax ? parseInt(settings.hrMax) : (hrZones ? (hrZones[hrZones.length - 1]?.max || 195) : 195);
-
-    if (!runs || runs.length === 0) {
-        container.innerHTML = '<p style="text-align:center; padding:2rem; color:#666;">No recent activities</p>';
-        return;
-    }
-
-    // Tomamos las 8 más recientes con mapa
-    const recentRuns = runs.slice(-8).reverse().filter(r => r.map && r.map.summary_polyline);
-
-    function getHrZone(avgHr) {
-        if (!avgHr) return null;
-        if (hrZones) {
-            for (let i = 0; i < hrZones.length; i++) {
-                const max = hrZones[i].max === -1 ? Infinity : hrZones[i].max;
-                if (avgHr >= hrZones[i].min && avgHr < max) return i + 1;
-            }
-            return null;
-        }
-        // Fallback: percentage-based zones
-        const hrPercent = (avgHr / USER_MAX_HR) * 100;
-        if (hrPercent < 60) return 1;
-        if (hrPercent < 70) return 2;
-        if (hrPercent < 80) return 3;
-        if (hrPercent < 90) return 4;
-        return 5;
-    }
-
-    const html = recentRuns.map(r => {
-        const date = new Date(r.start_date_local);
-        const distKm = (r.distance / 1000).toFixed(2);
-        const pace = (r.moving_time / 60) / (r.distance / 1000);
-        const time = utils.formatTime(r.moving_time);
-        const avgSpeed = ((r.distance / 1000) / (r.moving_time / 3600)).toFixed(1);
-
-        // Calcular VO₂max si hay HR
-        const vo2max = r.average_heartrate && r.moving_time > 0 && r.distance > 0
-            ? (() => {
-                const vel_m_min = (r.distance / r.moving_time) * 60;
-                const vo2_at_pace = (vel_m_min * 0.2) + 3.5;
-                return vo2_at_pace / (r.average_heartrate / USER_MAX_HR);
-            })()
-            : null;
-
-        const hrZone = getHrZone(r.average_heartrate);
-
-        const hrZoneColors = {
-            1: '#4CAF50',  // Verde - Recuperación
-            2: '#8BC34A',  // Verde claro - Aeróbica
-            3: '#FFC107',  // Amarillo - Tempo
-            4: '#FF9800',  // Naranja - Umbral
-            5: '#F44336'   // Rojo - Máximo
-        };
-
-        const environmentalDifficulty = utils.calculateEnvironmentalDifficulty(r);
-
-        return `
-            <div class="activity-card" 
-                 style="background:#fff; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.08); 
-                        margin:1.5rem 0; overflow:hidden; transition: transform 0.2s, box-shadow 0.2s;
-                        border: 1px solid #f0f0f0;">
-                
-                <div style="display:flex; gap:1.25rem; padding:1.25rem;">
-                    <!-- Mapa más grande y sin nada debajo -->
-                    <div style="flex-shrink:0;">
-                        <div style="width:200px; height:200px; background:#f8f9fa; border-radius:10px; 
-                                    overflow:hidden; border:2px solid #e9ecef; box-shadow:0 2px 4px rgba(0,0,0,0.06);" 
-                             id="map-${r.id}"></div>
-                    </div>
-                    
-                    <!-- Contenido a la derecha -->
-                    <div style="flex:1; display:flex; flex-direction:column; gap:1rem; min-width:0;">
-                        <!-- Header -->
-                        <div style="display:flex; justify-content:space-between; align-items:start;">
-                            <div style="flex:1; min-width:0;">
-                                <h3 style="margin:0; font-size:1.15rem; font-weight:600; color:#1a1a1a; 
-                                           white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                                    ${r.name || 'Run'}
-                                </h3>
-                                <div style="display:flex; align-items:center; gap:0.5rem; margin-top:0.35rem;">
-                                    <span style="font-size:0.85rem; color:#666;">
-                                        ${utils.formatDate(date)}
-                                    </span>
-                                    ${hrZone ? `
-                                        <span style="background:${hrZoneColors[hrZone]}; color:#fff; 
-                                                     padding:2px 7px; border-radius:4px; font-size:0.7rem; font-weight:600;">
-                                            Z${hrZone}
-                                        </span>
-                                    ` : ''}
-                                </div>
-                            </div>
-                            <a href="html/activity-router.html?id=${r.id}" target="_blank" 
-                               style="font-size:0.85rem; color:#FC5200; text-decoration:none; font-weight:500;
-                                      padding:5px 14px; border-radius:6px; background:#FFF5F0; 
-                                      white-space:nowrap; margin-left:0.5rem; transition:background 0.2s;">
-                                View →
-                            </a>
-                        </div>
-
-                        <!-- Stats principales - más compactas -->
-                        <div style="display:flex; gap:0.75rem;">
-                            <div style="flex:1; background:linear-gradient(135deg, #FF6B35 0%, #FC5200 100%); 
-                                        padding:0.65rem 0.8rem; border-radius:8px; color:#fff;">
-                                <div style="font-size:1.5rem; font-weight:700; line-height:1;">
-                                    ${distKm}
-                                </div>
-                                <div style="font-size:0.7rem; opacity:0.9; margin-top:3px; font-weight:500;">
-                                    KILOMETERS
-                                </div>
-                            </div>
-                            
-                            <div style="flex:1; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                                        padding:0.65rem 0.8rem; border-radius:8px; color:#fff;">
-                                <div style="font-size:1.5rem; font-weight:700; line-height:1;">
-                                    ${utils.paceDecimalToTime(pace)}
-                                </div>
-                                <div style="font-size:0.7rem; opacity:0.9; margin-top:3px; font-weight:500;">
-                                    MIN/KM
-                                </div>
-                            </div>
-
-                            <div style="flex:1; background:linear-gradient(135deg, #f093fb 0%, #f5576c 100%); 
-                                        padding:0.65rem 0.8rem; border-radius:8px; color:#fff;">
-                                <div style="font-size:1.5rem; font-weight:700; line-height:1;">
-                                    ${time.split(':')[0]}:${time.split(':')[1]}
-                                </div>
-                                <div style="font-size:0.7rem; opacity:0.9; margin-top:3px; font-weight:500;">
-                                    DURATION
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Stats secundarias - más compactas y organizadas -->
-                        <div style="display:flex; gap:1rem; flex-wrap:wrap;">
-                            ${r.athlete_count ? `
-                                <div style="display:flex; align-items:center; gap:0.4rem;">
-                                    <span style="font-size:1rem;">${r.athlete_count === 1 ? '🏃' : r.athlete_count === 2 ? '👥' : '👥'}</span>
-                                    <div>
-                                        <div style="font-weight:600; color:${r.athlete_count === 1 ? '#7f8c8d' : '#9b59b6'}; font-size:0.9rem; line-height:1.2;">
-                                            ${r.athlete_count === 1 ? 'Solo run' : r.athlete_count === 2 ? 'Run in pair' : 'Group run'}
-                                        </div>
-                                        <div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:0.3px;">
-                                            ${r.athlete_count === 1 ? 'Training' : r.athlete_count === 2 ? 'Pair' : 'Group'}
-                                        </div>
-                                    </div>
-                                </div>
-                            ` : `
-                                <div style="display:flex; align-items:center; gap:0.4rem;">
-                                    <span style="font-size:1rem;">🏃</span>
-                                    <div>
-                                        <div style="font-weight:600; color:#7f8c8d; font-size:0.9rem; line-height:1.2;">
-                                            Solo
-                                        </div>
-                                        <div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:0.3px;">
-                                            Training
-                                        </div>
-                                    </div>
-                                </div>
-                            `}
-
-                            ${r.suffer_score ? `
-                                <div style="display:flex; align-items:center; gap:0.4rem;">
-                                    <span style="font-size:1rem;">🔥</span>
-                                    <div>
-                                        <div style="font-weight:600; color:#e67e22; font-size:0.9rem; line-height:1.2;">
-                                            ${r.suffer_score}
-                                        </div>
-                                        <div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:0.3px;">
-                                            Suffer
-                                        </div>
-                                    </div>
-                                </div>
-                            ` : ''}
-
-                            ${r.elapsed_time && r.moving_time ? `
-                                <div style="display:flex; align-items:center; gap:0.4rem;">
-                                    <span style="font-size:1rem;">⏸️</span>
-                                    <div>
-                                        <div style="font-weight:600; color:#34495e; font-size:0.9rem; line-height:1.2;">
-                                            ${((r.moving_time / r.elapsed_time) * 100).toFixed(0)}%
-                                        </div>
-                                        <div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:0.3px;">
-                                            Moving
-                                        </div>
-                                    </div>
-                                </div>
-                            ` : ''}
-
-                            ${r.average_heartrate ? `
-                                <div style="display:flex; align-items:center; gap:0.4rem;">
-                                    <span style="font-size:1rem;">❤️</span>
-                                    <div>
-                                        <div style="font-weight:600; color:#e74c3c; font-size:0.9rem; line-height:1.2;">
-                                            ${r.average_heartrate.toFixed(0)} bpm
-                                        </div>
-                                        <div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:0.3px;">
-                                            Avg HR
-                                        </div>
-                                    </div>
-                                </div>
-                            ` : ''}
-
-                            ${vo2max ? `
-                                <div style="display:flex; align-items:center; gap:0.4rem;">
-                                    <span style="font-size:1rem;">💨</span>
-                                    <div>
-                                        <div style="font-weight:600; color:#3498db; font-size:0.9rem; line-height:1.2;">
-                                            ${vo2max.toFixed(1)}
-                                        </div>
-                                        <div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:0.3px;">
-                                            VO₂max
-                                        </div>
-                                    </div>
-                                </div>
-                            ` : ''}
-
-                            ${r.total_elevation_gain ? `
-                                <div style="display:flex; align-items:center; gap:0.4rem;">
-                                    <span style="font-size:1rem;">⛰️</span>
-                                    <div>
-                                        <div style="font-weight:600; color:#16a085; font-size:0.9rem; line-height:1.2;">
-                                            ${r.total_elevation_gain.toFixed(0)}m
-                                        </div>
-                                        <div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:0.3px;">
-                                            Elevation
-                                        </div>
-                                    </div>
-                                </div>
-                            ` : ''}
-
-                            ${environmentalDifficulty > 0 ? `
-                                <div style="display:flex; align-items:center; gap:0.4rem;">
-                                    <span style="font-size:1rem;">🌡️</span>
-                                    <div>
-                                        <div style="font-weight:600; color:#f39c12; font-size:0.9rem; line-height:1.2;">
-                                            ${environmentalDifficulty}%
-                                        </div>
-                                        <div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:0.3px;">
-                                            Difficulty
-                                        </div>
-                                    </div>
-                                </div>
-                            ` : ''}
-
-                            ${r.average_cadence ? `
-                                <div style="display:flex; align-items:center; gap:0.4rem;">
-                                    <span style="font-size:1rem;">👟</span>
-                                    <div>
-                                        <div style="font-weight:600; color:#f39c12; font-size:0.9rem; line-height:1.2;">
-                                            ${r.average_cadence.toFixed(0)} spm
-                                        </div>
-                                        <div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:0.3px;">
-                                            Cadence
-                                        </div>
-                                    </div>
-                                </div>
-                            ` : ''}
-                            ${r.tss ? `
-                                <div style="display:flex; align-items:center; gap:0.4rem;">
-                                    <span style="font-size:1rem;">📊</span>
-                                    <div>
-                                        <div style="font-weight:600; color:#e74c3c; font-size:0.9rem; line-height:1.2;">
-                                            ${r.tss.toFixed(0)} TSS
-                                        </div>
-                                        <div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:0.3px;">
-                                            TSS
-                                        </div>
-                                    </div>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }).join('');
-
-    container.innerHTML = html;
-
-    // Renderizar los mini mapas
-    recentRuns.forEach(r => {
-        renderMiniMap(r.id, r.map.summary_polyline);
-    });
-
-    // Añadir estilos hover
-    const style = document.createElement('style');
-    style.textContent = `
-        .activity-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.12) !important;
-        }
-        .activity-card a:hover {
-            background: #FFE5DB !important;
-        }
-    `;
-    document.head.appendChild(style);
-}
-
-function renderMiniMap(runId, polyline) {
-    const mapDiv = document.getElementById(`map-${runId}`);
-    if (!mapDiv || !polyline) {
-        return;
-    }
-
-    // Si Leaflet no está cargado
-    if (typeof L === 'undefined') {
-        console.error('🗺️ renderMiniMap: Leaflet not loaded');
-        mapDiv.innerHTML = '<p style="text-align:center; padding:2rem; font-size:0.8rem; color:#999;">Leaflet not loaded</p>';
-        return;
-    }
-
-    try {
-        const coordinates = decodePolyline(polyline);
-
-        if (coordinates.length === 0) {
-            console.warn(`🗺️ renderMiniMap: No coordinates decoded for run ${runId}`);
-            mapDiv.innerHTML = '<p style="text-align:center; padding:2rem; font-size:0.8rem; color:#999;">No coordinates</p>';
-            return;
-        }
-
-        // Crear mapa sin controles
-        const map = L.map(mapDiv, {
-            zoomControl: false,
-            attributionControl: false,
-            dragging: false,
-            scrollWheelZoom: false,
-            doubleClickZoom: false,
-            touchZoom: false
-        });
-
-        // Capa base
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19
-        }).addTo(map);
-
-        // Trazado del recorrido
-        const polylineLayer = L.polyline(coordinates, {
-            color: '#FC5200',
-            weight: 3,
-            opacity: 0.8
-        }).addTo(map);
-
-        map.fitBounds(polylineLayer.getBounds(), { padding: [10, 10] });
-
-        // Marcadores inicio y fin
-        if (coordinates.length > 0) {
-            L.circleMarker(coordinates[0], {
-                radius: 5,
-                color: '#2ECC40',
-                fillColor: '#2ECC40',
-                fillOpacity: 0.8,
-                weight: 2
-            }).addTo(map);
-
-            L.circleMarker(coordinates[coordinates.length - 1], {
-                radius: 5,
-                color: '#FF4136',
-                fillColor: '#FF4136',
-                fillOpacity: 0.8,
-                weight: 2
-            }).addTo(map);
-        }
-
-    } catch (err) {
-        console.error(`🗺️ renderMiniMap: Error rendering mini map for run ${runId}:`, err);
-        mapDiv.innerHTML = '<p style="text-align:center; padding:2rem; font-size:0.8rem; color:#999;">Error loading map</p>';
-    }
-}
-
-
-function decodePolyline(encoded) {
-    if (!encoded) return [];
-
-    const poly = [];
-    let index = 0, lat = 0, lng = 0;
-
-    while (index < encoded.length) {
-        let b, shift = 0, result = 0;
-        do {
-            b = encoded.charCodeAt(index++) - 63;
-            result |= (b & 0x1f) << shift;
-            shift += 5;
-        } while (b >= 0x20);
-        const dlat = (result & 1) ? ~(result >> 1) : (result >> 1);
-        lat += dlat;
-
-        shift = 0;
-        result = 0;
-        do {
-            b = encoded.charCodeAt(index++) - 63;
-            result |= (b & 0x1f) << shift;
-            shift += 5;
-        } while (b >= 0x20);
-        const dlng = (result & 1) ? ~(result >> 1) : (result >> 1);
-        lng += dlng;
-
-        poly.push([lat / 1e5, lng / 1e5]);
-    }
-
-    return poly;
-}
-
-
-
 
 /**
- * Renderiza una gráfica de barras: TSS por período
+ * Renderiza una gr�fica de barras: TSS por per�odo
  */
 function renderTSSBarChart(activities, rangeType) {
     const canvas = document.getElementById('tss-bar-chart');
@@ -1460,7 +1047,7 @@ function renderTSSBarChart(activities, rangeType) {
     const ctx = canvas.getContext('2d');
     if (window.tssBarChart) window.tssBarChart.destroy();
 
-    // Calcular las fechas de inicio y fin del período seleccionado
+    // Calcular las fechas de inicio y fin del per�odo seleccionado
     const now = new Date();
     let startDate;
     let endDate = new Date(now);
@@ -1484,7 +1071,7 @@ function renderTSSBarChart(activities, rangeType) {
         case 'month': {
             const today = new Date();
             startDate = new Date(today.getFullYear(), today.getMonth(), 1); // 1 del mes actual
-            endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0); // último del mes actual
+            endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0); // �ltimo del mes actual
             endDate.setHours(23, 59, 59, 999);
             break;
         }
@@ -1582,14 +1169,14 @@ function renderTSSBarChart(activities, rangeType) {
 function getMondayOfWeek(date) {
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
-    const day = d.getDay(); // 0 = domingo, 1 = lunes, ..., 6 = sábado
+    const day = d.getDay(); // 0 = domingo, 1 = lunes, ..., 6 = s�bado
     const diff = day === 0 ? -6 : 1 - day; // Si es domingo, ir al lunes anterior (retroceder 6)
     d.setDate(d.getDate() + diff);
     return d;
 }
 
 /**
- * Obtiene el número de semana del año (ISO 8601)
+ * Obtiene el n�mero de semana del a�o (ISO 8601)
  */
 function getWeekNumber(date) {
     const d = new Date(date);
@@ -1601,7 +1188,7 @@ function getWeekNumber(date) {
 }
 
 /**
- * Agrupa TSS por período (día, semana o mes) incluyendo períodos sin datos
+ * Agrupa TSS por per�odo (d�a, semana o mes) incluyendo per�odos sin datos
  */
 function groupTSSByPeriod(activities, rangeType, startDate, endDate) {
     // Usar las fechas del rango completo, no solo las de las actividades
@@ -1615,10 +1202,10 @@ function groupTSSByPeriod(activities, rangeType, startDate, endDate) {
     const grouped = {};
     const curr = new Date(minDate);
 
-    // Seguridad: límite máximo de iteraciones (por si hay error de rango)
+    // Seguridad: l�mite m�ximo de iteraciones (por si hay error de rango)
     let guard = 0;
 
-    // Crear todos los períodos del rango (incluso sin datos)
+    // Crear todos los per�odos del rango (incluso sin datos)
     while (curr <= maxDate && guard++ < 2000) {
         let key;
         if (isDaily) {
@@ -1639,14 +1226,14 @@ function groupTSSByPeriod(activities, rangeType, startDate, endDate) {
         grouped[key] = 0;
     }
 
-    // Añadir datos reales de actividades (solo si hay actividades)
+    // A�adir datos reales de actividades (solo si hay actividades)
     if (activities && activities.length > 0) {
         for (const a of activities) {
             if (!a.start_date_local) continue;
             const date = new Date(a.start_date_local);
             if (isNaN(date)) continue;
 
-            // Solo procesar si está dentro del rango
+            // Solo procesar si est� dentro del rango
             if (date < minDate || date > maxDate) continue;
 
             let key;
