@@ -323,18 +323,29 @@ function getTsbStatus(tsbValue, profile) {
     return { label: 'Underload', color: '#8e44ad' };
 }
 
+// Garmin-style acute load band:
+// "Optimal" zone sits between ~80-120% of 42-day chronic weekly load.
+// Conservative narrows the band; aggressive widens it.
 function getAcuteLoadBand(profile, ctlValue, mode = acuteLoadBandMode) {
     const weeklyBase = Math.max(10, ctlValue * 7);
-    const sportBias = profile.dominantSport === 'Ride'
-        ? 1.05
-        : profile.dominantSport === 'Swim'
-            ? 0.92
-            : 1;
+
+    // Garmin uses roughly 0.8×baseline – 1.3×baseline as the productive zone.
+    // Conservative  → 0.85 – 1.10  (narrower, lower ceiling)
+    // Aggressive    → 0.75 – 1.30  (wider, allows bigger overloads)
     const config = mode === 'aggressive'
-        ? { lowerMultiplier: 0.9, upperMultiplier: 1.24, minBand: 26 }
-        : { lowerMultiplier: 0.82, upperMultiplier: 1.06, minBand: 18 };
-    const lower = Math.max(config.minBand, weeklyBase * config.lowerMultiplier * sportBias);
-    const upper = Math.max(lower + Math.max(8, weeklyBase * 0.12), weeklyBase * config.upperMultiplier * sportBias);
+        ? { lo: 0.75, hi: 1.30, minWidth: 30 }
+        : { lo: 0.85, hi: 1.10, minWidth: 20 };
+
+    let lower = weeklyBase * config.lo;
+    let upper = weeklyBase * config.hi;
+
+    // Guarantee a minimum visual width so the band doesn't collapse for low CTL
+    if (upper - lower < config.minWidth) {
+        const mid = (lower + upper) / 2;
+        lower = mid - config.minWidth / 2;
+        upper = mid + config.minWidth / 2;
+    }
+    lower = Math.max(0, lower);
 
     return {
         lower: +lower.toFixed(1),
