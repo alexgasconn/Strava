@@ -507,7 +507,7 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
         ? `${(currentLoad - currentBand.upper).toFixed(1)} above the band`
         : currentStatus.tone === 'low'
             ? `${(currentBand.lower - currentLoad).toFixed(1)} below the band`
-            : `${Math.min(deltaToTop, deltaToBottom).toFixed(1)} away from the nearest edge`;
+            : `${Math.min(deltaToTop, deltaToBottom).toFixed(1)} from edge`;
 
     const ctlStatus = getCtlStatus(currentCtl, sortedActivities, profile);
     const atlStatus = getAtlStatus(currentAtl, currentCtl);
@@ -518,6 +518,30 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
         atlPercentile: percentileRank(sortedActivities.map(a => a.atl), currentAtl),
         riskPercentile: percentileRank(sortedActivities.map(a => a.injuryRisk), currentRisk)
     };
+
+    // Total load in range
+    const totalLoad = sortedActivities.reduce((s, a) => s + (a.tss || 0), 0).toFixed(0);
+
+    // Weekly delta (last 14 days)
+    const now = new Date();
+    const recent14 = sortedActivities.filter(a => (now - new Date(a.start_date_local)) / 86400000 <= 14);
+    const week1Load = recent14.filter(a => (now - new Date(a.start_date_local)) / 86400000 <= 7).reduce((s, a) => s + (a.tss || 0), 0);
+    const week2Load = recent14.filter(a => (now - new Date(a.start_date_local)) / 86400000 > 7).reduce((s, a) => s + (a.tss || 0), 0);
+    const weekDeltaPct = week2Load > 0 ? ((week1Load - week2Load) / week2Load) * 100 : 0;
+    const weekTrend = weekDeltaPct > 0 ? `▲ ${Math.abs(weekDeltaPct).toFixed(0)}%` : `▼ ${Math.abs(weekDeltaPct).toFixed(0)}%`;
+    const weekTrendColor = getTrendColor(weekDeltaPct);
+
+    // Ideal ranges
+    const th = profile.thresholds;
+    const ctlValues = sortedActivities.map(a => a.ctl).filter(Number.isFinite);
+    const ctlMin = Math.min(...ctlValues);
+    const ctlMax = Math.max(...ctlValues);
+    const ctlIdealLow = (ctlMax * 0.6).toFixed(1);
+    const ctlIdealHigh = ctlMax.toFixed(1);
+    const atlIdealLow = (currentCtl * 0.8).toFixed(1);
+    const atlIdealHigh = (currentCtl * 1.5).toFixed(1);
+    const tsbIdealLow = th.fatigue.toFixed(0);
+    const tsbIdealHigh = th.fresh.toFixed(0);
 
     container.innerHTML = `
         <div class="acute-load-summary-card">
@@ -532,11 +556,19 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
                 </div>
                 <div>
                     <strong>${currentBand.lower.toFixed(1)} – ${currentBand.upper.toFixed(1)}</strong>
-                    <span>Ideal range</span>
+                    <span>Ideal range (${acuteLoadBandMode === 'aggressive' ? 'aggr.' : 'cons.'})</span>
                 </div>
                 <div>
                     <strong>${gapText}</strong>
-                    <span>${acuteLoadBandMode === 'aggressive' ? 'Aggressive' : 'Conservative'}</span>
+                    <span>Gap</span>
+                </div>
+                <div>
+                    <strong>${totalLoad}</strong>
+                    <span>Period TSS</span>
+                </div>
+                <div>
+                    <strong style="color:${weekTrendColor}">${weekTrend}</strong>
+                    <span>Week Δ</span>
                 </div>
             </div>
             <p style="margin-bottom:.3rem;">${describeAcuteLoadStatus(currentLoad, currentBand, profile, currentStatus)}</p>
@@ -547,7 +579,7 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
                 <strong>CTL</strong> <small style="opacity:.65;">Fitness · ~42d</small>
                 <span class="pmc-explainer-value" style="color:${ctlStatus.color};">${currentCtl.toFixed(1)} · ${ctlStatus.label}</span>
             </div>
-            <small>${describeCtl(currentCtl, context)}</small>
+            <small>${describeCtl(currentCtl, context)} <span style="opacity:.6;">Ideal: ${ctlIdealLow}–${ctlIdealHigh} (your recent range).</span></small>
         </div>
         <div class="pmc-explainer-card pmc-explainer-atl">
             <div class="pmc-explainer-header">
@@ -555,7 +587,7 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
                 <strong>ATL</strong> <small style="opacity:.65;">Fatigue · ~7d</small>
                 <span class="pmc-explainer-value" style="color:${atlStatus.color};">${currentAtl.toFixed(1)} · ${atlStatus.label}</span>
             </div>
-            <small>${describeAtl(currentAtl, currentCtl, context)}</small>
+            <small>${describeAtl(currentAtl, currentCtl, context)} <span style="opacity:.6;">Productive range: ${atlIdealLow}–${atlIdealHigh} (0.8–1.5× CTL).</span></small>
         </div>
         <div class="pmc-explainer-card pmc-explainer-tsb">
             <div class="pmc-explainer-header">
@@ -563,7 +595,7 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
                 <strong>TSB</strong> <small style="opacity:.65;">Form · CTL−ATL</small>
                 <span class="pmc-explainer-value" style="color:${tsbStatus.color};">${currentTsb.toFixed(1)} · ${tsbStatus.label}</span>
             </div>
-            <small>${describeTsb(currentTsb, context)}</small>
+            <small>${describeTsb(currentTsb, context)} <span style="opacity:.6;">Productive zone: ${tsbIdealLow} to ${tsbIdealHigh} for ${profile.label}.</span></small>
         </div>
         <div class="pmc-explainer-card pmc-explainer-risk">
             <div class="pmc-explainer-header">
@@ -571,7 +603,7 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
                 <strong>Injury Risk</strong>
                 <span class="pmc-explainer-value">${currentRisk.toFixed(3)}</span>
             </div>
-            <small>${describeInjuryRisk(currentRisk, context)}</small>
+            <small>${describeInjuryRisk(currentRisk, context)} <span style="opacity:.6;">Ideal &lt; 0.25.</span></small>
         </div>
     `;
 }
@@ -647,7 +679,6 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
 
     renderDashboardTopline(filteredActivities, recentActivities, recentRuns, startDate, dateFilterFrom, dateFilterTo);
 
-    renderTrainingLoadMetrics(recentActivities);
     renderAcuteLoadChart(recentActivities, startDate, endDate);
     renderRecentActivitiesPreview(recentRuns);
     renderDashboardSummary(recentActivities, previousActivities, recentRuns, previousRuns);
@@ -811,116 +842,6 @@ function renderDashboardSummary(currentActivities, previousActivities, currentRu
  * Renders Training Load Metrics (CTL, ATL, TSB, Injury Risk, Load)
  * Uses preprocessed activities with .tss, .atl, .ctl, .tsb, .injuryRisk
  */
-function renderTrainingLoadMetrics(activities) {
-    const container = document.getElementById('training-load-metrics');
-    if (!container) return;
-
-    const now = new Date();
-    const validActivities = getValidLoadActivities(activities);
-
-    if (validActivities.length === 0) {
-        container.innerHTML = `<p style="color:#999;">No processed training load data.</p>`;
-        return;
-    }
-
-    const profile = getPmcProfile(validActivities);
-
-    // Latest values
-    const last = validActivities[validActivities.length - 1];
-    const lastCTL = last.ctl;
-    const lastATL = last.atl;
-    const lastTSB = toDisplayTsb(last.tsb);
-    const lastInjuryRisk = last.injuryRisk || 0;
-    const ctlStatus = getCtlStatus(lastCTL, validActivities, profile);
-    const atlStatus = getAtlStatus(lastATL, lastCTL);
-    const tsbStatus = getTsbStatus(lastTSB, profile);
-
-    // Total load in visible range
-    const totalLoad = validActivities.reduce((sum, r) => sum + r.tss, 0).toFixed(0);
-
-    // Weekly load change (last 14 days)
-    const recent = validActivities.filter(r => {
-        const actDate = new Date(r.start_date_local);
-        return (now - actDate) / 86400000 <= 14;
-    });
-
-    const week1 = recent.filter(r => (now - new Date(r.start_date_local)) / 86400000 <= 7);
-    const week2 = recent.filter(r => (now - new Date(r.start_date_local)) / 86400000 > 7);
-
-    const loadWeek1 = week1.reduce((a, b) => a + b.tss, 0);
-    const loadWeek2 = week2.reduce((a, b) => a + b.tss, 0);
-    const loadChangePct = loadWeek2 > 0 ? ((loadWeek1 - loadWeek2) / loadWeek2) * 100 : 0;
-    const trend = loadChangePct > 0 ? 'Up' : 'Down';
-    const fatigueThresholds = profile.thresholds;
-
-    // Smart message
-    let message = '';
-    let color = '#333';
-    let emoji = '';
-
-    if (lastTSB < fatigueThresholds.deepFatigue) {
-        emoji = 'Warning';
-        message = `Deep fatigue for your ${profile.label} mix — recovery is the priority`;
-        color = '#FF4136';
-    } else if (lastTSB < fatigueThresholds.fatigue) {
-        emoji = 'Warning';
-        message = `Productive overload for your ${profile.label} mix — monitor recovery closely`;
-        color = '#FF851B';
-    } else if (lastTSB <= fatigueThresholds.balanced) {
-        emoji = 'Checkmark';
-        message = `Balanced load for your ${profile.label} mix`;
-        color = '#0074D9';
-    } else {
-        emoji = 'Muscle';
-        message = `Fresh enough for intensity or a race-specific session`;
-        color = '#2ECC40';
-    }
-
-    if (loadChangePct > 20) message += ', strong weekly ramp';
-    else if (loadChangePct > 5) message += ', load increasing';
-    else if (loadChangePct < -10) message += ', possible form loss';
-
-    // Render
-    container.innerHTML = `
-        <div class="load-card" style="background:#f8f9fa;border-radius:12px;padding:1.2rem;margin:1rem 0;box-shadow:0 4px 8px rgba(0,0,0,0.08);">
-            <h3 style="margin:0 0 0.8rem;font-size:1.1rem;color:#1a1a1a;">Training Load</h3>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:0.8rem;">
-                <div>
-                    <p style="margin:0;font-size:1.4rem;font-weight:bold;color:${ctlStatus.color};">${lastCTL.toFixed(1)}</p>
-                    <small style="color:${ctlStatus.color};">CTL (Fitness) · ${ctlStatus.label}</small>
-                </div>
-                <div>
-                    <p style="margin:0;font-size:1.4rem;font-weight:bold;color:${atlStatus.color};">${lastATL.toFixed(1)}</p>
-                    <small style="color:${atlStatus.color};">ATL (Fatigue) · ${atlStatus.label}</small>
-                </div>
-                <div>
-                    <p style="margin:0;font-size:1.4rem;font-weight:bold;color:${tsbStatus.color};">${lastTSB.toFixed(1)}</p>
-                    <small style="color:${tsbStatus.color};">TSB (Form) · ${tsbStatus.label}</small>
-                </div>
-                <div>
-                    <p style="margin:0;font-size:1.4rem;font-weight:bold;color:#8E44AD;">${totalLoad}</p>
-                    <small style="color:#666;">Total Load</small>
-                </div>
-                <div>
-                    <p style="margin:0;font-size:1.3rem;font-weight:bold;color:${getTrendColor(loadChangePct)};">
-                        ${trend} ${Math.abs(loadChangePct).toFixed(0)}%
-                    </p>
-                    <small style="color:#666;">Weekly Δ</small>
-                </div>
-            </div>
-            <p style="text-align:center;margin:0.8rem 0 0.4rem;font-weight:600;color:${color};">
-                ${emoji} ${message}
-            </p>
-            <p style="text-align:center;margin:0 0 0.45rem;color:#666;font-size:0.9rem;">
-                Based on all TSS-bearing activities in this range, not just runs.
-            </p>
-            <p style="text-align:center;margin:0;font-weight:600;color:#e74c3c;">
-                Estimated Injury Risk: ~${lastInjuryRisk.toFixed(3)}
-            </p>
-        </div>
-    `;
-}
-
 // Helper
 function getTrendColor(pct) {
     if (pct > 15) return '#e74c3c';
@@ -1018,7 +939,8 @@ function renderAcuteLoadChart(activities, rangeStart, rangeEnd) {
                     borderDash: [6, 4],
                     tension: 0.28,
                     fill: false,
-                    yAxisID: 'y'
+                    yAxisID: 'y',
+                    hidden: true
                 },
                 {
                     label: 'Rolling 7-day load',
@@ -1040,7 +962,8 @@ function renderAcuteLoadChart(activities, rangeStart, rangeEnd) {
                     borderWidth: 2,
                     tension: 0.3,
                     fill: false,
-                    yAxisID: 'y1'
+                    yAxisID: 'y1',
+                    hidden: true
                 }
             ]
         },
