@@ -1,7 +1,7 @@
 import * as utils from './utils.js';
 
 let selectedRangeDays = 'last30'; // rango inicial
-let acuteLoadBandMode = localStorage.getItem('dashboard_acute_load_mode') === 'aggressive' ? 'aggressive' : 'conservative';
+let acuteLoadBandMode = localStorage.getItem('dashboard_acute_load_mode') === 'conservative' ? 'conservative' : 'aggressive';
 let dashboardRenderContext = {
     allActivities: [],
     dateFilterFrom: null,
@@ -418,29 +418,44 @@ function buildRollingSevenDayLoad(activities, rangeStart, rangeEnd) {
     if (!sorted.length) return null;
 
     const tssByDay = new Map();
-    const ctlByDay = new Map();
+    const metricsByDay = new Map();
     let ctlSeed = sorted[0].ctl || 0;
+    let atlSeed = sorted[0].atl || 0;
+    let tsbSeed = sorted[0].tsb || 0;
+    let riskSeed = sorted[0].injuryRisk || 0;
 
     sorted.forEach(activity => {
         const date = new Date(activity.start_date_local);
         const key = toLocalYMD(date);
         tssByDay.set(key, (tssByDay.get(key) || 0) + (activity.tss || 0));
 
-        const existing = ctlByDay.get(key) || { sum: 0, count: 0 };
-        existing.sum += activity.ctl || 0;
+        const existing = metricsByDay.get(key) || { ctlSum: 0, atlSum: 0, tsbSum: 0, riskSum: 0, count: 0 };
+        existing.ctlSum += activity.ctl || 0;
+        existing.atlSum += activity.atl || 0;
+        existing.tsbSum += activity.tsb || 0;
+        existing.riskSum += activity.injuryRisk || 0;
         existing.count += 1;
-        ctlByDay.set(key, existing);
+        metricsByDay.set(key, existing);
 
-        if (date <= rangeStart && Number.isFinite(activity.ctl)) {
-            ctlSeed = activity.ctl;
+        if (date <= rangeStart) {
+            if (Number.isFinite(activity.ctl)) ctlSeed = activity.ctl;
+            if (Number.isFinite(activity.atl)) atlSeed = activity.atl;
+            if (Number.isFinite(activity.tsb)) tsbSeed = activity.tsb;
+            if (Number.isFinite(activity.injuryRisk)) riskSeed = activity.injuryRisk;
         }
     });
 
     const labels = [];
     const dailyTss = [];
     const ctlDaily = [];
+    const atlDaily = [];
+    const tsbDaily = [];
+    const riskDaily = [];
     let cursor = new Date(rangeStart);
     let lastCtl = ctlSeed;
+    let lastAtl = atlSeed;
+    let lastTsb = tsbSeed;
+    let lastRisk = riskSeed;
     const endCursor = new Date(rangeEnd);
 
     cursor.setHours(0, 0, 0, 0);
@@ -448,15 +463,21 @@ function buildRollingSevenDayLoad(activities, rangeStart, rangeEnd) {
 
     while (cursor <= endCursor) {
         const key = toLocalYMD(cursor);
-        const ctlEntry = ctlByDay.get(key);
+        const entry = metricsByDay.get(key);
 
-        if (ctlEntry && ctlEntry.count) {
-            lastCtl = ctlEntry.sum / ctlEntry.count;
+        if (entry && entry.count) {
+            lastCtl = entry.ctlSum / entry.count;
+            lastAtl = entry.atlSum / entry.count;
+            lastTsb = entry.tsbSum / entry.count;
+            lastRisk = entry.riskSum / entry.count;
         }
 
         labels.push(key);
         dailyTss.push(tssByDay.get(key) || 0);
         ctlDaily.push(+lastCtl.toFixed(1));
+        atlDaily.push(+lastAtl.toFixed(1));
+        tsbDaily.push(+(toDisplayTsb(lastTsb)).toFixed(1));
+        riskDaily.push(+lastRisk.toFixed(3));
         cursor = addDays(cursor, 1);
     }
 
@@ -468,10 +489,10 @@ function buildRollingSevenDayLoad(activities, rangeStart, rangeEnd) {
         return +sum.toFixed(1);
     });
 
-    return { labels, load7d, ctlDaily, sorted };
+    return { labels, load7d, ctlDaily, atlDaily, tsbDaily, riskDaily, sorted };
 }
 
-function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, currentStatus, currentLoad, currentCtl) {
+function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, currentStatus, currentLoad, currentCtl, currentAtl, currentTsb, currentRisk) {
     const container = document.getElementById('acute-load-explainer');
     if (!container) return;
 
@@ -487,98 +508,70 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
         : currentStatus.tone === 'low'
             ? `${(currentBand.lower - currentLoad).toFixed(1)} below the band`
             : `${Math.min(deltaToTop, deltaToBottom).toFixed(1)} away from the nearest edge`;
-    const weeklyBase = currentCtl * 7;
+
+    const ctlStatus = getCtlStatus(currentCtl, sortedActivities, profile);
+    const atlStatus = getAtlStatus(currentAtl, currentCtl);
+    const tsbStatus = getTsbStatus(currentTsb, profile);
+    const context = {
+        profile,
+        ctlPercentile: percentileRank(sortedActivities.map(a => a.ctl), currentCtl),
+        atlPercentile: percentileRank(sortedActivities.map(a => a.atl), currentAtl),
+        riskPercentile: percentileRank(sortedActivities.map(a => a.injuryRisk), currentRisk)
+    };
 
     container.innerHTML = `
         <div class="acute-load-summary-card">
             <div class="acute-load-summary-topline">
-                <span class="acute-load-kicker">Current 7-day load</span>
+                <span class="acute-load-kicker">7-day load</span>
                 <span class="acute-load-status" style="color:${currentStatus.color};border-color:${currentStatus.color}33;background:${currentStatus.color}12;">${currentStatus.label}</span>
             </div>
             <div class="acute-load-summary-metrics">
                 <div>
                     <strong>${currentLoad.toFixed(1)}</strong>
-                    <span>7d TSS now</span>
+                    <span>7d TSS</span>
                 </div>
                 <div>
-                    <strong>${currentBand.lower.toFixed(1)} - ${currentBand.upper.toFixed(1)}</strong>
+                    <strong>${currentBand.lower.toFixed(1)} – ${currentBand.upper.toFixed(1)}</strong>
                     <span>Ideal range</span>
                 </div>
                 <div>
-                    <strong>${weeklyBase.toFixed(1)}</strong>
-                    <span>CTL x 7 baseline</span>
-                </div>
-                <div>
                     <strong>${gapText}</strong>
-                    <span>${acuteLoadBandMode === 'aggressive' ? 'Aggressive mode' : 'Conservative mode'}</span>
+                    <span>${acuteLoadBandMode === 'aggressive' ? 'Aggressive' : 'Conservative'}</span>
                 </div>
             </div>
-            <p>${describeAcuteLoadStatus(currentLoad, currentBand, profile, currentStatus)}</p>
+            <p style="margin-bottom:.3rem;">${describeAcuteLoadStatus(currentLoad, currentBand, profile, currentStatus)}</p>
         </div>
-    `;
-}
-
-function renderPMCExplanation(sortedActivities) {
-    const container = document.getElementById('pmc-explainer');
-    if (!container) return;
-
-    if (!sortedActivities.length) {
-        container.innerHTML = '';
-        return;
-    }
-
-    const last = sortedActivities[sortedActivities.length - 1];
-    const profile = getPmcProfile(sortedActivities);
-    const ctlValue = last.ctl || 0;
-    const atlValue = last.atl || 0;
-    const tsbValue = toDisplayTsb(last.tsb || 0);
-    const injuryRiskValue = last.injuryRisk || 0;
-    const ctlStatus = getCtlStatus(ctlValue, sortedActivities, profile);
-    const atlStatus = getAtlStatus(atlValue, ctlValue);
-    const tsbStatus = getTsbStatus(tsbValue, profile);
-    const context = {
-        profile,
-        ctlPercentile: percentileRank(sortedActivities.map(activity => activity.ctl), ctlValue),
-        atlPercentile: percentileRank(sortedActivities.map(activity => activity.atl), atlValue),
-        riskPercentile: percentileRank(sortedActivities.map(activity => activity.injuryRisk), last.injuryRisk || 0)
-    };
-
-    container.innerHTML = `
         <div class="pmc-explainer-card pmc-explainer-ctl">
             <div class="pmc-explainer-header">
                 <span class="pmc-dot"></span>
-                <strong>CTL</strong>
-                <span class="pmc-explainer-value" style="color:${ctlStatus.color};">${ctlValue.toFixed(1)} · ${ctlStatus.label}</span>
+                <strong>CTL</strong> <small style="opacity:.65;">Fitness · ~42d</small>
+                <span class="pmc-explainer-value" style="color:${ctlStatus.color};">${currentCtl.toFixed(1)} · ${ctlStatus.label}</span>
             </div>
-            <p>Fitness or long-term load. It is an exponentially weighted view of roughly the last 42 days of TSS.</p>
-            <small>${describeCtl(ctlValue, context)}</small>
+            <small>${describeCtl(currentCtl, context)}</small>
         </div>
         <div class="pmc-explainer-card pmc-explainer-atl">
             <div class="pmc-explainer-header">
                 <span class="pmc-dot"></span>
-                <strong>ATL</strong>
-                <span class="pmc-explainer-value" style="color:${atlStatus.color};">${atlValue.toFixed(1)} · ${atlStatus.label}</span>
+                <strong>ATL</strong> <small style="opacity:.65;">Fatigue · ~7d</small>
+                <span class="pmc-explainer-value" style="color:${atlStatus.color};">${currentAtl.toFixed(1)} · ${atlStatus.label}</span>
             </div>
-            <p>Fatigue or short-term load. It reacts quickly because it weights roughly the last 7 days of TSS.</p>
-            <small>${describeAtl(atlValue, ctlValue, context)}</small>
+            <small>${describeAtl(currentAtl, currentCtl, context)}</small>
         </div>
         <div class="pmc-explainer-card pmc-explainer-tsb">
             <div class="pmc-explainer-header">
                 <span class="pmc-dot"></span>
-                <strong>TSB</strong>
-                <span class="pmc-explainer-value" style="color:${tsbStatus.color};">${tsbValue.toFixed(1)} · ${tsbStatus.label}</span>
+                <strong>TSB</strong> <small style="opacity:.65;">Form · CTL−ATL</small>
+                <span class="pmc-explainer-value" style="color:${tsbStatus.color};">${currentTsb.toFixed(1)} · ${tsbStatus.label}</span>
             </div>
-            <p>Form or freshness. It is CTL minus ATL, so negative values mean fatigue and positive values mean freshness.</p>
-            <small>${describeTsb(tsbValue, context)}</small>
+            <small>${describeTsb(currentTsb, context)}</small>
         </div>
         <div class="pmc-explainer-card pmc-explainer-risk">
             <div class="pmc-explainer-header">
                 <span class="pmc-dot"></span>
                 <strong>Injury Risk</strong>
-                <span class="pmc-explainer-value">${injuryRiskValue.toFixed(3)}</span>
+                <span class="pmc-explainer-value">${currentRisk.toFixed(3)}</span>
             </div>
-            <p>App estimate derived from load balance. It is not medical risk, only a warning proxy based on how deep fatigue gets.</p>
-            <small>${describeInjuryRisk(injuryRiskValue, context)}</small>
+            <small>${describeInjuryRisk(currentRisk, context)}</small>
         </div>
     `;
 }
@@ -656,7 +649,6 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
 
     renderTrainingLoadMetrics(recentActivities);
     renderAcuteLoadChart(recentActivities, startDate, endDate);
-    renderPMCChart(recentActivities, allActivities);
     renderRecentActivitiesPreview(recentRuns);
     renderDashboardSummary(recentActivities, previousActivities, recentRuns, previousRuns);
     renderTSSBarChart(recentActivities, selectedRangeDays);
@@ -939,169 +931,6 @@ function getTrendColor(pct) {
 }
 
 
-
-/**
- * Renders PMC Chart using processed load values.
- */
-function renderPMCChart(runs) {
-    const canvas = document.getElementById('pmc-chart');
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (window.pmcChart) window.pmcChart.destroy();
-
-    const sorted = runs
-        .filter(r => r.atl != null && r.ctl != null && r.tsb != null && r.injuryRisk != null)
-        .sort((a, b) => new Date(a.start_date_local) - new Date(b.start_date_local));
-
-    if (sorted.length === 0) {
-        ctx.font = '16px sans-serif';
-        ctx.fillStyle = '#999';
-        ctx.textAlign = 'center';
-        ctx.fillText('No data to display', canvas.width / 2, canvas.height / 2);
-        renderPMCExplanation([]);
-        return;
-    }
-
-    const labels = sorted.map(r => {
-        const d = new Date(r.start_date_local);
-        return `${d.getMonth() + 1}/${d.getDate()}`;
-    });
-
-    const ctl = sorted.map(r => r.ctl);
-    const atl = sorted.map(r => r.atl);
-    const tsb = sorted.map(r => toDisplayTsb(r.tsb));
-    const injuryRisk = sorted.map(r => r.injuryRisk || 0);
-    const maxLoadValue = Math.max(...ctl, ...atl, 10);
-    const minTsb = Math.min(...tsb, -10);
-    const maxTsb = Math.max(...tsb, 10);
-    const tsbPadding = Math.max(6, Math.ceil((maxTsb - minTsb) * 0.12));
-    const observedRiskMax = Math.max(...injuryRisk, 0);
-    const riskAxisMax = Math.min(1, Math.max(0.1, Math.ceil((observedRiskMax * 1.2) / 0.05) * 0.05));
-
-    renderPMCExplanation(sorted);
-
-    window.pmcChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels,
-            datasets: [
-                {
-                    label: 'CTL (Fitness, ~42d)',
-                    data: ctl,
-                    borderColor: '#0074D9',
-                    backgroundColor: 'rgba(0, 116, 217, 0.22)',
-                    tension: 0.3,
-                    yAxisID: 'y',
-                    pointRadius: 0,
-                    borderWidth: 3,
-                    fill: true,
-                    hidden: false
-                },
-                {
-                    label: 'ATL (Fatigue, ~7d)',
-                    data: atl,
-                    borderColor: '#FF7A45',
-                    backgroundColor: 'rgba(255, 122, 69, 0.08)',
-                    tension: 0.3,
-                    yAxisID: 'y',
-                    pointRadius: 0,
-                    borderWidth: 2.5,
-                    fill: false,
-                    hidden: false
-                },
-                {
-                    label: 'TSB (Form)',
-                    data: tsb,
-                    borderColor: '#2ECC40',
-                    backgroundColor: 'rgba(46, 204, 64, 0.1)',
-                    tension: 0.3,
-                    yAxisID: 'y1',
-                    pointRadius: 0,
-                    borderWidth: 2.5,
-                    fill: false,
-                    hidden: false
-                },
-                {
-                    label: 'Injury Risk',
-                    data: injuryRisk,
-                    borderColor: '#B83B5E',
-                    backgroundColor: 'rgba(184, 59, 94, 0.08)',
-                    tension: 0.3,
-                    yAxisID: 'y2',
-                    pointRadius: 0,
-                    borderWidth: 2,
-                    borderDash: [6, 4],
-                    fill: false,
-                    hidden: true
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-                title: { display: false },
-                tooltip: {
-                    mode: 'index',
-                    intersect: false,
-                    callbacks: {
-                        label(context) {
-                            const decimals = context.dataset.yAxisID === 'y2' ? 3 : 1;
-                            return `${context.dataset.label}: ${context.parsed.y.toFixed(decimals)}`;
-                        }
-                    }
-                },
-                legend: {
-                    position: 'top',
-                    labels: {
-                        usePointStyle: true,
-                        boxWidth: 10,
-                        padding: 16
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    display: true,
-                    title: { display: true, text: 'Date' },
-                    ticks: { maxTicksLimit: 10 }
-                },
-                y: {
-                    type: 'linear',
-                    position: 'left',
-                    title: { display: true, text: 'Fitness / Fatigue (TSS/d)' },
-                    min: 0,
-                    suggestedMax: Math.ceil(maxLoadValue * 1.15),
-                    grid: { color: 'rgba(0, 0, 0, 0.06)' }
-                },
-                y1: {
-                    type: 'linear',
-                    position: 'right',
-                    title: { display: true, text: 'TSB' },
-                    grid: {
-                        drawOnChartArea: true,
-                        color(context) {
-                            return context.tick.value === 0 ? 'rgba(46, 204, 64, 0.28)' : 'rgba(0,0,0,0)';
-                        }
-                    },
-                    min: Math.floor(minTsb - tsbPadding),
-                    max: Math.ceil(maxTsb + tsbPadding)
-                },
-                y2: {
-                    type: 'linear',
-                    position: 'right',
-                    title: { display: true, text: 'Risk' },
-                    grid: { drawOnChartArea: false },
-                    min: 0,
-                    max: riskAxisMax
-                }
-            }
-        }
-    });
-}
-
 function renderAcuteLoadChart(activities, rangeStart, rangeEnd) {
     const canvas = document.getElementById('acute-load-chart');
     const explainer = document.getElementById('acute-load-explainer');
@@ -1120,7 +949,7 @@ function renderAcuteLoadChart(activities, rangeStart, rangeEnd) {
         ctx.font = '16px sans-serif';
         ctx.fillStyle = '#999';
         ctx.textAlign = 'center';
-        ctx.fillText('No acute load data to display', canvas.width / 2, canvas.height / 2);
+        ctx.fillText('No load data to display', canvas.width / 2, canvas.height / 2);
         if (explainer) explainer.innerHTML = '';
         return;
     }
@@ -1135,14 +964,20 @@ function renderAcuteLoadChart(activities, rangeStart, rangeEnd) {
     const idealBand = series.ctlDaily.map(value => getAcuteLoadBand(profile, value, acuteLoadBandMode));
     const bandLower = idealBand.map(band => band.lower);
     const bandUpper = idealBand.map(band => band.upper);
+    const tsbData = series.tsbDaily;
     const lastBand = idealBand[idealBand.length - 1];
     const lastLoad = load7d[load7d.length - 1] || 0;
     const lastCtl = series.ctlDaily[series.ctlDaily.length - 1] || 0;
+    const lastAtl = series.atlDaily[series.atlDaily.length - 1] || 0;
+    const lastTsb = series.tsbDaily[series.tsbDaily.length - 1] || 0;
+    const lastRisk = series.riskDaily[series.riskDaily.length - 1] || 0;
     const lastStatus = getAcuteLoadStatus(lastLoad, lastBand);
-    const currentPoint = load7d.map((value, index) => (index === load7d.length - 1 ? value : null));
     const maxY = Math.max(...bandUpper, ...load7d, ...ctl7dBase, 10);
+    const minTsb = Math.min(...tsbData, -10);
+    const maxTsb = Math.max(...tsbData, 10);
+    const tsbPadding = Math.max(6, Math.ceil((maxTsb - minTsb) * 0.12));
 
-    renderAcuteLoadExplanation(series.sorted, profile, lastBand, lastStatus, lastLoad, lastCtl);
+    renderAcuteLoadExplanation(series.sorted, profile, lastBand, lastStatus, lastLoad, lastCtl, lastAtl, lastTsb, lastRisk);
 
     dashboardCharts['acute-load-chart'] = new Chart(ctx, {
         type: 'line',
@@ -1158,7 +993,8 @@ function renderAcuteLoadChart(activities, rangeStart, rangeEnd) {
                     pointHoverRadius: 0,
                     borderWidth: 0,
                     fill: false,
-                    tension: 0.28
+                    tension: 0.28,
+                    yAxisID: 'y'
                 },
                 {
                     label: 'Ideal acute load range',
@@ -1169,10 +1005,11 @@ function renderAcuteLoadChart(activities, rangeStart, rangeEnd) {
                     pointHoverRadius: 0,
                     borderWidth: 1.5,
                     fill: '-1',
-                    tension: 0.28
+                    tension: 0.28,
+                    yAxisID: 'y'
                 },
                 {
-                    label: 'Base load (CTL x 7)',
+                    label: 'Base load (CTL × 7)',
                     data: ctl7dBase,
                     borderColor: 'rgba(0, 116, 217, 0.7)',
                     backgroundColor: 'rgba(0, 116, 217, 0)',
@@ -1180,7 +1017,8 @@ function renderAcuteLoadChart(activities, rangeStart, rangeEnd) {
                     borderWidth: 1.75,
                     borderDash: [6, 4],
                     tension: 0.28,
-                    fill: false
+                    fill: false,
+                    yAxisID: 'y'
                 },
                 {
                     label: 'Rolling 7-day load',
@@ -1190,16 +1028,19 @@ function renderAcuteLoadChart(activities, rangeStart, rangeEnd) {
                     pointRadius: 0,
                     borderWidth: 3,
                     tension: 0.28,
-                    fill: false
+                    fill: false,
+                    yAxisID: 'y'
                 },
                 {
-                    label: 'Today',
-                    data: currentPoint,
-                    borderColor: '#fc5200',
-                    backgroundColor: lastStatus.color,
-                    pointRadius: 4,
-                    pointHoverRadius: 6,
-                    showLine: false
+                    label: 'TSB (Form)',
+                    data: tsbData,
+                    borderColor: '#2ECC40',
+                    backgroundColor: 'rgba(46, 204, 64, 0.08)',
+                    pointRadius: 0,
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: false,
+                    yAxisID: 'y1'
                 }
             ]
         },
@@ -1231,7 +1072,7 @@ function renderAcuteLoadChart(activities, rangeStart, rangeEnd) {
                             if (context.dataset.label === 'Ideal acute load range') {
                                 const lower = bandLower[context.dataIndex];
                                 const upper = bandUpper[context.dataIndex];
-                                return `Ideal range: ${lower.toFixed(1)} - ${upper.toFixed(1)}`;
+                                return `Ideal range: ${lower.toFixed(1)} – ${upper.toFixed(1)}`;
                             }
 
                             return `${context.dataset.label}: ${context.parsed.y.toFixed(1)}`;
@@ -1250,6 +1091,19 @@ function renderAcuteLoadChart(activities, rangeStart, rangeEnd) {
                     suggestedMax: Math.ceil(maxY * 1.12),
                     title: { display: true, text: 'Load (7-day TSS)' },
                     grid: { color: 'rgba(0, 0, 0, 0.06)' }
+                },
+                y1: {
+                    type: 'linear',
+                    position: 'right',
+                    title: { display: true, text: 'TSB (Form)' },
+                    grid: {
+                        drawOnChartArea: true,
+                        color(context) {
+                            return context.tick.value === 0 ? 'rgba(46, 204, 64, 0.28)' : 'rgba(0,0,0,0)';
+                        }
+                    },
+                    min: Math.floor(minTsb - tsbPadding),
+                    max: Math.ceil(maxTsb + tsbPadding)
                 }
             }
         }
