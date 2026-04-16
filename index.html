@@ -370,7 +370,14 @@
                         <div class="acute-load-chart-header">
                             <div>
                                 <h3>Acute Load</h3>
-                                <p>Current short-term load versus your ideal range.</p>
+                                <p>Rolling 7-day load versus your ideal range.</p>
+                            </div>
+                            <div id="acute-load-mode-switch" class="acute-load-mode-switch" role="group"
+                                aria-label="Acute load range mode">
+                                <button type="button" class="acute-load-mode-btn"
+                                    data-mode="conservative">Conserv.</button>
+                                <button type="button" class="acute-load-mode-btn"
+                                    data-mode="aggressive">Aggres.</button>
                             </div>
                         </div>
                         <canvas id="acute-load-chart"></canvas>

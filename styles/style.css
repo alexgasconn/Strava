@@ -3489,6 +3489,7 @@ body {
     align-items: flex-start;
     justify-content: space-between;
     gap: 1rem;
+    flex-wrap: wrap;
     margin-bottom: 0.75rem;
 }
 
@@ -3500,6 +3501,40 @@ body {
     margin: 0;
     color: #666;
     font-size: 0.92rem;
+}
+
+.acute-load-mode-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.2rem;
+    border: 1px solid #e6e6e6;
+    border-radius: 999px;
+    background: #f7f7f7;
+}
+
+.acute-load-mode-btn {
+    border: 0;
+    background: transparent;
+    color: #666;
+    padding: 0.28rem 0.62rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.acute-load-mode-btn.active {
+    background: #fc5200;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(252, 82, 0, 0.18);
+}
+
+.acute-load-mode-btn:not(.active):hover {
+    background: #ececec;
+    color: #333;
 }
 
 .acute-load-explainer {

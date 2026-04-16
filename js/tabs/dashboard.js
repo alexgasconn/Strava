@@ -1,6 +1,13 @@
 import * as utils from './utils.js';
 
 let selectedRangeDays = 'last30'; // rango inicial
+let acuteLoadBandMode = localStorage.getItem('dashboard_acute_load_mode') === 'aggressive' ? 'aggressive' : 'conservative';
+let dashboardRenderContext = {
+    allActivities: [],
+    dateFilterFrom: null,
+    dateFilterTo: null
+};
+
 const RANGE_OPTIONS = [
     { label: 'This Week', type: 'week' },
     { label: 'Last 7 Days', type: 'last7' },
@@ -11,6 +18,49 @@ const RANGE_OPTIONS = [
     { label: 'This Year', type: 'year' },
     { label: 'Last 365 Days', type: 'last365' }
 ];
+
+function toLocalYMD(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function parseDateInput(value, endOfDay = false) {
+    if (!value) return null;
+    const [year, month, day] = value.split('-').map(Number);
+    if (!year || !month || !day) return null;
+    return new Date(year, month - 1, day, endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
+}
+
+function addDays(date, days) {
+    const next = new Date(date);
+    next.setDate(next.getDate() + days);
+    return next;
+}
+
+function getEffectiveDashboardWindow(dateFilterFrom, dateFilterTo) {
+    const now = new Date();
+    const startDate = getRangeStartDate(selectedRangeDays);
+    const minDate = parseDateInput(dateFilterFrom);
+    const maxDate = parseDateInput(dateFilterTo, true);
+    let effectiveStart = new Date(startDate);
+    let effectiveEnd = new Date(now);
+
+    effectiveStart.setHours(0, 0, 0, 0);
+
+    if (minDate && minDate > effectiveStart) {
+        effectiveStart = minDate;
+    }
+
+    if (maxDate && maxDate < effectiveEnd) {
+        effectiveEnd = maxDate;
+    }
+
+    if (effectiveStart > effectiveEnd) {
+        effectiveStart = new Date(effectiveEnd);
+        effectiveStart.setHours(0, 0, 0, 0);
+    }
+
+    return { startDate: effectiveStart, endDate: effectiveEnd };
+}
 
 function getRangeStartDate(rangeType) {
     const now = new Date();
@@ -273,9 +323,18 @@ function getTsbStatus(tsbValue, profile) {
     return { label: 'Underload', color: '#8e44ad' };
 }
 
-function getAcuteLoadBand(profile, ctlValue) {
-    const lower = Math.max(0, ctlValue - profile.thresholds.fresh);
-    const upper = Math.max(lower + 4, ctlValue - profile.thresholds.fatigue);
+function getAcuteLoadBand(profile, ctlValue, mode = acuteLoadBandMode) {
+    const weeklyBase = Math.max(10, ctlValue * 7);
+    const sportBias = profile.dominantSport === 'Ride'
+        ? 1.05
+        : profile.dominantSport === 'Swim'
+            ? 0.92
+            : 1;
+    const config = mode === 'aggressive'
+        ? { lowerMultiplier: 0.9, upperMultiplier: 1.24, minBand: 26 }
+        : { lowerMultiplier: 0.82, upperMultiplier: 1.06, minBand: 18 };
+    const lower = Math.max(config.minBand, weeklyBase * config.lowerMultiplier * sportBias);
+    const upper = Math.max(lower + Math.max(8, weeklyBase * 0.12), weeklyBase * config.upperMultiplier * sportBias);
 
     return {
         lower: +lower.toFixed(1),
@@ -283,10 +342,10 @@ function getAcuteLoadBand(profile, ctlValue) {
     };
 }
 
-function getAcuteLoadStatus(atlValue, band) {
-    const tolerance = 1.5;
+function getAcuteLoadStatus(loadValue, band) {
+    const tolerance = Math.max(8, (band.upper - band.lower) * 0.08);
 
-    if (atlValue < band.lower - tolerance) {
+    if (loadValue < band.lower - tolerance) {
         return {
             label: 'Below range',
             color: '#0074D9',
@@ -294,7 +353,7 @@ function getAcuteLoadStatus(atlValue, band) {
         };
     }
 
-    if (atlValue > band.upper + tolerance) {
+    if (loadValue > band.upper + tolerance) {
         return {
             label: 'Above range',
             color: '#e74c3c',
@@ -309,19 +368,99 @@ function getAcuteLoadStatus(atlValue, band) {
     };
 }
 
-function describeAcuteLoadStatus(atlValue, band, profile, status) {
+function describeAcuteLoadStatus(loadValue, band, profile, status) {
     if (status.tone === 'high') {
-        return `Your acute load is above the ideal band for a ${profile.label} profile. This is a valid overload signal, but it usually demands intentional recovery.`;
+        return `Your rolling 7-day load is above the ideal band for a ${profile.label} profile. This is a legitimate overload block, but recovery cost will usually climb fast here.`;
     }
 
     if (status.tone === 'low') {
-        return `Your acute load is below the ideal band for a ${profile.label} profile. This normally reflects a recovery week, taper, or a softer block than your base can currently support.`;
+        return `Your rolling 7-day load is below the ideal band for a ${profile.label} profile. This normally reflects a recovery week, taper, or a lighter block than your current base could support.`;
     }
 
-    return `Your acute load is sitting inside the ideal band for a ${profile.label} profile. This is the closest equivalent here to Garmin's productive acute-load zone.`;
+    return `Your rolling 7-day load is inside the ideal band for a ${profile.label} profile. This is the closest equivalent here to Garmin's productive acute-load zone.`;
 }
 
-function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, currentStatus) {
+function renderAcuteLoadModeSwitch() {
+    const container = document.getElementById('acute-load-mode-switch');
+    if (!container) return;
+
+    container.querySelectorAll('.acute-load-mode-btn').forEach(button => {
+        const isActive = button.dataset.mode === acuteLoadBandMode;
+        button.classList.toggle('active', isActive);
+        button.onclick = () => {
+            const nextMode = button.dataset.mode === 'aggressive' ? 'aggressive' : 'conservative';
+            if (nextMode === acuteLoadBandMode) return;
+
+            acuteLoadBandMode = nextMode;
+            localStorage.setItem('dashboard_acute_load_mode', acuteLoadBandMode);
+            renderDashboardContent(
+                dashboardRenderContext.allActivities,
+                dashboardRenderContext.dateFilterFrom,
+                dashboardRenderContext.dateFilterTo
+            );
+        };
+    });
+}
+
+function buildRollingSevenDayLoad(activities, rangeStart, rangeEnd) {
+    const sorted = getValidLoadActivities(activities);
+    if (!sorted.length) return null;
+
+    const tssByDay = new Map();
+    const ctlByDay = new Map();
+    let ctlSeed = sorted[0].ctl || 0;
+
+    sorted.forEach(activity => {
+        const date = new Date(activity.start_date_local);
+        const key = toLocalYMD(date);
+        tssByDay.set(key, (tssByDay.get(key) || 0) + (activity.tss || 0));
+
+        const existing = ctlByDay.get(key) || { sum: 0, count: 0 };
+        existing.sum += activity.ctl || 0;
+        existing.count += 1;
+        ctlByDay.set(key, existing);
+
+        if (date <= rangeStart && Number.isFinite(activity.ctl)) {
+            ctlSeed = activity.ctl;
+        }
+    });
+
+    const labels = [];
+    const dailyTss = [];
+    const ctlDaily = [];
+    let cursor = new Date(rangeStart);
+    let lastCtl = ctlSeed;
+    const endCursor = new Date(rangeEnd);
+
+    cursor.setHours(0, 0, 0, 0);
+    endCursor.setHours(0, 0, 0, 0);
+
+    while (cursor <= endCursor) {
+        const key = toLocalYMD(cursor);
+        const ctlEntry = ctlByDay.get(key);
+
+        if (ctlEntry && ctlEntry.count) {
+            lastCtl = ctlEntry.sum / ctlEntry.count;
+        }
+
+        labels.push(key);
+        dailyTss.push(tssByDay.get(key) || 0);
+        ctlDaily.push(+lastCtl.toFixed(1));
+        cursor = addDays(cursor, 1);
+    }
+
+    const load7d = dailyTss.map((_, index) => {
+        let sum = 0;
+        for (let offset = Math.max(0, index - 6); offset <= index; offset += 1) {
+            sum += dailyTss[offset];
+        }
+        return +sum.toFixed(1);
+    });
+
+    return { labels, load7d, ctlDaily, sorted };
+}
+
+function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, currentStatus, currentLoad, currentCtl) {
     const container = document.getElementById('acute-load-explainer');
     if (!container) return;
 
@@ -330,42 +469,40 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
         return;
     }
 
-    const last = sortedActivities[sortedActivities.length - 1];
-    const atlValue = last.atl || 0;
-    const ctlValue = last.ctl || 0;
-    const deltaToTop = currentBand.upper - atlValue;
-    const deltaToBottom = atlValue - currentBand.lower;
+    const deltaToTop = currentBand.upper - currentLoad;
+    const deltaToBottom = currentLoad - currentBand.lower;
     const gapText = currentStatus.tone === 'high'
-        ? `${(atlValue - currentBand.upper).toFixed(1)} above the band`
+        ? `${(currentLoad - currentBand.upper).toFixed(1)} above the band`
         : currentStatus.tone === 'low'
-            ? `${(currentBand.lower - atlValue).toFixed(1)} below the band`
+            ? `${(currentBand.lower - currentLoad).toFixed(1)} below the band`
             : `${Math.min(deltaToTop, deltaToBottom).toFixed(1)} away from the nearest edge`;
+    const weeklyBase = currentCtl * 7;
 
     container.innerHTML = `
         <div class="acute-load-summary-card">
             <div class="acute-load-summary-topline">
-                <span class="acute-load-kicker">Current acute load</span>
+                <span class="acute-load-kicker">Current 7-day load</span>
                 <span class="acute-load-status" style="color:${currentStatus.color};border-color:${currentStatus.color}33;background:${currentStatus.color}12;">${currentStatus.label}</span>
             </div>
             <div class="acute-load-summary-metrics">
                 <div>
-                    <strong>${atlValue.toFixed(1)}</strong>
-                    <span>ATL now</span>
+                    <strong>${currentLoad.toFixed(1)}</strong>
+                    <span>7d TSS now</span>
                 </div>
                 <div>
                     <strong>${currentBand.lower.toFixed(1)} - ${currentBand.upper.toFixed(1)}</strong>
                     <span>Ideal range</span>
                 </div>
                 <div>
-                    <strong>${ctlValue.toFixed(1)}</strong>
-                    <span>CTL base</span>
+                    <strong>${weeklyBase.toFixed(1)}</strong>
+                    <span>CTL x 7 baseline</span>
                 </div>
                 <div>
                     <strong>${gapText}</strong>
-                    <span>Relative position</span>
+                    <span>${acuteLoadBandMode === 'aggressive' ? 'Aggressive mode' : 'Conservative mode'}</span>
                 </div>
             </div>
-            <p>${describeAcuteLoadStatus(atlValue, currentBand, profile, currentStatus)}</p>
+            <p>${describeAcuteLoadStatus(currentLoad, currentBand, profile, currentStatus)}</p>
         </div>
     `;
 }
@@ -436,6 +573,7 @@ function renderPMCExplanation(sortedActivities) {
 }
 
 export function renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo) {
+    dashboardRenderContext = { allActivities, dateFilterFrom, dateFilterTo };
     const container = document.getElementById('dashboard-tab');
     if (container && !document.getElementById('range-selector')) {
         const rangeDiv = document.createElement('div');
@@ -472,40 +610,41 @@ function renderRangeSelector(allActivities, dateFilterFrom, dateFilterTo) {
 
 
 function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
+    dashboardRenderContext = { allActivities, dateFilterFrom, dateFilterTo };
     const filteredActivities = utils.filterActivitiesByDate(allActivities, dateFilterFrom, dateFilterTo);
     const runs = filteredActivities
         .filter(a => a.type && a.type.includes('Run'))
         .sort((a, b) => new Date(a.start_date_local || 0) - new Date(b.start_date_local || 0));
 
-    const now = new Date();
-    const startDate = getRangeStartDate(selectedRangeDays);
-    const windowMs = Math.max(24 * 3600 * 1000, now.getTime() - startDate.getTime());
+    const { startDate, endDate } = getEffectiveDashboardWindow(dateFilterFrom, dateFilterTo);
+    const windowMs = Math.max(24 * 3600 * 1000, endDate.getTime() - startDate.getTime());
     const previousStartDate = new Date(startDate.getTime() - windowMs);
+    const previousEndDate = new Date(startDate.getTime() - 1);
 
     const recentRuns = runs.filter(r => {
         const d = new Date(r.start_date_local);
-        return d >= startDate && d <= now;
+        return d >= startDate && d <= endDate;
     });
 
     const previousRuns = runs.filter(r => {
         const d = new Date(r.start_date_local);
-        return d >= previousStartDate && d < startDate;
+        return d >= previousStartDate && d <= previousEndDate;
     });
 
     const recentActivities = filteredActivities.filter(activity => {
         const d = new Date(activity.start_date_local);
-        return d >= startDate && d <= now;
+        return d >= startDate && d <= endDate;
     });
 
     const previousActivities = filteredActivities.filter(activity => {
         const d = new Date(activity.start_date_local);
-        return d >= previousStartDate && d < startDate;
+        return d >= previousStartDate && d <= previousEndDate;
     });
 
     renderDashboardTopline(filteredActivities, recentActivities, recentRuns, startDate, dateFilterFrom, dateFilterTo);
 
     renderTrainingLoadMetrics(recentActivities);
-    renderAcuteLoadChart(recentActivities);
+    renderAcuteLoadChart(recentActivities, startDate, endDate);
     renderPMCChart(recentActivities, allActivities);
     renderRecentActivitiesPreview(recentRuns);
     renderDashboardSummary(recentActivities, previousActivities, recentRuns, previousRuns);
@@ -952,18 +1091,20 @@ function renderPMCChart(runs) {
     });
 }
 
-function renderAcuteLoadChart(activities) {
+function renderAcuteLoadChart(activities, rangeStart, rangeEnd) {
     const canvas = document.getElementById('acute-load-chart');
     const explainer = document.getElementById('acute-load-explainer');
     if (!canvas) return;
+
+    renderAcuteLoadModeSwitch();
 
     const ctx = canvas.getContext('2d');
     if (dashboardCharts['acute-load-chart']) {
         dashboardCharts['acute-load-chart'].destroy();
     }
 
-    const sorted = getValidLoadActivities(activities);
-    if (!sorted.length) {
+    const series = buildRollingSevenDayLoad(activities, rangeStart, rangeEnd);
+    if (!series || !series.sorted.length) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.font = '16px sans-serif';
         ctx.fillStyle = '#999';
@@ -973,22 +1114,24 @@ function renderAcuteLoadChart(activities) {
         return;
     }
 
-    const profile = getPmcProfile(sorted);
-    const labels = sorted.map(activity => {
-        const date = new Date(activity.start_date_local);
+    const profile = getPmcProfile(series.sorted);
+    const labels = series.labels.map(label => {
+        const date = new Date(`${label}T00:00:00`);
         return `${date.getMonth() + 1}/${date.getDate()}`;
     });
-    const atl = sorted.map(activity => activity.atl);
-    const ctl = sorted.map(activity => activity.ctl);
-    const idealBand = sorted.map(activity => getAcuteLoadBand(profile, activity.ctl));
+    const load7d = series.load7d;
+    const ctl7dBase = series.ctlDaily.map(value => +(value * 7).toFixed(1));
+    const idealBand = series.ctlDaily.map(value => getAcuteLoadBand(profile, value, acuteLoadBandMode));
     const bandLower = idealBand.map(band => band.lower);
     const bandUpper = idealBand.map(band => band.upper);
     const lastBand = idealBand[idealBand.length - 1];
-    const lastStatus = getAcuteLoadStatus(atl[atl.length - 1], lastBand);
-    const currentPoint = atl.map((value, index) => (index === atl.length - 1 ? value : null));
-    const maxY = Math.max(...bandUpper, ...atl, ...ctl, 10);
+    const lastLoad = load7d[load7d.length - 1] || 0;
+    const lastCtl = series.ctlDaily[series.ctlDaily.length - 1] || 0;
+    const lastStatus = getAcuteLoadStatus(lastLoad, lastBand);
+    const currentPoint = load7d.map((value, index) => (index === load7d.length - 1 ? value : null));
+    const maxY = Math.max(...bandUpper, ...load7d, ...ctl7dBase, 10);
 
-    renderAcuteLoadExplanation(sorted, profile, lastBand, lastStatus);
+    renderAcuteLoadExplanation(series.sorted, profile, lastBand, lastStatus, lastLoad, lastCtl);
 
     dashboardCharts['acute-load-chart'] = new Chart(ctx, {
         type: 'line',
@@ -1018,8 +1161,8 @@ function renderAcuteLoadChart(activities) {
                     tension: 0.28
                 },
                 {
-                    label: 'Base load (CTL)',
-                    data: ctl,
+                    label: 'Base load (CTL x 7)',
+                    data: ctl7dBase,
                     borderColor: 'rgba(0, 116, 217, 0.7)',
                     backgroundColor: 'rgba(0, 116, 217, 0)',
                     pointRadius: 0,
@@ -1029,8 +1172,8 @@ function renderAcuteLoadChart(activities) {
                     fill: false
                 },
                 {
-                    label: 'Acute load (ATL)',
-                    data: atl,
+                    label: 'Rolling 7-day load',
+                    data: load7d,
                     borderColor: '#fc5200',
                     backgroundColor: 'rgba(252, 82, 0, 0.12)',
                     pointRadius: 0,
@@ -1094,7 +1237,7 @@ function renderAcuteLoadChart(activities) {
                 y: {
                     beginAtZero: true,
                     suggestedMax: Math.ceil(maxY * 1.12),
-                    title: { display: true, text: 'Load (TSS/d)' },
+                    title: { display: true, text: 'Load (7-day TSS)' },
                     grid: { color: 'rgba(0, 0, 0, 0.06)' }
                 }
             }
