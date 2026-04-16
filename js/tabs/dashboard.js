@@ -329,9 +329,9 @@ function getTsbStatus(tsbValue, profile) {
 function getAcuteLoadBand(profile, ctlValue, mode = acuteLoadBandMode) {
     const weeklyBase = Math.max(10, ctlValue * 7);
 
-    // Garmin uses roughly 0.8�baseline � 1.3�baseline as the productive zone.
-    // Conservative  �  0.85 � 1.10  (narrower, lower ceiling)
-    // Aggressive    �  0.75 � 1.30  (wider, allows bigger overloads)
+    // Garmin uses roughly 0.8×baseline – 1.3×baseline as the productive zone.
+    // Conservative  →  0.85 – 1.10  (narrower, lower ceiling)
+    // Aggressive    →  0.75 – 1.30  (wider, allows bigger overloads)
     const config = mode === 'aggressive'
         ? { lo: 0.75, hi: 1.30, minWidth: 30 }
         : { lo: 0.85, hi: 1.10, minWidth: 20 };
@@ -528,7 +528,7 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
     const week1Load = recent14.filter(a => (now - new Date(a.start_date_local)) / 86400000 <= 7).reduce((s, a) => s + (a.tss || 0), 0);
     const week2Load = recent14.filter(a => (now - new Date(a.start_date_local)) / 86400000 > 7).reduce((s, a) => s + (a.tss || 0), 0);
     const weekDeltaPct = week2Load > 0 ? ((week1Load - week2Load) / week2Load) * 100 : 0;
-    const weekTrend = weekDeltaPct > 0 ? `�� ${Math.abs(weekDeltaPct).toFixed(0)}%` : `�� ${Math.abs(weekDeltaPct).toFixed(0)}%`;
+    const weekTrend = weekDeltaPct > 0 ? `▲ ${Math.abs(weekDeltaPct).toFixed(0)}%` : `▼ ${Math.abs(weekDeltaPct).toFixed(0)}%`;
     const weekTrendColor = getTrendColor(weekDeltaPct);
 
     // Ideal ranges
@@ -555,7 +555,7 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
                     <span>7d TSS</span>
                 </div>
                 <div>
-                    <strong>${currentBand.lower.toFixed(1)} � ${currentBand.upper.toFixed(1)}</strong>
+                    <strong>${currentBand.lower.toFixed(1)} – ${currentBand.upper.toFixed(1)}</strong>
                     <span>Ideal range (${acuteLoadBandMode === 'aggressive' ? 'aggr.' : 'cons.'})</span>
                 </div>
                 <div>
@@ -568,7 +568,7 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
                 </div>
                 <div>
                     <strong style="color:${weekTrendColor}">${weekTrend}</strong>
-                    <span>Week �</span>
+                    <span>Week ?</span>
                 </div>
             </div>
             <p style="margin-bottom:.3rem;">${describeAcuteLoadStatus(currentLoad, currentBand, profile, currentStatus)}</p>
@@ -579,7 +579,7 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
                 <strong>CTL</strong> <small style="opacity:.65;">Fitness · ~42d</small>
                 <span class="pmc-explainer-value" style="color:${ctlStatus.color};">${currentCtl.toFixed(1)} · ${ctlStatus.label}</span>
             </div>
-            <small>${describeCtl(currentCtl, context)} <span style="opacity:.6;">Ideal: ${ctlIdealLow}�${ctlIdealHigh} (your recent range).</span></small>
+            <small>${describeCtl(currentCtl, context)} <span style="opacity:.6;">Ideal: ${ctlIdealLow}–${ctlIdealHigh} (your recent range).</span></small>
         </div>
         <div class="pmc-explainer-card pmc-explainer-atl">
             <div class="pmc-explainer-header">
@@ -587,12 +587,12 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
                 <strong>ATL</strong> <small style="opacity:.65;">Fatigue · ~7d</small>
                 <span class="pmc-explainer-value" style="color:${atlStatus.color};">${currentAtl.toFixed(1)} · ${atlStatus.label}</span>
             </div>
-            <small>${describeAtl(currentAtl, currentCtl, context)} <span style="opacity:.6;">Productive range: ${atlIdealLow}�${atlIdealHigh} (0.8�1.5� CTL).</span></small>
+            <small>${describeAtl(currentAtl, currentCtl, context)} <span style="opacity:.6;">Productive range: ${atlIdealLow}–${atlIdealHigh} (0.8–1.5× CTL).</span></small>
         </div>
         <div class="pmc-explainer-card pmc-explainer-tsb">
             <div class="pmc-explainer-header">
                 <span class="pmc-dot"></span>
-                <strong>TSB</strong> <small style="opacity:.65;">Form · CTL��ATL</small>
+                <strong>TSB</strong> <small style="opacity:.65;">Form · CTL−ATL</small>
                 <span class="pmc-explainer-value" style="color:${tsbStatus.color};">${currentTsb.toFixed(1)} · ${tsbStatus.label}</span>
             </div>
             <small>${describeTsb(currentTsb, context)} <span style="opacity:.6;">Productive zone: ${tsbIdealLow} to ${tsbIdealHigh} for ${profile.label}.</span></small>
@@ -722,12 +722,12 @@ function renderDashboardSummary(currentActivities, previousActivities, currentRu
 
     const trendVisual = (metric, change) => {
         if (!Number.isFinite(change)) {
-            return { icon: '⬢', color: '#888', label: 'N/A' };
+            return { icon: '•', color: '#888', label: 'N/A' };
         }
 
         const lowerIsBetter = ['pace', 'hr', 'injury'].includes(metric);
         const improved = lowerIsBetter ? change < 0 : change > 0;
-        const icon = change === 0 ? '⬢' : (improved ? '��' : '��');
+        const icon = change === 0 ? '•' : (improved ? '▲' : '▼');
         const color = change === 0 ? '#888' : (improved ? '#2ECC40' : '#FF4136');
         return { icon, color, label: `${change > 0 ? '+' : ''}${change.toFixed(1)}%` };
     };
@@ -785,50 +785,50 @@ function renderDashboardSummary(currentActivities, previousActivities, currentRu
     // --- Renderizado ---
     container.innerHTML = `
         <div class="card">
-            <h3>�x� Total Distance</h3>
+            <h3>📏 Total Distance</h3>
             <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${totalDistance.toFixed(1)} km</p>
             <small><span style="color:${distTrend.color};">${distTrend.icon} ${distTrend.label}</span></small>
         </div>
 
         <div class="card">
-            <h3>�x" Total Time</h3>
+            <h3>🕒 Total Time</h3>
             <p style="font-size:2rem;font-weight:bold;color:#B10DC9;">${totalTime.toFixed(1)} h</p>
             <small><span style="color:${timeTrend.color};">${timeTrend.icon} ${timeTrend.label}</span></small>
         </div>
 
         <div class="card">
-            <h3>�:�️ Elevation</h3>
+            <h3>⛰️ Elevation</h3>
             <p style="font-size:2rem;font-weight:bold;color:#2ECC40;">${totalElevation.toFixed(0)} m</p>
             <small><span style="color:${elevTrend.color};">${elevTrend.icon} ${elevTrend.label}</span></small>
         </div>
 
         <div class="card">
-            <h3>�x�� VO�max</h3>
-            <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${Number.isFinite(currentAvgVO2) ? currentAvgVO2.toFixed(1) : '�'}</p>
+            <h3>🫁 VO₂max</h3>
+            <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${Number.isFinite(currentAvgVO2) ? currentAvgVO2.toFixed(1) : '–'}</p>
             <small><span style="color:${vo2Trend.color};">${vo2Trend.icon} ${vo2Trend.label}</span></small>
         </div>
 
         <div class="card">
-            <h3>�a�️ Injury Risk</h3>
-            <p style="font-size:2rem;font-weight:bold;color:#FF4136;">${Number.isFinite(currentInjury) ? currentInjury.toFixed(3) : '�'}</p>
+            <h3>⚠️ Injury Risk</h3>
+            <p style="font-size:2rem;font-weight:bold;color:#FF4136;">${Number.isFinite(currentInjury) ? currentInjury.toFixed(3) : '–'}</p>
             <small><span style="color:${injuryTrend.color};">${injuryTrend.icon} ${injuryTrend.label}</span></small>
         </div>
 
         <div class="card">
-            <h3>�a� Average Pace</h3>
-            <p style="font-size:2rem;font-weight:bold;color:#B10DC9;"> ${Number.isFinite(avgPace) ? utils.paceDecimalToTime(avgPace) : '�'} </p>
+            <h3>⚡ Average Pace</h3>
+            <p style="font-size:2rem;font-weight:bold;color:#B10DC9;"> ${Number.isFinite(avgPace) ? utils.paceDecimalToTime(avgPace) : '–'} </p>
             <small><span style="color:${paceTrend.color};">${paceTrend.icon} ${paceTrend.label}</span></small>
         </div>
 
         <div class="card">
             <h3>❤️ Average HR</h3>
-            <p style="font-size:2rem;font-weight:bold;color:#FF4136;">${Number.isFinite(currentAvgHR) ? currentAvgHR.toFixed(0) : '�'} bpm</p>
+            <p style="font-size:2rem;font-weight:bold;color:#FF4136;">${Number.isFinite(currentAvgHR) ? currentAvgHR.toFixed(0) : '–'} bpm</p>
             <small><span style="color:${hrTrend.color};">${hrTrend.icon} ${hrTrend.label}</span></small>
         </div>
 
         <div class="card">
-            <h3>�x��⬍�"️ Average Distance</h3>
-            <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${Number.isFinite(avgDistance) ? avgDistance.toFixed(1) : '�'} km</p>
+            <h3>🏃 Average Distance</h3>
+            <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${Number.isFinite(avgDistance) ? avgDistance.toFixed(1) : '–'} km</p>
             <small><span style="color:${avgDistTrend.color};">${avgDistTrend.icon} ${avgDistTrend.label}</span></small>
         </div>
         
@@ -929,7 +929,7 @@ function renderAcuteLoadChart(activities, rangeStart, rangeEnd) {
                     yAxisID: 'y'
                 },
                 {
-                    label: 'Base load (CTL � 7)',
+                    label: 'Base load (CTL × 7)',
                     data: ctl7dBase,
                     borderColor: 'rgba(0, 116, 217, 0.7)',
                     backgroundColor: 'rgba(0, 116, 217, 0)',
@@ -994,7 +994,7 @@ function renderAcuteLoadChart(activities, rangeStart, rangeEnd) {
                             if (context.dataset.label === 'Ideal acute load range') {
                                 const lower = bandLower[context.dataIndex];
                                 const upper = bandUpper[context.dataIndex];
-                                return `Ideal range: ${lower.toFixed(1)} � ${upper.toFixed(1)}`;
+                                return `Ideal range: ${lower.toFixed(1)} – ${upper.toFixed(1)}`;
                             }
 
                             return `${context.dataset.label}: ${context.parsed.y.toFixed(1)}`;
@@ -1038,7 +1038,7 @@ function renderAcuteLoadChart(activities, rangeStart, rangeEnd) {
 
 
 /**
- * Renderiza una gr�fica de barras: TSS por per�odo
+ * Renderiza una gr→fica de barras: TSS por per→odo
  */
 function renderTSSBarChart(activities, rangeType) {
     const canvas = document.getElementById('tss-bar-chart');
@@ -1047,7 +1047,7 @@ function renderTSSBarChart(activities, rangeType) {
     const ctx = canvas.getContext('2d');
     if (window.tssBarChart) window.tssBarChart.destroy();
 
-    // Calcular las fechas de inicio y fin del per�odo seleccionado
+    // Calcular las fechas de inicio y fin del per→odo seleccionado
     const now = new Date();
     let startDate;
     let endDate = new Date(now);
@@ -1071,7 +1071,7 @@ function renderTSSBarChart(activities, rangeType) {
         case 'month': {
             const today = new Date();
             startDate = new Date(today.getFullYear(), today.getMonth(), 1); // 1 del mes actual
-            endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0); // �ltimo del mes actual
+            endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0); // →ltimo del mes actual
             endDate.setHours(23, 59, 59, 999);
             break;
         }
@@ -1169,14 +1169,14 @@ function renderTSSBarChart(activities, rangeType) {
 function getMondayOfWeek(date) {
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
-    const day = d.getDay(); // 0 = domingo, 1 = lunes, ..., 6 = s�bado
+    const day = d.getDay(); // 0 = domingo, 1 = lunes, ..., 6 = s→bado
     const diff = day === 0 ? -6 : 1 - day; // Si es domingo, ir al lunes anterior (retroceder 6)
     d.setDate(d.getDate() + diff);
     return d;
 }
 
 /**
- * Obtiene el n�mero de semana del a�o (ISO 8601)
+ * Obtiene el n→mero de semana del a→o (ISO 8601)
  */
 function getWeekNumber(date) {
     const d = new Date(date);
@@ -1188,7 +1188,7 @@ function getWeekNumber(date) {
 }
 
 /**
- * Agrupa TSS por per�odo (d�a, semana o mes) incluyendo per�odos sin datos
+ * Agrupa TSS por per→odo (d→a, semana o mes) incluyendo per→odos sin datos
  */
 function groupTSSByPeriod(activities, rangeType, startDate, endDate) {
     // Usar las fechas del rango completo, no solo las de las actividades
@@ -1202,10 +1202,10 @@ function groupTSSByPeriod(activities, rangeType, startDate, endDate) {
     const grouped = {};
     const curr = new Date(minDate);
 
-    // Seguridad: l�mite m�ximo de iteraciones (por si hay error de rango)
+    // Seguridad: l→mite m→ximo de iteraciones (por si hay error de rango)
     let guard = 0;
 
-    // Crear todos los per�odos del rango (incluso sin datos)
+    // Crear todos los per→odos del rango (incluso sin datos)
     while (curr <= maxDate && guard++ < 2000) {
         let key;
         if (isDaily) {
@@ -1226,14 +1226,14 @@ function groupTSSByPeriod(activities, rangeType, startDate, endDate) {
         grouped[key] = 0;
     }
 
-    // A�adir datos reales de actividades (solo si hay actividades)
+    // A→adir datos reales de actividades (solo si hay actividades)
     if (activities && activities.length > 0) {
         for (const a of activities) {
             if (!a.start_date_local) continue;
             const date = new Date(a.start_date_local);
             if (isNaN(date)) continue;
 
-            // Solo procesar si est� dentro del rango
+            // Solo procesar si est→ dentro del rango
             if (date < minDate || date > maxDate) continue;
 
             let key;
