@@ -300,21 +300,33 @@ function renderGearSummary(data) {
     summaryBar.innerHTML = `
         <div class="gear-summary-bar">
             <div class="gear-summary-stat">
-                <span class="summary-value">${data.length}</span>
-                <span class="summary-label">Pieces</span>
+                <span class="summary-icon">🎽</span>
+                <div>
+                    <span class="summary-value">${data.length}</span>
+                    <span class="summary-label">Pieces</span>
+                </div>
             </div>
             <div class="gear-summary-stat">
-                <span class="summary-value">${totalKm.toFixed(0)}</span>
-                <span class="summary-label">Total km</span>
+                <span class="summary-icon">🛤️</span>
+                <div>
+                    <span class="summary-value">${totalKm.toFixed(0)}</span>
+                    <span class="summary-label">Total km</span>
+                </div>
             </div>
             <div class="gear-summary-stat">
-                <span class="summary-value">${totalActivities}</span>
-                <span class="summary-label">Activities</span>
+                <span class="summary-icon">⚡</span>
+                <div>
+                    <span class="summary-value">${totalActivities}</span>
+                    <span class="summary-label">Activities</span>
+                </div>
             </div>
             ${needsReplacement > 0 ? `
-            <div class="gear-summary-stat" style="color:#ef4444;">
-                <span class="summary-value">${needsReplacement}</span>
-                <span class="summary-label">⚠️ Replace</span>
+            <div class="gear-summary-stat gear-summary-stat--alert">
+                <span class="summary-icon">⚠️</span>
+                <div>
+                    <span class="summary-value">${needsReplacement}</span>
+                    <span class="summary-label">Replace</span>
+                </div>
             </div>` : ''}
         </div>
     `;
@@ -372,7 +384,7 @@ function createGearCard(data, isEditMode) {
             const weeksLeft = Math.round(remainingKm / weeklyKm);
             const estDate = new Date();
             estDate.setDate(estDate.getDate() + weeksLeft * 7);
-            replacementEst = `<small class="replacement-est">Est. end: ${formatDate(estDate)} (~${weeksLeft}w)</small>`;
+            replacementEst = `<div class="gear-replacement-est">🗓 Est. end: ${formatDate(estDate)} (~${weeksLeft}w)</div>`;
         }
     }
 
@@ -385,16 +397,20 @@ function createGearCard(data, isEditMode) {
     const stats = createStatsSection(metrics, gear, euroPerKm);
     const editSection = isEditMode ? createEditSection(gear.id, price, durationKm) : '';
 
+    const accentColor = gear.type === 'bike' ? '#3b82f6' : '#f59e0b';
+    const iconBg = gear.type === 'bike' ? 'rgba(59,130,246,0.1)' : 'rgba(245,158,11,0.1)';
+
     return `
         <div class="gear-card ${gear.retired ? 'retired' : ''} ${needsReplacement && !gear.retired ? 'needs-replacement' : ''}"
-             onclick="window.open('html/gear.html?id=${gear.id}', '_blank')" style="cursor:pointer;">
+             onclick="window.open('html/gear.html?id=${gear.id}', '_blank')" style="cursor:pointer; --accent: ${accentColor};">
+            <div class="gear-card__accent"></div>
             ${statusBadges}
             <div class="gear-card-header">
-                <div class="gear-icon">${gear.type === 'bike' ? '🚴' : '👟'}</div>
+                <div class="gear-icon" style="background:${iconBg}; color:${accentColor};">${gear.type === 'bike' ? '🚴' : '👟'}</div>
                 <div class="gear-title">
                     <h4>${gear.name || [gear.brand_name, gear.model_name].filter(Boolean).join(' ') || 'Unnamed'}</h4>
-                    <p class="gear-category">${gearLabel}</p>
-                    ${gear.brand_name ? `<p class="gear-brand" style="font-size:0.75rem;color:#9ca3af;">${gear.brand_name}${gear.model_name ? ` · ${gear.model_name}` : ''}</p>` : ''}
+                    <span class="gear-type-chip" style="background:${iconBg}; color:${accentColor};">${gearLabel}</span>
+                    ${gear.brand_name ? `<p class="gear-brand">${gear.brand_name}${gear.model_name ? ` · ${gear.model_name}` : ''}</p>` : ''}
                 </div>
             </div>
             <div class="gear-distance-display">
@@ -439,32 +455,50 @@ function createStatsSection(metrics, gear, euroPerKm) {
         <div class="gear-stats">
             <div class="stat-row">
                 <div class="stat-item">
-                    <span class="stat-label">Uses</span>
-                    <span class="stat-value">${metrics.numUses || 0}</span>
+                    <span class="stat-icon-mini">🏃</span>
+                    <div class="stat-content">
+                        <span class="stat-value">${metrics.numUses || 0}</span>
+                        <span class="stat-label">Uses</span>
+                    </div>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">€/km</span>
-                    <span class="stat-value">${euroPerKm}</span>
-                </div>
-            </div>
-            <div class="stat-row">
-                <div class="stat-item">
-                    <span class="stat-label">Avg Distance</span>
-                    <span class="stat-value">${formatDistance(metrics.avgDistancePerUse || 0, 1)}</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">First Use</span>
-                    <span class="stat-value">${metrics.firstUse ? formatDate(metrics.firstUse) : 'N/A'}</span>
+                    <span class="stat-icon-mini">💰</span>
+                    <div class="stat-content">
+                        <span class="stat-value">${euroPerKm}</span>
+                        <span class="stat-label">€/km</span>
+                    </div>
                 </div>
             </div>
             <div class="stat-row">
                 <div class="stat-item">
-                    <span class="stat-label">Avg Elevation</span>
-                    <span class="stat-value">${metrics.avgElevationGainPerUse ? metrics.avgElevationGainPerUse.toFixed(0) + 'm' : '-'}</span>
+                    <span class="stat-icon-mini">📏</span>
+                    <div class="stat-content">
+                        <span class="stat-value">${formatDistance(metrics.avgDistancePerUse || 0, 1)}</span>
+                        <span class="stat-label">Avg Dist</span>
+                    </div>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">Last Use</span>
-                    <span class="stat-value">${metrics.lastUse ? formatDate(metrics.lastUse) : 'N/A'}</span>
+                    <span class="stat-icon-mini">⛰️</span>
+                    <div class="stat-content">
+                        <span class="stat-value">${metrics.avgElevationGainPerUse ? metrics.avgElevationGainPerUse.toFixed(0) + 'm' : '-'}</span>
+                        <span class="stat-label">Avg Elev</span>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-row">
+                <div class="stat-item">
+                    <span class="stat-icon-mini">📅</span>
+                    <div class="stat-content">
+                        <span class="stat-value">${metrics.firstUse ? formatDate(metrics.firstUse) : 'N/A'}</span>
+                        <span class="stat-label">First Use</span>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-icon-mini">🕐</span>
+                    <div class="stat-content">
+                        <span class="stat-value">${metrics.lastUse ? formatDate(metrics.lastUse) : 'N/A'}</span>
+                        <span class="stat-label">Last Use</span>
+                    </div>
                 </div>
             </div>
         </div>
