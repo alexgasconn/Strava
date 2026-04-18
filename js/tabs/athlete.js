@@ -55,6 +55,7 @@ export function renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo, sp
 
     // Charts: many of these accept the whole filteredActivities but treat them as runs where appropriate
     renderStartTimeHistogram(filteredActivities, dataType);
+    renderDurationHistogram(filteredActivities);
     renderYearlyComparison(filteredActivities, dataType);
     renderWeeklyMixChart(filteredActivities, dataType);
     renderMonthlyMixChart(filteredActivities, dataType);
@@ -191,6 +192,66 @@ function renderStartTimeHistogram(runs, dataType = 'count') {
     });
 }
 
+
+function renderDurationHistogram(activities) {
+    // Convert moving_time to minutes
+    const durations = activities.map(a => a.moving_time / 60).filter(d => d > 0);
+    if (durations.length === 0) return;
+
+    const maxDur = Math.max(...durations);
+
+    // Choose bucket size and label unit based on max duration
+    let bucketSize, unit;
+    if (maxDur <= 120) {
+        bucketSize = 10; // 10-minute buckets
+        unit = 'min';
+    } else if (maxDur <= 300) {
+        bucketSize = 15; // 15-minute buckets
+        unit = 'min';
+    } else {
+        bucketSize = 30; // 30-minute buckets
+        unit = 'min';
+    }
+
+    const numBuckets = Math.ceil(maxDur / bucketSize);
+    const counts = new Array(numBuckets).fill(0);
+    durations.forEach(d => {
+        const idx = Math.min(Math.floor(d / bucketSize), numBuckets - 1);
+        counts[idx]++;
+    });
+
+    const labels = counts.map((_, i) => {
+        const from = i * bucketSize;
+        const to = from + bucketSize;
+        if (unit === 'min' && from >= 60) {
+            const fH = Math.floor(from / 60), fM = from % 60;
+            const tH = Math.floor(to / 60), tM = to % 60;
+            const fStr = fM ? `${fH}h${fM}` : `${fH}h`;
+            const tStr = tM ? `${tH}h${tM}` : `${tH}h`;
+            return `${fStr}–${tStr}`;
+        }
+        return `${from}–${to} ${unit}`;
+    });
+
+    createUiChart('duration-histogram', {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: '# of Activities',
+                data: counts,
+                backgroundColor: 'rgba(0, 116, 217, 0.7)'
+            }]
+        },
+        options: {
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { title: { display: true, text: 'Duration' } },
+                y: { beginAtZero: true, title: { display: true, text: 'Activities' } }
+            }
+        }
+    });
+}
 
 
 function renderYearlyComparison(runs, dataType = 'count') {
