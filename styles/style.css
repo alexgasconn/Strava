@@ -218,6 +218,8 @@ main {
     border-radius: 10px;
     border: 1.5px solid #f5e7e0;
     box-shadow: none;
+    aspect-ratio: 16 / 9;
+    object-fit: contain;
 }
 
 #cal-heatmap {
@@ -299,42 +301,73 @@ main {
 @media (max-width: 900px) {
     .charts-grid {
         grid-template-columns: 1fr;
-
-        /* SVG chart container tweaks */
-        .solo-group-svg {
-            width: 100%;
-        }
-
-        .solo-svg {
-            width: 100%;
-            height: 48px;
-            display: block;
-        }
-
-        .solo-svg text {
-            font-family: Inter, 'Segoe UI', Roboto, Arial;
-        }
-
         gap: 1.2rem;
+    }
+
+    .charts-grid .chart-container.wide {
+        grid-column: 1;
+    }
+
+    /* SVG chart container tweaks */
+    .solo-group-svg {
+        width: 100%;
+    }
+
+    .solo-svg {
+        width: 100%;
+        height: 48px;
+        display: block;
+    }
+
+    .solo-svg text {
+        font-family: Inter, 'Segoe UI', Roboto, Arial;
     }
 }
 
 @media (max-width: 800px) {
     .charts-grid {
         max-width: 100vw;
-        padding: 0 0.2rem;
+        padding: 0;
     }
 
     .chart-container {
-        padding: 1rem 0.2rem;
+        padding: 1rem 0.75rem;
+        border-radius: 12px;
     }
 
     .chart-container canvas {
-        height: 220px !important;
+        height: 240px !important;
+        min-height: 180px;
     }
 
     .activity-details-col {
         max-width: 100%;
+    }
+
+    /* Date controls on tablets */
+    .date-controls-container {
+        flex-direction: column;
+        gap: 0.75rem;
+        padding: 0.75rem;
+    }
+
+    .filter-group {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .year-buttons {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+    }
+
+    .year-buttons button {
+        flex: 1;
+        min-width: 50px;
+        padding: 0.45em 0.6em;
+        font-size: 0.85rem;
     }
 }
 
@@ -342,22 +375,133 @@ main {
     body {
         padding: 1rem;
     }
+
+    /* Summary cards responsive */
+    .summary-grid {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 0.75rem;
+    }
+
+    .summary-grid .card {
+        padding: 0.85rem 0.65rem;
+    }
+
+    /* CalHeatmap responsive */
+    .chart-container:has(#cal-heatmap),
+    .chart-container:has(#cal-heatmap-run),
+    .chart-container:has(#cal-heatmap-bike),
+    .chart-container:has(#cal-heatmap-swim),
+    .chart-container:has([id^="cal-heatmap"]) {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 0.5rem;
+    }
+
+    .cal-heatmap-container {
+        min-width: 600px;
+    }
 }
 
 @media (max-width: 700px) {
     .charts-grid {
         grid-template-columns: 1fr;
-        gap: 1.2rem;
-        padding: 0 0.2rem;
+        gap: 1rem;
+        padding: 0;
         max-width: 100vw;
     }
 
     .chart-container {
-        padding: 1rem 0.2rem 1.5rem 0.2rem;
+        padding: 0.85rem 0.6rem 1.2rem;
+        border-radius: 10px;
+        border-top-width: 3px;
+    }
+
+    .chart-container h3 {
+        font-size: 1rem;
+        margin-bottom: 0.8rem;
+    }
+
+    .chart-container canvas {
+        height: 200px !important;
+        min-height: 160px;
+        border-radius: 8px;
+    }
+
+    /* Make chart containers horizontally scrollable if needed */
+    .chart-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .chart-container canvas {
+        min-width: 280px;
+    }
+}
+
+@media (max-width: 480px) {
+    .charts-grid {
+        gap: 0.85rem;
+    }
+
+    .chart-container {
+        padding: 0.75rem 0.5rem 1rem;
+        margin-bottom: 0;
+    }
+
+    .chart-container h3 {
+        font-size: 0.9rem;
+        margin-bottom: 0.6rem;
     }
 
     .chart-container canvas {
         height: 180px !important;
+        border: 1px solid #f0e8e4;
+    }
+
+    /* Summary grid - 2 columns on very small */
+    .summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.6rem;
+    }
+
+    .summary-grid .card {
+        padding: 0.7rem 0.5rem;
+        border-radius: 10px;
+        border-top-width: 3px;
+    }
+
+    .summary-grid .card .stat-value {
+        font-size: 1.15rem;
+    }
+
+    .summary-grid .card .stat-label {
+        font-size: 0.7rem;
+    }
+
+    /* Date controls compact */
+    .date-controls-container {
+        padding: 0.6rem;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        border-radius: 10px;
+    }
+
+    .date-controls-container label {
+        font-size: 0.8rem;
+    }
+
+    .date-controls-container input[type="date"] {
+        padding: 0.4rem;
+        font-size: 0.85rem;
+    }
+
+    .filter-group {
+        gap: 0.4rem;
+    }
+
+    .year-buttons button {
+        padding: 0.35em 0.5em;
+        font-size: 0.78rem;
     }
 }
 
@@ -4623,7 +4767,11 @@ body {
     }
 
     /* Charts */
-    canvas,
+    .chart-container canvas {
+        height: 180px !important;
+        min-height: 150px;
+    }
+
     #global-map {
         height: 400px !important;
     }

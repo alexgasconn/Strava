@@ -216,6 +216,11 @@ function createChart(canvasId, config) {
 
     if (charts[canvasId]) charts[canvasId].destroy();
 
+    // Ensure charts are responsive and maintain aspect ratio
+    if (!config.options) config.options = {};
+    config.options.responsive = true;
+    config.options.maintainAspectRatio = true;
+
     const ctx = canvas.getContext("2d");
     const chart = new Chart(ctx, config);
     charts[canvasId] = chart;

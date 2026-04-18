@@ -90,6 +90,10 @@ function createChart(canvasId, config) {
     if (charts[canvasId]) {
         charts[canvasId].destroy();
     }
+    // Ensure charts are responsive and maintain aspect ratio
+    if (!config.options) config.options = {};
+    config.options.responsive = true;
+    config.options.maintainAspectRatio = true;
     charts[canvasId] = new Chart(canvas, config);
 }
 
