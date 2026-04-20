@@ -502,6 +502,11 @@ function renderTopActivities(rides) {
         return `${h}h ${m}m`;
     };
 
+    const activityLink = a => {
+        if (!a?.id) return a?.name || '-';
+        return `<a href="html/activity-router.html?id=${encodeURIComponent(a.id)}" target="_blank" rel="noopener noreferrer">${a.name}</a>`;
+    };
+
     el.innerHTML = `
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin: 2rem 0;">
@@ -512,7 +517,7 @@ function renderTopActivities(rides) {
 
             <ol>
                 ${topDistance.map(a =>
-        `<li>${a.name} – ${(a.distance / 1000).toFixed(1)} km</li>`
+        `<li>${activityLink(a)} – ${(a.distance / 1000).toFixed(1)} km</li>`
     ).join("")}
             </ol>
 
@@ -524,7 +529,7 @@ function renderTopActivities(rides) {
 
             <ol>
                 ${topElevation.map(a =>
-        `<li>${a.name} – ${a.total_elevation_gain} m</li>`
+        `<li>${activityLink(a)} – ${a.total_elevation_gain} m</li>`
     ).join("")}
             </ol>
 
@@ -536,7 +541,7 @@ function renderTopActivities(rides) {
 
             <ol>
                 ${topFastest.map(a =>
-        `<li>${a.name} – ${a.speed.toFixed(1)} km/h</li>`
+        `<li>${activityLink(a)} – ${a.speed.toFixed(1)} km/h</li>`
     ).join("")}
             </ol>
 
@@ -567,10 +572,14 @@ function renderActivitiesTable(rides) {
                     ? ((a.total_elevation_gain || 0) / (a.distance / 1000)).toFixed(1)
                     : "-";
 
+            const activityLink = a.id
+                ? `<a href="html/activity-router.html?id=${encodeURIComponent(a.id)}" target="_blank" rel="noopener noreferrer">${a.name}</a>`
+                : a.name;
+
             return `
             <tr>
                 <td>${a.start_date_local.substring(0, 10)}</td>
-                <td>${a.name}</td>
+                <td>${activityLink}</td>
                 <td>${bikeTypeBadge(a)}</td>
                 <td>${(a.distance / 1000).toFixed(1)}</td>
                 <td>${a.total_elevation_gain || 0}</td>

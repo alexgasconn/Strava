@@ -1096,26 +1096,31 @@ function renderTopRuns(runs) {
         return `${min}:${sec.toString().padStart(2, '0')} /km`;
     };
 
+    const activityLink = a => {
+        if (!a?.id) return a?.name || '-';
+        return `<a href="html/activity-router.html?id=${encodeURIComponent(a.id)}" target="_blank" rel="noopener noreferrer">${a.name}</a>`;
+    };
+
     el.innerHTML = `
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin: 2rem 0;">
             <div class="top-box" style="padding: 1.5rem; background: #f9f9f9; border-radius: 8px;">
                 <h3 style="margin-top: 0;">🏃 Longest Runs</h3>
                 <ol>
-                    ${topDistance.map(a => `<li>${a.name} – ${(a.distance / 1000).toFixed(1)} km</li>`).join("")}
+                    ${topDistance.map(a => `<li>${activityLink(a)} – ${(a.distance / 1000).toFixed(1)} km</li>`).join("")}
                 </ol>
             </div>
 
             <div class="top-box" style="padding: 1.5rem; background: #f9f9f9; border-radius: 8px;">
                 <h3 style="margin-top: 0;">⛰️ Most Elevation</h3>
                 <ol>
-                    ${topElevation.map(a => `<li>${a.name} – ${a.total_elevation_gain} m</li>`).join("")}
+                    ${topElevation.map(a => `<li>${activityLink(a)} – ${a.total_elevation_gain} m</li>`).join("")}
                 </ol>
             </div>
 
             <div class="top-box" style="padding: 1.5rem; background: #f9f9f9; border-radius: 8px;">
                 <h3 style="margin-top: 0;">⚡ Fastest Races</h3>
                 <ol>
-                    ${topFastest.map(a => `<li>${a.name} – ${formatPace(a.pace)}</li>`).join("")}
+                    ${topFastest.map(a => `<li>${activityLink(a)} – ${formatPace(a.pace)}</li>`).join("")}
                 </ol>
             </div>
         </div>
@@ -1139,10 +1144,13 @@ function renderActivitiesTable(runs) {
         .sort((a, b) => new Date(b.start_date) - new Date(a.start_date))
         .map(a => {
             const pace = formatPace(a.average_speed);
+            const activityLink = a.id
+                ? `<a href="html/activity-router.html?id=${encodeURIComponent(a.id)}" target="_blank" rel="noopener noreferrer">${a.name}</a>`
+                : a.name;
             return `
             <tr>
                 <td>${a.start_date_local.substring(0, 10)}</td>
-                <td>${a.name}</td>
+                <td>${activityLink}</td>
                 <td>${(a.distance / 1000).toFixed(2)}</td>
                 <td>${a.total_elevation_gain || 0}</td>
                 <td>${pace}</td>

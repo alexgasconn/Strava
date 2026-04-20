@@ -526,6 +526,11 @@ function renderTopSwims(swims) {
         .sort((a, b) => a.pace_min100 - b.pace_min100)
         .slice(0, 10);
 
+    const activityLink = s => {
+        if (!s?.id) return s?.name || '-';
+        return `<a href="html/activity-router.html?id=${encodeURIComponent(s.id)}" target="_blank" rel="noopener noreferrer">${s.name}</a>`;
+    };
+
     el.innerHTML = `
 <div class="top-box">
 <h3>Longest Swims</h3>
@@ -541,7 +546,7 @@ function renderTopSwims(swims) {
 ${topDistance.map((s, i) => `
 <tr>
 <td>${i + 1}</td>
-<td>${s.name}</td>
+<td>${activityLink(s)}</td>
 <td>${s.distance_km.toFixed(2)} km</td>
 </tr>`).join("")}
 </tbody>
@@ -562,7 +567,7 @@ ${topDistance.map((s, i) => `
 ${topPace.map((s, i) => `
 <tr>
 <td>${i + 1}</td>
-<td>${s.name}</td>
+<td>${activityLink(s)}</td>
 <td>${formatPace(s.pace_min100)}</td>
 </tr>`).join("")}
 </tbody>
@@ -583,10 +588,13 @@ function renderSwimsTable(swims) {
     const rows = swims
         .sort((a, b) => new Date(b.start_date) - new Date(a.start_date))
         .map(s => {
+            const activityLink = s.id
+                ? `<a href="html/activity-router.html?id=${encodeURIComponent(s.id)}" target="_blank" rel="noopener noreferrer">${s.name}</a>`
+                : s.name;
             return `
                 <tr>
                     <td>${s.start_date_local.substring(0, 10)}</td>
-                    <td>${s.name}</td>
+                    <td>${activityLink}</td>
                     <td>${s.distance_km.toFixed(2)}</td>
                     <td>${s.pace_min100 ? formatPace(s.pace_min100) : "-"}</td>
                     <td>${s.average_heartrate ? s.average_heartrate.toFixed(0) : "-"}</td>
