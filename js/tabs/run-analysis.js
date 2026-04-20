@@ -228,12 +228,12 @@ export function renderConsistencyChart(runs, dateFilterFrom = null, dateFilterTo
             color: {
                 type: 'threshold',
                 range: [
-                    '#ffffff',  // descanso
-                    '#fee5d9',
-                    '#fcbba1',
-                    '#fc9272',
-                    '#fb6a4a',
-                    '#cb181d'
+                    '#fff7ed',  // descanso (naranja muy claro)
+                    '#ffedd5',
+                    '#fdba74',
+                    '#fb923c',
+                    '#f97316',
+                    '#c2410c'
                 ],
                 domain: thresholds
             }

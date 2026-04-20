@@ -749,12 +749,12 @@ export function renderConsistencyChart(rides, dateFilterFrom = null, dateFilterT
             color: {
                 type: 'threshold',
                 range: [
-                    '#ffffff',
-                    '#d9fdd3',
-                    '#a8f0a2',
-                    '#5edb77',
-                    '#22b455',
-                    '#0a6102'
+                    '#f0fdf4',
+                    '#dcfce7',
+                    '#86efac',
+                    '#4ade80',
+                    '#22c55e',
+                    '#166534'
                 ],
                 domain: thresholds
             }

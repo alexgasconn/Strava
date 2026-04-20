@@ -757,11 +757,11 @@ export function renderConsistencyChart(swims, dateFilterFrom = null, dateFilterT
             color: {
                 type: 'threshold',
                 range: [
-                    '#ffffff',  // sin actividad
-                    '#dbeafe',  // azul muy claro
+                    '#eff6ff',  // sin actividad (azul muy claro)
+                    '#dbeafe',
+                    '#bfdbfe',
                     '#93c5fd',
                     '#60a5fa',
-                    '#2563eb',
                     '#1e3a8a'   // azul muy oscuro
                 ],
                 domain: thresholds
