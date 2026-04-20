@@ -41,7 +41,7 @@ function isTargetAthleteAlexGascon(userProfile = {}) {
     const username = normalizeText(profile.username);
     const athleteId = Number(profile.id);
 
-    return athleteId === TARGET_ATHLETE_ID || fullName === 'alex gascon' || username === 'alexgasconn' || username === 'alexgascon';
+    return athleteId === TARGET_ATHLETE_ID || fullName === 'alex gascon' || username === 'gascn_alex' || username === 'alexgasconn' || username === 'alexgascon';
 }
 
 function isDateOnOrBeforeCutoff(activity, cutoffIsoDate) {

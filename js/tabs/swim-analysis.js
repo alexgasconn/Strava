@@ -278,10 +278,9 @@ function poolBadge(poolLength) {
     return `<span class="pool-badge pool-unknown">-</span>`;
 }
 
-function correctionTagBadge(activity) {
-    if (!Array.isArray(activity?.tags)) return '-';
-    if (!activity.tags.includes('piscina-20m')) return '-';
-    return `<span class="pool-badge pool-20">Piscina 20m</span>`;
+function poolLengthInt(poolLength) {
+    const parsed = Number.parseInt(poolLength, 10);
+    return Number.isFinite(parsed) ? String(parsed) : '-';
 }
 
 // ------------------------
@@ -597,8 +596,7 @@ function renderSwimsTable(swims) {
                         </span>
                         </td>
                     <td>${(s.moving_ratio * 100).toFixed(2)}%</td>
-                    <td>${poolBadge(s.pool_length)}</td>
-                    <td>${correctionTagBadge(s)}</td>
+                    <td>${poolLengthInt(s.pool_length)}</td>
                 </tr>
             `;
         }).join("");
@@ -615,7 +613,6 @@ function renderSwimsTable(swims) {
                     <th>Type</th>
                     <th>Moving %</th>
                     <th>Pool</th>
-                    <th>Tag</th>
                 </tr>
             </thead>
             <tbody>${rows}</tbody>
