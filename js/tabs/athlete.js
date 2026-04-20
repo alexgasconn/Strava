@@ -46,6 +46,14 @@ export function renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo, sp
     const athleteData = JSON.parse(localStorage.getItem('strava_athlete_data'));
     const zonesData = JSON.parse(localStorage.getItem('strava_training_zones'));
 
+    if (athleteData) {
+        console.log('[Athlete Tab] active athlete', {
+            id: athleteData?.id,
+            name: `${athleteData?.firstname || ''} ${athleteData?.lastname || ''}`.trim(),
+            username: athleteData?.username || null,
+        });
+    }
+
     if (athleteData) renderAthleteProfile(athleteData);
     if (zonesData) renderTrainingZones(zonesData);
 

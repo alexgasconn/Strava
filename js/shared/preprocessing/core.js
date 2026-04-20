@@ -7,6 +7,100 @@ import { rollingMean, calculateEnvironmentalDifficulty } from '../utils/index.js
 const SUFFER_TO_TSS = 1;
 const MAX_HR_DEFAULT = 190;
 
+// Indoor swim correction for a known historical pool length misconfiguration
+// (recorded as 25m, actual 20m) for a specific athlete and date window.
+const INDOOR_SWIM_DISTANCE_CORRECTION = 20 / 25;
+const INDOOR_SWIM_CORRECTION_TAG = 'piscina-20m';
+const INDOOR_SWIM_CORRECTION_CUTOFF = '2025-08-19';
+const TARGET_ATHLETE_ID = 66914681;
+
+function normalizeText(value) {
+    return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLowerCase();
+}
+
+function isTargetAthleteAlexGascon(userProfile = {}) {
+    let profile = userProfile || {};
+
+    // Fallback to cached athlete profile if API athlete fetch was unavailable.
+    if ((!profile.firstname && !profile.lastname && !profile.username) && typeof localStorage !== 'undefined') {
+        try {
+            const cached = JSON.parse(localStorage.getItem('strava_athlete_data') || 'null');
+            if (cached) profile = cached;
+        } catch (_err) {
+            // ignore malformed cache
+        }
+    }
+
+    const first = normalizeText(profile.firstname);
+    const last = normalizeText(profile.lastname);
+    const fullName = `${first} ${last}`.trim();
+    const username = normalizeText(profile.username);
+    const athleteId = Number(profile.id);
+
+    return athleteId === TARGET_ATHLETE_ID || fullName === 'alex gascon' || username === 'alexgasconn' || username === 'alexgascon';
+}
+
+function isDateOnOrBeforeCutoff(activity, cutoffIsoDate) {
+    const datePart = String(activity?.start_date_local || activity?.start_date || '').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return false;
+    return datePart <= cutoffIsoDate;
+}
+
+function isIndoorPoolSwim(activity) {
+    const sportType = String(activity?.sport_type || activity?.type || '');
+    if (!/swim/i.test(sportType) || /openwater/i.test(sportType)) return false;
+
+    if (activity?.trainer === true) return true;
+
+    const hasStartLatLng = Array.isArray(activity?.start_latlng) && activity.start_latlng.length === 2;
+    return !hasStartLatLng;
+}
+
+function addTag(activity, tag) {
+    if (!Array.isArray(activity.tags)) {
+        activity.tags = [];
+    }
+    if (!activity.tags.includes(tag)) {
+        activity.tags.push(tag);
+    }
+}
+
+function applyIndoorSwimPool20mCorrection(activities, userProfile = {}) {
+    if (!isTargetAthleteAlexGascon(userProfile)) {
+        return;
+    }
+
+    activities.forEach(activity => {
+        if (!isIndoorPoolSwim(activity)) return;
+        if (!isDateOnOrBeforeCutoff(activity, INDOOR_SWIM_CORRECTION_CUTOFF)) return;
+
+        const originalDistance = Number(activity.distance) || 0;
+        const originalMovingTime = Number(activity.moving_time) || 0;
+
+        if (originalDistance > 0) {
+            activity.distance = Math.max(1, Math.round(originalDistance * INDOOR_SWIM_DISTANCE_CORRECTION));
+        }
+
+        if (originalMovingTime > 0 && activity.distance > 0) {
+            // Recompute speed from corrected distance to keep pace coherent everywhere.
+            activity.average_speed = activity.distance / originalMovingTime;
+        } else if (Number(activity.average_speed) > 0) {
+            activity.average_speed = Number(activity.average_speed) * INDOOR_SWIM_DISTANCE_CORRECTION;
+        }
+
+        if (Number(activity.max_speed) > 0) {
+            activity.max_speed = Number(activity.max_speed) * INDOOR_SWIM_DISTANCE_CORRECTION;
+        }
+
+        activity.pool_length = 20;
+        addTag(activity, INDOOR_SWIM_CORRECTION_TAG);
+    });
+}
+
 // ===================================================================
 // WEATHER API FUNCTION
 // ===================================================================
@@ -395,6 +489,8 @@ function assignMetrics(activities, dates, pmc, injuryRisk) {
 // ===================================================================
 export async function preprocessActivities(activities, userProfile = {}, zones = null, gears = null) {
     if (!activities?.length) return [];
+
+    applyIndoorSwimPool20mCorrection(activities, userProfile);
 
     // Derive maxHR from zones if available (last zone's max), fallback to profile, then default
     let maxHr = MAX_HR_DEFAULT;

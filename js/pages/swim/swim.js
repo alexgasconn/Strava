@@ -19,6 +19,11 @@ const CONFIG = {
     NUM_SEGMENTS: 40,
 };
 
+const INDOOR_SWIM_DISTANCE_CORRECTION = 20 / 25;
+const INDOOR_SWIM_CORRECTION_TAG = 'piscina-20m';
+const INDOOR_SWIM_CORRECTION_CUTOFF = '2025-08-19';
+const TARGET_ATHLETE_ID = 66914681;
+
 // DOM References
 const DOM = {
     info: document.getElementById('activity-info'),
@@ -96,6 +101,97 @@ function formatSwimPace(speedInMps) {
     const min = Math.floor(paceInSecPer100m / 60);
     const sec = Math.round(paceInSecPer100m % 60);
     return `${min}:${sec.toString().padStart(2, '0')}/100m`;
+}
+
+function normalizeText(value) {
+    return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLowerCase();
+}
+
+function isTargetAthleteAlexGascon() {
+    const athleteData = JSON.parse(localStorage.getItem('strava_athlete_data') || 'null');
+    if (!athleteData) return false;
+
+    const athleteId = Number(athleteData.id);
+    const first = normalizeText(athleteData.firstname);
+    const last = normalizeText(athleteData.lastname);
+    const fullName = `${first} ${last}`.trim();
+    const username = normalizeText(athleteData.username);
+
+    return athleteId === TARGET_ATHLETE_ID || fullName === 'alex gascon' || username === 'alexgasconn' || username === 'alexgascon';
+}
+
+function isDateOnOrBeforeCutoff(dateLike) {
+    const datePart = String(dateLike || '').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return false;
+    return datePart <= INDOOR_SWIM_CORRECTION_CUTOFF;
+}
+
+function isIndoorPoolSwim(activity) {
+    const sportType = String(activity?.sport_type || activity?.type || '');
+    if (!/swim/i.test(sportType) || /openwater/i.test(sportType)) return false;
+
+    if (activity?.trainer === true) return true;
+
+    const hasStartLatLng = Array.isArray(activity?.start_latlng) && activity.start_latlng.length === 2;
+    return !hasStartLatLng;
+}
+
+function addCorrectionTag(activity) {
+    if (!Array.isArray(activity.tags)) activity.tags = [];
+    if (!activity.tags.includes(INDOOR_SWIM_CORRECTION_TAG)) {
+        activity.tags.push(INDOOR_SWIM_CORRECTION_TAG);
+    }
+}
+
+function applyPool20mCorrectionToSplit(split) {
+    if (!split || typeof split !== 'object') return;
+
+    if (Number(split.distance) > 0) {
+        split.distance = Math.max(1, Math.round(Number(split.distance) * INDOOR_SWIM_DISTANCE_CORRECTION));
+    }
+
+    if (Number(split.moving_time) > 0 && Number(split.distance) > 0) {
+        split.average_speed = Number(split.distance) / Number(split.moving_time);
+    } else if (Number(split.average_speed) > 0) {
+        split.average_speed = Number(split.average_speed) * INDOOR_SWIM_DISTANCE_CORRECTION;
+    }
+}
+
+function maybeCorrectIndoorSwimForAlex(activity) {
+    if (!isTargetAthleteAlexGascon()) return activity;
+    if (!isIndoorPoolSwim(activity)) return activity;
+    if (!isDateOnOrBeforeCutoff(activity?.start_date_local || activity?.start_date)) return activity;
+
+    if (Number(activity.distance) > 0) {
+        activity.distance = Math.max(1, Math.round(Number(activity.distance) * INDOOR_SWIM_DISTANCE_CORRECTION));
+    }
+
+    if (Number(activity.moving_time) > 0 && Number(activity.distance) > 0) {
+        activity.average_speed = Number(activity.distance) / Number(activity.moving_time);
+    } else if (Number(activity.average_speed) > 0) {
+        activity.average_speed = Number(activity.average_speed) * INDOOR_SWIM_DISTANCE_CORRECTION;
+    }
+
+    if (Number(activity.max_speed) > 0) {
+        activity.max_speed = Number(activity.max_speed) * INDOOR_SWIM_DISTANCE_CORRECTION;
+    }
+
+    activity.pool_length = 20;
+    addCorrectionTag(activity);
+
+    if (Array.isArray(activity.laps)) {
+        activity.laps.forEach(applyPool20mCorrectionToSplit);
+    }
+
+    if (Array.isArray(activity.splits_swim)) {
+        activity.splits_swim.forEach(applyPool20mCorrectionToSplit);
+    }
+
+    return activity;
 }
 
 /**
@@ -677,10 +773,12 @@ async function loadActivityPage() {
         }
 
         // Fetch activity details and streams in parallel
-        const [activityData, streams] = await Promise.all([
+        const [activityDataRaw, streams] = await Promise.all([
             fetchActivityDetails(activityId, authPayload),
             fetchActivityStreams(activityId, authPayload)
         ]);
+
+        const activityData = maybeCorrectIndoorSwimForAlex(activityDataRaw);
 
         lastActivityData = activityData;
         lastStreamData = streams;

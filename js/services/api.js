@@ -124,6 +124,11 @@ export async function fetchAthleteData() {
     const cacheKey = 'strava_athlete_data';
     const cached = getFromCache(cacheKey, 'athlete');
     if (cached) {
+        console.log('[Athlete] cached profile', {
+            id: cached?.id,
+            name: `${cached?.firstname || ''} ${cached?.lastname || ''}`.trim(),
+            username: cached?.username || null,
+        });
         return cached;
     }
 
@@ -132,6 +137,12 @@ export async function fetchAthleteData() {
     });
     const result = await handleApiResponse(response);
     const athlete = result.athlete;
+
+    console.log('[Athlete] fetched profile', {
+        id: athlete?.id,
+        name: `${athlete?.firstname || ''} ${athlete?.lastname || ''}`.trim(),
+        username: athlete?.username || null,
+    });
 
     saveToCache(cacheKey, athlete);
     return athlete;
