@@ -63,6 +63,7 @@ export function renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterT
     if (!rides.length) return;
 
     renderSummaryCards(rides);
+    renderBikeTypeSummary(rides);
 
     renderBikeTypeChart(rides);
 
@@ -207,6 +208,66 @@ function createChart(canvasId, config) {
 // ------------------------
 // SUMMARY
 // ------------------------
+
+function renderBikeTypeSummary(rides) {
+    const el = document.getElementById("bike-type-summary");
+    if (!el) return;
+
+    const types = ["road", "mtb", "gravel", "indoor", "electric"];
+    const labels = { road: "Road", mtb: "MTB", gravel: "Gravel", indoor: "Indoor", electric: "Electric" };
+
+    function agg(arr) {
+        const count = arr.length;
+        if (!count) return null;
+        const totalDist = arr.reduce((s, a) => s + (a.distance || 0) / 1000, 0);
+        const totalSec = arr.reduce((s, a) => s + (a.moving_time || 0), 0);
+        const avgDist = totalDist / count;
+        const avgSpeed = arr.reduce((s, a) => {
+            const spd = (a.distance / 1000) / (a.moving_time / 3600);
+            return s + (isFinite(spd) ? spd : 0);
+        }, 0) / count;
+        const avgTime = totalSec / count;
+        const avgTimeH = Math.floor(avgTime / 3600);
+        const avgTimeM = Math.floor((avgTime % 3600) / 60);
+        const avgTimeStr = avgTimeH > 0
+            ? `${avgTimeH}h ${String(avgTimeM).padStart(2, '0')}m`
+            : `${avgTimeM}m`;
+        return { count, totalDist, avgDist, avgSpeed, avgTimeStr };
+    }
+
+    const rows = types.map(t => {
+        const arr = rides.filter(r => getBikeType(r) === t);
+        const a = agg(arr);
+        if (!a) return `<tr>
+            <td><span class="bike-type-badge bike-type-${t}">${labels[t]}</span></td>
+            <td>-</td><td>-</td><td>-</td><td>-</td>
+        </tr>`;
+        return `<tr>
+            <td><span class="bike-type-badge bike-type-${t}">${labels[t]}</span></td>
+            <td>${a.count}</td>
+            <td>${a.totalDist.toFixed(0)} km</td>
+            <td>${a.avgDist.toFixed(1)} km</td>
+            <td>${a.avgSpeed.toFixed(1)} km/h</td>
+            <td>${a.avgTimeStr}</td>
+        </tr>`;
+    }).join("");
+
+    el.innerHTML = `
+        <table class="compact-table">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Sessions</th>
+                    <th>Total dist</th>
+                    <th>Avg dist</th>
+                    <th>Avg speed</th>
+                    <th>Avg time</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>
+    `;
+}
 
 function renderSummaryCards(rides) {
 
@@ -632,6 +693,13 @@ function renderActivitiesTable(rides) {
                 ? `<a href="html/activity-router.html?id=${encodeURIComponent(a.id)}" target="_blank" rel="noopener noreferrer">${a.name}</a>`
                 : a.name;
 
+            const elapsedSec = a.elapsed_time || 0;
+            const elapsedH = Math.floor(elapsedSec / 3600);
+            const elapsedM = Math.floor((elapsedSec % 3600) / 60);
+            const elapsedStr = elapsedH > 0
+                ? `${elapsedH}h ${String(elapsedM).padStart(2, '0')}m`
+                : `${elapsedM}m`;
+
             return `
             <tr>
                 <td>${a.start_date_local.substring(0, 10)}</td>
@@ -642,6 +710,7 @@ function renderActivitiesTable(rides) {
                 <td data-value="${elevPerKm === '-' ? 0 : elevPerKm}">${elevPerKm}</td>
                 <td data-value="${speed.toFixed(1)}">${speed.toFixed(1)}</td>
                 <td data-value="${a.average_watts || 0}">${a.average_watts || "-"}</td>
+                <td data-value="${elapsedSec}">${elapsedStr}</td>
             </tr>
             `;
         })
@@ -662,6 +731,7 @@ function renderActivitiesTable(rides) {
                 <th data-sort="num">Elev/km</th>
                 <th data-sort="num">km/h</th>
                 <th data-sort="num">W</th>
+                <th data-sort="num">Elapsed</th>
             </tr>
 
         </thead>
