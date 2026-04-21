@@ -79,6 +79,46 @@ function buildWeeklyDistanceSeries(activities, distanceGetter) {
 
 let charts = {};
 
+// --- SORTABLE TABLE UTILITY ---
+function makeSortable(table) {
+    if (!table) return;
+    const headers = table.querySelectorAll('thead th[data-sort]');
+    headers.forEach(th => {
+        th.style.cursor = 'pointer';
+        th.style.userSelect = 'none';
+        th.addEventListener('click', () => {
+            const tbody = table.querySelector('tbody');
+            if (!tbody) return;
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const type = th.dataset.sort;
+            const currentDir = th.dataset.dir === 'asc' ? 'desc' : 'asc';
+            headers.forEach(h => { h.dataset.dir = ''; h.classList.remove('sort-asc', 'sort-desc'); });
+            th.dataset.dir = currentDir;
+            th.classList.add(currentDir === 'asc' ? 'sort-asc' : 'sort-desc');
+            const realIdx = Array.from(th.parentElement.children).indexOf(th);
+            rows.sort((a, b) => {
+                const cellA = a.children[realIdx];
+                const cellB = b.children[realIdx];
+                if (!cellA || !cellB) return 0;
+                let vA, vB;
+                if (type === 'num' || type === 'pace') {
+                    vA = parseFloat(cellA.dataset.value ?? cellA.textContent) || 0;
+                    vB = parseFloat(cellB.dataset.value ?? cellB.textContent) || 0;
+                } else if (type === 'date') {
+                    vA = new Date(cellA.textContent.trim()).getTime() || 0;
+                    vB = new Date(cellB.textContent.trim()).getTime() || 0;
+                } else {
+                    vA = cellA.textContent.trim().toLowerCase();
+                    vB = cellB.textContent.trim().toLowerCase();
+                    return currentDir === 'asc' ? vA.localeCompare(vB) : vB.localeCompare(vA);
+                }
+                return currentDir === 'asc' ? vA - vB : vB - vA;
+            });
+            rows.forEach(r => tbody.appendChild(r));
+        });
+    });
+}
+
 // --- UTILITY ---
 function createChart(canvasId, config) {
     const canvas = document.getElementById(canvasId);
@@ -1107,26 +1147,39 @@ function renderTopRuns(runs) {
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin: 2rem 0;">
             <div class="top-box" style="padding: 1.5rem; background: #f9f9f9; border-radius: 8px;">
                 <h3 style="margin-top: 0;">🏃 Longest Runs</h3>
-                <ol>
-                    ${topDistance.map(a => `<li>${activityLink(a)} – ${(a.distance / 1000).toFixed(1)} km</li>`).join("")}
-                </ol>
+                <table class="compact-table" id="run-top-distance-table">
+                <thead><tr><th>#</th><th>Run</th><th data-sort="num">km</th></tr></thead>
+                <tbody>
+                    ${topDistance.map((a, i) => `<tr><td>${i + 1}</td><td>${activityLink(a)}</td><td data-value="${a.distance / 1000}">${(a.distance / 1000).toFixed(1)} km</td></tr>`).join("")}
+                </tbody>
+                </table>
             </div>
 
             <div class="top-box" style="padding: 1.5rem; background: #f9f9f9; border-radius: 8px;">
                 <h3 style="margin-top: 0;">⛰️ Most Elevation</h3>
-                <ol>
-                    ${topElevation.map(a => `<li>${activityLink(a)} – ${a.total_elevation_gain} m</li>`).join("")}
-                </ol>
+                <table class="compact-table" id="run-top-elevation-table">
+                <thead><tr><th>#</th><th>Run</th><th data-sort="num">Elev (m)</th></tr></thead>
+                <tbody>
+                    ${topElevation.map((a, i) => `<tr><td>${i + 1}</td><td>${activityLink(a)}</td><td data-value="${a.total_elevation_gain}">${a.total_elevation_gain} m</td></tr>`).join("")}
+                </tbody>
+                </table>
             </div>
 
             <div class="top-box" style="padding: 1.5rem; background: #f9f9f9; border-radius: 8px;">
                 <h3 style="margin-top: 0;">⚡ Fastest Races</h3>
-                <ol>
-                    ${topFastest.map(a => `<li>${activityLink(a)} – ${formatPace(a.pace)}</li>`).join("")}
-                </ol>
+                <table class="compact-table" id="run-top-pace-table">
+                <thead><tr><th>#</th><th>Run</th><th data-sort="num">Pace</th></tr></thead>
+                <tbody>
+                    ${topFastest.map((a, i) => `<tr><td>${i + 1}</td><td>${activityLink(a)}</td><td data-value="${a.pace}">${formatPace(a.pace)}</td></tr>`).join("")}
+                </tbody>
+                </table>
             </div>
         </div>
     `;
+
+    makeSortable(document.getElementById('run-top-distance-table'));
+    makeSortable(document.getElementById('run-top-elevation-table'));
+    makeSortable(document.getElementById('run-top-pace-table'));
 }
 
 // --- ACTIVITIES TABLE ---
@@ -1146,6 +1199,7 @@ function renderActivitiesTable(runs) {
         .sort((a, b) => new Date(b.start_date) - new Date(a.start_date))
         .map(a => {
             const pace = formatPace(a.average_speed);
+            const paceVal = a.average_speed > 0 ? (1000 / a.average_speed) : 9999;
             const activityLink = a.id
                 ? `<a href="html/activity-router.html?id=${encodeURIComponent(a.id)}" target="_blank" rel="noopener noreferrer">${a.name}</a>`
                 : a.name;
@@ -1153,25 +1207,25 @@ function renderActivitiesTable(runs) {
             <tr>
                 <td>${a.start_date_local.substring(0, 10)}</td>
                 <td>${activityLink}</td>
-                <td>${(a.distance / 1000).toFixed(2)}</td>
-                <td>${a.total_elevation_gain || 0}</td>
-                <td>${pace}</td>
-                <td>${a.average_heartrate ? Math.round(a.average_heartrate) : "-"}</td>
+                <td data-value="${(a.distance / 1000).toFixed(2)}">${(a.distance / 1000).toFixed(2)}</td>
+                <td data-value="${a.total_elevation_gain || 0}">${a.total_elevation_gain || 0}</td>
+                <td data-value="${paceVal}">${pace}</td>
+                <td data-value="${a.average_heartrate || 0}">${a.average_heartrate ? Math.round(a.average_heartrate) : "-"}</td>
             </tr>
             `;
         })
         .join("");
 
     el.innerHTML = `
-        <table style="width: 100%; border-collapse: collapse; margin-top: 2rem;">
+        <table id="run-all-table" style="width: 100%; border-collapse: collapse; margin-top: 2rem;">
             <thead>
                 <tr style="background-color: #f0f0f0;">
-                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Date</th>
+                    <th data-sort="date" style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Date</th>
                     <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Activity</th>
-                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Distance (km)</th>
-                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Elevation (m)</th>
-                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Pace /km</th>
-                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Avg HR</th>
+                    <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Distance (km)</th>
+                    <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Elevation (m)</th>
+                    <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Pace /km</th>
+                    <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Avg HR</th>
                 </tr>
             </thead>
             <tbody>
@@ -1179,4 +1233,6 @@ function renderActivitiesTable(runs) {
             </tbody>
         </table>
     `;
+
+    makeSortable(document.getElementById('run-all-table'));
 }

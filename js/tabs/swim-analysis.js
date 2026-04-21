@@ -207,6 +207,50 @@ function buildWeeklyDistanceSeries(activities, distanceGetter) {
 }
 
 // ------------------------
+// SORTABLE TABLE UTILITY
+// ------------------------
+
+function makeSortable(table) {
+    if (!table) return;
+    const headers = table.querySelectorAll('thead th[data-sort]');
+    headers.forEach((th, colIdx) => {
+        th.style.cursor = 'pointer';
+        th.style.userSelect = 'none';
+        th.addEventListener('click', () => {
+            const tbody = table.querySelector('tbody');
+            if (!tbody) return;
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const type = th.dataset.sort; // num, text, pace, date
+            const currentDir = th.dataset.dir === 'asc' ? 'desc' : 'asc';
+            // Reset all headers
+            headers.forEach(h => { h.dataset.dir = ''; h.classList.remove('sort-asc', 'sort-desc'); });
+            th.dataset.dir = currentDir;
+            th.classList.add(currentDir === 'asc' ? 'sort-asc' : 'sort-desc');
+            const realIdx = Array.from(th.parentElement.children).indexOf(th);
+            rows.sort((a, b) => {
+                const cellA = a.children[realIdx];
+                const cellB = b.children[realIdx];
+                if (!cellA || !cellB) return 0;
+                let vA, vB;
+                if (type === 'num' || type === 'pace') {
+                    vA = parseFloat(cellA.dataset.value ?? cellA.textContent) || 0;
+                    vB = parseFloat(cellB.dataset.value ?? cellB.textContent) || 0;
+                } else if (type === 'date') {
+                    vA = new Date(cellA.textContent.trim()).getTime() || 0;
+                    vB = new Date(cellB.textContent.trim()).getTime() || 0;
+                } else {
+                    vA = cellA.textContent.trim().toLowerCase();
+                    vB = cellB.textContent.trim().toLowerCase();
+                    return currentDir === 'asc' ? vA.localeCompare(vB) : vB.localeCompare(vA);
+                }
+                return currentDir === 'asc' ? vA - vB : vB - vA;
+            });
+            rows.forEach(r => tbody.appendChild(r));
+        });
+    });
+}
+
+// ------------------------
 // CHART UTILITY
 // ------------------------
 
@@ -534,12 +578,15 @@ function renderTopSwims(swims) {
     el.innerHTML = `
 <div class="top-box">
 <h3>Longest Swims</h3>
-<table class="compact-table">
+<table class="compact-table" id="swim-top-distance-table">
 <thead>
 <tr>
 <th>#</th>
 <th>Swim</th>
-<th>Distance</th>
+<th data-sort="num">Distance</th>
+<th data-sort="pace">Pace</th>
+<th data-sort="text">Type</th>
+<th data-sort="text">Pool</th>
 </tr>
 </thead>
 <tbody>
@@ -547,7 +594,10 @@ ${topDistance.map((s, i) => `
 <tr>
 <td>${i + 1}</td>
 <td>${activityLink(s)}</td>
-<td>${s.distance_km.toFixed(2)} km</td>
+<td data-value="${s.distance_km}">${s.distance_km.toFixed(2)} km</td>
+<td data-value="${s.pace_min100 || 9999}">${formatPace(s.pace_min100)}</td>
+<td>${s.swim_type}</td>
+<td>${poolLengthInt(s.pool_length)}</td>
 </tr>`).join("")}
 </tbody>
 </table>
@@ -555,12 +605,15 @@ ${topDistance.map((s, i) => `
 
 <div class="top-box">
 <h3>Best Pace</h3>
-<table class="compact-table">
+<table class="compact-table" id="swim-top-pace-table">
 <thead>
 <tr>
 <th>#</th>
 <th>Swim</th>
-<th>Pace</th>
+<th data-sort="num">Distance</th>
+<th data-sort="pace">Pace</th>
+<th data-sort="text">Type</th>
+<th data-sort="text">Pool</th>
 </tr>
 </thead>
 <tbody>
@@ -568,12 +621,18 @@ ${topPace.map((s, i) => `
 <tr>
 <td>${i + 1}</td>
 <td>${activityLink(s)}</td>
-<td>${formatPace(s.pace_min100)}</td>
+<td data-value="${s.distance_km}">${s.distance_km.toFixed(2)} km</td>
+<td data-value="${s.pace_min100 || 9999}">${formatPace(s.pace_min100)}</td>
+<td>${s.swim_type}</td>
+<td>${poolLengthInt(s.pool_length)}</td>
 </tr>`).join("")}
 </tbody>
 </table>
 </div>
 `;
+
+    makeSortable(document.getElementById('swim-top-distance-table'));
+    makeSortable(document.getElementById('swim-top-pace-table'));
 }
 
 // ------------------------
@@ -595,37 +654,39 @@ function renderSwimsTable(swims) {
                 <tr>
                     <td>${s.start_date_local.substring(0, 10)}</td>
                     <td>${activityLink}</td>
-                    <td>${s.distance_km.toFixed(2)}</td>
-                    <td>${s.pace_min100 ? formatPace(s.pace_min100) : "-"}</td>
-                    <td>${s.average_heartrate ? s.average_heartrate.toFixed(0) : "-"}</td>
+                    <td data-value="${s.distance_km}">${s.distance_km.toFixed(2)}</td>
+                    <td data-value="${s.pace_min100 || 9999}">${s.pace_min100 ? formatPace(s.pace_min100) : "-"}</td>
+                    <td data-value="${s.average_heartrate || 0}">${s.average_heartrate ? s.average_heartrate.toFixed(0) : "-"}</td>
                     <td>
                         <span class="swim-badge ${s.swim_type}">
                         ${s.swim_type}
                         </span>
                         </td>
-                    <td>${(s.moving_ratio * 100).toFixed(2)}%</td>
+                    <td data-value="${(s.moving_ratio * 100).toFixed(2)}">${(s.moving_ratio * 100).toFixed(2)}%</td>
                     <td>${poolLengthInt(s.pool_length)}</td>
                 </tr>
             `;
         }).join("");
 
     el.innerHTML = `
-        <table>
+        <table id="swim-all-table">
             <thead>
                 <tr>
-                    <th>Date</th>
+                    <th data-sort="date">Date</th>
                     <th>Activity</th>
-                    <th>km</th>
-                    <th>Pace /100m</th>
-                    <th>Avg HR</th>
-                    <th>Type</th>
-                    <th>Moving %</th>
-                    <th>Pool</th>
+                    <th data-sort="num">km</th>
+                    <th data-sort="pace">Pace /100m</th>
+                    <th data-sort="num">Avg HR</th>
+                    <th data-sort="text">Type</th>
+                    <th data-sort="num">Moving %</th>
+                    <th data-sort="text">Pool</th>
                 </tr>
             </thead>
             <tbody>${rows}</tbody>
         </table>
     `;
+
+    makeSortable(document.getElementById('swim-all-table'));
 }
 
 

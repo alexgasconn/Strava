@@ -1152,6 +1152,36 @@ main {
     font-size: .8em;
 }
 
+/* Sortable table headers */
+th[data-sort] {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    position: relative;
+}
+
+th[data-sort]:hover {
+    background: rgba(0, 0, 0, .05);
+}
+
+th[data-sort]::after {
+    content: ' ⇅';
+    opacity: .3;
+    font-size: .75em;
+}
+
+th[data-sort].sort-asc::after {
+    content: ' ▲';
+    opacity: .8;
+    font-size: .7em;
+}
+
+th[data-sort].sort-desc::after {
+    content: ' ▼';
+    opacity: .8;
+    font-size: .7em;
+}
+
 
 /* --- GEAR SECTION STYLES (legacy - overridden by modern styles below) --- */
 
