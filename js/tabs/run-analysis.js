@@ -138,12 +138,13 @@ export function renderConsistencyChart(runs, dateFilterFrom = null, dateFilterTo
     const thresholds = kmValues.length >= 6
         ? [
             kmValues[Math.floor(0.1 * kmValues.length)],
-            kmValues[Math.floor(0.3 * kmValues.length)],
-            kmValues[Math.floor(0.5 * kmValues.length)],
-            kmValues[Math.floor(0.7 * kmValues.length)],
+            kmValues[Math.floor(0.25 * kmValues.length)],
+            kmValues[Math.floor(0.45 * kmValues.length)],
+            kmValues[Math.floor(0.6 * kmValues.length)],
+            kmValues[Math.floor(0.75 * kmValues.length)],
             kmValues[Math.floor(0.9 * kmValues.length)]
         ]
-        : [5, 10, 15, 21, 30]; // km
+        : [3, 5, 8, 12, 18, 30]; // km
 
     const cal = new CalHeatmap();
     const today = new Date();
@@ -228,12 +229,13 @@ export function renderConsistencyChart(runs, dateFilterFrom = null, dateFilterTo
             color: {
                 type: 'threshold',
                 range: [
-                    '#fff7ed',  // descanso (naranja muy claro)
-                    '#ffedd5',
+                    '#fed7aa',  // naranja claro visible
                     '#fdba74',
                     '#fb923c',
                     '#f97316',
-                    '#c2410c'
+                    '#ea580c',
+                    '#c2410c',
+                    '#7c2d12'
                 ],
                 domain: thresholds
             }
