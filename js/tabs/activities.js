@@ -71,7 +71,10 @@ const COLUMNS = [
         format: (v, a) => {
             if (!a.start_date_local) return '–';
             const d = new Date(a.start_date_local);
-            return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            return d.toLocaleTimeString('en-GB', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
         }
     },
     {
