@@ -106,10 +106,6 @@ const COLUMNS = [
         format: (v, a) => fmtKcal(v, a)
     },
     {
-        key: 'suffer_score', label: 'Suffer',
-        format: v => typeof v === 'number' && v > 0 ? Math.round(v) : '–'
-    },
-    {
         key: 'tss', label: 'TSS',
         format: v => typeof v === 'number' ? Math.round(v) : '–'
     },
