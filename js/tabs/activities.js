@@ -41,8 +41,11 @@ function fmtKcal(v, act) {
 function sortVal(act, col) {
     if (col === 'start_hour') {
         if (!act.start_date_local) return -Infinity;
-        const d = new Date(act.start_date_local);
-        return d.getHours() * 60 + d.getMinutes();
+        const time = act.start_date_local?.split('T')[1];
+        if (!time) return -Infinity;
+
+        const [h, m] = time.split(':').map(Number);
+        return h * 60 + m;
     }
     if (col === 'type') return getType(act);
     if (col === 'pace_speed') {
@@ -70,12 +73,9 @@ const COLUMNS = [
         key: 'start_hour', label: 'Hour',
         format: (v, a) => {
             if (!a.start_date_local) return '–';
-            const d = new Date(a.start_date_local);
-            return d.toLocaleTimeString('en-GB', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-            });
-        }
+            const time = a.start_date_local?.split('T')[1]?.slice(0, 5);
+            return time || '–';
+                    }
     },
     {
         key: 'type', label: 'Sport',
