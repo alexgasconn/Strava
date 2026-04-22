@@ -39,16 +39,21 @@ function fmtKcal(v, act) {
 
 // ─── Sort value extractor ─────────────────────────────────────────────────────
 function sortVal(act, col) {
+    if (col === 'start_hour') {
+        if (!act.start_date_local) return -Infinity;
+        const d = new Date(act.start_date_local);
+        return d.getHours() * 60 + d.getMinutes();
+    }
     if (col === 'type') return getType(act);
     if (col === 'pace_speed') {
         if (!act.distance || !act.moving_time) return Infinity;
         const type = getType(act);
-        if (SWIM_TYPES.has(type)) return (act.moving_time / act.distance) * 100; // sec/100m (lower = faster)
-        if (RUN_TYPES.has(type)) return act.moving_time / (act.distance / 1000); // sec/km
-        return -((act.distance / act.moving_time) * 3.6); // bike: negate so desc = fastest first
+        if (SWIM_TYPES.has(type)) return (act.moving_time / act.distance) * 100;
+        if (RUN_TYPES.has(type)) return act.moving_time / (act.distance / 1000);
+        return -((act.distance / act.moving_time) * 3.6);
     }
     const v = act[col];
-    return v === undefined || v === null ? (col === 'start_date_local' ? '' : -Infinity) : v;
+    return v === undefined || v === null ? -Infinity : v;
 }
 
 // ─── Column definitions ───────────────────────────────────────────────────────
@@ -58,7 +63,15 @@ const COLUMNS = [
         format: (v) => {
             if (!v) return '–';
             const d = new Date(v);
-            return `${utils.formatDate(d)}<br><small style="opacity:.55">${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small>`;
+            return utils.formatDate(d);
+        }
+    },
+    {
+        key: 'start_hour', label: 'Hour',
+        format: (v, a) => {
+            if (!a.start_date_local) return '–';
+            const d = new Date(a.start_date_local);
+            return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
     },
     {
@@ -100,10 +113,6 @@ const COLUMNS = [
     {
         key: 'average_watts', label: 'Power',
         format: v => typeof v === 'number' && v > 0 ? `${Math.round(v)}<small> W</small>` : '–'
-    },
-    {
-        key: 'kilojoules', label: 'Energy',
-        format: (v, a) => fmtKcal(v, a)
     },
     {
         key: 'tss', label: 'TSS',
@@ -299,7 +308,7 @@ export function renderActivitiesTab(allActivities) {
             const va = sortVal(a, sortCol);
             const vb = sortVal(b, sortCol);
             if (sortCol === 'start_date_local')
-                return (Date.parse(va || 0) - Date.parse(vb || 0)) * factor;
+                return ((new Date(a.start_date_local || 0)) - (new Date(b.start_date_local || 0))) * factor;
             if (typeof va === 'number' && typeof vb === 'number')
                 return (va - vb) * factor;
             return String(va || '').localeCompare(String(vb || '')) * factor;
