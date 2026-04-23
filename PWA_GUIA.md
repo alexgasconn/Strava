@@ -1,128 +1,429 @@
-# 📱 Guía PWA - Strava Dashboard Mobile
+# Complete guide to tabs, stats, charts, filters, and views
 
-## ✅ Ya implementado
+This document describes, tab by tab, everything currently shown by the application: filters, statistics, visualizations, and user actions.
 
-### 1. **Manifest.json** (`manifest.json`)
+## 0) Shared app foundation
 
-- Define el nombre de la app: "Strava Dashboard"
-- Colors: Tema naranja (#FC5200)
-- Icono de deporte (montaña + persona corriendo)
-- Permite instalar en Android/iOS
+### Authentication
 
-### 2. **Icono SVG** (`icon-sport.svg`)
+- Login with Strava OAuth 2.0.
+- Access token and refresh token stored in localStorage.
+- Automatic token refresh in backend.
 
-- Icono vectorial de deporte
-- Se adapta a cualquier tamaño
-- Compatible con Android
+### Data sources
 
-### 3. **Service Worker** (`sw.js`)
+- Activities: paginated list from Strava.
+- Athlete profile.
+- Training zones.
+- Gear details.
+- Activity streams for detailed views.
 
-- Permite usar la app **sin conexión**
-- Cachea archivos automáticamente
-- Network-first strategy (intenta red, luego cache)
+### Local cache
 
-### 4. **index.html actualizado**
+- Athlete, zones, gear: longer TTL (24h).
+- Activities: shorter TTL (1h).
 
-- Links a manifest.json
-- Meta tags para PWA
-- Links a iconos
+## 1) Dashboard
 
----
+### Filters
 
-## 🔧 Cómo probar en Android
+- Quick time range (week, 7d, 30d, 3m, 6m, year, 365d).
+- From/to date filter.
+- Acute load band mode selector (conservative/aggressive).
 
-### **Opción 1: Teléfono real**
+### Stats and KPIs
 
-1. Abre Chrome/Android browser
-2. Navega a tu site: `https://tudominio.com`
-3. Arriba a la derecha → **"Instalar aplicación"** o **"Agregar a pantalla de inicio"**
-4. Aparecerá el icono en tu pantalla de inicio
-5. ¡Listo! Toca el icono para abrir como app
+- Total number of activities.
+- Total distance.
+- Total moving time.
+- Longest activity.
+- Sport mix.
+- CTL (fitness), ATL (fatigue), TSB (freshness), injury risk, 7-day rolling load.
+- Annual/monthly goal progress (distance, hours, or activity count).
 
-### **Opción 2: Testing local (Vercel)**
+### Charts and views
 
-Si está en Vercel:
+- Acute Load Chart (load lines and productive band).
+- Consistency heatmap (calendar).
+- Load time series (CTL/ATL/TSB/risk).
+- Goal progress chart.
 
-1. Deploy la rama actual (ya tiene los archivos)
-2. Copia el link de Vercel
-3. Abre en Chrome Mobile
-4. Busca el botón de instalación
+### Actions
 
-### **Opción 3: DevTools en PC**
+- Apply filters.
+- Change range presets.
+- Change acute load mode.
+- Edit goals.
 
-1. Abre Chrome DevTools (F12)
-2. Ve a **Application** → **Manifest**
-3. Verifica que se cargó correctamente
-4. **Lighthouse** tab → Run audit → busca PWA score
+## 2) Run
 
----
+### Filters
 
-## 📊 Qué hace funcionar offline
+- From/to date.
+- Shoe filter (gear).
+- Apply and reset filters.
 
-- ✅ Página principal (index.html)
-- ✅ CSS
-- ✅ Archivos estáticos (icons, assets)
-- ❌ Datos de Strava (necesita internet - es normal)
-- ❌ Mapas (necesita conexión)
+### Stats and KPIs
 
----
+- Total runs.
+- Total distance.
+- Total time.
+- Total elevation.
+- Average run distance.
+- Average pace.
+- Average and max HR.
+- Min/max/average speed.
 
-## 🎨 Siguiente: Mejoras Mobile (opcional)
+### Charts and views
 
-Si quieres mejorar más la experience en móvil:
+- Activity-type bars (trail, long run, race, intensity).
+- Monthly distance (with session frequency).
+- Pace vs distance scatter.
+- Distance histogram.
+- Elevation histogram.
+- Distance vs elevation scatter.
+- Accumulated distance.
+- Weekly rolling-mean trend.
+- Consistency heatmap.
+- Runs heatmap map.
+- Top runs.
+- Monthly shoe-usage Gantt.
+- Sortable activities table.
 
-1. **Bottom navigation** (tabs en la bottom, no arriba)
-2. **Lazy loading** de gráficos pesados
-3. **Touch optimizations** (botones más grandes)
-4. **Dark mode** para móvil
+### Actions
 
----
+- Sort columns.
+- Open activity detail.
+- Apply/reset date and gear filters.
 
-## 🐛 Debugging
+## 3) Bike
 
-```javascript
-// EN LA CONSOLA DEL NAVEGADOR (Chrome DevTools):
+### Filters
 
-// Ver si está registrado el SW:
-navigator.serviceWorker.getRegistrations()
-  .then(registrations => console.log('SWs registrados:', registrations));
+- From/to date.
+- Bike filter (gear).
+- Apply and reset filters.
 
-// Limpiar todo el cache:
-caches.keys().then(names => 
-  names.forEach(name => caches.delete(name))
-);
+### Stats and KPIs
 
-// Ver archivos en cache:
-caches.keys().then(names => 
-  Promise.all(names.map(name => 
-    caches.open(name).then(cache => 
-      cache.keys().then(requests => 
-        console.log(`Cache ${name}:`, requests)
-      )
-    )
-  ))
-);
-```
+- Total rides.
+- Total distance.
+- Total time.
+- Total elevation.
+- Average distance.
+- Average speed.
+- Average cadence.
+- Average power.
+- Average HR.
+- Summary by bike type: road, mtb, gravel, indoor, electric.
 
----
+### Charts and views
 
-## 📝 Archivos nuevos creados
+- Bike-type pie chart.
+- Distance histogram.
+- Elevation histogram.
+- Speed vs distance scatter.
+- Distance vs elevation scatter.
+- Elevation ratio chart.
+- Power vs speed scatter.
+- Accumulated distance.
+- Weekly trend.
+- Consistency heatmap.
+- Top activities.
+- Activities table.
 
-```
-/
-├── manifest.json          🆕 Metadatos de la PWA
-├── icon-sport.svg          🆕 Icono de la app
-├── sw.js                   🆕 Service Worker
-└── index.html              ✏️ ACTUALIZADO (links PWA)
-    └── js/app/main.js      ✏️ ACTUALIZADO (registro SW)
-```
+### Actions
 
----
+- Filter by date range and bike.
+- Sort table.
 
-## Pruébalo ahora
+## 4) Swim
 
-1. Haz `npm run deploy` (o tu comando de deploy)
-2. La URL debe estar en **HTTPS** (obligatorio para PWA)
-3. Abre en Android y busca "Instalar" o "Agregar a pantalla"
+### Filters
 
-¿Necesitas ayuda con algo específico? 🚀
+- From/to date.
+- Apply and reset.
+
+### Stats and KPIs
+
+- Total swims.
+- Total distance.
+- Total time.
+- Average session distance.
+- Average pace (sec/100m).
+- Average HR.
+- Pool vs open-water comparison (count, distance, average time).
+- Pool length estimation (when available).
+
+### Charts and views
+
+- Distance histogram.
+- Pace histogram.
+- Pace vs distance scatter (pool/open water).
+- Swims table (date, name, distance, time, pace/100m, type, pool length).
+
+### Actions
+
+- Filter by date.
+
+## 5) Athlete
+
+### Filters
+
+- Sport filter.
+- Data type selector (time, count, distance).
+- From/to date.
+
+### Stats and KPIs
+
+- Athlete profile (name, location, followers, friends).
+- All-time totals (activities, distance, time, elevation).
+- Records: longest run, fastest run, most elevation.
+- Time preferences: favorite day and favorite hour.
+- Average distance and average pace.
+- Solo vs group workouts.
+- Training zones (HR and power).
+
+### Charts and views
+
+- Start-time histogram.
+- Duration histogram.
+- Yearly comparison (bars).
+- Weekly and monthly mix.
+- Time matrices (hour x day, year x month, month x day, etc.).
+- Interactive matrix.
+
+### Actions
+
+- Change sport/data type and time range.
+
+## 6) Predictor
+
+### Filters/inputs
+
+- Base distance/result.
+- Model-weight sliders.
+- Conservative/moderate/aggressive profile selector.
+
+### Stats and calculations
+
+- Personal bests for standard distances.
+- Historical top 3 by distance.
+- Riegel model prediction.
+- VDOT model prediction.
+- Final weighted prediction.
+
+### Charts and views
+
+- PB table.
+- Prediction table (time, pace, margin).
+
+### Actions
+
+- Adjust model weights and recalculate predictions.
+
+## 7) Gear
+
+### Filters
+
+- Sort by last use, distance, health, or name.
+
+### Stats and KPIs
+
+- Total distance by gear.
+- Number of uses.
+- First and last use dates.
+- Average distance per use.
+- Average pace by gear.
+- Health percentage (usage vs expected lifetime).
+
+### Charts and views
+
+- Gear list with metrics.
+- Distance-by-gear chart.
+- Monthly gear-usage Gantt.
+- Gear detail view (model, brand, price, durability).
+
+### Actions
+
+- Open detail.
+- Edit custom fields (price, expected durability).
+- Delete custom configuration.
+
+## 8) Activities
+
+### Filters
+
+- Sport (multi-select).
+- Name text filter.
+- Date range.
+- Distance range.
+- Duration range.
+- HR range.
+- TSS range.
+
+### Stats and views
+
+- Universal table with columns:
+  - Date, hour, sport, name.
+  - Distance, duration, pace/speed.
+  - Average/max HR.
+  - Elevation, cadence, power, TSS.
+
+### Actions
+
+- Sort by any column.
+- Open activity detail from activity name.
+
+## 9) Calendar
+
+### Filters
+
+- Year selector.
+
+### Stats and KPIs
+
+- Current and longest day streak.
+- Current and longest week streak.
+- Activities in period.
+- Total distance.
+- Total hours.
+- Active days.
+- Total TSS.
+
+### Charts and views
+
+- Annual calendar heatmap.
+- Activities list grouped by date.
+
+### Actions
+
+- Navigate by year.
+- Click a day to view details.
+
+## 10) Weather
+
+### Filters
+
+- Histogram variable selector (temperature, rain, wind, humidity, clouds, pressure).
+
+### Stats and KPIs
+
+- Average temperature.
+- Average wind.
+- Average humidity.
+- Total rain.
+- Most common weather condition.
+- Most common wind direction.
+- Average pressure.
+- Estimated environmental difficulty.
+
+### Charts and views
+
+- Monthly multi-variable overview.
+- Weather conditions pie chart.
+- Temperature vs pace scatter.
+- Histogram of selected variable.
+- Weather-per-activity table.
+
+### Actions
+
+- Change histogram variable.
+
+## 11) Map
+
+### Filters
+
+- Sport.
+- Visualization mode (heat or routes).
+- Map tiles (OSM, Carto, etc.).
+- From/to date.
+- Heatmap intensity/radius/blur.
+- Color-by-sport toggle.
+
+### Stats and views
+
+- Global map with two modes:
+  - Density heatmap.
+  - Route polylines.
+- Popups with activity names.
+
+### Actions
+
+- Change map layers and visualization style.
+- Tune heatmap parameters.
+
+## 12) Report (Wrapped)
+
+### Filters
+
+- Year selector.
+
+### Stats and KPIs
+
+- Distance, time, elevation, activities, active days.
+- Longest activity, average distance, most active month.
+- Year-over-year changes (percent).
+- Current and longest streaks.
+- Sport highlights.
+
+### Charts and views
+
+- Monthly volume.
+- Sport distribution pie chart.
+- Year comparison.
+- Top weeks.
+- Monthly heatmap.
+
+### Actions
+
+- Change report year.
+- Export/print summary.
+
+## 13) AI Coach
+
+### Inputs
+
+- User-provided Gemini API key.
+- Chat prompt.
+
+### Context used by the assistant
+
+- Global training summary.
+- Sport breakdown.
+- PBs.
+- Gear summary.
+- Recent activities.
+- Recent monthly volume.
+
+### Views
+
+- Persistent chat history.
+- User/assistant messages.
+
+### Actions
+
+- Send prompt.
+- Clear history.
+
+## Cross-app settings
+
+Global settings panel with:
+
+- Metric/imperial units.
+- Age.
+- Max HR.
+
+These preferences affect unit conversion and HR-dependent calculations.
+
+## Exports
+
+- Global CSV export from header.
+- PDF print through browser.
+
+## Quick guide
+
+If you want training control and consistency, use Dashboard and Calendar.
+If you want deep sport-specific analysis, use Run/Bike/Swim.
+If you want planning support, use Predictor and AI Coach.
+If you want year-end retrospective, use Report.

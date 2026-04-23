@@ -1,258 +1,129 @@
-# Strava Running Analytics Dashboard
+# Strava Dashboard
 
-A web app built to answer the questions that Strava alone doesn’t solve: *Am I improving? How consistent is my training? What shape am I in? What races could I run?* This dashboard connects to your Strava account and transforms raw GPS activities into clear, interactive metrics.
+Web app to analyze your Strava activities with a focus on training, performance, and consistency. The app connects to Strava via OAuth, downloads activities, computes derived metrics (for example TSS, CTL, ATL, TSB), and displays interactive panels by sport and goal.
 
-**Demo:** [https://stravastats.vercel.app/](https://stravastats.vercel.app/)
+Demo: <https://stravastats.vercel.app/>
 
----
+## What the app does
 
-## Overview
+- Connects to your Strava account (OAuth 2.0).
+- Downloads paginated activities and applies local cache for better performance.
+- Computes global and sport-specific statistics.
+- Generates visualizations (bar, line, scatter, histograms, heatmaps, route map).
+- Includes gear analysis (shoes/bikes), annual calendar, annual report, and AI assistant.
 
-The app pulls your Strava running data and presents it through intuitive charts, tables, and analysis modules. You can filter by year or custom dates, explore long‑term patterns, inspect individual activities in depth, and access planning tools for your next races.
+## Available tabs and what they show
 
-Everything is designed around practical running insights — not vanity metrics.
+- Dashboard: load, consistency, goals, global summary.
+- Run: running analysis with date and gear filters.
+- Bike: cycling analysis with bike-type segmentation.
+- Swim: swim analysis (pool and open water).
+- Athlete: profile, records, zones, and time patterns.
+- Predictor: PBs and distance predictions.
+- Gear: equipment health and usage.
+- Activities: universal table with advanced filters.
+- Calendar: annual heatmap, streaks, and period summary.
+- Weather: weather context and relationship with performance.
+- Map: global heatmap and route rendering.
+- Report: annual/wrapped summary and year-over-year comparisons.
+- AI Coach: chat with context from your data.
 
----
+Detailed documentation of stats, charts, filters, and views for each tab is in PWA_GUIA.md.
 
-## Dashboard
+## Architecture
 
-### Period Filters
+- Frontend: HTML + modular JavaScript.
+- Backend API: Vercel Functions in api/.
+- Visualization: Chart.js, Cal-Heatmap, Leaflet, Leaflet.heat.
+- Local persistence: localStorage for tokens, filters, cache, and preferences.
 
-Choose a specific year or enter a custom date range. Training patterns vary through the season, so filtering helps you compare the right blocks: base phase, peak, taper, or recovery.
+Main structure:
 
-### KPI Tiles
+- index.html: main layout and tab containers.
+- js/app/main.js: bootstrap, global state, tab routing.
+- js/tabs/: rendering logic for each tab.
+- js/services/api.js: API calls and cache.
+- js/shared/: utilities and preprocessing.
+- api/: serverless Strava endpoints.
 
-For the selected period:
+## Authentication and data flow
 
-* **Activities**
-* **Total Distance**
-* **Moving Time**
-* **Elevation Gain**
+1. Login from frontend using Strava OAuth.
+2. Strava returns a code to the redirect URI.
+3. Frontend sends code to /api/strava-auth.
+4. Backend exchanges code for access_token and refresh_token.
+5. Tokens are stored in localStorage.
+6. The app consumes /api/strava-activities and auxiliary endpoints.
+7. Activities are preprocessed and tabs are rendered.
 
-These tiles give a quick volume and consistency snapshot.
+## API endpoints (project-internal)
 
-### Consistency Heatmap
+- POST /api/strava-auth: OAuth exchange.
+- GET /api/strava-activities: paginated activities.
+- GET /api/strava-athlete: athlete profile.
+- GET /api/strava-zones: training zones.
+- GET /api/strava-gear?id=<gearId>: gear detail.
+- GET /api/strava-streams?id=<activityId>&type=<streamType>: activity streams.
 
-A calendar-style heatmap (similar to GitHub contributions) showing daily running frequency and duration. It highlights streaks, gaps, slumps, and high‑density periods.
+## Configuration
 
-### Monthly Distance & Frequency
+### Requirements
 
-Two bars per month:
+- Node.js 18+
+- Strava account and registered app in Strava Developers
 
-* Total running distance
-* Number of runs
+### Environment variables (backend)
 
-Great for spotting whether volume came from many short runs or a few long ones.
+Define these variables in your environment (for example in Vercel):
 
-### Pace vs. Distance Scatter Plot
+- STRAVA_CLIENT_ID
+- STRAVA_CLIENT_SECRET
 
-Each run becomes a point (distance vs. average pace). Outliers and breakthroughs stand out clearly, helping you track improving fitness or flag fatigue.
+Optionally, you can keep client ID in the frontend if the current flow requires it, but the recommendation is to centralize sensitive configuration in the backend.
 
-### Gear Usage
+## Local development
 
-Mileage per shoe across months plus total accumulated distance. Useful for monitoring wear, experimenting with footwear, and tracking cost per kilometer.
-
-### Training Load (CTL / ATL / TSB)
-
-* **CTL:** long‑term fitness
-* **ATL:** short‑term fatigue
-* **TSB:** readiness
-
-These metrics help you avoid overtraining and time your peak for a race.
-
-### Run Start Heatmap
-
-A geographical density map showing where your runs begin. Reveals favorite routes, travel miles, and training habits.
-
-### Elevation Analysis
-
-* **Elevation Histogram:** frequency of elevation profiles.
-* **Distance vs. Elevation Scatter:** see whether your runs are flat, rolling, or hilly.
-
----
-
-## Progress & Fitness
-
-### Accumulated Distance
-
-A running total of your yearly mileage. Steeper slope = higher consistency.
-
-### Rolling Mean Distance
-
-Average distance of your last 10 runs. Smooths random fluctuations to show long‑term trends in training volume.
-
-### VO₂ Max Trend (Monthly)
-
-Estimated aerobic capacity shown month‑by‑month. Highlights improvements, plateaus, or dips due to rest, illness, or tough blocks.
-
----
-
-## Personal Bests
-
-PBs for standard distances:
-
-* Mile
-* 5K
-* 10K
-* Half Marathon
-* Marathon
-
-Each entry shows pace, date, and a button to open the original run. A **Top 3** view adds context to see if a PB was a one‑off performance or part of a rising trend.
-
-Empty entries help you spot distances you’ve never raced.
-
----
-
-## Races
-
-A compact table listing every race you’ve run:
-
-* Date
-* Name
-* Distance
-* Time
-* Pace
-* Details button
-
-Useful for tracking long‑term race performance and trends across distances.
-
----
-
-## Planner & Tools
-
-### Race Time Predictor
-
-Uses three models:
-
-* Riegel formula
-* A machine‑learning fit based on your history
-* Your actual PBs as anchors
-
-You can mix the models with sliders to produce conservative or aggressive predictions.
-
-### VDOT Calculator
-
-Based on Jack Daniels’ system. Enter a recent race result to get:
-
-* VDOT score
-* Easy, marathon, threshold, interval, and repetition paces
-
-This helps you plan workouts that match your fitness.
-
----
-
-## Deep-Dive Activity View
-
-### Run Type Classification
-
-An algorithm labels each run as:
-
-* Recovery
-* Long
-* Tempo
-* Intervals
-* Hills
-* Race
-
-It uses pace variation, HR, elevation, and cadence — more reliable than manual Strava tags.
-
-### Three-Column Summary
-
-* **Left:** general details (route, weather, gear)
-* **Center:** performance metrics (pace CV, HR CV, elevation, cost/km)
-* **Right:** advanced metrics (normalized pace, efficiency, form index)
-
-### Interactive Route Map
-
-Zoomable map with terrain layers and elevation overlay.
-
-### Splits
-
-Bar charts of pace and heart rate per kilometer. Great for checking pacing strategy or fatigue.
-
-### Stream Plots
-
-Continuous charts of pace, HR, cadence, and altitude. Useful for spotting surges, form breakdown, and effort patterns.
-
-### Best Efforts Within the Run
-
-Your fastest 1K, 1 mile, 5K, 10K, HM, etc., detected inside the activity.
-
-### Segment Analysis
-
-List of all Strava segments from the route with ranks, PRs, and improvements.
-
-### Laps Table
-
-For each kilometer:
-
-* Lap time
-* Pace
-* Elevation gain
-* Avg HR
-
-Helps identify fatigue points and pacing strategy.
-
----
-
-## Try the App
-
-Live demo: **[https://stravastats.vercel.app/](https://stravastats.vercel.app/)**
-
-GitHub repo: **[https://github.com/alexgasconn/strava-stats](https://github.com/alexgasconn/strava-stats)**
-
----
-
-## Performance Monitoring with Vercel Speed Insights
-
-To monitor and optimize dashboard performance, the app integrates **Vercel Speed Insights** for real-time performance metrics.
-
-### Get Started
-
-To start collecting performance metrics, follow these steps:
-
-#### 1. Install our package
-
-Start by installing `@vercel/speed-insights` in your existing project:
+1. Install dependencies:
 
 ```bash
-npm i @vercel/speed-insights
+npm install
 ```
 
-#### 2. Use injectSpeedInsights()
+1. Run locally:
 
-Import and call the `injectSpeedInsights()` function once on the client side:
-
-```javascript
-import { injectSpeedInsights } from '@vercel/speed-insights';
-
-injectSpeedInsights();
+```bash
+npm run dev
 ```
 
-**Note:** For browser environments without a bundler, use the CDN script tag:
+1. Open the local URL and connect with Strava.
 
-```html
-<script defer src="https://cdn.jsdelivr.net/npm/@vercel/speed-insights@latest"></script>
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    if (window.SpeedInsights && window.SpeedInsights.init) {
-      window.SpeedInsights.init();
-    }
-  });
-</script>
-```
+## Local persistence (localStorage)
 
-#### 3. Deploy & Visit your Site
+Relevant keys:
 
-Deploy your changes and visit the deployment to collect your first data points.
+- strava_tokens
+- strava_athlete_data
+- strava_training_zones
+- strava_gears
+- strava_activities
+- dashboard_filters
+- dashboard_settings
+- dashboard_acute_load_mode
+- ai_chat_history
+- gemini_api_key
 
-If you don't see data after 30 seconds, please:
-- Check for content blockers in your browser
-- Try navigating between pages on your site
-- Check browser console for any errors
+## Export and utilities
 
-For full examples and further reference, please refer to the [Vercel Speed Insights documentation](https://vercel.com/docs/speed-insights).
+- CSV export from header.
+- PDF print using browser print dialog.
+- Unit settings (metric/imperial), age, and max HR.
 
----
+## PWA
 
-The app is actively evolving. Feedback is welcome through the repo.
+The project includes manifest.json and a service worker (sw.js) for installability and partial offline use of static assets.
+
+## Notes
+
+- Strava data and maps require internet connection.
+- The AI Coach tab uses the user's own Gemini API key.
+- This app is intended for personal training analysis, not medical diagnosis.
