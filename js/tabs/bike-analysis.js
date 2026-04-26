@@ -668,9 +668,10 @@ function renderTopActivities(rides) {
     makeSortable(document.getElementById('bike-top-speed-table'));
 }
 
-// ------------------------
-// ACTIVITIES TABLE
-// ------------------------
+
+///////////////////////
+// ALL ACTIVITIES TABLE
+///////////////////////
 
 function renderActivitiesTable(rides) {
 
@@ -681,93 +682,122 @@ function renderActivitiesTable(rides) {
         .sort((a, b) => new Date(b.start_date) - new Date(a.start_date))
         .map(a => {
 
-            const speed =
-                (a.distance / 1000) / (a.moving_time / 3600);
+            // --- safe base values ---
+            const distance = a.distance || 0; // meters
+            const movingTime = a.moving_time || 0;
+            const elapsedTime = a.elapsed_time || 0;
+            const elevation = a.total_elevation_gain || 0;
 
-            // // --- velocidad media ---
-            // const speed = km / (a.moving_time / 3600);
+            const km = distance / 1000;
 
-            // --- ratio movimiento ---
-            const ratio = a.elapsed_time > 0
-                ? (a.moving_time / a.elapsed_time)
+            // --- speed (km/h) ---
+            const speed = movingTime > 0
+                ? km / (movingTime / 3600)
+                : 0;
+
+            // --- moving ratio ---
+            const ratio = elapsedTime > 0
+                ? Math.min(movingTime / elapsedTime, 1)
                 : 1;
 
-            // --- dureza (solo D + H) ---
-            const dureza = a.distance + 2.5 * (a.total_elevation_gain / 100);
+            // --- effort (distance + elevation weight) ---
+            const effort = km + 2.5 * (elevation / 100);
 
-            // --- score (V + ratio) ---
-            const score = Math.pow(speed / 14.2, 0.3) * Math.pow(ratio, 0.3);
+            // --- score (normalized speed + ratio) ---
+            const score = speed > 0
+                ? Math.pow(speed / 14.2, 0.3) * Math.pow(ratio, 0.3)
+                : 0;
 
-            const elevPerKm =
-                a.distance > 0
-                    ? ((a.total_elevation_gain || 0) / (a.distance / 1000)).toFixed(1)
-                    : "-";
+            // --- elevation per km ---
+            const elevPerKmValue = km > 0
+                ? elevation / km
+                : 0;
+
+            const elevPerKmDisplay = km > 0
+                ? elevPerKmValue.toFixed(1)
+                : "-";
+
+            // --- activity link ---
+            const safeName = escapeHTML(a.name || "Untitled");
 
             const activityLink = a.id
-                ? `<a href="html/activity-router.html?id=${encodeURIComponent(a.id)}" target="_blank" rel="noopener noreferrer">${a.name}</a>`
-                : a.name;
+                ? `<a href="html/activity-router.html?id=${encodeURIComponent(a.id)}" target="_blank" rel="noopener noreferrer">${safeName}</a>`
+                : safeName;
 
-            const elapsedSec = a.elapsed_time || 0;
-            const elapsedH = Math.floor(elapsedSec / 3600);
-            const elapsedM = Math.floor((elapsedSec % 3600) / 60);
+            // --- date ---
+            const date = a.start_date_local
+                ? a.start_date_local.substring(0, 10)
+                : "-";
+
+            // --- elapsed time formatting ---
+            const elapsedH = Math.floor(elapsedTime / 3600);
+            const elapsedM = Math.floor((elapsedTime % 3600) / 60);
+
             const elapsedStr = elapsedH > 0
                 ? `${elapsedH}h ${String(elapsedM).padStart(2, '0')}m`
                 : `${elapsedM}m`;
 
             return `
             <tr>
-                <td>${a.start_date_local.substring(0, 10)}</td>
+                <td>${date}</td>
                 <td>${activityLink}</td>
                 <td>${bikeTypeBadge(a)}</td>
-                <td data-value="${a.distance.toFixed(1)}">${a.distance.toFixed(1)}</td>
-                <td data-value="${a.total_elevation_gain}">${a.total_elevation_gain}</td>
-                <td data-value="${elevPerKm === '-' ? 0 : elevPerKm}">${elevPerKm}</td>
-                <td data-value="${speed.toFixed(1)}">${speed.toFixed(1)}</td>
-                <td data-value="${dureza.toFixed(1)}">${dureza.toFixed(1)}</td>
-                <td data-value="${score.toFixed(3)}">${score.toFixed(3)}</td>
-                <td data-value="${a.average_watts || 0}">${a.average_watts ? `${a.average_watts} W` : '-'}</td>
+
+                <td data-value="${km}">${km.toFixed(1)}</td>
+                <td data-value="${elevation}">${elevation}</td>
+                <td data-value="${elevPerKmValue}">${elevPerKmDisplay}</td>
+
+                <td data-value="${speed}">${speed.toFixed(1)}</td>
+                <td data-value="${effort}">${effort.toFixed(1)}</td>
+                <td data-value="${score}">${score.toFixed(3)}</td>
+
+                <td data-value="${a.average_watts ?? 0}">
+                    ${a.average_watts != null ? `${a.average_watts} W` : '-'}
+                </td>
+
                 <td data-value="${ratio}">${(ratio * 100).toFixed(0)}%</td>
-                <td data-value="${elapsedSec}">${elapsedStr}</td>
+                <td data-value="${elapsedTime}">${elapsedStr}</td>
             </tr>
             `;
         })
         .join("");
 
     el.innerHTML = `
-
         <table id="bike-all-table">
-
-        <thead>
-
-            <tr>
-                <th data-sort="date">Date</th>
-                <th>Activity</th>
-                <th data-sort="date">Date</th>
-                <th>Activity</th>
-                <th data-sort="text">Type</th>
-                <th data-sort="num">km</th>
-                <th data-sort="num">Elev (m)</th>
-                <th data-sort="num">Elev/km</th>
-                <th data-sort="num">km/h</th>
-                <th data-sort="num">Dureza</th>
-                <th data-sort="num">Score</th>
-                <th data-sort="num">Power</th>
-                <th data-sort="num">Ratio</th>
-                <th data-sort="num">Elapsed</th>
-            </tr>
-
-        </thead>
-
-        <tbody>
-
-            ${rows}
-
-        </tbody>
-
+            <thead>
+                <tr>
+                    <th data-sort="date">Date</th>
+                    <th>Activity</th>
+                    <th data-sort="text">Type</th>
+                    <th data-sort="num">km</th>
+                    <th data-sort="num">Elev (m)</th>
+                    <th data-sort="num">Elev/km</th>
+                    <th data-sort="num">km/h</th>
+                    <th data-sort="num">Effort</th>
+                    <th data-sort="num">Score</th>
+                    <th data-sort="num">Power</th>
+                    <th data-sort="num">Ratio</th>
+                    <th data-sort="num">Elapsed</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${rows}
+            </tbody>
         </table>
     `;
 
     makeSortable(document.getElementById('bike-all-table'));
+}
+
+
+// --- basic HTML escape (prevents XSS in names) ---
+function escapeHTML(str) {
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 
