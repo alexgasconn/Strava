@@ -684,6 +684,20 @@ function renderActivitiesTable(rides) {
             const speed =
                 (a.distance / 1000) / (a.moving_time / 3600);
 
+            // --- velocidad media ---
+            const speed = km / (a.moving_time / 3600);
+
+            // --- ratio movimiento ---
+            const ratio = a.elapsed_time > 0
+                ? (a.moving_time / a.elapsed_time)
+                : 1;
+
+            // --- dureza (solo D + H) ---
+            const dureza = km + 2.5 * (elev / 100);
+
+            // --- score (V + ratio) ---
+            const score = Math.pow(speed / 14.2, 0.3) * Math.pow(ratio, 0.3);
+
             const elevPerKm =
                 a.distance > 0
                     ? ((a.total_elevation_gain || 0) / (a.distance / 1000)).toFixed(1)
@@ -705,11 +719,14 @@ function renderActivitiesTable(rides) {
                 <td>${a.start_date_local.substring(0, 10)}</td>
                 <td>${activityLink}</td>
                 <td>${bikeTypeBadge(a)}</td>
-                <td data-value="${(a.distance / 1000).toFixed(1)}">${(a.distance / 1000).toFixed(1)}</td>
-                <td data-value="${a.total_elevation_gain || 0}">${a.total_elevation_gain || 0}</td>
+                <td data-value="${km.toFixed(1)}">${km.toFixed(1)}</td>
+                <td data-value="${elev}">${elev}</td>
                 <td data-value="${elevPerKm === '-' ? 0 : elevPerKm}">${elevPerKm}</td>
                 <td data-value="${speed.toFixed(1)}">${speed.toFixed(1)}</td>
-                <td data-value="${a.average_watts || 0}">${a.average_watts || "-"}</td>
+                <td data-value="${dureza.toFixed(1)}">${dureza.toFixed(1)}</td>
+                <td data-value="${score.toFixed(3)}">${score.toFixed(3)}</td>
+                <td data-value="${a.average_watts || 0}">${a.average_watts ? `${a.average_watts} W` : '-'}</td>
+                <td data-value="${ratio}">${(ratio * 100).toFixed(0)}%</td>
                 <td data-value="${elapsedSec}">${elapsedStr}</td>
             </tr>
             `;
@@ -725,12 +742,17 @@ function renderActivitiesTable(rides) {
             <tr>
                 <th data-sort="date">Date</th>
                 <th>Activity</th>
+                <th data-sort="date">Date</th>
+                <th>Activity</th>
                 <th data-sort="text">Type</th>
                 <th data-sort="num">km</th>
                 <th data-sort="num">Elev (m)</th>
                 <th data-sort="num">Elev/km</th>
                 <th data-sort="num">km/h</th>
-                <th data-sort="num">W</th>
+                <th data-sort="num">Dureza</th>
+                <th data-sort="num">Score</th>
+                <th data-sort="num">Power</th>
+                <th data-sort="num">Ratio</th>
                 <th data-sort="num">Elapsed</th>
             </tr>
 
