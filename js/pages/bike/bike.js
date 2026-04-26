@@ -208,6 +208,88 @@ function calculateBestAveragePower(wattsData, durationSec) {
     return Math.round(best);
 }
 
+function estimatePowerDataFromStreams(streams, activity = null) {
+    const distance = streams?.distance?.data;
+    const time = streams?.time?.data;
+    const speedStream = streams?.velocity_smooth?.data;
+    const altitude = streams?.altitude?.data;
+
+    const sampleCount = Math.max(
+        distance?.length || 0,
+        time?.length || 0,
+        speedStream?.length || 0,
+        altitude?.length || 0
+    );
+
+    if (sampleCount < 2) return [];
+
+    const mass = 75;
+    const cda = 0.35;
+    const crr = 0.004;
+    const airDensity = 1.225;
+    const gravity = 9.81;
+    const estimated = new Array(sampleCount).fill(0);
+
+    for (let i = 0; i < sampleCount; i++) {
+        let speedMs = Number.isFinite(speedStream?.[i]) ? speedStream[i] : null;
+
+        if (!Number.isFinite(speedMs) && i > 0 && Number.isFinite(distance?.[i]) && Number.isFinite(distance?.[i - 1]) && Number.isFinite(time?.[i]) && Number.isFinite(time?.[i - 1])) {
+            const deltaDistance = distance[i] - distance[i - 1];
+            const deltaTime = time[i] - time[i - 1];
+            speedMs = deltaTime > 0 ? deltaDistance / deltaTime : 0;
+        }
+
+        if (!Number.isFinite(speedMs) || speedMs <= 0) {
+            estimated[i] = 0;
+            continue;
+        }
+
+        let grade = 0;
+        if (i > 0 && Number.isFinite(altitude?.[i]) && Number.isFinite(altitude?.[i - 1]) && Number.isFinite(distance?.[i]) && Number.isFinite(distance?.[i - 1])) {
+            const deltaDistance = distance[i] - distance[i - 1];
+            if (deltaDistance > 0) {
+                grade = (altitude[i] - altitude[i - 1]) / deltaDistance;
+                grade = Math.max(-0.2, Math.min(0.2, grade));
+            }
+        }
+
+        const gravityPower = mass * gravity * grade * speedMs;
+        const rollingPower = mass * gravity * crr * speedMs;
+        const aeroPower = 0.5 * airDensity * cda * Math.pow(speedMs, 3);
+        estimated[i] = Math.max(0, gravityPower + rollingPower + aeroPower);
+    }
+
+    const positiveSamples = estimated.filter(w => w > 0);
+    if (!positiveSamples.length) return estimated;
+
+    const targetAverage = activity?.average_watts || activity?.weighted_average_watts || null;
+    if (targetAverage) {
+        const estimatedAverage = positiveSamples.reduce((sum, value) => sum + value, 0) / positiveSamples.length;
+        if (estimatedAverage > 0) {
+            const scaleFactor = targetAverage / estimatedAverage;
+            return estimated.map(value => Math.round(Math.max(0, value * scaleFactor)));
+        }
+    }
+
+    return estimated.map(value => Math.round(value));
+}
+
+function getPowerData(streams, activity = null) {
+    const measured = streams?.watts?.data
+        ?.filter(w => w !== null && Number.isFinite(w) && w >= 0) || [];
+
+    if (measured.some(w => w > 0)) {
+        return { data: measured, source: 'measured' };
+    }
+
+    const estimated = estimatePowerDataFromStreams(streams, activity);
+    if (estimated.some(w => w > 0)) {
+        return { data: estimated, source: 'estimated' };
+    }
+
+    return { data: [], source: null };
+}
+
 /**
  * Applies smoothing to a copy of stream data
  */
@@ -625,21 +707,22 @@ function renderStreamCharts(streams, activity, smoothingLevel = 100) {
 // 9. RENDERING — POWER CURVE
 // =====================================================
 
-function renderPowerCurveChart(streams) {
+function renderPowerCurveChart(streams, activity) {
     const section = document.getElementById('power-curve-section');
     if (!section) return;
-    if (!streams?.watts?.data?.some(w => w > 0)) { section.style.display = 'none'; return; }
+
+    const powerData = getPowerData(streams, activity);
+    if (!powerData.data.length) { section.style.display = 'none'; return; }
     section.style.display = '';
 
-    const wattsData = streams.watts.data.filter(w => w !== null && w >= 0);
-    const curve = calculatePowerCurve(wattsData);
+    const curve = calculatePowerCurve(powerData.data);
 
     createChart('power-curve-chart', {
         type: 'line',
         data: {
             labels: curve.map(c => c.duration < 60 ? `${c.duration}s` : c.duration < 3600 ? `${c.duration / 60}min` : `${c.duration / 3600}h`),
             datasets: [{
-                label: 'Best Avg Power (W)', data: curve.map(c => c.power),
+                label: powerData.source === 'estimated' ? 'Best Avg Estimated Power (W)' : 'Best Avg Power (W)', data: curve.map(c => c.power),
                 borderColor: chartColors.watts.primary, backgroundColor: chartColors.watts.secondary,
                 fill: true, tension: 0.3, pointRadius: 4, borderWidth: 2,
             }]
@@ -660,13 +743,14 @@ function renderPowerProfile(streams, activity) {
     const container = document.getElementById('bike-power-metrics');
     if (!section || !container) return;
 
-    if (!streams?.watts?.data?.some(w => w > 0)) {
+    const powerData = getPowerData(streams, activity);
+    if (!powerData.data.length) {
         section.style.display = 'none';
         return;
     }
 
     section.style.display = '';
-    const watts = streams.watts.data.filter(w => w !== null && isFinite(w) && w >= 0);
+    const watts = powerData.data;
     const np = activity?.weighted_average_watts ? Math.round(activity.weighted_average_watts) : calculateNormalizedPower(watts);
     const best5s = calculateBestAveragePower(watts, 5);
     const best1m = calculateBestAveragePower(watts, 60);
@@ -1243,7 +1327,7 @@ async function main() {
         renderStreamCharts(initialSmoothed, activityData, currentSmoothingLevel);
         renderClimbInsights(streamData);
         renderPowerProfile(streamData, activityData);
-        renderPowerCurveChart(streamData);
+        renderPowerCurveChart(streamData, activityData);
         renderCadenceSpeedChart(streamData);
         renderHrZoneDistributionChart(streamData);
         renderHrMinMaxAreaChart(initialSmoothed, currentSmoothingLevel);
