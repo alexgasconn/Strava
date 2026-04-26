@@ -192,7 +192,16 @@
                             <canvas id="accumulated-distance-chart"></canvas>
                         </div>
                         <div class="chart-container">
-                            <h3>Weekly Distance + 5-Week Rolling Mean</h3>
+                            <h3>Weekly Distance + Rolling Mean</h3>
+                            <div class="rolling-selector">
+                                <label for="rolling-window-run">Rolling mean:</label>
+                                <select id="rolling-window-run">
+                                    <option value="4">1 month</option>
+                                    <option value="12">3 months</option>
+                                    <option value="26" selected>6 months</option>
+                                    <option value="52">1 year</option>
+                                </select>
+                            </div>
                             <canvas id="rolling-mean-distance-chart"></canvas>
                         </div>
                         <div class="chart-container">
@@ -284,7 +293,16 @@
                         </div>
 
                         <div class="chart-container">
-                            <h3>Weekly Distance + 5-Week Rolling Mean</h3>
+                            <h3>Weekly Distance + Rolling Mean</h3>
+                            <div class="rolling-selector">
+                                <label for="rolling-window-bike">Rolling mean:</label>
+                                <select id="rolling-window-bike">
+                                    <option value="4">1 month</option>
+                                    <option value="12">3 months</option>
+                                    <option value="26" selected>6 months</option>
+                                    <option value="52">1 year</option>
+                                </select>
+                            </div>
                             <canvas id="bike-weekly-distance-trend-chart"></canvas>
                         </div>
                     </div>
@@ -342,7 +360,16 @@
                         </div>
 
                         <div class="chart-container">
-                            <h3>Weekly Distance + 5-Week Rolling Mean</h3>
+                            <h3>Weekly Distance + Rolling Mean</h3>
+                            <div class="rolling-selector">
+                                <label for="rolling-window-swim">Rolling mean:</label>
+                                <select id="rolling-window-swim">
+                                    <option value="4">1 month</option>
+                                    <option value="12">3 months</option>
+                                    <option value="26" selected>6 months</option>
+                                    <option value="52">1 year</option>
+                                </select>
+                            </div>
                             <canvas id="swim-weekly-distance-trend-chart"></canvas>
                         </div>
                     </div>

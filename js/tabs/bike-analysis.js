@@ -44,7 +44,7 @@ function bikeTypeBadge(r) {
 // MAIN ENTRY
 // ------------------------
 
-export function renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, gearFilter = 'all') {
+export function renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, gearFilter = 'all', rollingWindowWeeks = 26) {
 
     const filteredActivities =
         utils.filterActivitiesByDate(allActivities, dateFilterFrom, dateFilterTo);
@@ -78,7 +78,7 @@ export function renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterT
     renderPowerVsSpeedChart(rides);
 
     renderAccumulatedDistanceChart(rides);
-    renderWeeklyDistanceTrendChart(rides);
+    renderWeeklyDistanceTrendChart(rides, rollingWindowWeeks);
 
     renderTopActivities(rides);
 
@@ -958,12 +958,17 @@ export function renderAccumulatedDistanceChart(rides) {
     });
 }
 
-export function renderWeeklyDistanceTrendChart(rides) {
+export function renderWeeklyDistanceTrendChart(rides, rollingWindowWeeks = 26) {
     if (!rides || rides.length === 0) return;
 
     const { labels, weeklyKm } = buildWeeklyDistanceSeries(rides, a => (a.distance || 0) / 1000);
-    const rollingWindowWeeks = 5;
     const rolling = utils.rollingMean(weeklyKm, rollingWindowWeeks).map(v => +v.toFixed(2));
+
+    // Convert weeks to human-readable label
+    const windowLabel = rollingWindowWeeks >= 52 ? '1 year' 
+        : rollingWindowWeeks >= 26 ? '6 months' 
+        : rollingWindowWeeks >= 12 ? '3 months' 
+        : '1 month';
 
     createChart('bike-weekly-distance-trend-chart', {
         type: 'line',
@@ -981,7 +986,7 @@ export function renderWeeklyDistanceTrendChart(rides) {
                     order: 2
                 },
                 {
-                    label: `Rolling mean (${rollingWindowWeeks} weeks)`,
+                    label: `Rolling mean (${windowLabel})`,
                     data: rolling,
                     type: 'line',
                     borderColor: 'rgba(255,99,132,1)',
@@ -994,6 +999,16 @@ export function renderWeeklyDistanceTrendChart(rides) {
             ]
         },
         options: {
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        boxWidth: 12,
+                        padding: 15,
+                        font: { size: 11 }
+                    }
+                }
+            },
             scales: {
                 x: { title: { display: true } },
                 y: { title: { display: true, text: 'Distance (km)' } }

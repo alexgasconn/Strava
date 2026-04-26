@@ -29,12 +29,15 @@ document.addEventListener('DOMContentLoaded', () => {
     let athleteDataType = 'time';
     let runGearFilter = 'all';
     let bikeGearFilter = 'all';
+    let runRollingWindow = 26; // default 6 months (26 weeks)
+    let bikeRollingWindow = 26;
+    let swimRollingWindow = 26;
 
     // --- Tab rendering config: maps tab id → { render function, uses date filters } ---
     const tabConfig = {
         'dashboard-tab': { render: () => renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
-        'analysis-tab': { render: () => renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, runGearFilter), usesFilters: true },
-        'bike-tab': { render: () => renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, bikeGearFilter), usesFilters: true },
+        'analysis-tab': { render: () => renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, runGearFilter, runRollingWindow), usesFilters: true },
+        'bike-tab': { render: () => renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, bikeGearFilter, bikeRollingWindow), usesFilters: true },
         'swim-tab': { render: () => renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
         'athlete-tab': { render: () => renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo, athleteSportFilter, athleteDataType), usesFilters: true },
         'planner-tab': { render: () => renderPlannerTab(allActivities) },
@@ -345,7 +348,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     runGearFilter = runGearFilterEl?.value || runGearFilter || 'all';
                     saveFilterState();
 
-                    renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, runGearFilter);
+                    renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, runGearFilter, runRollingWindow);
                 });
             });
         }
@@ -499,7 +502,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setupDashboard(allActivities);
             loadFilterState();
             populateGearFilters();
-            renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, runGearFilter);
+            renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, runGearFilter, runRollingWindow);
             renderedTabs.add('analysis-tab');
             setupYearlySelector();
 
@@ -540,7 +543,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderedTabs.clear();
             loadFilterState();
             populateGearFilters();
-            renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, runGearFilter);
+            renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, runGearFilter, runRollingWindow);
             renderedTabs.add('analysis-tab');
             setupYearlySelector();
             activateTab(getTabIdFromPath(window.location.pathname));
@@ -590,7 +593,7 @@ document.addEventListener('DOMContentLoaded', () => {
             dateFilterTo = dateToEl?.value || null;
             runGearFilter = runGearFilterEl?.value || 'all';
             saveFilterState();
-            renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, runGearFilter);
+            renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, runGearFilter, runRollingWindow);
         });
     }
 
@@ -604,7 +607,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (runGearFilterEl) runGearFilterEl.value = 'all';
             document.querySelectorAll('#year-filter-buttons .year-btn').forEach(b => b.classList.remove('active'));
             saveFilterState();
-            renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, runGearFilter);
+            renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, runGearFilter, runRollingWindow);
         });
     }
 
@@ -612,7 +615,17 @@ document.addEventListener('DOMContentLoaded', () => {
         runGearFilterEl.addEventListener('change', () => {
             runGearFilter = runGearFilterEl.value || 'all';
             saveFilterState();
-            renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, runGearFilter);
+            renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, runGearFilter, runRollingWindow);
+        });
+    }
+
+    // Rolling mean window selector for Run Tab
+    const runRollingWindowEl = document.getElementById('rolling-window-run');
+    if (runRollingWindowEl) {
+        runRollingWindow = parseInt(runRollingWindowEl.value) || 26;
+        runRollingWindowEl.addEventListener('change', () => {
+            runRollingWindow = parseInt(runRollingWindowEl.value) || 26;
+            renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, runGearFilter, runRollingWindow);
         });
     }
 
