@@ -14,6 +14,11 @@ export async function renderWeatherTab(allActivities) {
     const runs = allActivities.filter(
         (a) => a.type?.toLowerCase().includes("run") && a.start_latlng && a.start_date_local
     );
+
+    const outActivities = allActivities.filter(
+        (a) => a.start_latlng && a.start_date_local
+    );
+
     if (!runs.length) {
         if (summaryCardsContainer) {
             summaryCardsContainer.innerHTML = "<p>No running activities with GPS/time found.</p>";
@@ -45,7 +50,8 @@ export async function renderWeatherTab(allActivities) {
     }
 
 
-    const weatherResults = await fetchWeatherForRuns(runs);
+    // const weatherResults = await fetchWeatherForRuns(runs);
+    const weatherResults = await fetchWeatherForRuns(outActivities);
 
     const combinedWeatherData = weatherResults.map((wr, index) => {
         const run = wr.run; // Acceder al objeto run directamente
