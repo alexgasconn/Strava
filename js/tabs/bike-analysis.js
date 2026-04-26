@@ -719,8 +719,8 @@ function renderActivitiesTable(rides) {
                 <td>${a.start_date_local.substring(0, 10)}</td>
                 <td>${activityLink}</td>
                 <td>${bikeTypeBadge(a)}</td>
-                <td data-value="${km.toFixed(1)}">${km.toFixed(1)}</td>
-                <td data-value="${elev}">${elev}</td>
+                <td data-value="${a.distance.toFixed(1)}">${a.distance.toFixed(1)}</td>
+                <td data-value="${a.total_elevation_gain}">${a.total_elevation_gain}</td>
                 <td data-value="${elevPerKm === '-' ? 0 : elevPerKm}">${elevPerKm}</td>
                 <td data-value="${speed.toFixed(1)}">${speed.toFixed(1)}</td>
                 <td data-value="${dureza.toFixed(1)}">${dureza.toFixed(1)}</td>
