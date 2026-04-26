@@ -87,7 +87,7 @@ function estimatePoolLength(activity, historicalCounts = {}) {
 // MAIN ENTRY
 // ------------------------
 
-export function renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterTo) {
+export function renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, rollingWindowWeeks = 26) {
 
     const filteredActivities =
         utils.filterActivitiesByDate(allActivities, dateFilterFrom, dateFilterTo);
@@ -154,7 +154,7 @@ export function renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterT
     renderPoolLengthChart(enriched);
 
     renderAccumulatedDistanceChart(enriched);
-    renderWeeklyDistanceTrendChart(enriched);
+    renderWeeklyDistanceTrendChart(enriched, rollingWindowWeeks);
 }
 
 function buildWeeklyDistanceSeries(activities, distanceGetter) {
@@ -971,11 +971,10 @@ export function renderAccumulatedDistanceChart(swims) {
     });
 }
 
-export function renderWeeklyDistanceTrendChart(swims) {
+export function renderWeeklyDistanceTrendChart(swims, rollingWindowWeeks) {
     if (!swims || swims.length === 0) return;
 
     const { labels, weeklyKm } = buildWeeklyDistanceSeries(swims, a => a.distance_km || 0);
-    const rollingWindowWeeks = 5;
     const rolling = utils.rollingMean(weeklyKm, rollingWindowWeeks).map(v => +v.toFixed(2));
 
     createChart('swim-weekly-distance-trend-chart', {
