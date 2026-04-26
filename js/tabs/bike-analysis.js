@@ -684,8 +684,8 @@ function renderActivitiesTable(rides) {
             const speed =
                 (a.distance / 1000) / (a.moving_time / 3600);
 
-            // --- velocidad media ---
-            const speed = km / (a.moving_time / 3600);
+            // // --- velocidad media ---
+            // const speed = km / (a.moving_time / 3600);
 
             // --- ratio movimiento ---
             const ratio = a.elapsed_time > 0
