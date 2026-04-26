@@ -693,7 +693,7 @@ function renderActivitiesTable(rides) {
                 : 1;
 
             // --- dureza (solo D + H) ---
-            const dureza = km + 2.5 * (elev / 100);
+            const dureza = a.distance + 2.5 * (a.total_elevation_gain / 100);
 
             // --- score (V + ratio) ---
             const score = Math.pow(speed / 14.2, 0.3) * Math.pow(ratio, 0.3);
