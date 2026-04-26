@@ -209,6 +209,52 @@ main {
     text-align: left;
 }
 
+.rolling-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.rolling-selector label {
+    font-size: 0.9rem;
+    color: #555;
+    font-weight: 500;
+}
+
+.rolling-selector select {
+    padding: 0.4rem 0.6rem;
+    border: 1.5px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.rolling-selector select:hover {
+    border-color: #fc4c02;
+}
+
+/* Mobile-friendly chart legend */
+@media (max-width: 768px) {
+    .chart-container canvas {
+        aspect-ratio: 4 / 3;
+    }
+    
+    .chart-legend {
+        font-size: 0.75rem !important;
+        padding: 0.5rem !important;
+    }
+    
+    /* Make legend wrap on mobile */
+    .chart-container .legend {
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+    }
+}
+
 .chart-container canvas {
     width: 100% !important;
     max-width: 100%;
