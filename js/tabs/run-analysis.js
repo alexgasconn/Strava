@@ -545,7 +545,7 @@ export function renderPaceHistogram(runs) {
     createChart('pace-histogram-chart', {
         type: 'bar',
         data: {
-            labels: bins.map(b => b.toFixed(2)),
+            labels: bins.map(b => formatPace(b)),
             datasets: [{
                 label: 'Actividades',
                 data: counts,
