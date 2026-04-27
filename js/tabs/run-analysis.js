@@ -516,9 +516,9 @@ const formatPace = paceDecimal => {
         if (!paceDecimal || paceDecimal <= 0) return '-';
         const min = Math.floor(paceDecimal);
         const sec = Math.round((paceDecimal - min) * 60);
-        return `${min}:${sec.toString().padStart(2, '0')} /km`;
+        return `${min}:${sec.toString().padStart(2, '0')} min/km`;
     };
-    
+
 export function renderPaceHistogram(runs) {
     if (!runs || runs.length === 0) return;
 
