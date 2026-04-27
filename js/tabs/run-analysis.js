@@ -1,4 +1,4 @@
-// js/analysis.js
+// js/run-analysis.js
 import * as utils from './utils.js';
 import { getCachedGears } from './api.js';
 
@@ -26,6 +26,7 @@ export function renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo
     renderConsistencyChart(runs, dateFilterFrom, dateFilterTo);
     renderTopRuns(runs);
     renderActivitiesTable(runs);
+    renderPaceHistogram(runs);
 }
 
 function buildWeeklyDistanceSeries(activities, distanceGetter) {
@@ -510,6 +511,63 @@ export function renderPaceVsDistanceChart(runs) {
         }
     });
 }
+
+export function renderPaceHistogram(runs) {
+    if (!runs || runs.length === 0) return;
+
+    // Convertimos cada actividad a ritmo medio (min/km)
+    const paces = runs
+        .filter(a => a.distance > 0 && a.moving_time > 0)
+        .map(a => (a.moving_time / 60) / (a.distance / 1000));
+
+    if (paces.length === 0) return;
+
+    // Definir bins (por ejemplo, de 4 a 8 min/km en pasos de 0.25)
+    const minPace = Math.min(...paces);
+    const maxPace = Math.max(...paces);
+
+    const binSize = 0.25; // 15 segundos
+    const bins = [];
+    for (let p = Math.floor(minPace); p <= Math.ceil(maxPace) + 1; p += binSize) {
+        bins.push(+p.toFixed(2));
+    }
+
+    // Contar cuántos ritmos caen en cada bin
+    const counts = new Array(bins.length).fill(0);
+    paces.forEach(p => {
+        const idx = Math.min(
+            bins.length - 1,
+            Math.floor((p - bins[0]) / binSize)
+        );
+        counts[idx]++;
+    });
+
+    createChart('pace-histogram-chart', {
+        type: 'bar',
+        data: {
+            labels: bins.map(b => b.toFixed(2)),
+            datasets: [{
+                label: 'Actividades',
+                data: counts,
+                backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                x: {
+                    title: { display: true, text: 'Ritmo (min/km)' }
+                },
+                y: {
+                    title: { display: true, text: '# Actividades' },
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
 
 export function renderDistanceHistogram(runs) {
     const HISTOGRAM_BIN_SIZE_KM = 1;
