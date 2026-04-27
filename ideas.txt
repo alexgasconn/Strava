@@ -21,22 +21,23 @@ IN PROGRESS
 
 🟡🚧[PREPROCESSING]carregar zonas, profile, gear, weather api... al iniciar app
 🟡🩹[WEATHER]weather api fer servir per predictions 
-🟡🩹[ANALYSIS]consistency map canvia al posar filre 2026??
 🟡⚠️[GENERAL]format del pace decimals-> time amb utils.paceDecimalToTime(pace)
-🟡🌈[GENERAL]afegir chat IA
+
 
 
 TO DO
+🔴🩹[GENERAL] SEO
+🔴🩹[DASHBOARD] millorar o treure targetes de dashboard
+🔴🩹[ACTIVITY]power curve no surt a bike activity??
 🔴⚠️[ATHLETE]arreglar custom matix a Athlete (no fa be les bar charts, les ha de fer el grups de 1 km)
 🔴🩹[ACTIVITY]coords streams in activity -> veure cap a on va el vent -> % de vent a favor, en contra, de costat...
-🔴🩹[WRAPPED]wrapped -> exportar captura pels fans 
 🔴🚧[ACTIVITY]text de alerta si no hi ha dades de HR/cadence, watts, time...
 🔴🚧[GENERAL]time zones???
 🔴🚧[GENERAL]miles or km...
 🔴🌈[GENERAL]idiomes
 🔴🌈[GENERAL]tenir una base de dades
-🔴[GENERAL]tenir un arxiu de config general (dades metriques/imperials, zona horaria, HR_MAX, edat...)
-🔴[PREPROCESSING][WEATHER]get weather api en segon pla desde preprocessing.... NO al entrar a weatehr TAB
+🔴🌈[GENERAL]tenir un arxiu de config general (dades metriques/imperials, zona horaria, HR_MAX, edat...)
+🔴🚧[PREPROCESSING][WEATHER]get weather api en segon pla desde preprocessing.... NO al entrar a weatehr TAB
 
 
 
@@ -94,3 +95,6 @@ DONE
 🟢🚨[ATHLETE]No es veu Monday a una matrix de Athlete
 🟢🚨[ATHLETE]grafiques de AThlete MALAMENT
 🟢🌈[GENERAL]versio mobil
+🟢🩹[WRAPPED]wrapped -> exportar captura pels fans 
+🟢🩹[ANALYSIS]consistency map canvia al posar filre 2026??
+🟢🌈[GENERAL]afegir chat IA
