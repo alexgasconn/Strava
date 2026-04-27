@@ -23,6 +23,90 @@ function toLocalYMD(date) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
+function renderHoursBySportChart(activities) {
+    // Agrupar horas por día y por deporte
+    const sports = ["Run", "Ride", "Swim", "Workout"]; // Gym = Workout en Strava
+    const dataByDay = {};
+
+    activities.forEach(act => {
+        const date = act.start_date_local.split("T")[0];
+        const sport = act.sport_type;
+        const hours = act.moving_time / 3600;
+
+        if (!sports.includes(sport)) return;
+
+        if (!dataByDay[date]) {
+            dataByDay[date] = { Run: 0, Ride: 0, Swim: 0, Workout: 0 };
+        }
+
+        dataByDay[date][sport] += hours;
+    });
+
+    // Ordenar fechas
+    const labels = Object.keys(dataByDay).sort();
+
+    // Construir datasets
+    const datasets = [
+        {
+            label: "Run",
+            data: labels.map(d => dataByDay[d].Run),
+            borderColor: "#ff7f50",
+            backgroundColor: "rgba(255,127,80,0.4)",
+            fill: true
+        },
+        {
+            label: "Ride",
+            data: labels.map(d => dataByDay[d].Ride),
+            borderColor: "#1e90ff",
+            backgroundColor: "rgba(30,144,255,0.4)",
+            fill: true
+        },
+        {
+            label: "Swim",
+            data: labels.map(d => dataByDay[d].Swim),
+            borderColor: "#20b2aa",
+            backgroundColor: "rgba(32,178,170,0.4)",
+            fill: true
+        },
+        {
+            label: "Gym",
+            data: labels.map(d => dataByDay[d].Workout),
+            borderColor: "#9370db",
+            backgroundColor: "rgba(147,112,219,0.4)",
+            fill: true
+        }
+    ];
+
+    // Crear gráfico
+    const ctx = document.getElementById("hoursBySportChart").getContext("2d");
+
+    new Chart(ctx, {
+        type: "line",
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            interaction: { mode: "index", intersect: false },
+            stacked: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: "Horas por deporte (stacked area)"
+                }
+            },
+            scales: {
+                y: {
+                    stacked: true,
+                    title: { display: true, text: "Horas" }
+                },
+                x: {
+                    title: { display: true, text: "Fecha" }
+                }
+            }
+        }
+    });
+}
+
+
 function parseDateInput(value, endOfDay = false) {
     if (!value) return null;
     const [year, month, day] = value.split('-').map(Number);
@@ -683,6 +767,7 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
     renderDashboardSummary(recentActivities, previousActivities, recentRuns, previousRuns);
     renderTSSBarChart(recentActivities, selectedRangeDays);
     renderGoalsSectionAdvanced(allActivities);
+    renderHoursBySportChart(allActivities);
 }
 
 
