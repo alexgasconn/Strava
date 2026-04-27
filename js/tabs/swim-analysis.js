@@ -971,11 +971,17 @@ export function renderAccumulatedDistanceChart(swims) {
     });
 }
 
-export function renderWeeklyDistanceTrendChart(swims, rollingWindowWeeks) {
+export function renderWeeklyDistanceTrendChart(swims, rollingWindowWeeks = 26) {
     if (!swims || swims.length === 0) return;
 
     const { labels, weeklyKm } = buildWeeklyDistanceSeries(swims, a => a.distance_km || 0);
     const rolling = utils.rollingMean(weeklyKm, rollingWindowWeeks).map(v => +v.toFixed(2));
+
+    // Convert weeks to human-readable label
+    const windowLabel = rollingWindowWeeks >= 52 ? '1 year' 
+        : rollingWindowWeeks >= 26 ? '6 months' 
+        : rollingWindowWeeks >= 12 ? '3 months' 
+        : '1 month';
 
     createChart('swim-weekly-distance-trend-chart', {
         type: 'line',
@@ -993,7 +999,7 @@ export function renderWeeklyDistanceTrendChart(swims, rollingWindowWeeks) {
                     order: 2
                 },
                 {
-                    label: `Rolling mean (${rollingWindowWeeks} weeks)`,
+                    label: `Rolling mean (${windowLabel})`,
                     data: rolling,
                     type: 'line',
                     borderColor: 'rgba(255,99,132,1)',
@@ -1006,6 +1012,16 @@ export function renderWeeklyDistanceTrendChart(swims, rollingWindowWeeks) {
             ]
         },
         options: {
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        boxWidth: 12,
+                        padding: 15,
+                        font: { size: 11 }
+                    }
+                }
+            },
             scales: {
                 x: { title: { display: true } },
                 y: { title: { display: true, text: 'Distance (km)' } }

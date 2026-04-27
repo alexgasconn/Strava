@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'dashboard-tab': { render: () => renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
         'analysis-tab': { render: () => renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, runGearFilter, runRollingWindow), usesFilters: true },
         'bike-tab': { render: () => renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, bikeGearFilter, bikeRollingWindow), usesFilters: true },
-        'swim-tab': { render: () => renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterTo), usesFilters: true },
+        'swim-tab': { render: () => renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, swimRollingWindow), usesFilters: true },
         'athlete-tab': { render: () => renderAthleteTab(allActivities, dateFilterFrom, dateFilterTo, athleteSportFilter, athleteDataType), usesFilters: true },
         'planner-tab': { render: () => renderPlannerTab(allActivities) },
         'gear-tab': { render: () => renderGearTab(allActivities) },
@@ -389,7 +389,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (swimDateToEl) swimDateToEl.value = dateFilterTo;
                     saveFilterState();
 
-                    renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
+                    renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, swimRollingWindow);
                 });
             });
         }
@@ -690,7 +690,7 @@ document.addEventListener('DOMContentLoaded', () => {
             dateFilterFrom = swimDateFromEl?.value || null;
             dateFilterTo = swimDateToEl?.value || null;
             saveFilterState();
-            renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
+            renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, swimRollingWindow);
         });
     }
 
@@ -702,7 +702,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (swimDateToEl) swimDateToEl.value = '';
             document.querySelectorAll('#swim-year-filter-buttons .year-btn').forEach(b => b.classList.remove('active'));
             saveFilterState();
-            renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterTo);
+            renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterTo, swimRollingWindow);
         });
     }
 
