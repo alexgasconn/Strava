@@ -18,7 +18,11 @@
 
 
 IN PROGRESS
-
+explicacions estil:
+CTL (Chronic Training Load / fitness) — media exponencial de 42 días de tu TSS diario. Cuanto más alto, más en forma estás crónicamente.
+ATL (Acute Training Load / fatiga) — media exponencial de 7 días. Sube rápido cuando entrenas mucho, baja rápido cuando descansas.
+TSB (Training Stress Balance / forma) = CTL − ATL. Positivo = frescos y descansados, negativo = en bloque de carga o fatigados.
++ diferents rangs de valors i el que significa... ALL IN ENGLISH
 🟡🚧[PREPROCESSING]carregar zonas, profile, gear, weather api... al iniciar app
 🟡🩹[WEATHER]weather api fer servir per predictions 
 🟡⚠️[GENERAL]format del pace decimals-> time amb utils.paceDecimalToTime(pace)
