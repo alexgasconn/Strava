@@ -889,9 +889,12 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
             </div>
             <small><strong>CTL (Chronic Training Load / fitness)</strong> is the 42-day exponentially weighted average of your daily TSS. Higher values mean stronger long-term fitness capacity.</small>
             <small style="margin-top:.2rem;display:block;">${describeCtl(currentCtl, context)} <span style="opacity:.6;">Ideal: ${ctlIdealLow}–${ctlIdealHigh} (your recent range).</span></small>
-            <div style="margin-top:.55rem;">
-                ${ctlBandsHtml}
-            </div>
+            <details style="margin-top:.55rem;">
+                <summary style="cursor:pointer;font-weight:600;color:#2f3b52;">Show CTL ranges</summary>
+                <div style="margin-top:.55rem;">
+                    ${ctlBandsHtml}
+                </div>
+            </details>
         </div>
         <div class="pmc-explainer-card pmc-explainer-atl">
             <div class="pmc-explainer-header">
@@ -902,9 +905,12 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
             <small><strong>ATL (Acute Training Load / fatigue)</strong> is the 7-day exponentially weighted average of daily TSS. It rises quickly with hard training and drops quickly with recovery.</small>
             <small style="margin-top:.2rem;display:block;">${describeAtl(currentAtl, currentCtl, context)} <span style="opacity:.6;">Productive range: ${atlIdealLow}–${atlIdealHigh} (0.8–1.5× CTL).</span></small>
             <small style="margin-top:.2rem;display:block;opacity:.72;">Current ATL−CTL: ${formatSigned(atlDelta, 1)}</small>
-            <div style="margin-top:.55rem;">
-                ${atlBandsHtml}
-            </div>
+            <details style="margin-top:.55rem;">
+                <summary style="cursor:pointer;font-weight:600;color:#2f3b52;">Show ATL ranges</summary>
+                <div style="margin-top:.55rem;">
+                    ${atlBandsHtml}
+                </div>
+            </details>
         </div>
         <div class="pmc-explainer-card pmc-explainer-tsb">
             <div class="pmc-explainer-header">
@@ -914,9 +920,12 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
             </div>
             <small><strong>TSB (Training Stress Balance / form)</strong> is CTL − ATL. Positive values usually mean freshness, while negative values mean fatigue from load accumulation.</small>
             <small style="margin-top:.2rem;display:block;">${describeTsb(currentTsb, context)} <span style="opacity:.6;">Productive zone: ${tsbIdealLow} to ${tsbIdealHigh} for ${profile.label}.</span></small>
-            <div style="margin-top:.55rem;">
-                ${tsbBandsHtml}
-            </div>
+            <details style="margin-top:.55rem;">
+                <summary style="cursor:pointer;font-weight:600;color:#2f3b52;">Show TSB ranges</summary>
+                <div style="margin-top:.55rem;">
+                    ${tsbBandsHtml}
+                </div>
+            </details>
         </div>
         <div class="pmc-explainer-card pmc-explainer-risk">
             <div class="pmc-explainer-header">
