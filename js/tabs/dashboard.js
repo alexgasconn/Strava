@@ -576,6 +576,199 @@ function buildRollingSevenDayLoad(activities, rangeStart, rangeEnd) {
     return { labels, load7d, ctlDaily, atlDaily, tsbDaily, riskDaily, sorted };
 }
 
+function getPercentileValue(values, percentile) {
+    const sorted = values.filter(Number.isFinite).sort((a, b) => a - b);
+    if (!sorted.length) return 0;
+    const idx = Math.min(sorted.length - 1, Math.max(0, Math.round((sorted.length - 1) * percentile)));
+    return sorted[idx];
+}
+
+function formatSigned(value, digits = 1) {
+    if (!Number.isFinite(value)) return 'N/A';
+    if (value > 0) return `+${value.toFixed(digits)}`;
+    if (value < 0) return `-${Math.abs(value).toFixed(digits)}`;
+    return (0).toFixed(digits);
+}
+
+function isValueInBand(value, band) {
+    const minOk = band.min == null ? true : value >= band.min;
+    const maxOk = band.max == null ? true : value < band.max;
+    return minOk && maxOk;
+}
+
+function renderBandRows(bands, currentValue, formatRange) {
+    return bands.map(band => {
+        const active = isValueInBand(currentValue, band);
+        return `
+            <div style="display:flex;align-items:flex-start;gap:.6rem;padding:.5rem .55rem;border-radius:8px;background:${active ? `${band.color}18` : '#fff'};border:1px solid ${active ? `${band.color}66` : '#e6e6e6'};margin-bottom:.4rem;">
+                <span style="width:10px;height:10px;border-radius:50%;background:${band.color};margin-top:.35rem;flex:0 0 auto;"></span>
+                <div style="display:flex;flex-direction:column;gap:.12rem;min-width:0;">
+                    <div style="display:flex;gap:.45rem;align-items:center;flex-wrap:wrap;">
+                        <strong>${band.label}</strong>
+                        <small style="opacity:.7;">${formatRange(band)}</small>
+                        ${band.isIdeal ? '<small style="padding:.05rem .35rem;border-radius:999px;background:#1f9d5518;color:#1f9d55;border:1px solid #1f9d5540;">Ideal</small>' : ''}
+                        ${active ? '<small style="padding:.05rem .35rem;border-radius:999px;background:#0074d918;color:#0074D9;border:1px solid #0074D940;">Current</small>' : ''}
+                    </div>
+                    <small style="opacity:.86;line-height:1.35;">${band.meaning}</small>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function buildCtlBands(ctlValues) {
+    const p25 = getPercentileValue(ctlValues, 0.25);
+    const p45 = getPercentileValue(ctlValues, 0.45);
+    const p70 = getPercentileValue(ctlValues, 0.70);
+    const p90 = getPercentileValue(ctlValues, 0.90);
+
+    return [
+        {
+            label: 'Rebuilding',
+            min: null,
+            max: p25,
+            color: '#f39c12',
+            isIdeal: false,
+            meaning: 'Low chronic load for your own history. Typical during reset blocks, low consistency, or return-to-training phases.'
+        },
+        {
+            label: 'Maintaining',
+            min: p25,
+            max: p45,
+            color: '#6c757d',
+            isIdeal: false,
+            meaning: 'Stable but modest long-term load. Good for maintenance, but usually not enough to push fitness up quickly.'
+        },
+        {
+            label: 'Productive',
+            min: p45,
+            max: p70,
+            color: '#27ae60',
+            isIdeal: true,
+            meaning: 'Sustainable fitness-building territory with manageable fatigue for most training cycles.'
+        },
+        {
+            label: 'High fitness',
+            min: p70,
+            max: p90,
+            color: '#1f9d55',
+            isIdeal: true,
+            meaning: 'Strong chronic conditioning. Usually effective for race-specific phases if recovery habits stay consistent.'
+        },
+        {
+            label: 'Peak fitness',
+            min: p90,
+            max: null,
+            color: '#0074D9',
+            isIdeal: false,
+            meaning: 'Top end of your recent CTL distribution. Powerful but harder to sustain for long.'
+        }
+    ];
+}
+
+function buildAtlBands(currentCtl) {
+    return [
+        {
+            label: 'Recovery',
+            min: null,
+            max: -6,
+            color: '#0074D9',
+            isIdeal: false,
+            meaning: 'ATL well below CTL. Usually indicates tapering, deloading, or reduced short-term stress.'
+        },
+        {
+            label: 'Productive',
+            min: -6,
+            max: 4,
+            color: '#27ae60',
+            isIdeal: true,
+            meaning: 'Acute load close to base load. Good balance between stimulus and recoverability.'
+        },
+        {
+            label: 'Build',
+            min: 4,
+            max: 12,
+            color: '#f39c12',
+            isIdeal: true,
+            meaning: 'Short-term load above baseline. Useful for progression blocks when sleep and easy days are protected.'
+        },
+        {
+            label: 'Overload',
+            min: 12,
+            max: 22,
+            color: '#FF851B',
+            isIdeal: false,
+            meaning: 'High acute stress. Effective only in controlled blocks; fatigue and injury exposure increase.'
+        },
+        {
+            label: 'Strained',
+            min: 22,
+            max: null,
+            color: '#e74c3c',
+            isIdeal: false,
+            meaning: 'Very high acute load versus base. Keep this short and intentional, with recovery planned.'
+        }
+    ].map(band => ({
+        ...band,
+        absoluteMin: band.min == null ? null : currentCtl + band.min,
+        absoluteMax: band.max == null ? null : currentCtl + band.max
+    }));
+}
+
+function buildTsbBands(profile) {
+    const t = profile.thresholds;
+    return [
+        {
+            label: 'Strained',
+            min: null,
+            max: t.deepFatigue,
+            color: '#e74c3c',
+            isIdeal: false,
+            meaning: 'Deep fatigue state. Useful only briefly in heavy blocks, then followed by recovery.'
+        },
+        {
+            label: 'Heavy load',
+            min: t.deepFatigue,
+            max: t.fatigue,
+            color: '#FF851B',
+            isIdeal: false,
+            meaning: 'Substantial fatigue. Strong training stress, but low freshness for quality performance.'
+        },
+        {
+            label: 'Productive',
+            min: t.fatigue,
+            max: t.balanced,
+            color: '#27ae60',
+            isIdeal: true,
+            meaning: 'Balanced training zone where adaptation often improves without excessive residual fatigue.'
+        },
+        {
+            label: 'Race-ready',
+            min: t.balanced,
+            max: t.fresh,
+            color: '#0074D9',
+            isIdeal: true,
+            meaning: 'Fresh enough for quality sessions, testing, or racing while keeping some fitness tension.'
+        },
+        {
+            label: 'Recovery',
+            min: t.fresh,
+            max: t.fresh + 8,
+            color: '#6c757d',
+            isIdeal: false,
+            meaning: 'Very fresh state. Good for regeneration, but prolonged time here can reduce training momentum.'
+        },
+        {
+            label: 'Underload',
+            min: t.fresh + 8,
+            max: null,
+            color: '#8e44ad',
+            isIdeal: false,
+            meaning: 'Too fresh for too long. Usually signals insufficient load to drive continued fitness gains.'
+        }
+    ];
+}
+
 function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, currentStatus, currentLoad, currentCtl, currentAtl, currentTsb, currentRisk) {
     const container = document.getElementById('acute-load-explainer');
     if (!container) return;
@@ -618,7 +811,6 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
     // Ideal ranges
     const th = profile.thresholds;
     const ctlValues = sortedActivities.map(a => a.ctl).filter(Number.isFinite);
-    const ctlMin = Math.min(...ctlValues);
     const ctlMax = Math.max(...ctlValues);
     const ctlIdealLow = (ctlMax * 0.6).toFixed(1);
     const ctlIdealHigh = ctlMax.toFixed(1);
@@ -626,6 +818,38 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
     const atlIdealHigh = (currentCtl * 1.5).toFixed(1);
     const tsbIdealLow = th.fatigue.toFixed(0);
     const tsbIdealHigh = th.fresh.toFixed(0);
+    const ctlBands = buildCtlBands(ctlValues);
+    const atlBands = buildAtlBands(currentCtl);
+    const tsbBands = buildTsbBands(profile);
+    const atlDelta = currentAtl - currentCtl;
+
+    const ctlBandsHtml = renderBandRows(ctlBands, currentCtl, band => {
+        if (band.min == null) return `< ${band.max.toFixed(1)}`;
+        if (band.max == null) return `>= ${band.min.toFixed(1)}`;
+        return `${band.min.toFixed(1)} to ${band.max.toFixed(1)}`;
+    });
+
+    const atlBandsHtml = renderBandRows(atlBands, atlDelta, band => {
+        const rel = band.min == null
+            ? `< ${formatSigned(band.max, 1)} vs CTL`
+            : band.max == null
+                ? `>= ${formatSigned(band.min, 1)} vs CTL`
+                : `${formatSigned(band.min, 1)} to ${formatSigned(band.max, 1)} vs CTL`;
+
+        const abs = band.absoluteMin == null
+            ? `< ${band.absoluteMax.toFixed(1)} ATL`
+            : band.absoluteMax == null
+                ? `>= ${band.absoluteMin.toFixed(1)} ATL`
+                : `${band.absoluteMin.toFixed(1)} to ${band.absoluteMax.toFixed(1)} ATL`;
+
+        return `${rel} (${abs})`;
+    });
+
+    const tsbBandsHtml = renderBandRows(tsbBands, currentTsb, band => {
+        if (band.min == null) return `< ${band.max.toFixed(1)}`;
+        if (band.max == null) return `>= ${band.min.toFixed(1)}`;
+        return `${band.min.toFixed(1)} to ${band.max.toFixed(1)}`;
+    });
 
     container.innerHTML = `
         <div class="acute-load-summary-card">
@@ -663,7 +887,11 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
                 <strong>CTL</strong> <small style="opacity:.65;">Fitness · ~42d</small>
                 <span class="pmc-explainer-value" style="color:${ctlStatus.color};">${currentCtl.toFixed(1)} · ${ctlStatus.label}</span>
             </div>
-            <small>${describeCtl(currentCtl, context)} <span style="opacity:.6;">Ideal: ${ctlIdealLow}–${ctlIdealHigh} (your recent range).</span></small>
+            <small><strong>CTL (Chronic Training Load / fitness)</strong> is the 42-day exponentially weighted average of your daily TSS. Higher values mean stronger long-term fitness capacity.</small>
+            <small style="margin-top:.2rem;display:block;">${describeCtl(currentCtl, context)} <span style="opacity:.6;">Ideal: ${ctlIdealLow}–${ctlIdealHigh} (your recent range).</span></small>
+            <div style="margin-top:.55rem;">
+                ${ctlBandsHtml}
+            </div>
         </div>
         <div class="pmc-explainer-card pmc-explainer-atl">
             <div class="pmc-explainer-header">
@@ -671,7 +899,12 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
                 <strong>ATL</strong> <small style="opacity:.65;">Fatigue · ~7d</small>
                 <span class="pmc-explainer-value" style="color:${atlStatus.color};">${currentAtl.toFixed(1)} · ${atlStatus.label}</span>
             </div>
-            <small>${describeAtl(currentAtl, currentCtl, context)} <span style="opacity:.6;">Productive range: ${atlIdealLow}–${atlIdealHigh} (0.8–1.5× CTL).</span></small>
+            <small><strong>ATL (Acute Training Load / fatigue)</strong> is the 7-day exponentially weighted average of daily TSS. It rises quickly with hard training and drops quickly with recovery.</small>
+            <small style="margin-top:.2rem;display:block;">${describeAtl(currentAtl, currentCtl, context)} <span style="opacity:.6;">Productive range: ${atlIdealLow}–${atlIdealHigh} (0.8–1.5× CTL).</span></small>
+            <small style="margin-top:.2rem;display:block;opacity:.72;">Current ATL−CTL: ${formatSigned(atlDelta, 1)}</small>
+            <div style="margin-top:.55rem;">
+                ${atlBandsHtml}
+            </div>
         </div>
         <div class="pmc-explainer-card pmc-explainer-tsb">
             <div class="pmc-explainer-header">
@@ -679,7 +912,11 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
                 <strong>TSB</strong> <small style="opacity:.65;">Form · CTL−ATL</small>
                 <span class="pmc-explainer-value" style="color:${tsbStatus.color};">${currentTsb.toFixed(1)} · ${tsbStatus.label}</span>
             </div>
-            <small>${describeTsb(currentTsb, context)} <span style="opacity:.6;">Productive zone: ${tsbIdealLow} to ${tsbIdealHigh} for ${profile.label}.</span></small>
+            <small><strong>TSB (Training Stress Balance / form)</strong> is CTL − ATL. Positive values usually mean freshness, while negative values mean fatigue from load accumulation.</small>
+            <small style="margin-top:.2rem;display:block;">${describeTsb(currentTsb, context)} <span style="opacity:.6;">Productive zone: ${tsbIdealLow} to ${tsbIdealHigh} for ${profile.label}.</span></small>
+            <div style="margin-top:.55rem;">
+                ${tsbBandsHtml}
+            </div>
         </div>
         <div class="pmc-explainer-card pmc-explainer-risk">
             <div class="pmc-explainer-header">
