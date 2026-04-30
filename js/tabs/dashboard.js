@@ -1438,13 +1438,13 @@ function renderTSSBarChart(activities, rangeType) {
         }
         case 'last7': {
             startDate = new Date(now);
-            startDate.setDate(now.getDate() - 7);
+            startDate.setDate(now.getDate() - 6);
             startDate.setHours(0, 0, 0, 0);
             break;
         }
         case 'last30': {
             startDate = new Date(now);
-            startDate.setDate(now.getDate() - 30);
+            startDate.setDate(now.getDate() - 29);
             startDate.setHours(0, 0, 0, 0);
             break;
         }
@@ -1462,7 +1462,7 @@ function renderTSSBarChart(activities, rangeType) {
         }
         case 'last365': {
             startDate = new Date(now);
-            startDate.setDate(now.getDate() - 365);
+            startDate.setDate(now.getDate() - 364);
             startDate.setHours(0, 0, 0, 0);
             break;
         }
@@ -1473,9 +1473,9 @@ function renderTSSBarChart(activities, rangeType) {
         }
     }
 
-    const { labels, data } = groupTSSByPeriod(activities, rangeType, startDate, endDate);
+    const { labels, datasets } = groupTSSByPeriod(activities, rangeType, startDate, endDate);
 
-    if (!labels.length || !data.length) {
+    if (!labels.length || !datasets.length) {
         console.warn('No TSS data to render');
         return;
     }
@@ -1484,30 +1484,25 @@ function renderTSSBarChart(activities, rangeType) {
         type: 'bar',
         data: {
             labels,
-            datasets: [{
-                label: 'TSS',
-                data,
-                backgroundColor: '#e74c3c',
-                borderColor: '#fff',
-                borderWidth: 1,
-                borderRadius: 4
-            }]
+            datasets
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
                 tooltip: { mode: 'index', intersect: false },
-                legend: { display: false }
+                legend: { display: true, position: 'top' }
             },
             scales: {
                 x: {
+                    stacked: true,
                     ticks: {
                         maxRotation: 0,
                         autoSkip: true
                     }
                 },
                 y: {
+                    stacked: true,
                     beginAtZero: true,
                     title: { display: true, text: 'TSS' },
                     ticks: { precision: 0 }
@@ -1527,6 +1522,26 @@ function getMondayOfWeek(date) {
     const diff = day === 0 ? -6 : 1 - day; // Si es domingo, ir al lunes anterior (retroceder 6)
     d.setDate(d.getDate() + diff);
     return d;
+}
+
+function parseLocalYMD(ymd) {
+    const [year, month, day] = ymd.split('-').map(Number);
+    return new Date(year, (month || 1) - 1, day || 1);
+}
+
+function getMonthKey(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function getPeriodKey(date, mode) {
+    if (mode === 'daily') return toLocalYMD(date);
+    if (mode === 'weekly') return toLocalYMD(getMondayOfWeek(date));
+    return getMonthKey(date);
+}
+
+function isDateWithinRange(date, minDate, maxDate) {
+    const value = date.getTime();
+    return value >= minDate.getTime() && value <= maxDate.getTime();
 }
 
 /**
@@ -1555,6 +1570,14 @@ function groupTSSByPeriod(activities, rangeType, startDate, endDate) {
 
     const grouped = {};
     const curr = new Date(minDate);
+    const sports = ['Run', 'Ride', 'Swim', 'Gym', 'Other'];
+    const sportColors = {
+        Run: '#ff7f50',
+        Ride: '#1e90ff',
+        Swim: '#20b2aa',
+        Gym: '#9370db',
+        Other: '#95a5a6'
+    };
 
     // Seguridad: l→mite m→ximo de iteraciones (por si hay error de rango)
     let guard = 0;
@@ -1563,21 +1586,27 @@ function groupTSSByPeriod(activities, rangeType, startDate, endDate) {
     while (curr <= maxDate && guard++ < 2000) {
         let key;
         if (isDaily) {
-            key = curr.toISOString().split('T')[0];
+            key = getPeriodKey(curr, 'daily');
             curr.setDate(curr.getDate() + 1);
         } else if (isWeekly) {
-            const monday = getMondayOfWeek(curr);
-            key = monday.toISOString().split('T')[0];
+            key = getPeriodKey(curr, 'weekly');
             curr.setDate(curr.getDate() + 7);
         } else if (isMonthly) {
-            key = `${curr.getFullYear()}-${String(curr.getMonth() + 1).padStart(2, '0')}`;
+            key = getPeriodKey(curr, 'monthly');
             curr.setMonth(curr.getMonth() + 1);
         } else {
             // fallback: evitar bucle infinito
-            key = curr.toISOString().split('T')[0];
+            key = getPeriodKey(curr, 'daily');
             curr.setDate(curr.getDate() + 1);
         }
-        grouped[key] = 0;
+        grouped[key] = {
+            total: 0,
+            Run: 0,
+            Ride: 0,
+            Swim: 0,
+            Gym: 0,
+            Other: 0
+        };
     }
 
     // A→adir datos reales de actividades (solo si hay actividades)
@@ -1588,36 +1617,44 @@ function groupTSSByPeriod(activities, rangeType, startDate, endDate) {
             if (isNaN(date)) continue;
 
             // Solo procesar si est→ dentro del rango
-            if (date < minDate || date > maxDate) continue;
+            if (!isDateWithinRange(date, minDate, maxDate)) continue;
 
             let key;
             if (isDaily) {
-                key = date.toISOString().split('T')[0];
+                key = getPeriodKey(date, 'daily');
             } else if (isWeekly) {
-                const monday = getMondayOfWeek(date);
-                key = monday.toISOString().split('T')[0];
+                key = getPeriodKey(date, 'weekly');
             } else if (isMonthly) {
-                key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                key = getPeriodKey(date, 'monthly');
             } else {
-                key = date.toISOString().split('T')[0];
+                key = getPeriodKey(date, 'daily');
             }
 
             const tss = a.tss ?? (a.suffer_score ? a.suffer_score * 1.05 : 0);
             if (grouped.hasOwnProperty(key)) {
-                grouped[key] += tss;
+                const sport = getSportKey(a.type || '');
+                grouped[key].total += tss;
+                grouped[key][sport] = (grouped[key][sport] || 0) + tss;
             }
         }
     }
 
-    const sortedKeys = Object.keys(grouped).sort((a, b) => new Date(a) - new Date(b));
+    const sortedKeys = Object.keys(grouped).sort((a, b) => {
+        if (isMonthly) {
+            const [ya, ma] = a.split('-').map(Number);
+            const [yb, mb] = b.split('-').map(Number);
+            return new Date(ya, ma - 1, 1) - new Date(yb, mb - 1, 1);
+        }
+        return parseLocalYMD(a) - parseLocalYMD(b);
+    });
 
     const labels = sortedKeys.map(key => {
         if (isDaily) {
-            const d = new Date(key);
+            const d = parseLocalYMD(key);
             return d.toLocaleDateString('default', { day: '2-digit', month: 'short' });
         }
         if (isWeekly) {
-            const d = new Date(key);
+            const d = parseLocalYMD(key);
             return `Week ${getWeekNumber(d)}`;
         }
         if (isMonthly) {
@@ -1627,8 +1664,18 @@ function groupTSSByPeriod(activities, rangeType, startDate, endDate) {
         return key;
     });
 
-    const data = sortedKeys.map(k => Math.round(grouped[k]));
-    return { labels, data };
+    const datasets = sports
+        .map(sport => ({
+            label: sport,
+            data: sortedKeys.map(k => Math.round(grouped[k][sport] || 0)),
+            backgroundColor: sportColors[sport],
+            borderColor: '#fff',
+            borderWidth: 1,
+            borderRadius: 3
+        }))
+        .filter(dataset => dataset.data.some(value => value > 0));
+
+    return { labels, datasets };
 }
 
 
