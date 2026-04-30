@@ -278,13 +278,18 @@ function getPmcProfile(loadActivities) {
     return { label, thresholds, dominantSport, rankedSports };
 }
 
-function renderDashboardTopline(filteredActivities, recentActivities, recentRuns, startDate, dateFilterFrom, dateFilterTo) {
+function renderDashboardTopline(recentActivities) {
     const container = document.getElementById('dashboard-topline');
     if (!container) return;
 
     const totalDistanceKm = recentActivities.reduce((sum, a) => sum + ((a.distance || 0) / 1000), 0);
     const totalMovingTime = recentActivities.reduce((sum, a) => sum + (a.moving_time || 0), 0);
-    const longestRunKm = recentRuns.reduce((max, run) => Math.max(max, (run.distance || 0) / 1000), 0);
+    const longestActivity = recentActivities.reduce((max, activity) => {
+        const distanceKm = (activity.distance || 0) / 1000;
+        return distanceKm > max.distanceKm
+            ? { distanceKm, type: getSportKey(activity.type || ''), rawType: activity.type || 'Activity' }
+            : max;
+    }, { distanceKm: 0, type: 'Other', rawType: 'Activity' });
 
     const sportCounts = recentActivities.reduce((acc, a) => {
         const key = getSportKey(a.type || '');
@@ -308,8 +313,9 @@ function renderDashboardTopline(filteredActivities, recentActivities, recentRuns
             <p class="dashboard-mini-subvalue">${utils.formatTime(totalMovingTime)}</p>
         </div>
         <div class="dashboard-mini-card">
-            <p class="dashboard-mini-label">Longest Run</p>
-            <p class="dashboard-mini-value">${longestRunKm.toFixed(1)} km</p>
+            <p class="dashboard-mini-label">Longest Session</p>
+            <p class="dashboard-mini-value">${longestActivity.distanceKm.toFixed(1)} km</p>
+            <p class="dashboard-mini-subvalue">${longestActivity.type}</p>
         </div>
         <div class="dashboard-mini-card dashboard-mini-card-wide">
             <p class="dashboard-mini-label">Sport Mix</p>
@@ -1007,7 +1013,7 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
         return d >= previousStartDate && d <= previousEndDate;
     });
 
-    renderDashboardTopline(filteredActivities, recentActivities, recentRuns, startDate, dateFilterFrom, dateFilterTo);
+    renderDashboardTopline(recentActivities);
 
     renderAcuteLoadChart(recentActivities, startDate, endDate);
     renderDashboardSummary(recentActivities, previousActivities, recentRuns, previousRuns);
@@ -1056,7 +1062,11 @@ function renderDashboardSummary(currentActivities, previousActivities, currentRu
             return { icon: '•', color: '#888', label: 'N/A' };
         }
 
-        const lowerIsBetter = ['pace', 'hr', 'injury'].includes(metric);
+        if (metric === 'hr') {
+            return { icon: 'Δ', color: '#6c757d', label: `${change > 0 ? '+' : ''}${change.toFixed(1)}%` };
+        }
+
+        const lowerIsBetter = ['injury'].includes(metric);
         const improved = lowerIsBetter ? change < 0 : change > 0;
         const icon = change === 0 ? '•' : (improved ? '▲' : '▼');
         const color = change === 0 ? '#888' : (improved ? '#2ECC40' : '#FF4136');
@@ -1080,86 +1090,99 @@ function renderDashboardSummary(currentActivities, previousActivities, currentRu
     const currentInjury = avg(numeric(currentActivities.map(activity => activity.injuryRisk)));
     const previousInjury = avg(numeric(previousActivities.map(activity => activity.injuryRisk)));
 
-    const currentPaceValues = numeric(currentRuns.map(run => {
-        const distanceKm = safeDistanceKm(run);
-        return distanceKm > 0 && run.moving_time ? (run.moving_time / 60) / distanceKm : NaN;
-    }));
-    const previousPaceValues = numeric(previousRuns.map(run => {
-        const distanceKm = safeDistanceKm(run);
-        return distanceKm > 0 && run.moving_time ? (run.moving_time / 60) / distanceKm : NaN;
-    }));
-    const avgPace = avg(currentPaceValues);
-    const prevPace = avg(previousPaceValues);
+    const currentTotalTss = sum(currentActivities, activity => activity.tss ?? (activity.suffer_score ? activity.suffer_score * 1.05 : 0));
+    const previousTotalTss = sum(previousActivities, activity => activity.tss ?? (activity.suffer_score ? activity.suffer_score * 1.05 : 0));
 
-    const avgDistance = currentRuns.length ? sum(currentRuns, safeDistanceKm) / currentRuns.length : null;
-    const prevAvgDistance = previousRuns.length ? sum(previousRuns, safeDistanceKm) / previousRuns.length : null;
+    const currentSpeedValues = numeric(currentActivities.map(activity => {
+        const distanceKm = safeDistanceKm(activity);
+        const hours = safeHours(activity);
+        return hours > 0 && distanceKm > 0 ? distanceKm / hours : NaN;
+    }));
+    const previousSpeedValues = numeric(previousActivities.map(activity => {
+        const distanceKm = safeDistanceKm(activity);
+        const hours = safeHours(activity);
+        return hours > 0 && distanceKm > 0 ? distanceKm / hours : NaN;
+    }));
+    const avgSpeed = avg(currentSpeedValues);
+    const prevAvgSpeed = avg(previousSpeedValues);
+
+    const avgDistancePerSession = currentActivities.length ? totalDistance / currentActivities.length : null;
+    const prevAvgDistancePerSession = previousActivities.length ? prevDistance / previousActivities.length : null;
 
     const distChange = calcChange(totalDistance, prevDistance);
     const timeChange = calcChange(totalTime, prevTime);
     const elevChange = calcChange(totalElevation, prevElevation);
-    const paceChange = calcChange(avgPace, prevPace);
+    const speedChange = calcChange(avgSpeed, prevAvgSpeed);
     const hrChange = calcChange(currentAvgHR, previousAvgHR);
     const vo2Change = calcChange(currentAvgVO2, previousAvgVO2);
-    const avgDistChange = calcChange(avgDistance, prevAvgDistance);
+    const avgDistSessionChange = calcChange(avgDistancePerSession, prevAvgDistancePerSession);
     const injuryRiskChange = calcChange(currentInjury, previousInjury);
+    const tssChange = calcChange(currentTotalTss, previousTotalTss);
 
     const distTrend = trendVisual('distance', distChange);
     const timeTrend = trendVisual('time', timeChange);
     const elevTrend = trendVisual('elevation', elevChange);
     const vo2Trend = trendVisual('vo2', vo2Change);
     const injuryTrend = trendVisual('injury', injuryRiskChange);
-    const paceTrend = trendVisual('pace', paceChange);
+    const speedTrend = trendVisual('speed', speedChange);
     const hrTrend = trendVisual('hr', hrChange);
-    const avgDistTrend = trendVisual('distance', avgDistChange);
+    const avgDistTrend = trendVisual('distance', avgDistSessionChange);
+    const tssTrend = trendVisual('load', tssChange);
 
 
     // --- Renderizado ---
     container.innerHTML = `
         <div class="card">
-            <h3>📏 Total Distance</h3>
+            <h3>Total Distance</h3>
             <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${totalDistance.toFixed(1)} km</p>
             <small><span style="color:${distTrend.color};">${distTrend.icon} ${distTrend.label}</span></small>
         </div>
 
         <div class="card">
-            <h3>🕒 Total Time</h3>
+            <h3>Total Moving Time</h3>
             <p style="font-size:2rem;font-weight:bold;color:#B10DC9;">${totalTime.toFixed(1)} h</p>
             <small><span style="color:${timeTrend.color};">${timeTrend.icon} ${timeTrend.label}</span></small>
         </div>
 
         <div class="card">
-            <h3>⛰️ Elevation</h3>
+            <h3>Total Elevation Gain</h3>
             <p style="font-size:2rem;font-weight:bold;color:#2ECC40;">${totalElevation.toFixed(0)} m</p>
             <small><span style="color:${elevTrend.color};">${elevTrend.icon} ${elevTrend.label}</span></small>
         </div>
 
         <div class="card">
-            <h3>🫁 VO₂max</h3>
+            <h3>Total Training Load (TSS)</h3>
+            <p style="font-size:2rem;font-weight:bold;color:#FF851B;">${currentTotalTss.toFixed(0)}</p>
+            <small><span style="color:${tssTrend.color};">${tssTrend.icon} ${tssTrend.label}</span></small>
+        </div>
+
+        <div class="card">
+            <h3>Average Speed</h3>
+            <p style="font-size:2rem;font-weight:bold;color:#39CCCC;">${Number.isFinite(avgSpeed) ? avgSpeed.toFixed(1) : '–'} km/h</p>
+            <small><span style="color:${speedTrend.color};">${speedTrend.icon} ${speedTrend.label}</span></small>
+        </div>
+
+        <div class="card">
+            <h3>Estimated VO₂max</h3>
             <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${Number.isFinite(currentAvgVO2) ? currentAvgVO2.toFixed(1) : '–'}</p>
             <small><span style="color:${vo2Trend.color};">${vo2Trend.icon} ${vo2Trend.label}</span></small>
         </div>
 
         <div class="card">
-            <h3>⚠️ Injury Risk</h3>
+            <h3>Injury Risk Index</h3>
             <p style="font-size:2rem;font-weight:bold;color:#FF4136;">${Number.isFinite(currentInjury) ? currentInjury.toFixed(3) : '–'}</p>
             <small><span style="color:${injuryTrend.color};">${injuryTrend.icon} ${injuryTrend.label}</span></small>
         </div>
 
         <div class="card">
-            <h3>⚡ Average Pace</h3>
-            <p style="font-size:2rem;font-weight:bold;color:#B10DC9;"> ${Number.isFinite(avgPace) ? utils.paceDecimalToTime(avgPace) : '–'} </p>
-            <small><span style="color:${paceTrend.color};">${paceTrend.icon} ${paceTrend.label}</span></small>
-        </div>
-
-        <div class="card">
-            <h3>❤️ Average HR</h3>
+            <h3>Average Heart Rate</h3>
             <p style="font-size:2rem;font-weight:bold;color:#FF4136;">${Number.isFinite(currentAvgHR) ? currentAvgHR.toFixed(0) : '–'} bpm</p>
             <small><span style="color:${hrTrend.color};">${hrTrend.icon} ${hrTrend.label}</span></small>
         </div>
 
         <div class="card">
-            <h3>🏃 Average Distance</h3>
-            <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${Number.isFinite(avgDistance) ? avgDistance.toFixed(1) : '–'} km</p>
+            <h3>Avg Distance / Session</h3>
+            <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${Number.isFinite(avgDistancePerSession) ? avgDistancePerSession.toFixed(1) : '–'} km</p>
             <small><span style="color:${avgDistTrend.color};">${avgDistTrend.icon} ${avgDistTrend.label}</span></small>
         </div>
         
