@@ -1475,8 +1475,8 @@ function getTSSBarChartData(activities, rangeType, startDate, endDate, unit) {
     const sports = ['Run', 'Ride', 'Swim', 'Gym'];
     const sportColors = {
         Run: '#ff7f50',
-        Ride: '#1e90ff',
-        Swim: '#20b2aa',
+        Ride: '#20b2aa',
+        Swim: '#1e90ff',
         Gym: '#9370db',
         Other: '#95a5a6'
     };
