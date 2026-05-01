@@ -417,11 +417,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 activities = JSON.parse(cachedActivities);
                 progress = 40;
                 showLoading(`Activities loaded from cache (${activities.length})`, progress, elapsed());
+                console.log(`[Strava] Activities loaded from cache (${activities.length}):`, activities);
             } else {
                 showLoading('Downloading activities from Strava...', 18, elapsed());
                 activities = await fetchAllActivities();
                 progress = 40;
                 showLoading(`Activities downloaded (${activities.length})`, progress, elapsed());
+                console.log(`[Strava] Activities downloaded from API (${activities.length}):`, activities);
                 localStorage.setItem('strava_activities', JSON.stringify(activities));
                 localStorage.setItem('strava_activities_timestamp', Date.now().toString());
             }
@@ -451,12 +453,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (results[0].status === 'fulfilled') {
                     athlete = results[0].value;
+                    console.log('[Strava] Athlete data:', athlete);
                 } else {
                     console.warn('Failed to load athlete data:', results[0].reason);
                 }
 
                 if (results[1].status === 'fulfilled') {
                     zones = results[1].value;
+                    console.log('[Strava] Training zones:', zones);
                 } else {
                     console.warn('Failed to load zones data:', results[1].reason);
                 }
@@ -479,6 +483,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (athlete) {
                     showLoading('Loading gear usage...', 72, elapsed());
                     gears = await fetchAllGears(athlete);
+                    console.log(`[Strava] Gears (${gears.length}):`, gears);
                     // Persist gears to cache with 24h TTL
                     setCachedGears(gears);
                 }
@@ -494,7 +499,14 @@ document.addEventListener('DOMContentLoaded', () => {
             // Phase 3: Preprocess activities (90% -> 100%)
             const preprocessed = await preprocessActivities(activities, athlete, zones, gears);
             allActivities = preprocessed;
-            console.log('Preprocessed activities:', allActivities);
+            console.log(`[Strava] Preprocessed activities (${allActivities.length}):`, allActivities);
+            console.log('[Strava] Summary:', {
+                total: allActivities.length,
+                byType: allActivities.reduce((acc, a) => { acc[a.type] = (acc[a.type] || 0) + 1; return acc; }, {}),
+                dateRange: allActivities.length ? `${allActivities[allActivities.length - 1].start_date_local?.slice(0, 10)} → ${allActivities[0].start_date_local?.slice(0, 10)}` : 'N/A',
+                withHR: allActivities.filter(a => a.average_heartrate).length,
+                withTSS: allActivities.filter(a => a.tss).length,
+            });
 
             progress = 100;
             showLoading('Finalizing UI...', progress, elapsed());
