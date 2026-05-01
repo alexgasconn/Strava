@@ -953,12 +953,40 @@ function setupChartClickHandlers() {
         const canvas = container.querySelector('canvas');
         const title = container.querySelector('h3');
         if (canvas) {
-            canvas.style.cursor = 'pointer';
-            canvas.addEventListener('click', () => {
-                openChartModal(canvas, title ? title.textContent : 'Chart');
+            // Remove old listeners to avoid duplicates
+            const newCanvas = canvas.cloneNode(true);
+            canvas.parentNode.replaceChild(newCanvas, canvas);
+            const freshCanvas = container.querySelector('canvas');
+            freshCanvas.style.cursor = 'pointer';
+            freshCanvas.addEventListener('click', () => {
+                openChartModal(freshCanvas, title ? title.textContent : 'Chart');
             });
         }
     });
+
+    // Add modal close listeners
+    const modal = document.getElementById('chart-modal');
+    if (modal) {
+        // Close when clicking outside the content
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeChartModal();
+            }
+        });
+
+        // Close button
+        const closeBtn = modal.querySelector('.chart-modal-close');
+        if (closeBtn) {
+            closeBtn.onclick = closeChartModal;
+        }
+
+        // Keyboard escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.classList.contains('active')) {
+                closeChartModal();
+            }
+        });
+    }
 }
 
 /**
@@ -969,14 +997,14 @@ function openChartModal(canvas, title) {
     const container = document.getElementById('chart-modal-canvas-container');
     if (!modal || !container) return;
 
-    // Clone the canvas and add title
-    const clonedCanvas = canvas.cloneNode(true);
-    clonedCanvas.style.width = '100%';
-    clonedCanvas.style.height = '100%';
-    clonedCanvas.style.maxWidth = 'none';
-
-    container.innerHTML = `<h2 style="margin-top:0;">${title}</h2>`;
-    container.appendChild(clonedCanvas);
+    // Convert canvas to image for display in modal
+    const imageUrl = canvas.toDataURL('image/png');
+    container.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:1rem;width:100%;height:100%;">
+            <h2 style="margin:0;">${title}</h2>
+            <img src="${imageUrl}" style="width:100%;height:auto;max-height:calc(95vh - 60px);object-fit:contain;" />
+        </div>
+    `;
 
     modal.classList.add('active');
 }
@@ -1171,12 +1199,6 @@ function renderDashboardSummary(currentActivities, previousActivities, currentRu
             <h3>Total Elevation Gain</h3>
             <p style="font-size:2rem;font-weight:bold;color:#2ECC40;">${totalElevation.toFixed(0)} m</p>
             <small><span style="color:${elevTrend.color};">${elevTrend.icon} ${elevTrend.label}</span></small>
-        </div>
-
-        <div class="card">
-            <h3>Total Training Load (TSS)</h3>
-            <p style="font-size:2rem;font-weight:bold;color:#FF851B;">${currentTotalTss.toFixed(0)}</p>
-            <small><span style="color:${tssTrend.color};">${tssTrend.icon} ${tssTrend.label}</span></small>
         </div>
 
         <div class="card">
@@ -1521,9 +1543,9 @@ function renderTSSBarChart(activities, rangeType) {
  * Helper function to get TSS/Activities/Hours data grouped by period
  */
 function getTSSBarChartData(activities, rangeType, startDate, endDate, unit) {
-    const isDaily = rangeType === 'week' || rangeType === 'last7';
-    const isWeekly = rangeType === 'last30' || rangeType === 'last3m' || rangeType === 'last6m' || rangeType === 'last365';
-    const isMonthly = rangeType === 'year' || rangeType === 'month';
+    const isDaily = rangeType === 'week' || rangeType === 'last7' || rangeType === 'month' || rangeType === 'last30';
+    const isWeekly = rangeType === 'last3m' || rangeType === 'last6m';
+    const isMonthly = rangeType === 'year' || rangeType === 'last365';
 
     const sports = ['Run', 'Ride', 'Swim', 'Gym'];
     const sportColors = {
