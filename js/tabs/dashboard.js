@@ -1180,30 +1180,6 @@ function renderDashboardSummary(currentActivities, previousActivities, currentRu
         </div>
 
         <div class="card">
-            <h3>Average Speed</h3>
-            <p style="font-size:2rem;font-weight:bold;color:#39CCCC;">${Number.isFinite(avgSpeed) ? avgSpeed.toFixed(1) : '–'} km/h</p>
-            <small><span style="color:${speedTrend.color};">${speedTrend.icon} ${speedTrend.label}</span></small>
-        </div>
-
-        <div class="card">
-            <h3>Estimated VO₂max</h3>
-            <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${Number.isFinite(currentAvgVO2) ? currentAvgVO2.toFixed(1) : '–'}</p>
-            <small><span style="color:${vo2Trend.color};">${vo2Trend.icon} ${vo2Trend.label}</span></small>
-        </div>
-
-        <div class="card">
-            <h3>Average Speed</h3>
-            <p style="font-size:2rem;font-weight:bold;color:#39CCCC;">${Number.isFinite(avgSpeed) ? avgSpeed.toFixed(1) : '–'} km/h</p>
-            <small><span style="color:${speedTrend.color};">${speedTrend.icon} ${speedTrend.label}</span></small>
-        </div>
-
-        <div class="card">
-            <h3>Estimated VO₂max</h3>
-            <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${Number.isFinite(currentAvgVO2) ? currentAvgVO2.toFixed(1) : '–'}</p>
-            <small><span style="color:${vo2Trend.color};">${vo2Trend.icon} ${vo2Trend.label}</span></small>
-        </div>
-
-        <div class="card">
             <h3>Injury Risk Index</h3>
             <p style="font-size:2rem;font-weight:bold;color:#FF4136;">${Number.isFinite(currentInjury) ? currentInjury.toFixed(3) : '–'}</p>
             <small><span style="color:${injuryTrend.color};">${injuryTrend.icon} ${injuryTrend.label}</span></small>
