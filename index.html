@@ -140,9 +140,9 @@
 
             <!-- TAB NAVIGATION -->
             <nav class="tab-nav tabs">
-                <button class="tab-link" data-tab="dashboard-tab" aria-controls="dashboard-tab"
+                <button class="tab-link active" data-tab="dashboard-tab" aria-controls="dashboard-tab"
                     aria-label="Dashboard">📈 Dashboard</button>
-                <button class="tab-link active" data-tab="analysis-tab" aria-controls="analysis-tab" aria-label="Run">🏃
+                <button class="tab-link" data-tab="analysis-tab" aria-controls="analysis-tab" aria-label="Run">🏃
                     Run</button>
                 <button class="tab-link" data-tab="bike-tab" aria-controls="bike-tab" aria-label="Bike">🚴 Bike</button>
                 <button class="tab-link" data-tab="swim-tab" aria-controls="swim-tab" aria-label="Swim">🏊 Swim</button>
@@ -167,7 +167,7 @@
             <button id="header-toggle" title="Show/hide top bar">▲ hide</button>
 
             <main>
-                <div id="analysis-tab" class="tab-content active">
+                <div id="analysis-tab" class="tab-content">
                     <div id="date-controls" class="date-controls-container">
                         <div class="filter-group">
                             <label>From: <input type="date" id="date-from"></label>
@@ -407,7 +407,7 @@
 
 
 
-                <div id="dashboard-tab" class="tab-content">
+                <div id="dashboard-tab" class="tab-content active">
                     <div id="range-selector" class="dashboard-range-selector"
                         aria-label="Dashboard time range selector"></div>
                     <div id="dashboard-topline" class="dashboard-topline" aria-live="polite"></div>
@@ -416,6 +416,17 @@
 
                     <div class="chart-container">
                         <h3>TSS Tracking</h3>
+                        <div class="tss-unit-selector" style="margin-bottom: 1rem;">
+                            <label style="margin-right: 1rem;">
+                                <input type="radio" name="tss-unit" value="tss" checked> TSS
+                            </label>
+                            <label style="margin-right: 1rem;">
+                                <input type="radio" name="tss-unit" value="activities"> Activities
+                            </label>
+                            <label>
+                                <input type="radio" name="tss-unit" value="hours"> Hours
+                            </label>
+                        </div>
                         <canvas id="tss-bar-chart" height="300"></canvas>
                     </div>
 
@@ -426,12 +437,7 @@
                                 <p>Rolling 7-day load vs ideal range, plus form (TSB).</p>
                             </div>
                             <div id="acute-load-mode-switch" class="acute-load-mode-switch" role="group"
-                                aria-label="Acute load range mode">
-                                <button type="button" class="acute-load-mode-btn"
-                                    data-mode="conservative">Conserv.</button>
-                                <button type="button" class="acute-load-mode-btn"
-                                    data-mode="aggressive">Aggres.</button>
-                            </div>
+                                aria-label="Acute load range mode" style="display:none;"></div>
                         </div>
                         <canvas id="acute-load-chart"></canvas>
                         <div id="acute-load-explainer" class="acute-load-explainer"></div>

@@ -1,7 +1,8 @@
 import * as utils from './utils.js';
 
 let selectedRangeDays = 'last30'; // rango inicial
-let acuteLoadBandMode = localStorage.getItem('dashboard_acute_load_mode') === 'conservative' ? 'conservative' : 'aggressive';
+let tssUnit = 'tss'; // unit for TSS chart: 'tss', 'activities', or 'hours'
+let acuteLoadBandMode = 'aggressive'; // always aggressive, no user selection
 let dashboardRenderContext = {
     allActivities: [],
     dateFilterFrom: null,
@@ -482,25 +483,8 @@ function describeAcuteLoadStatus(loadValue, band, profile, status) {
 }
 
 function renderAcuteLoadModeSwitch() {
-    const container = document.getElementById('acute-load-mode-switch');
-    if (!container) return;
-
-    container.querySelectorAll('.acute-load-mode-btn').forEach(button => {
-        const isActive = button.dataset.mode === acuteLoadBandMode;
-        button.classList.toggle('active', isActive);
-        button.onclick = () => {
-            const nextMode = button.dataset.mode === 'aggressive' ? 'aggressive' : 'conservative';
-            if (nextMode === acuteLoadBandMode) return;
-
-            acuteLoadBandMode = nextMode;
-            localStorage.setItem('dashboard_acute_load_mode', acuteLoadBandMode);
-            renderDashboardContent(
-                dashboardRenderContext.allActivities,
-                dashboardRenderContext.dateFilterFrom,
-                dashboardRenderContext.dateFilterTo
-            );
-        };
-    });
+    // Mode is always aggressive, no user selection needed
+    return;
 }
 
 function buildRollingSevenDayLoad(activities, rangeStart, rangeEnd) {
@@ -944,6 +928,22 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
     `;
 }
 
+/**
+ * Setup event listeners for TSS unit selector
+ */
+function setupTSSUnitSelector() {
+    const selector = document.querySelector('.tss-unit-selector');
+    if (!selector) return;
+
+    const radios = selector.querySelectorAll('input[name="tss-unit"]');
+    radios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            tssUnit = e.target.value;
+            renderTSSBarChart(dashboardRenderContext.allActivities, selectedRangeDays);
+        });
+    });
+}
+
 export function renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo) {
     dashboardRenderContext = { allActivities, dateFilterFrom, dateFilterTo };
     const container = document.getElementById('dashboard-tab');
@@ -1018,6 +1018,7 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
     renderAcuteLoadChart(recentActivities, startDate, endDate);
     renderDashboardSummary(recentActivities, previousActivities, recentRuns, previousRuns);
     renderTSSBarChart(recentActivities, selectedRangeDays);
+    setupTSSUnitSelector();
     renderGoalsSectionAdvanced(allActivities);
     renderHoursBySportChart(allActivities);
 }
@@ -1473,10 +1474,10 @@ function renderTSSBarChart(activities, rangeType) {
         }
     }
 
-    const { labels, datasets } = groupTSSByPeriod(activities, rangeType, startDate, endDate);
+    const { labels, datasets, yAxisTitle } = getTSSBarChartData(activities, rangeType, startDate, endDate, tssUnit);
 
     if (!labels.length || !datasets.length) {
-        console.warn('No TSS data to render');
+        console.warn('No data to render');
         return;
     }
 
@@ -1504,12 +1505,150 @@ function renderTSSBarChart(activities, rangeType) {
                 y: {
                     stacked: true,
                     beginAtZero: true,
-                    title: { display: true, text: 'TSS' },
+                    title: { display: true, text: yAxisTitle },
                     ticks: { precision: 0 }
                 }
             }
         }
     });
+}
+
+/**
+ * Helper function to get TSS/Activities/Hours data grouped by period
+ */
+function getTSSBarChartData(activities, rangeType, startDate, endDate, unit) {
+    const isDaily = rangeType === 'week' || rangeType === 'last7';
+    const isWeekly = rangeType === 'last30' || rangeType === 'last3m' || rangeType === 'last6m' || rangeType === 'last365';
+    const isMonthly = rangeType === 'year' || rangeType === 'month';
+
+    const sports = ['Run', 'Ride', 'Swim', 'Gym'];
+    const sportColors = {
+        Run: '#ff7f50',
+        Ride: '#1e90ff',
+        Swim: '#20b2aa',
+        Gym: '#9370db',
+        Other: '#95a5a6'
+    };
+
+    let grouped = {};
+    const minDate = new Date(startDate);
+    const maxDate = new Date(endDate);
+    let curr = new Date(minDate);
+
+    // Crear todos los periodos del rango (incluso sin datos)
+    let guard = 0;
+    while (curr <= maxDate && guard++ < 2000) {
+        let key;
+        if (isDaily) {
+            key = getPeriodKey(curr, 'daily');
+            curr.setDate(curr.getDate() + 1);
+        } else if (isWeekly) {
+            key = getPeriodKey(curr, 'weekly');
+            curr.setDate(curr.getDate() + 7);
+        } else if (isMonthly) {
+            key = getPeriodKey(curr, 'monthly');
+            curr.setMonth(curr.getMonth() + 1);
+        } else {
+            key = getPeriodKey(curr, 'daily');
+            curr.setDate(curr.getDate() + 1);
+        }
+        grouped[key] = {
+            total: 0,
+            Run: 0,
+            Ride: 0,
+            Swim: 0,
+            Gym: 0,
+            Other: 0
+        };
+    }
+
+    // Agregar datos reales de actividades
+    if (activities && activities.length > 0) {
+        for (const a of activities) {
+            if (!a.start_date_local) continue;
+            const date = new Date(a.start_date_local);
+            if (isNaN(date)) continue;
+
+            if (!isDateWithinRange(date, minDate, maxDate)) continue;
+
+            let key;
+            if (isDaily) {
+                key = getPeriodKey(date, 'daily');
+            } else if (isWeekly) {
+                key = getPeriodKey(date, 'weekly');
+            } else if (isMonthly) {
+                key = getPeriodKey(date, 'monthly');
+            } else {
+                key = getPeriodKey(date, 'daily');
+            }
+
+            if (grouped.hasOwnProperty(key)) {
+                const sport = getSportKey(a.type || '');
+
+                let value = 0;
+                if (unit === 'tss') {
+                    value = a.tss ?? (a.suffer_score ? a.suffer_score * 1.05 : 0);
+                } else if (unit === 'activities') {
+                    value = 1;
+                } else if (unit === 'hours') {
+                    value = (a.moving_time || 0) / 3600; // Convert seconds to hours
+                }
+
+                grouped[key].total += value;
+                grouped[key][sport] = (grouped[key][sport] || 0) + value;
+            }
+        }
+    }
+
+    const sortedKeys = Object.keys(grouped).sort((a, b) => {
+        if (isMonthly) {
+            const [ya, ma] = a.split('-').map(Number);
+            const [yb, mb] = b.split('-').map(Number);
+            return new Date(ya, ma - 1, 1) - new Date(yb, mb - 1, 1);
+        }
+        return parseLocalYMD(a) - parseLocalYMD(b);
+    });
+
+    const labels = sortedKeys.map(key => {
+        if (isDaily) {
+            const d = parseLocalYMD(key);
+            return d.toLocaleDateString('default', { day: '2-digit', month: 'short' });
+        }
+        if (isWeekly) {
+            const d = parseLocalYMD(key);
+            return `Week ${getWeekNumber(d)}`;
+        }
+        if (isMonthly) {
+            const [y, m] = key.split('-');
+            return `${new Date(y, m - 1).toLocaleString('default', { month: 'short' })} ${y.slice(2)}`;
+        }
+        return key;
+    });
+
+    let formatFn = v => Math.round(v);
+    if (unit === 'hours') {
+        formatFn = v => v.toFixed(1);
+    }
+
+    const datasets = sports
+        .map(sport => ({
+            label: sport,
+            data: sortedKeys.map(k => formatFn(grouped[k][sport] || 0)),
+            backgroundColor: sportColors[sport],
+            borderColor: '#fff',
+            borderWidth: 1,
+            borderRadius: 3
+        }))
+        .filter(dataset => dataset.data.some(value => value > 0));
+
+    let yAxisTitle = 'TSS';
+    if (unit === 'activities') {
+        yAxisTitle = 'Activities';
+    } else if (unit === 'hours') {
+        yAxisTitle = 'Hours';
+    }
+
+    return { labels, datasets, yAxisTitle };
 }
 
 /**
