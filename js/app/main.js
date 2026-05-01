@@ -227,24 +227,38 @@ document.addEventListener('DOMContentLoaded', () => {
         syncDateInputs();
     }
 
+    let activeTabId = null;
+
     function activateTab(tabId, { updateUrl = false, replaceUrl = false } = {}) {
+        if (tabId === activeTabId) return; // skip if already active
+
         const link = document.querySelector(`.tab-link[data-tab="${tabId}"]`);
         const content = document.getElementById(tabId);
         if (!link || !content) return;
 
-        tabLinks.forEach(item => item.classList.remove('active'));
-        tabContents.forEach(item => item.classList.remove('active'));
+        // Deactivate previous tab directly instead of looping all
+        if (activeTabId) {
+            const prevLink = document.querySelector(`.tab-link[data-tab="${activeTabId}"]`);
+            const prevContent = document.getElementById(activeTabId);
+            if (prevLink) prevLink.classList.remove('active');
+            if (prevContent) prevContent.classList.remove('active');
+        } else {
+            // First time - clean all (fallback for initial load)
+            tabLinks.forEach(item => item.classList.remove('active'));
+            tabContents.forEach(item => item.classList.remove('active'));
+        }
 
         link.classList.add('active');
         content.classList.add('active');
+        activeTabId = tabId;
 
         // Sync date inputs when switching tabs
         syncDateInputs();
 
-        // Lazy-render tabs on first visit
+        // Lazy-render tabs on first visit (deferred to next frame)
         if (!renderedTabs.has(tabId) && tabConfig[tabId]) {
-            tabConfig[tabId].render();
             renderedTabs.add(tabId);
+            requestAnimationFrame(() => tabConfig[tabId].render());
         }
 
         if (updateUrl) {

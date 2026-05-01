@@ -24,88 +24,7 @@ function toLocalYMD(date) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
-function renderHoursBySportChart(activities) {
-    // Agrupar horas por día y por deporte
-    const sports = ["Run", "Ride", "Swim", "Workout"]; // Gym = Workout en Strava
-    const dataByDay = {};
 
-    activities.forEach(act => {
-        const date = act.start_date_local.split("T")[0];
-        const sport = act.sport_type;
-        const hours = act.moving_time / 3600;
-
-        if (!sports.includes(sport)) return;
-
-        if (!dataByDay[date]) {
-            dataByDay[date] = { Run: 0, Ride: 0, Swim: 0, Workout: 0 };
-        }
-
-        dataByDay[date][sport] += hours;
-    });
-
-    // Ordenar fechas
-    const labels = Object.keys(dataByDay).sort();
-
-    // Construir datasets
-    const datasets = [
-        {
-            label: "Run",
-            data: labels.map(d => dataByDay[d].Run),
-            borderColor: "#ff7f50",
-            backgroundColor: "rgba(255,127,80,0.4)",
-            fill: true
-        },
-        {
-            label: "Ride",
-            data: labels.map(d => dataByDay[d].Ride),
-            borderColor: "#1e90ff",
-            backgroundColor: "rgba(30,144,255,0.4)",
-            fill: true
-        },
-        {
-            label: "Swim",
-            data: labels.map(d => dataByDay[d].Swim),
-            borderColor: "#20b2aa",
-            backgroundColor: "rgba(32,178,170,0.4)",
-            fill: true
-        },
-        {
-            label: "Gym",
-            data: labels.map(d => dataByDay[d].Workout),
-            borderColor: "#9370db",
-            backgroundColor: "rgba(147,112,219,0.4)",
-            fill: true
-        }
-    ];
-
-    // Crear gráfico
-    const ctx = document.getElementById("hoursBySportChart").getContext("2d");
-
-    new Chart(ctx, {
-        type: "line",
-        data: { labels, datasets },
-        options: {
-            responsive: true,
-            interaction: { mode: "index", intersect: false },
-            stacked: true,
-            plugins: {
-                title: {
-                    display: true,
-                    text: "Horas por deporte (stacked area)"
-                }
-            },
-            scales: {
-                y: {
-                    stacked: true,
-                    title: { display: true, text: "Horas" }
-                },
-                x: {
-                    title: { display: true, text: "Fecha" }
-                }
-            }
-        }
-    });
-}
 
 
 function parseDateInput(value, endOfDay = false) {
@@ -929,11 +848,12 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
 }
 
 /**
- * Setup event listeners for TSS unit selector
+ * Setup event listeners for TSS unit selector (only once)
  */
 function setupTSSUnitSelector() {
     const selector = document.querySelector('.tss-unit-selector');
-    if (!selector) return;
+    if (!selector || selector.dataset.listenerReady) return;
+    selector.dataset.listenerReady = '1';
 
     const radios = selector.querySelectorAll('input[name="tss-unit"]');
     radios.forEach(radio => {
@@ -952,21 +872,20 @@ function setupChartClickHandlers() {
     chartContainers.forEach(container => {
         const canvas = container.querySelector('canvas');
         const title = container.querySelector('h3');
-        if (canvas) {
-            // Remove old listeners to avoid duplicates
-            const newCanvas = canvas.cloneNode(true);
-            canvas.parentNode.replaceChild(newCanvas, canvas);
-            const freshCanvas = container.querySelector('canvas');
-            freshCanvas.style.cursor = 'pointer';
-            freshCanvas.addEventListener('click', () => {
-                openChartModal(freshCanvas, title ? title.textContent : 'Chart');
+        if (canvas && !canvas.dataset.modalReady) {
+            canvas.dataset.modalReady = '1';
+            canvas.style.cursor = 'pointer';
+            canvas.addEventListener('click', () => {
+                openChartModal(canvas, title ? title.textContent : 'Chart');
             });
         }
     });
 
-    // Add modal close listeners
+    // Add modal close listeners (only once)
     const modal = document.getElementById('chart-modal');
-    if (modal) {
+    if (modal && !modal.dataset.listenersReady) {
+        modal.dataset.listenersReady = '1';
+
         // Close when clicking outside the content
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
@@ -1026,14 +945,15 @@ export function renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo) 
     if (container && !document.getElementById('range-selector')) {
         const rangeDiv = document.createElement('div');
         rangeDiv.id = 'range-selector';
-        rangeDiv.style = 'display:flex;gap:.5rem;margin-bottom:1rem;';
+        rangeDiv.style = 'display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap;';
         container.prepend(rangeDiv);
     }
 
-    renderRangeSelector(allActivities, dateFilterFrom, dateFilterTo);
+    renderRangeSelector();
+    renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo);
 }
 
-function renderRangeSelector(allActivities, dateFilterFrom, dateFilterTo) {
+function renderRangeSelector() {
     const container = document.getElementById('range-selector');
     if (!container) return;
 
@@ -1048,12 +968,16 @@ function renderRangeSelector(allActivities, dateFilterFrom, dateFilterTo) {
     container.querySelectorAll('.range-btn').forEach(btn => {
         btn.onclick = () => {
             selectedRangeDays = btn.dataset.type;
-            renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo);
-            renderRangeSelector(allActivities, dateFilterFrom, dateFilterTo);
+            // Update active class immediately for snappy feedback
+            container.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            // Defer heavy render to next frame
+            requestAnimationFrame(() => {
+                const ctx = dashboardRenderContext;
+                renderDashboardContent(ctx.allActivities, ctx.dateFilterFrom, ctx.dateFilterTo);
+            });
         };
     });
-
-    renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo);
 }
 
 
@@ -1090,15 +1014,16 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
     });
 
     renderDashboardTopline(recentActivities);
-
-    renderAcuteLoadChart(recentActivities, startDate, endDate);
     renderDashboardSummary(recentActivities, previousActivities, recentRuns, previousRuns);
-    renderTSSBarChart(recentActivities, selectedRangeDays);
-    setupTSSUnitSelector();
-    renderGoalsSectionAdvanced(allActivities);
 
-    // Setup chart click handlers after all charts are rendered
-    setTimeout(() => setupChartClickHandlers(), 100);
+    // Render heavy charts in next frame to avoid blocking UI
+    requestAnimationFrame(() => {
+        renderAcuteLoadChart(recentActivities, startDate, endDate);
+        renderTSSBarChart(recentActivities, selectedRangeDays);
+        setupTSSUnitSelector();
+        renderGoalsSectionAdvanced(allActivities);
+        setupChartClickHandlers();
+    });
 }
 
 
@@ -1720,130 +1645,6 @@ function getWeekNumber(date) {
     const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
     return weekNo;
 }
-
-/**
- * Agrupa TSS por per→odo (d→a, semana o mes) incluyendo per→odos sin datos
- */
-function groupTSSByPeriod(activities, rangeType, startDate, endDate) {
-    // Usar las fechas del rango completo, no solo las de las actividades
-    const minDate = new Date(startDate);
-    const maxDate = new Date(endDate);
-
-    const isDaily = ['week', 'last7', 'month', 'last30'].includes(rangeType);
-    const isWeekly = ['last3m', 'last6m'].includes(rangeType);
-    const isMonthly = ['last365', 'year'].includes(rangeType);
-
-    const grouped = {};
-    const curr = new Date(minDate);
-    const sports = ['Run', 'Ride', 'Swim', 'Gym', 'Other'];
-    const sportColors = {
-        Run: '#ff7f50',
-        Ride: '#1e90ff',
-        Swim: '#20b2aa',
-        Gym: '#9370db',
-        Other: '#95a5a6'
-    };
-
-    // Seguridad: l→mite m→ximo de iteraciones (por si hay error de rango)
-    let guard = 0;
-
-    // Crear todos los per→odos del rango (incluso sin datos)
-    while (curr <= maxDate && guard++ < 2000) {
-        let key;
-        if (isDaily) {
-            key = getPeriodKey(curr, 'daily');
-            curr.setDate(curr.getDate() + 1);
-        } else if (isWeekly) {
-            key = getPeriodKey(curr, 'weekly');
-            curr.setDate(curr.getDate() + 7);
-        } else if (isMonthly) {
-            key = getPeriodKey(curr, 'monthly');
-            curr.setMonth(curr.getMonth() + 1);
-        } else {
-            // fallback: evitar bucle infinito
-            key = getPeriodKey(curr, 'daily');
-            curr.setDate(curr.getDate() + 1);
-        }
-        grouped[key] = {
-            total: 0,
-            Run: 0,
-            Ride: 0,
-            Swim: 0,
-            Gym: 0,
-            Other: 0
-        };
-    }
-
-    // A→adir datos reales de actividades (solo si hay actividades)
-    if (activities && activities.length > 0) {
-        for (const a of activities) {
-            if (!a.start_date_local) continue;
-            const date = new Date(a.start_date_local);
-            if (isNaN(date)) continue;
-
-            // Solo procesar si est→ dentro del rango
-            if (!isDateWithinRange(date, minDate, maxDate)) continue;
-
-            let key;
-            if (isDaily) {
-                key = getPeriodKey(date, 'daily');
-            } else if (isWeekly) {
-                key = getPeriodKey(date, 'weekly');
-            } else if (isMonthly) {
-                key = getPeriodKey(date, 'monthly');
-            } else {
-                key = getPeriodKey(date, 'daily');
-            }
-
-            const tss = a.tss ?? (a.suffer_score ? a.suffer_score * 1.05 : 0);
-            if (grouped.hasOwnProperty(key)) {
-                const sport = getSportKey(a.type || '');
-                grouped[key].total += tss;
-                grouped[key][sport] = (grouped[key][sport] || 0) + tss;
-            }
-        }
-    }
-
-    const sortedKeys = Object.keys(grouped).sort((a, b) => {
-        if (isMonthly) {
-            const [ya, ma] = a.split('-').map(Number);
-            const [yb, mb] = b.split('-').map(Number);
-            return new Date(ya, ma - 1, 1) - new Date(yb, mb - 1, 1);
-        }
-        return parseLocalYMD(a) - parseLocalYMD(b);
-    });
-
-    const labels = sortedKeys.map(key => {
-        if (isDaily) {
-            const d = parseLocalYMD(key);
-            return d.toLocaleDateString('default', { day: '2-digit', month: 'short' });
-        }
-        if (isWeekly) {
-            const d = parseLocalYMD(key);
-            return `Week ${getWeekNumber(d)}`;
-        }
-        if (isMonthly) {
-            const [y, m] = key.split('-');
-            return `${new Date(y, m - 1).toLocaleString('default', { month: 'short' })} ${y.slice(2)}`;
-        }
-        return key;
-    });
-
-    const datasets = sports
-        .map(sport => ({
-            label: sport,
-            data: sortedKeys.map(k => Math.round(grouped[k][sport] || 0)),
-            backgroundColor: sportColors[sport],
-            borderColor: '#fff',
-            borderWidth: 1,
-            borderRadius: 3
-        }))
-        .filter(dataset => dataset.data.some(value => value > 0));
-
-    return { labels, datasets };
-}
-
-
 
 
 // ==============================================

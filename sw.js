@@ -47,6 +47,9 @@ self.addEventListener('activate', event => {
 
 // Strategynetwork-first: intenta red, sino cach
 self.addEventListener('fetch', event => {
+    // Only handle GET requests - POST/PUT/etc cannot be cached
+    if (event.request.method !== 'GET') return;
+
     // No cachear peticiones a la API de Strava
     if (event.request.url.includes('api.strava.com')) {
         return event.respondWith(
