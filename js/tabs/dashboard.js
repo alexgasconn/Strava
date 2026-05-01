@@ -944,6 +944,54 @@ function setupTSSUnitSelector() {
     });
 }
 
+/**
+ * Setup chart click handlers for fullscreen modal
+ */
+function setupChartClickHandlers() {
+    const chartContainers = document.querySelectorAll('.chart-container');
+    chartContainers.forEach(container => {
+        const canvas = container.querySelector('canvas');
+        const title = container.querySelector('h3');
+        if (canvas) {
+            canvas.style.cursor = 'pointer';
+            canvas.addEventListener('click', () => {
+                openChartModal(canvas, title ? title.textContent : 'Chart');
+            });
+        }
+    });
+}
+
+/**
+ * Open chart in fullscreen modal
+ */
+function openChartModal(canvas, title) {
+    const modal = document.getElementById('chart-modal');
+    const container = document.getElementById('chart-modal-canvas-container');
+    if (!modal || !container) return;
+
+    // Clone the canvas and add title
+    const clonedCanvas = canvas.cloneNode(true);
+    clonedCanvas.style.width = '100%';
+    clonedCanvas.style.height = '100%';
+    clonedCanvas.style.maxWidth = 'none';
+
+    container.innerHTML = `<h2 style="margin-top:0;">${title}</h2>`;
+    container.appendChild(clonedCanvas);
+
+    modal.classList.add('active');
+}
+
+/**
+ * Close chart modal
+ */
+function closeChartModal() {
+    const modal = document.getElementById('chart-modal');
+    if (modal) {
+        modal.classList.remove('active');
+        document.getElementById('chart-modal-canvas-container').innerHTML = '';
+    }
+}
+
 export function renderDashboardTab(allActivities, dateFilterFrom, dateFilterTo) {
     dashboardRenderContext = { allActivities, dateFilterFrom, dateFilterTo };
     const container = document.getElementById('dashboard-tab');
@@ -1020,7 +1068,9 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
     renderTSSBarChart(recentActivities, selectedRangeDays);
     setupTSSUnitSelector();
     renderGoalsSectionAdvanced(allActivities);
-    renderHoursBySportChart(allActivities);
+
+    // Setup chart click handlers after all charts are rendered
+    setTimeout(() => setupChartClickHandlers(), 100);
 }
 
 
@@ -1063,14 +1113,11 @@ function renderDashboardSummary(currentActivities, previousActivities, currentRu
             return { icon: '•', color: '#888', label: 'N/A' };
         }
 
-        if (metric === 'hr') {
-            return { icon: 'Δ', color: '#6c757d', label: `${change > 0 ? '+' : ''}${change.toFixed(1)}%` };
-        }
-
-        const lowerIsBetter = ['injury'].includes(metric);
+        // For metrics where less is better (HR, injury), invert the colors
+        const lowerIsBetter = ['hr', 'injury'].includes(metric);
         const improved = lowerIsBetter ? change < 0 : change > 0;
         const icon = change === 0 ? '•' : (improved ? '▲' : '▼');
-        const color = change === 0 ? '#888' : (improved ? '#2ECC40' : '#FF4136');
+        const color = change === 0 ? '#888' : (improved ? '#27ae60' : '#e74c3c');
         return { icon, color, label: `${change > 0 ? '+' : ''}${change.toFixed(1)}%` };
     };
 
@@ -1085,49 +1132,27 @@ function renderDashboardSummary(currentActivities, previousActivities, currentRu
     const currentAvgHR = avg(numeric(currentActivities.map(activity => activity.average_heartrate)));
     const previousAvgHR = avg(numeric(previousActivities.map(activity => activity.average_heartrate)));
 
-    const currentAvgVO2 = avg(numeric(currentActivities.map(activity => activity.vo2max)));
-    const previousAvgVO2 = avg(numeric(previousActivities.map(activity => activity.vo2max)));
-
     const currentInjury = avg(numeric(currentActivities.map(activity => activity.injuryRisk)));
     const previousInjury = avg(numeric(previousActivities.map(activity => activity.injuryRisk)));
 
     const currentTotalTss = sum(currentActivities, activity => activity.tss ?? (activity.suffer_score ? activity.suffer_score * 1.05 : 0));
     const previousTotalTss = sum(previousActivities, activity => activity.tss ?? (activity.suffer_score ? activity.suffer_score * 1.05 : 0));
 
-    const currentSpeedValues = numeric(currentActivities.map(activity => {
-        const distanceKm = safeDistanceKm(activity);
-        const hours = safeHours(activity);
-        return hours > 0 && distanceKm > 0 ? distanceKm / hours : NaN;
-    }));
-    const previousSpeedValues = numeric(previousActivities.map(activity => {
-        const distanceKm = safeDistanceKm(activity);
-        const hours = safeHours(activity);
-        return hours > 0 && distanceKm > 0 ? distanceKm / hours : NaN;
-    }));
-    const avgSpeed = avg(currentSpeedValues);
-    const prevAvgSpeed = avg(previousSpeedValues);
-
-    const avgDistancePerSession = currentActivities.length ? totalDistance / currentActivities.length : null;
-    const prevAvgDistancePerSession = previousActivities.length ? prevDistance / previousActivities.length : null;
+    const currentAvgHR = avg(numeric(currentActivities.map(activity => activity.average_heartrate)));
+    const previousAvgHR = avg(numeric(previousActivities.map(activity => activity.average_heartrate)));
 
     const distChange = calcChange(totalDistance, prevDistance);
     const timeChange = calcChange(totalTime, prevTime);
     const elevChange = calcChange(totalElevation, prevElevation);
-    const speedChange = calcChange(avgSpeed, prevAvgSpeed);
     const hrChange = calcChange(currentAvgHR, previousAvgHR);
-    const vo2Change = calcChange(currentAvgVO2, previousAvgVO2);
-    const avgDistSessionChange = calcChange(avgDistancePerSession, prevAvgDistancePerSession);
     const injuryRiskChange = calcChange(currentInjury, previousInjury);
     const tssChange = calcChange(currentTotalTss, previousTotalTss);
 
     const distTrend = trendVisual('distance', distChange);
     const timeTrend = trendVisual('time', timeChange);
     const elevTrend = trendVisual('elevation', elevChange);
-    const vo2Trend = trendVisual('vo2', vo2Change);
     const injuryTrend = trendVisual('injury', injuryRiskChange);
-    const speedTrend = trendVisual('speed', speedChange);
     const hrTrend = trendVisual('hr', hrChange);
-    const avgDistTrend = trendVisual('distance', avgDistSessionChange);
     const tssTrend = trendVisual('load', tssChange);
 
 
@@ -1170,6 +1195,18 @@ function renderDashboardSummary(currentActivities, previousActivities, currentRu
         </div>
 
         <div class="card">
+            <h3>Average Speed</h3>
+            <p style="font-size:2rem;font-weight:bold;color:#39CCCC;">${Number.isFinite(avgSpeed) ? avgSpeed.toFixed(1) : '–'} km/h</p>
+            <small><span style="color:${speedTrend.color};">${speedTrend.icon} ${speedTrend.label}</span></small>
+        </div>
+
+        <div class="card">
+            <h3>Estimated VO₂max</h3>
+            <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${Number.isFinite(currentAvgVO2) ? currentAvgVO2.toFixed(1) : '–'}</p>
+            <small><span style="color:${vo2Trend.color};">${vo2Trend.icon} ${vo2Trend.label}</span></small>
+        </div>
+
+        <div class="card">
             <h3>Injury Risk Index</h3>
             <p style="font-size:2rem;font-weight:bold;color:#FF4136;">${Number.isFinite(currentInjury) ? currentInjury.toFixed(3) : '–'}</p>
             <small><span style="color:${injuryTrend.color};">${injuryTrend.icon} ${injuryTrend.label}</span></small>
@@ -1179,12 +1216,6 @@ function renderDashboardSummary(currentActivities, previousActivities, currentRu
             <h3>Average Heart Rate</h3>
             <p style="font-size:2rem;font-weight:bold;color:#FF4136;">${Number.isFinite(currentAvgHR) ? currentAvgHR.toFixed(0) : '–'} bpm</p>
             <small><span style="color:${hrTrend.color};">${hrTrend.icon} ${hrTrend.label}</span></small>
-        </div>
-
-        <div class="card">
-            <h3>Avg Distance / Session</h3>
-            <p style="font-size:2rem;font-weight:bold;color:#0074D9;">${Number.isFinite(avgDistancePerSession) ? avgDistancePerSession.toFixed(1) : '–'} km</p>
-            <small><span style="color:${avgDistTrend.color};">${avgDistTrend.icon} ${avgDistTrend.label}</span></small>
         </div>
         
     `;

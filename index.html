@@ -57,6 +57,70 @@
             gap: .5rem;
             align-items: center;
         }
+
+        /* Chart modal styles */
+        .chart-modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .chart-modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chart-modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            max-width: 95vw;
+            max-height: 95vh;
+            width: 90vw;
+            height: 80vh;
+            position: relative;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            overflow: auto;
+        }
+
+        .chart-modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1.5rem;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #555;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0;
+            transition: color 0.2s;
+        }
+
+        .chart-modal-close:hover {
+            color: #000;
+        }
+
+        .chart-container canvas {
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .chart-container canvas:hover {
+            opacity: 0.8;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
     </style>
 
     <!-- Analytics -->
@@ -988,6 +1052,14 @@
                 <div id="loading-progress-bar"></div>
             </div>
             <p id="loading-meta"></p>
+        </div>
+    </div>
+
+    <!-- Chart fullscreen modal -->
+    <div id="chart-modal" class="chart-modal">
+        <div class="chart-modal-content">
+            <button class="chart-modal-close" onclick="closeChartModal();">&times;</button>
+            <div id="chart-modal-canvas-container"></div>
         </div>
     </div>
 
