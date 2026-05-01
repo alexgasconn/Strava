@@ -6,20 +6,21 @@ let charts = {};
 // --- BIKE TYPE COLORING ---
 
 const bikeColors = {
-    road: "#FC5200",
-    mtb: "#2e7d32",
-    indoor: "#1976d2",
-    gravel: "#FFD54F",
-    electric: "#7E57C2"
+    road: "#2e7d32",
+    mtb: "#8d6e63",
+    indoor: "#42a5f5",
+    gravel: "#ffa726",
+    electric: "#ab47bc"
 };
 
+const BIKE_TYPES = ['road', 'mtb', 'gravel', 'indoor', 'electric'];
+const BIKE_TYPE_LABELS = { road: 'Road', mtb: 'MTB', gravel: 'Gravel', indoor: 'Indoor', electric: 'Electric' };
+
 function getBikeType(r) {
-    if (r.sport_type === "MountainBikeRide") return "mtb";
-    if (r.sport_type === "GravelBikeRide") return "gravel";
-    if (r.sport_type === "EBikeRide" ||
-        r.sport_type === "EMountainBikeRide" ||
-        r.sport_type === "EGravelBikeRide") return "electric";
-    if (r.sport_type === "IndoorRide" || r.distance === 0) return "indoor";
+    if (r.sport_type === "MountainBikeRide" || r.sport_type === "EMountainBikeRide") return "mtb";
+    if (r.sport_type === "GravelBikeRide" || r.sport_type === "EGravelBikeRide") return "gravel";
+    if (r.sport_type === "EBikeRide") return "electric";
+    if (r.sport_type === "VirtualRide" || r.sport_type === "IndoorRide" || r.type === "VirtualRide" || (!r.start_latlng?.length && r.distance === 0)) return "indoor";
     return "road";
 }
 
@@ -49,12 +50,15 @@ export function renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterT
     const filteredActivities =
         utils.filterActivitiesByDate(allActivities, dateFilterFrom, dateFilterTo);
 
+    const rideSportTypes = new Set([
+        'Ride', 'MountainBikeRide', 'GravelBikeRide',
+        'EBikeRide', 'EMountainBikeRide', 'EGravelBikeRide',
+        'VirtualRide', 'IndoorRide'
+    ]);
+    const rideTypes = new Set(['Ride', 'VirtualRide', 'EBikeRide']);
+
     const rides = filteredActivities
-        .filter(a =>
-            a.type === "Ride" ||
-            a.sport_type === "Ride" ||
-            a.sport_type === "MountainBikeRide"
-        )
+        .filter(a => rideTypes.has(a.type) || rideSportTypes.has(a.sport_type))
         .filter(a => gearFilter === 'all' || a.gear_id === gearFilter);
 
     console.log("Rendering bike analysis for", rides.length, "rides");
@@ -314,33 +318,18 @@ function renderSummaryCards(rides) {
 // ------------------------
 
 function renderBikeTypeChart(rides) {
+    const counts = { road: 0, mtb: 0, indoor: 0, gravel: 0, electric: 0 };
+    rides.forEach(r => { counts[getBikeType(r)]++; });
 
-    let road = 0;
-    let mtb = 0;
-    let indoor = 0;
-    let gravel = 0;
-    let electric = 0;
-
-    rides.forEach(r => {
-        if (r.sport_type === "MountainBikeRide") mtb++;
-        else if (r.distance == 0) indoor++;
-        else if (r.sport_type == "IndoorRide") indoor++;
-        else if (r.sport_type == "GravelBikeRide") gravel++;
-        else if (r.sport_type == "EBikeRide") electric++;
-        else if (r.sport_type == "EMountainBikeRide") electric++;
-        else if (r.sport_type == "EGravelBikeRide") electric++;
-        else road++;
-    });
+    const activeTypes = BIKE_TYPES.filter(t => counts[t] > 0);
 
     createChart("bike-type-chart", {
-
         type: "pie",
-
         data: {
-            labels: ["Road", "MTB", "Indoor", "Gravel", "Electric"],
+            labels: activeTypes.map(t => BIKE_TYPE_LABELS[t]),
             datasets: [{
-                data: [road, mtb, indoor, gravel, electric],
-                backgroundColor: ["#FC5200", "#2e7d32", "#1976d2", "#FFD54F", "#7E57C2"]
+                data: activeTypes.map(t => counts[t]),
+                backgroundColor: activeTypes.map(t => bikeColors[t])
             }]
         }
     });
@@ -373,7 +362,7 @@ function renderDistanceHistogram(rides) {
             datasets: [{
                 label: "# rides",
                 data: bins,
-                backgroundColor: "rgba(252,82,0,0.7)"
+                backgroundColor: "rgba(46,125,50,0.7)"
             }]
         },
         options: {
@@ -414,8 +403,12 @@ function renderElevationHistogram(rides) {
             datasets: [{
                 label: "# rides",
                 data: bins,
-                backgroundColor: "rgba(200,40,40,0.7)"
+                backgroundColor: "rgba(56,142,60,0.7)"
             }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } }
         }
     });
 }
@@ -426,32 +419,44 @@ function renderElevationHistogram(rides) {
 // DISTANCE VS SPEED
 // ------------------------
 
-function renderSpeedVsDistanceChart(rides) {
-    const data = rides
-        .filter(r => r.moving_time > 0 && r.distance > 0)
-        .map(r => ({
-            x: r.distance / 1000,
-            y: (r.distance / 1000) / (r.moving_time / 3600),
-            type: getBikeType(r)
-        }));
+function buildScatterDatasets(rides, xFn, yFn) {
+    return BIKE_TYPES
+        .map(type => {
+            const data = rides
+                .filter(r => getBikeType(r) === type)
+                .map(r => ({ x: xFn(r), y: yFn(r) }))
+                .filter(p => isFinite(p.x) && isFinite(p.y) && p.x !== 0);
+            return {
+                label: BIKE_TYPE_LABELS[type],
+                data,
+                backgroundColor: bikeColors[type],
+                borderColor: bikeColors[type],
+                pointRadius: 4,
+                pointHoverRadius: 6
+            };
+        })
+        .filter(ds => ds.data.length > 0);
+}
 
-    if (!data.length) return;
+function renderSpeedVsDistanceChart(rides) {
+    const validRides = rides.filter(r => r.moving_time > 0 && r.distance > 0);
+    if (!validRides.length) return;
+
+    const datasets = buildScatterDatasets(
+        validRides,
+        r => r.distance / 1000,
+        r => (r.distance / 1000) / (r.moving_time / 3600)
+    );
 
     createChart("bike-speed-distance-chart", {
         type: "scatter",
-        data: {
-            datasets: [{
-                label: "Ride",
-                data,
-                backgroundColor: ctx => bikeColors[ctx.raw.type]
-            }]
-        },
+        data: { datasets },
         options: {
-            parsing: false,
             scales: {
                 x: { title: { display: true, text: "Distance (km)" } },
                 y: { title: { display: true, text: "Speed (km/h)" } }
-            }
+            },
+            plugins: { legend: { position: 'bottom' } }
         }
     });
 }
@@ -464,31 +469,24 @@ function renderSpeedVsDistanceChart(rides) {
 // ------------------------
 
 function renderDistanceVsElevationChart(rides) {
-    const data = rides
-        .filter(r => r.distance >= 0 && r.total_elevation_gain >= 0)
-        .map(r => ({
-            x: r.distance / 1000,
-            y: r.total_elevation_gain || 0,
-            type: getBikeType(r)
-        }));
+    const validRides = rides.filter(r => r.distance > 0 && r.total_elevation_gain >= 0);
+    if (!validRides.length) return;
 
-    if (!data.length) return;
+    const datasets = buildScatterDatasets(
+        validRides,
+        r => r.distance / 1000,
+        r => r.total_elevation_gain || 0
+    );
 
     createChart("bike-distance-elevation-chart", {
         type: "scatter",
-        data: {
-            datasets: [{
-                label: "Ride",
-                data,
-                backgroundColor: ctx => bikeColors[ctx.raw.type]
-            }]
-        },
+        data: { datasets },
         options: {
-            parsing: false,
             scales: {
                 x: { title: { display: true, text: "Distance (km)" } },
                 y: { title: { display: true, text: "Elevation Gain (m)" } }
-            }
+            },
+            plugins: { legend: { position: 'bottom' } }
         }
     });
 }
@@ -501,32 +499,24 @@ function renderDistanceVsElevationChart(rides) {
 // ------------------------
 
 function renderElevationRatioChart(rides) {
-    const data = rides
-        .filter(r => r.distance > 0)
-        .map(r => ({
-            x: r.distance / 1000,
-            y: (r.total_elevation_gain || 0) / (r.distance / 1000),
-            type: getBikeType(r)
-        }))
-        .filter(p => isFinite(p.y));
+    const validRides = rides.filter(r => r.distance > 0);
+    if (!validRides.length) return;
 
-    if (!data.length) return;
+    const datasets = buildScatterDatasets(
+        validRides,
+        r => r.distance / 1000,
+        r => (r.total_elevation_gain || 0) / (r.distance / 1000)
+    );
 
     createChart("bike-elevation-ratio-chart", {
         type: "scatter",
-        data: {
-            datasets: [{
-                label: "Elevation per km",
-                data,
-                backgroundColor: ctx => bikeColors[ctx.raw.type]
-            }]
-        },
+        data: { datasets },
         options: {
-            parsing: false,
             scales: {
                 x: { title: { display: true, text: "Distance (km)" } },
                 y: { title: { display: true, text: "m / km" } }
-            }
+            },
+            plugins: { legend: { position: 'bottom' } }
         }
     });
 }
@@ -539,32 +529,24 @@ function renderElevationRatioChart(rides) {
 // ------------------------
 
 function renderPowerVsSpeedChart(rides) {
-    const data = rides
-        .filter(r => r.average_watts > 0 && r.moving_time > 0 && r.distance > 0)
-        .map(r => ({
-            x: r.average_watts,
-            y: (r.distance / 1000) / (r.moving_time / 3600),
-            type: getBikeType(r)
-        }))
-        .filter(p => isFinite(p.y));
+    const validRides = rides.filter(r => r.average_watts > 0 && r.moving_time > 0 && r.distance > 0);
+    if (!validRides.length) return;
 
-    if (!data.length) return;
+    const datasets = buildScatterDatasets(
+        validRides,
+        r => r.average_watts,
+        r => (r.distance / 1000) / (r.moving_time / 3600)
+    );
 
     createChart("bike-power-speed-chart", {
         type: "scatter",
-        data: {
-            datasets: [{
-                label: "Power vs Speed",
-                data,
-                backgroundColor: ctx => bikeColors[ctx.raw.type]
-            }]
-        },
+        data: { datasets },
         options: {
-            parsing: false,
             scales: {
                 x: { title: { display: true, text: "Power (W)" } },
                 y: { title: { display: true, text: "Speed (km/h)" } }
-            }
+            },
+            plugins: { legend: { position: 'bottom' } }
         }
     });
 }
@@ -1001,7 +983,9 @@ export function renderAccumulatedDistanceChart(rides) {
             datasets: [{
                 label: 'Accumulated Distance (km)',
                 data: accumulated,
-                borderColor: 'rgba(54,162,235,1)',
+                borderColor: '#2e7d32',
+                backgroundColor: 'rgba(46,125,50,0.1)',
+                fill: true,
                 pointRadius: 0,
                 tension: 0.1
             }]
@@ -1031,8 +1015,8 @@ export function renderWeeklyDistanceTrendChart(rides, rollingWindowWeeks = 26) {
                     label: 'Weekly distance (km)',
                     data: weeklyKm,
                     type: 'bar',
-                    backgroundColor: 'rgba(54,162,235,0.20)',
-                    borderColor: 'rgba(54,162,235,0.35)',
+                    backgroundColor: 'rgba(46,125,50,0.20)',
+                    borderColor: 'rgba(46,125,50,0.35)',
                     borderWidth: 1,
                     hidden: true,
                     order: 2
@@ -1041,8 +1025,8 @@ export function renderWeeklyDistanceTrendChart(rides, rollingWindowWeeks = 26) {
                     label: `Rolling mean (${windowLabel})`,
                     data: rolling,
                     type: 'line',
-                    borderColor: 'rgba(255,99,132,1)',
-                    backgroundColor: 'rgba(255,99,132,0.18)',
+                    borderColor: '#2e7d32',
+                    backgroundColor: 'rgba(46,125,50,0.18)',
                     pointRadius: 0,
                     borderWidth: 4,
                     tension: 0.25,
