@@ -1138,9 +1138,6 @@ function renderDashboardSummary(currentActivities, previousActivities, currentRu
     const currentTotalTss = sum(currentActivities, activity => activity.tss ?? (activity.suffer_score ? activity.suffer_score * 1.05 : 0));
     const previousTotalTss = sum(previousActivities, activity => activity.tss ?? (activity.suffer_score ? activity.suffer_score * 1.05 : 0));
 
-    const currentAvgHR = avg(numeric(currentActivities.map(activity => activity.average_heartrate)));
-    const previousAvgHR = avg(numeric(previousActivities.map(activity => activity.average_heartrate)));
-
     const distChange = calcChange(totalDistance, prevDistance);
     const timeChange = calcChange(totalTime, prevTime);
     const elevChange = calcChange(totalElevation, prevElevation);
