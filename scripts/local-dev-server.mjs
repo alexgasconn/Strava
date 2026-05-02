@@ -1,3 +1,8 @@
+// Local dev only: corporate proxies use self-signed CA certs that Node.js doesn't trust.
+// This flag is safe here because this file is never executed in production (Vercel runs the
+// api/ handlers directly). Never set this in production code.
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -9,7 +14,7 @@ const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 const apiDir = path.join(rootDir, 'api');
 const originalEnvKeys = new Set(Object.keys(process.env));
-const port = Number(process.env.PORT || 3000);
+const port = Number(process.env.PORT || 3001);
 
 const mimeTypes = new Map([
   ['.html', 'text/html; charset=utf-8'],

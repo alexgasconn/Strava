@@ -25,22 +25,26 @@ export default async function handler(req, res) {
     grant_type: 'authorization_code'
   });
 
+  let response;
   try {
-    const response = await fetch('https://www.strava.com/oauth/token', {
+    response = await fetch('https://www.strava.com/oauth/token', {
       method: 'POST',
       body: params
     });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error('Strava auth error:', data);
-      return res.status(500).json({ error: data.message || 'Strava auth failed' });
-    }
-
-    return res.status(200).json(data); // contiene access_token, refresh_token, expires_at
-  } catch (error) {
-    console.error('Auth error:', error);
-    return res.status(500).json({ error: error.message });
+  } catch (networkError) {
+    const cause = networkError.cause?.message || networkError.cause?.code || '';
+    const detail = cause ? `${networkError.message} (${cause})` : networkError.message;
+    console.error('Strava token fetch — network error:', networkError.cause ?? networkError);
+    return res.status(502).json({ error: `Cannot reach Strava: ${detail}` });
   }
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const msg = data.message || data.error || 'Strava auth failed';
+    console.error('Strava auth error:', data);
+    return res.status(400).json({ error: msg });
+  }
+
+  return res.status(200).json(data);
 }
