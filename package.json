@@ -2,6 +2,11 @@
   "name": "strava-dashboard-app",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/local-dev-server.mjs",
+    "check:syntax": "find . \\( -name '*.js' -o -name '*.mjs' \\) -not -path './node_modules/*' -exec node --check {} \\;"
+  },
   "dependencies": {
     "@vercel/speed-insights": "^2.0.0",
     "node-fetch": "^2.6.7"

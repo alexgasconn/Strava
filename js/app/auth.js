@@ -1,13 +1,28 @@
 // js/auth.js
 import { showLoading, handleError, hideLoading } from './ui.js';
 
-const STRAVA_CLIENT_ID = '143540';
 const REDIRECT_URI = window.location.origin + window.location.pathname;
 
-export function redirectToStrava() {
-    const scope = 'read,activity:read_all,profile:read_all';
-    const authUrl = `https://www.strava.com/oauth/authorize?client_id=${STRAVA_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=${scope}`;
-    window.location.href = authUrl;
+async function getStravaClientId() {
+    const response = await fetch('/api/config');
+    const data = await response.json();
+
+    if (!response.ok || !data.stravaClientId) {
+        throw new Error(data.error || 'Unable to load Strava client ID');
+    }
+
+    return data.stravaClientId;
+}
+
+export async function redirectToStrava() {
+    try {
+        const clientId = await getStravaClientId();
+        const scope = 'read,activity:read_all,profile:read_all';
+        const authUrl = `https://www.strava.com/oauth/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(scope)}`;
+        window.location.href = authUrl;
+    } catch (error) {
+        handleError('Could not start Strava login', error);
+    }
 }
 
 export async function logout() {

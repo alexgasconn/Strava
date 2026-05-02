@@ -40,7 +40,7 @@ export class AeroEngine {
             const drag_power = this._calculateDragPower(point.speed, wind_component);
 
             // Wind Adjusted Pace (WAP) - what pace would be with zero wind
-            const actual_pace = 60 / (point.speed) if point.speed > 0 else null;
+            const actual_pace = point.speed > 0 ? 60 / point.speed : null;
             const adjusted_speed = point.speed + (wind_component / 10); // Rough adjustment
             const wap = 60 / Math.max(0.1, adjusted_speed);
 

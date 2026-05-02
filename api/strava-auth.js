@@ -8,6 +8,12 @@ export default async function handler(req, res) {
   const clientId = process.env.STRAVA_CLIENT_ID;
   const clientSecret = process.env.STRAVA_CLIENT_SECRET;
 
+  if (!clientId || !clientSecret) {
+    return res.status(500).json({
+      error: 'Missing STRAVA_CLIENT_ID or STRAVA_CLIENT_SECRET'
+    });
+  }
+
   if (!code) {
     return res.status(400).json({ error: 'Authorization code is required' });
   }
