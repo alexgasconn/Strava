@@ -301,7 +301,7 @@ The app is a path-routed SPA. Vercel rewrites route segments such as `/run`, `/d
 - Node.js 18+
 - A Strava account
 - A registered Strava developer application
-- Vercel CLI for local serverless emulation
+- The included local Node.js dev server
 
 ### Required environment variables
 
@@ -320,20 +320,22 @@ npm install
 
 ### Local development
 
-The repository currently does not define local `npm` scripts in `package.json`. The correct local workflow is to run the application through Vercel's local serverless environment:
+Create local environment variables, install dependencies, and run the local dev server:
 
 ```bash
-npx vercel dev
+cp .env.example .env.local
+npm install
+npm run dev
 ```
 
-Then open the local URL provided by Vercel and authenticate with Strava.
+Then open the local URL printed by the dev server and authenticate with Strava. See [LOCAL_SETUP.md](LOCAL_SETUP.md) for the full Strava OAuth setup and troubleshooting checklist.
 
 ### Recommended local setup sequence
 
 1. Create or configure your Strava developer application with the correct redirect URL.
-2. Set `STRAVA_CLIENT_ID` and `STRAVA_CLIENT_SECRET` in your Vercel local environment.
+2. Copy `.env.example` to `.env.local` and set `STRAVA_CLIENT_ID` and `STRAVA_CLIENT_SECRET`.
 3. Install dependencies with `npm install`.
-4. Run `npx vercel dev`.
+4. Run `npm run dev`.
 5. Open the app and connect with Strava.
 6. If you want AI Coach, paste your Gemini API key into the AI tab after the app loads.
 
@@ -474,7 +476,7 @@ Interactivity includes:
 
 ## Known Issues And Caveats
 
-- The local development workflow depends on Vercel CLI because `package.json` currently has no scripts.
+- The local development workflow depends on the included Node.js dev server so API routes work during Strava OAuth.
 - The predictor and classification layers are heuristic and should be treated as decision support, not ground truth.
 - Weather enrichment is approximate and based on hourly historical data, not exact on-route microclimate.
 - GPX export is reconstructed from processed streams rather than original device files.
