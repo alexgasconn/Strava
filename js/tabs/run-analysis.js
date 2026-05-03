@@ -556,8 +556,8 @@ export function renderPaceHistogram(runs) {
             datasets: [{
                 label: 'Actividades',
                 data: counts,
-                backgroundColor: 'rgba(54, 162, 235, 0.7)',
-                borderColor: 'rgba(54, 162, 235, 1)',
+                backgroundColor: 'rgba(252, 82, 0, 0.7)',
+                borderColor: '#FC5200',
                 borderWidth: 1
             }]
         },
@@ -778,7 +778,8 @@ export function renderAccumulatedDistanceChart(runs) {
             datasets: [{
                 label: 'Accumulated Distance (km)',
                 data: accumulated,
-                borderColor: 'rgba(54,162,235,1)',
+                borderColor: '#FC5200',
+                backgroundColor: 'rgba(252, 82, 0, 0.16)',
                 pointRadius: 0,
                 tension: 0.1
             }]
@@ -808,8 +809,8 @@ export function renderRollingMeanDistanceChart(runs, rollingWindowWeeks = 26) {
                     label: 'Weekly distance (km)',
                     data: weeklyKm,
                     type: 'bar',
-                    backgroundColor: 'rgba(54,162,235,0.20)',
-                    borderColor: 'rgba(54,162,235,0.35)',
+                    backgroundColor: 'rgba(252, 82, 0, 0.20)',
+                    borderColor: 'rgba(252, 82, 0, 0.35)',
                     borderWidth: 1,
                     hidden: true,
                     order: 2
@@ -818,8 +819,8 @@ export function renderRollingMeanDistanceChart(runs, rollingWindowWeeks = 26) {
                     label: `Rolling mean (${windowLabel})`,
                     data: rolling,
                     type: 'line',
-                    borderColor: 'rgba(255,99,132,1)',
-                    backgroundColor: 'rgba(255,99,132,0.18)',
+                    borderColor: '#FC5200',
+                    backgroundColor: 'rgba(252, 82, 0, 0.18)',
                     pointRadius: 0,
                     borderWidth: 4,
                     tension: 0.25,
@@ -1225,30 +1226,30 @@ function renderTopRuns(runs) {
 
     el.innerHTML = `
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin: 2rem 0;">
-            <div class="top-box" style="padding: 1.5rem; background: #f9f9f9; border-radius: 8px;">
-                <h3 style="margin-top: 0;">🏃 Longest Runs</h3>
+            <div class="top-box" style="padding: 1.5rem; background: rgba(252, 82, 0, 0.08); border: 1px solid rgba(252, 82, 0, 0.25); border-radius: 12px;">
+                <h3 style="margin-top: 0; color: #FC5200;">🏃 Longest Runs</h3>
                 <table class="compact-table" id="run-top-distance-table">
-                <thead><tr><th>#</th><th>Run</th><th data-sort="num">km</th></tr></thead>
+                <thead><tr style="background: #FC5200; color: #fff;"><th>#</th><th>Run</th><th data-sort="num">km</th></tr></thead>
                 <tbody>
                     ${topDistance.map((a, i) => `<tr><td>${i + 1}</td><td>${activityLink(a)}</td><td data-value="${a.distance / 1000}">${(a.distance / 1000).toFixed(1)} km</td></tr>`).join("")}
                 </tbody>
                 </table>
             </div>
 
-            <div class="top-box" style="padding: 1.5rem; background: #f9f9f9; border-radius: 8px;">
-                <h3 style="margin-top: 0;">⛰️ Most Elevation</h3>
+            <div class="top-box" style="padding: 1.5rem; background: rgba(252, 82, 0, 0.08); border: 1px solid rgba(252, 82, 0, 0.25); border-radius: 12px;">
+                <h3 style="margin-top: 0; color: #FC5200;">⛰️ Most Elevation</h3>
                 <table class="compact-table" id="run-top-elevation-table">
-                <thead><tr><th>#</th><th>Run</th><th data-sort="num">Elev (m)</th></tr></thead>
+                <thead><tr style="background: #FC5200; color: #fff;"><th>#</th><th>Run</th><th data-sort="num">Elev (m)</th></tr></thead>
                 <tbody>
                     ${topElevation.map((a, i) => `<tr><td>${i + 1}</td><td>${activityLink(a)}</td><td data-value="${a.total_elevation_gain}">${a.total_elevation_gain} m</td></tr>`).join("")}
                 </tbody>
                 </table>
             </div>
 
-            <div class="top-box" style="padding: 1.5rem; background: #f9f9f9; border-radius: 8px;">
-                <h3 style="margin-top: 0;">⚡ Fastest Races</h3>
+            <div class="top-box" style="padding: 1.5rem; background: rgba(252, 82, 0, 0.08); border: 1px solid rgba(252, 82, 0, 0.25); border-radius: 12px;">
+                <h3 style="margin-top: 0; color: #FC5200;">⚡ Fastest Races</h3>
                 <table class="compact-table" id="run-top-pace-table">
-                <thead><tr><th>#</th><th>Run</th><th data-sort="num">Pace</th></tr></thead>
+                <thead><tr style="background: #FC5200; color: #fff;"><th>#</th><th>Run</th><th data-sort="num">Pace</th></tr></thead>
                 <tbody>
                     ${topFastest.map((a, i) => `<tr><td>${i + 1}</td><td>${activityLink(a)}</td><td data-value="${a.pace}">${formatPace(a.pace)}</td></tr>`).join("")}
                 </tbody>
@@ -1297,17 +1298,16 @@ function renderActivitiesTable(runs) {
         .join("");
 
     el.innerHTML = `
-        <table id="run-all-table" style="width: 100%; border-collapse: collapse; margin-top: 2rem;">
+        <table id="run-all-table" style="width: 100%; border-collapse: collapse; margin-top: 2rem; border: 1px solid rgba(252, 82, 0, 0.25); border-radius: 10px; overflow: hidden;">
             <thead>
-                <tr style="background-color: #f0f0f0;">
-                    <th data-sort="date" style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Date</th>
-                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Activity</th>
-                    <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Distance (km)</th>
-                    <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Elevation (m)</th>
-                    <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Pace /km</th>
-                    <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Avg HR</th>
+                <tr style="background: #FC5200; color: #fff;">
+                    <th data-sort="date" style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2);">Date</th>
+                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2);">Activity</th>
+                    <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2);">Distance (km)</th>
+                    <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2);">Elevation (m)</th>
+                    <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2);">Pace /km</th>
+                    <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2);">Avg HR</th>
                 </tr>
-            </thead>
             <tbody>
                 ${rows}
             </tbody>
