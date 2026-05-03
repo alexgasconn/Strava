@@ -456,38 +456,58 @@ function renderDistanceHistogram(swims) {
 
 function renderPaceHistogram(swims) {
 
-    const paces = swims
-        .map(s => s.pace_min100)
-        .filter(p => p && isFinite(p));
+    const poolPaces = swims
+        .filter(s => s.swim_type === "pool" && s.pace_min100 && isFinite(s.pace_min100))
+        .map(s => s.pace_min100);
 
-    if (!paces.length) return;
+    const openwaterPaces = swims
+        .filter(s => s.swim_type === "openwater" && s.pace_min100 && isFinite(s.pace_min100))
+        .map(s => s.pace_min100);
+
+    const allPaces = [...poolPaces, ...openwaterPaces];
+    if (!allPaces.length) return;
 
     const binSize = 0.05; // 3s aprox
-    const max = Math.max(...paces, 0);
-    const min = Math.min(...paces, max);
-    const bins = new Array(Math.ceil((max - min) / binSize)).fill(0);
+    const max = Math.max(...allPaces, 0);
+    const min = Math.min(...allPaces, max);
+    const binCount = Math.ceil((max - min) / binSize);
 
-    paces.forEach(p => {
+    const binsPool = new Array(binCount).fill(0);
+    const binsOW = new Array(binCount).fill(0);
+
+    poolPaces.forEach(p => {
         const idx = Math.floor((p - min) / binSize);
-        if (bins[idx] !== undefined) bins[idx]++;
+        if (binsPool[idx] !== undefined) binsPool[idx]++;
+    });
+
+    openwaterPaces.forEach(p => {
+        const idx = Math.floor((p - min) / binSize);
+        if (binsOW[idx] !== undefined) binsOW[idx]++;
     });
 
     createChart("swim-pace-histogram", {
         type: "bar",
         data: {
-            labels: bins.map((_, i) => {
+            labels: binsPool.map((_, i) => {
                 const from = min + i * binSize;
                 const to = min + (i + 1) * binSize;
                 return `${formatPace(from)}–${formatPace(to)}`;
             }),
-            datasets: [{
-                label: "# swims",
-                data: bins,
-                backgroundColor: "rgba(0,200,150,0.7)"
-            }]
+            datasets: [
+                {
+                    label: "Pool",
+                    data: binsPool,
+                    backgroundColor: swimColors.pool
+                },
+                {
+                    label: "Open Water",
+                    data: binsOW,
+                    backgroundColor: swimColors.openwater
+                }
+            ]
         },
         options: {
-            plugins: { legend: { display: false } },
+            plugins: { legend: { display: true } },
             scales: { x: { ticks: { maxRotation: 90, minRotation: 45 } } }
         }
     });
