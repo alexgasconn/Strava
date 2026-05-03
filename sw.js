@@ -47,6 +47,9 @@ self.addEventListener('activate', event => {
 
 // Strategynetwork-first: intenta red, sino cach
 self.addEventListener('fetch', event => {
+    // Only handle http/https requests - chrome-extension:// etc. are unsupported by Cache API
+    if (!event.request.url.startsWith('http')) return;
+
     // Only handle GET requests - POST/PUT/etc cannot be cached
     if (event.request.method !== 'GET') return;
 

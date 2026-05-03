@@ -118,8 +118,13 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
     </style>
 
@@ -135,11 +140,11 @@
 
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-H12FLB7QEC"></script>
     <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
 
-    gtag('config', 'G-H12FLB7QEC');
+        gtag('config', 'G-H12FLB7QEC');
     </script>
 
     <script defer src="/_vercel/insights/script.js"></script>
@@ -1047,8 +1052,7 @@
             <div id="loading-progress-track" aria-hidden="true">
                 <div id="loading-progress-bar"></div>
             </div>
-            <p id="loading-pct" style="margin:4px 0 0;font-size:1rem;font-weight:700;color:#fc5200;letter-spacing:0.03em;"></p>
-            <p id="loading-meta"></p>
+            <p id="loading-pct" style="margin:4px 0 0;font-size:1rem;font-weight:700;letter-spacing:0.03em;"></p>
         </div>
     </div>
 

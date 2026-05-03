@@ -242,12 +242,12 @@ main {
     .chart-container canvas {
         aspect-ratio: 4 / 3;
     }
-    
+
     .chart-legend {
         font-size: 0.75rem !important;
         padding: 0.5rem !important;
     }
-    
+
     /* Make legend wrap on mobile */
     .chart-container .legend {
         flex-wrap: wrap !important;
@@ -325,13 +325,6 @@ main {
     width: 0%;
     background: linear-gradient(90deg, #ff7f3f 0%, #fc5200 100%);
     transition: width 0.25s ease;
-}
-
-#loading-meta {
-    margin-top: 8px;
-    font-size: 0.86rem;
-    color: #666;
-    text-align: center;
 }
 
 @keyframes spin {

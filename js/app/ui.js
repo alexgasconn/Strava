@@ -5,53 +5,43 @@ import * as utils from '../shared/utils/index.js';
 const loadingOverlay = document.getElementById('loading-overlay');
 const loadingMessage = document.getElementById('loading-message');
 const loadingProgressBar = document.getElementById('loading-progress-bar');
-const loadingMeta = document.getElementById('loading-meta');
 const athleteName = document.getElementById('athlete-name');
 const loginSection = document.getElementById('login-section');
 const appSection = document.getElementById('app-section');
 
-let _loadTimerInterval = null;
-let _loadStartTime = null;
 let _lastProgress = 0;
 
-// --- UI HELPERS ---
-export function showLoading(message, progress = null, meta = '') {
-    _lastProgress = Number.isFinite(progress) ? Math.max(0, Math.min(100, progress)) : _lastProgress;
+function _pctColor(p) {
+    // Interpolate: light orange (#ff9a5c) → Strava orange (#fc5200) as p goes 0→1
+    const r = Math.round(255 - 3 * p);
+    const g = Math.round(154 - 72 * p);
+    const b = Math.round(92 - 92 * p);
+    return `rgb(${r},${g},${b})`;
+}
 
-    if (!_loadTimerInterval) {
-        _loadStartTime = Date.now();
-        _loadTimerInterval = setInterval(() => {
-            const secs = ((Date.now() - _loadStartTime) / 1000).toFixed(1);
-            const pctEl = document.getElementById('loading-pct');
-            if (pctEl) pctEl.textContent = `${Math.round(_lastProgress)}%  ·  ${secs}s`;
-        }, 100);
-    }
+// --- UI HELPERS ---
+export function showLoading(message, progress = null) {
+    _lastProgress = Number.isFinite(progress) ? Math.max(0, Math.min(100, progress)) : _lastProgress;
 
     if (loadingOverlay) {
         loadingMessage.textContent = message;
         if (loadingProgressBar) {
             loadingProgressBar.style.width = `${_lastProgress}%`;
         }
-        if (loadingMeta) {
-            loadingMeta.textContent = meta || '';
-        }
         const pctEl = document.getElementById('loading-pct');
-        if (pctEl) pctEl.textContent = `${Math.round(_lastProgress)}%`;
+        if (pctEl) {
+            pctEl.textContent = `${Math.round(_lastProgress)}%`;
+            pctEl.style.color = _pctColor(_lastProgress / 100);
+        }
         loadingOverlay.style.display = 'flex';
         loadingOverlay.classList.remove('hidden');
     }
 }
 
 export function hideLoading() {
-    if (_loadTimerInterval) {
-        clearInterval(_loadTimerInterval);
-        _loadTimerInterval = null;
-        _loadStartTime = null;
-        _lastProgress = 0;
-    }
+    _lastProgress = 0;
     if (loadingOverlay) {
         if (loadingProgressBar) loadingProgressBar.style.width = '0%';
-        if (loadingMeta) loadingMeta.textContent = '';
         const pctEl = document.getElementById('loading-pct');
         if (pctEl) pctEl.textContent = '';
         loadingOverlay.style.display = 'none';

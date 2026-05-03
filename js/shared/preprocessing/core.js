@@ -108,6 +108,9 @@ function numericSafe(v) {
     return v === null || v === undefined || isNaN(v) ? 0 : Number(v);
 }
 
+const WEATHER_REQUEST_TIMEOUT_MS = 4000; // abort individual request after 4 s
+const WEATHER_TOTAL_TIMEOUT_MS = 12000;  // stop fetching weather after 12 s total
+
 async function getWeatherForRun(run) {
     if (!run.start_latlng || run.start_latlng.length < 2) {
         return null;
@@ -119,8 +122,12 @@ async function getWeatherForRun(run) {
 
     const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m,wind_direction_10m,weathercode,cloudcover,surface_pressure,relativehumidity_2m&start_date=${dateStr}&end_date=${dateStr}&timezone=auto`;
 
+    const controller = new AbortController();
+    const timerId = setTimeout(() => controller.abort(), WEATHER_REQUEST_TIMEOUT_MS);
+
     try {
-        const res = await fetch(url);
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(timerId);
         if (!res.ok) throw new Error(`HTTP ${res.status} - ${res.statusText}`);
         const data = await res.json();
 
@@ -151,7 +158,11 @@ async function getWeatherForRun(run) {
         return { ...weather, difficulty };
 
     } catch (err) {
-        console.error(`Weather fetch for ${run.name} (${dateStr}) failed:`, err);
+        clearTimeout(timerId);
+        // AbortError means timeout — silent skip; log other errors
+        if (err.name !== 'AbortError') {
+            console.warn(`Weather fetch for ${run.name} (${dateStr}) failed:`, err);
+        }
         return null;
     }
 }
@@ -332,9 +343,14 @@ async function groupByDay(activities) {
     const daily = {};
     const runs = activities.filter(a => a.type === 'Run' && a.start_latlng);
 
-    // Fetch weather in batches
+    // Fetch weather in batches with a hard total-time cap
     const batches = 5;
+    const weatherStart = Date.now();
     for (let i = 0; i < runs.length; i += batches) {
+        if (Date.now() - weatherStart > WEATHER_TOTAL_TIMEOUT_MS) {
+            console.warn(`[Weather] Total timeout reached after ${WEATHER_TOTAL_TIMEOUT_MS}ms — skipping remaining ${runs.length - i} runs`);
+            break;
+        }
         const batch = runs.slice(i, i + batches);
         const weatherPromises = batch.map(run => getWeatherForRun(run));
         const weatherResults = await Promise.all(weatherPromises);
