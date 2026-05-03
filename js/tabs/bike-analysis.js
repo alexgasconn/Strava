@@ -6,11 +6,11 @@ let charts = {};
 // --- BIKE TYPE COLORING ---
 
 const bikeColors = {
-    road: "#2e7d32",
-    mtb: "#8d6e63",
-    indoor: "#42a5f5",
-    gravel: "#ffa726",
-    electric: "#ab47bc"
+    road: "#6b7280",      // grey road
+    mtb: "#2e7d32",       // mountain green
+    indoor: "#42a5f5",    // blue indoor
+    gravel: "#d97706",    // yellow/orange gravel
+    electric: "#facc15"   // yellow electric
 };
 
 const BIKE_TYPES = ['road', 'mtb', 'gravel', 'indoor', 'electric'];
@@ -346,7 +346,7 @@ function renderDistanceHistogram(rides) {
 
     if (!distances.length) return;
 
-    const binSize = 10;
+    const binSize = 5; //km
     const max = Math.max(...distances, 0);
     const bins = new Array(Math.ceil(max / binSize)).fill(0);
 
@@ -597,12 +597,12 @@ function renderTopActivities(rides) {
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin: 2rem 0;">
 
-        <div class="top-box" style="padding: 1.5rem; background: #f9f9f9; border-radius: 8px;">
+        <div class="top-box" style="padding: 1.5rem; background: rgba(46, 125, 50, 0.08); border: 1px solid rgba(46, 125, 50, 0.25); border-radius: 12px;">
 
-            <h3>Longest Rides</h3>
+            <h3 style="margin-top: 0; color: #2e7d32;">Longest Rides</h3>
 
             <table class="compact-table" id="bike-top-distance-table">
-            <thead><tr><th>#</th><th>Ride</th><th data-sort="num">km</th></tr></thead>
+            <thead><tr style="background: #2e7d32; color: #fff;"><th>#</th><th>Ride</th><th data-sort="num">km</th></tr></thead>
             <tbody>
                 ${topDistance.map((a, i) =>
         `<tr><td>${i + 1}</td><td>${activityLink(a)}</td><td data-value="${a.distance / 1000}">${(a.distance / 1000).toFixed(1)} km</td></tr>`
@@ -612,12 +612,12 @@ function renderTopActivities(rides) {
 
         </div>
 
-        <div class="top-box" style="padding: 1.5rem; background: #f9f9f9; border-radius: 8px;">
+        <div class="top-box" style="padding: 1.5rem; background: rgba(46, 125, 50, 0.08); border: 1px solid rgba(46, 125, 50, 0.25); border-radius: 12px;">
 
-            <h3>Most Elevation</h3>
+            <h3 style="margin-top: 0; color: #2e7d32;">Most Elevation</h3>
 
             <table class="compact-table" id="bike-top-elevation-table">
-            <thead><tr><th>#</th><th>Ride</th><th data-sort="num">Elev (m)</th></tr></thead>
+            <thead><tr style="background: #2e7d32; color: #fff;"><th>#</th><th>Ride</th><th data-sort="num">Elev (m)</th></tr></thead>
             <tbody>
                 ${topElevation.map((a, i) =>
         `<tr><td>${i + 1}</td><td>${activityLink(a)}</td><td data-value="${a.total_elevation_gain}">${a.total_elevation_gain} m</td></tr>`
@@ -627,12 +627,12 @@ function renderTopActivities(rides) {
 
         </div>
 
-        <div class="top-box" style="padding: 1.5rem; background: #f9f9f9; border-radius: 8px;">
+        <div class="top-box" style="padding: 1.5rem; background: rgba(46, 125, 50, 0.08); border: 1px solid rgba(46, 125, 50, 0.25); border-radius: 12px;">
 
-            <h3>Fastest Rides</h3>
+            <h3 style="margin-top: 0; color: #2e7d32;">Fastest Rides</h3>
 
             <table class="compact-table" id="bike-top-speed-table">
-            <thead><tr><th>#</th><th>Ride</th><th data-sort="num">km/h</th></tr></thead>
+            <thead><tr style="background: #2e7d32; color: #fff;"><th>#</th><th>Ride</th><th data-sort="num">km/h</th></tr></thead>
             <tbody>
                 ${topFastest.map((a, i) =>
         `<tr><td>${i + 1}</td><td>${activityLink(a)}</td><td data-value="${a.speed}">${a.speed.toFixed(1)} km/h</td></tr>`
@@ -745,21 +745,21 @@ function renderActivitiesTable(rides) {
         .join("");
 
     el.innerHTML = `
-        <table id="bike-all-table">
+        <table id="bike-all-table" style="width: 100%; border-collapse: collapse; margin-top: 2rem; border: 1px solid rgba(46, 125, 50, 0.25); border-radius: 10px; overflow: hidden;">
             <thead>
-                <tr>
-                    <th data-sort="date">Date</th>
-                    <th>Activity</th>
-                    <th data-sort="text">Type</th>
-                    <th data-sort="num">km</th>
-                    <th data-sort="num">Elev (m)</th>
-                    <th data-sort="num">Elev/km</th>
-                    <th data-sort="num">km/h</th>
-                    <th data-sort="num">Effort</th>
-                    <th data-sort="num">Score</th>
-                    <th data-sort="num">Power</th>
-                    <th data-sort="num">Ratio</th>
-                    <th data-sort="num">Elapsed</th>
+                <tr style="background: #2e7d32; color: #fff;">
+                    <th data-sort="date" style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2);">Date</th>
+                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2);">Activity</th>
+                    <th data-sort="text" style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2);">Type</th>
+                    <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2);">km</th>
+                    <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2);">Elev (m)</th>
+                    <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2);">Elev/km</th>
+                    <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2);">km/h</th>
+                    <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2);">Effort</th>
+                    <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2);">Score</th>
+                    <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2);">Power</th>
+                    <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2);">Ratio</th>
+                    <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2);">Elapsed</th>
                 </tr>
             </thead>
             <tbody>
