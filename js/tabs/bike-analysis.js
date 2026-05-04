@@ -83,6 +83,8 @@ export function renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterT
 
     renderAccumulatedDistanceChart(rides);
     renderWeeklyDistanceTrendChart(rides, rollingWindowWeeks);
+    renderEddingtonDistributionChart(rides);
+    renderEddingtonProgressionChart(rides);
 
     renderTopActivities(rides);
 
@@ -994,10 +996,10 @@ export function renderWeeklyDistanceTrendChart(rides, rollingWindowWeeks = 26) {
     const rolling = utils.rollingMean(weeklyKm, rollingWindowWeeks).map(v => +v.toFixed(2));
 
     // Convert weeks to human-readable label
-    const windowLabel = rollingWindowWeeks >= 52 ? '1 year' 
-        : rollingWindowWeeks >= 26 ? '6 months' 
-        : rollingWindowWeeks >= 12 ? '3 months' 
-        : '1 month';
+    const windowLabel = rollingWindowWeeks >= 52 ? '1 year'
+        : rollingWindowWeeks >= 26 ? '6 months'
+            : rollingWindowWeeks >= 12 ? '3 months'
+                : '1 month';
 
     createChart('bike-weekly-distance-trend-chart', {
         type: 'line',
@@ -1044,4 +1046,203 @@ export function renderWeeklyDistanceTrendChart(rides, rollingWindowWeeks = 26) {
             }
         }
     });
+
+    utils.upsertChartInfo('bike-weekly-distance-trend-chart', {
+        title: 'Weekly trend, in short',
+        bodyHtml: `Bars are the weekly totals and the solid line is the rolling mean over the selected window.<br>
+           It helps separate one-off spikes from the underlying training trend.`,
+        accentColor: '#2e7d32'
+    });
+}
+
+function getBikeMilestoneLabels() {
+    return new Map([
+        [25, '25K E25'],
+        [50, '50K E50'],
+        [75, '75K E75'],
+        [100, '100K E100'],
+        [150, '150K E150'],
+        [200, '200K E200']
+    ]);
+}
+
+function attachBikeEddingtonInfo(canvasId, eddington, variant) {
+    const current = eddington.summary.current;
+    const recentWindow = eddington.summary.recentWindowDays;
+    const projectionCount = eddington.summary.projectionCount;
+    const bodyHtml = variant === 'distribution'
+        ? `Current value: <strong>E${current}</strong>.<br>
+           A bike Eddington of 75 means <strong>75 different days</strong> with at least <strong>75 km</strong> each.<br>
+           The bars count qualifying days; the solid line shows <strong>active days</strong> needed to reach each E.<br>
+           The dashed continuation projects only the next <strong>${projectionCount}</strong> E values, using your last <strong>${recentWindow}</strong> days of activity.`
+        : `Current value: <strong>E${current}</strong>.<br>
+           The 50K, 75K or 200K markers only appear after reaching E50, E75 or E200.<br>
+           A single 200 km ride does <strong>not</strong> create the E200 milestone.`;
+
+    utils.upsertChartInfo(canvasId, {
+        title: 'How milestones work',
+        bodyHtml,
+        accentColor: '#2e7d32'
+    });
+}
+
+export function renderEddingtonDistributionChart(rides) {
+    if (!rides || rides.length === 0) return;
+
+    const eddington = utils.buildEddingtonSeries(rides, ride => (ride.distance || 0) / 1000, { unitStep: 1 });
+    if (!eddington.distributionSeries.length) return;
+
+    createChart('bike-eddington-distribution-chart', {
+        type: 'bar',
+        data: {
+            labels: eddington.distributionSeries.map(point => String(point.threshold)),
+            datasets: [
+                {
+                    label: 'Days >= E km',
+                    data: eddington.distributionSeries.map(point => point.qualifyingDays),
+                    backgroundColor: 'rgba(46, 125, 50, 0.65)',
+                    borderColor: '#2e7d32',
+                    borderWidth: 1,
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Days needed',
+                    data: eddington.distributionSeries.map(point => point.activeDaysNeeded),
+                    type: 'line',
+                    borderColor: '#166534',
+                    backgroundColor: 'rgba(22, 101, 52, 0.18)',
+                    spanGaps: true,
+                    tension: 0.25,
+                    pointRadius: 2,
+                    pointHoverRadius: 4,
+                    yAxisID: 'y1'
+                },
+                {
+                    label: 'Projected days needed',
+                    data: eddington.distributionSeries.map(point => point.projectedActiveDaysNeeded),
+                    type: 'line',
+                    borderColor: '#166534',
+                    backgroundColor: 'transparent',
+                    borderDash: [6, 6],
+                    spanGaps: true,
+                    tension: 0.2,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    yAxisID: 'y1'
+                }
+            ]
+        },
+        options: {
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label(context) {
+                            const point = eddington.distributionSeries[context.dataIndex];
+                            if (context.datasetIndex === 0) {
+                                return `${point.qualifyingDays} days at ${point.threshold} km or more`;
+                            }
+                            if (context.datasetIndex === 1 && point.activeDaysNeeded == null) {
+                                return `E${point.threshold} not reached yet`;
+                            }
+                            if (context.datasetIndex === 1) {
+                                return `${point.activeDaysNeeded} active days to reach E${point.threshold} (${point.daysNeeded} calendar days)`;
+                            }
+                            if (point.projectedActiveDaysNeeded == null) {
+                                return `No projection for E${point.threshold} yet`;
+                            }
+                            return `Projection: about ${point.projectedActiveDaysNeeded} active days to reach E${point.threshold}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { title: { display: true, text: 'Eddington number (km)' } },
+                y: {
+                    type: 'linear',
+                    position: 'left',
+                    beginAtZero: true,
+                    title: { display: true, text: 'Qualifying days' }
+                },
+                y1: {
+                    type: 'linear',
+                    position: 'right',
+                    beginAtZero: true,
+                    title: { display: true, text: 'Active days needed' },
+                    grid: { drawOnChartArea: false }
+                }
+            }
+        }
+    });
+
+    attachBikeEddingtonInfo('bike-eddington-distribution-chart', eddington, 'distribution');
+}
+
+export function renderEddingtonProgressionChart(rides) {
+    if (!rides || rides.length === 0) return;
+
+    const eddington = utils.buildEddingtonSeries(rides, ride => (ride.distance || 0) / 1000, { unitStep: 1 });
+    if (!eddington.achievementSeries.length) return;
+
+    const milestoneLabels = getBikeMilestoneLabels();
+    const milestoneData = eddington.achievementSeries
+        .filter(point => milestoneLabels.has(point.threshold))
+        .map(point => ({ x: point.date, y: point.threshold, label: milestoneLabels.get(point.threshold) }));
+
+    createChart('bike-eddington-progression-chart', {
+        type: 'line',
+        data: {
+            labels: eddington.achievementSeries.map(point => point.date),
+            datasets: [
+                {
+                    label: 'Eddington reached',
+                    data: eddington.achievementSeries.map(point => point.threshold),
+                    borderColor: '#2e7d32',
+                    backgroundColor: 'rgba(46, 125, 50, 0.18)',
+                    pointRadius: 2,
+                    pointHoverRadius: 4,
+                    tension: 0.15,
+                    fill: false
+                },
+                {
+                    label: 'Milestones',
+                    type: 'scatter',
+                    data: milestoneData,
+                    borderColor: '#166534',
+                    backgroundColor: '#166534',
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    pointStyle: 'rectRot',
+                    showLine: false
+                }
+            ]
+        },
+        options: {
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        title(items) {
+                            return items[0]?.label || '';
+                        },
+                        label(context) {
+                            if (context.datasetIndex === 1) {
+                                return `${context.raw.label}. Reached when you had ${context.raw.y} days of at least ${context.raw.y} km.`;
+                            }
+                            return `Reached E${context.raw} on ${context.label}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { title: { display: true, text: 'Achievement date' } },
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: 'Eddington number (km)' }
+                }
+            }
+        }
+    });
+
+    attachBikeEddingtonInfo('bike-eddington-progression-chart', eddington, 'progression');
 }

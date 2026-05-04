@@ -21,6 +21,8 @@ export function renderRunAnalysisTab(allActivities, dateFilterFrom, dateFilterTo
     renderDistanceHistogram(runs);
     renderAccumulatedDistanceChart(runs);
     renderRollingMeanDistanceChart(runs, rollingWindowWeeks);
+    renderEddingtonDistributionChart(runs);
+    renderEddingtonProgressionChart(runs);
     renderDistanceVsElevationChart(runs);
     renderElevationHistogram(runs);
     renderConsistencyChart(runs, dateFilterFrom, dateFilterTo);
@@ -513,11 +515,11 @@ export function renderPaceVsDistanceChart(runs) {
 }
 
 const formatPace = paceDecimal => {
-        if (!paceDecimal || paceDecimal <= 0) return '-';
-        const min = Math.floor(paceDecimal);
-        const sec = Math.round((paceDecimal - min) * 60);
-        return `${min}:${sec.toString().padStart(2, '0')} min/km`;
-    };
+    if (!paceDecimal || paceDecimal <= 0) return '-';
+    const min = Math.floor(paceDecimal);
+    const sec = Math.round((paceDecimal - min) * 60);
+    return `${min}:${sec.toString().padStart(2, '0')} min/km`;
+};
 
 export function renderPaceHistogram(runs) {
     if (!runs || runs.length === 0) return;
@@ -795,10 +797,10 @@ export function renderRollingMeanDistanceChart(runs, rollingWindowWeeks = 26) {
     const rolling = utils.rollingMean(weeklyKm, rollingWindowWeeks).map(v => +v.toFixed(2));
 
     // Convert weeks to human-readable label
-    const windowLabel = rollingWindowWeeks >= 52 ? '1 year' 
-        : rollingWindowWeeks >= 26 ? '6 months' 
-        : rollingWindowWeeks >= 12 ? '3 months' 
-        : '1 month';
+    const windowLabel = rollingWindowWeeks >= 52 ? '1 year'
+        : rollingWindowWeeks >= 26 ? '6 months'
+            : rollingWindowWeeks >= 12 ? '3 months'
+                : '1 month';
 
     createChart('rolling-mean-distance-chart', {
         type: 'line',
@@ -845,6 +847,213 @@ export function renderRollingMeanDistanceChart(runs, rollingWindowWeeks = 26) {
             }
         }
     });
+
+    utils.upsertChartInfo('rolling-mean-distance-chart', {
+        title: 'Weekly trend, in short',
+        bodyHtml: `Bars are the weekly totals and the solid line is the rolling mean over the selected window.<br>
+           Longer windows smooth more noise; shorter windows react faster to changes.`,
+        accentColor: '#FC5200'
+    });
+}
+
+function getRunMilestoneLabels() {
+    return new Map([
+        [5, '5K E5'],
+        [10, '10K E10'],
+        [15, '15K E15'],
+        [20, '20K E20'],
+        [21, 'Half E21'],
+        [30, '30K E30'],
+        [42, 'Marathon E42'],
+        [50, '50K E50']
+    ]);
+}
+
+function attachRunEddingtonInfo(canvasId, eddington, variant) {
+    const current = eddington.summary.current;
+    const recentWindow = eddington.summary.recentWindowDays;
+    const projectionCount = eddington.summary.projectionCount;
+    const milestoneNote = current >= 42
+        ? 'The marathon marker appears because E42 has been reached.'
+        : 'A marathon marker only appears once E42 is reached: 42 different days of at least 42 km.';
+
+    const bodyHtml = variant === 'distribution'
+        ? `Current value: <strong>E${current}</strong>.<br>
+           The bars show how many different days were at least that distance.<br>
+              The solid line shows how many <strong>active days</strong> it took to reach each E value.<br>
+              The dashed continuation projects only the next <strong>${projectionCount}</strong> E values, using your last <strong>${recentWindow}</strong> days of activity.<br>
+           ${milestoneNote}`
+        : `Current value: <strong>E${current}</strong>.<br>
+           Each step marks the first date on which that exact E value was achieved.<br>
+           Special markers are not single activities. They only appear when the matching E value is reached.<br>
+           Example: one marathon day does <strong>not</strong> mean Marathon E42.`;
+
+    utils.upsertChartInfo(canvasId, {
+        title: 'Eddington, in short',
+        bodyHtml,
+        accentColor: '#FC5200'
+    });
+}
+
+export function renderEddingtonDistributionChart(runs) {
+    if (!runs || runs.length === 0) return;
+
+    const eddington = utils.buildEddingtonSeries(runs, run => (run.distance || 0) / 1000, { unitStep: 1 });
+    if (!eddington.distributionSeries.length) return;
+
+    createChart('run-eddington-distribution-chart', {
+        type: 'bar',
+        data: {
+            labels: eddington.distributionSeries.map(point => String(point.threshold)),
+            datasets: [
+                {
+                    label: 'Days >= E km',
+                    data: eddington.distributionSeries.map(point => point.qualifyingDays),
+                    backgroundColor: 'rgba(252, 82, 0, 0.65)',
+                    borderColor: '#FC5200',
+                    borderWidth: 1,
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Days needed',
+                    data: eddington.distributionSeries.map(point => point.activeDaysNeeded),
+                    type: 'line',
+                    borderColor: '#7c2d12',
+                    backgroundColor: 'rgba(124, 45, 18, 0.18)',
+                    spanGaps: true,
+                    tension: 0.25,
+                    pointRadius: 2,
+                    pointHoverRadius: 4,
+                    yAxisID: 'y1'
+                },
+                {
+                    label: 'Projected days needed',
+                    data: eddington.distributionSeries.map(point => point.projectedActiveDaysNeeded),
+                    type: 'line',
+                    borderColor: '#7c2d12',
+                    backgroundColor: 'transparent',
+                    borderDash: [6, 6],
+                    spanGaps: true,
+                    tension: 0.2,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    yAxisID: 'y1'
+                }
+            ]
+        },
+        options: {
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label(context) {
+                            const point = eddington.distributionSeries[context.dataIndex];
+                            if (context.datasetIndex === 0) {
+                                return `${point.qualifyingDays} days at ${point.threshold} km or more`;
+                            }
+                            if (context.datasetIndex === 1 && point.activeDaysNeeded == null) {
+                                return `E${point.threshold} not reached yet`;
+                            }
+                            if (context.datasetIndex === 1) {
+                                return `${point.activeDaysNeeded} active days to reach E${point.threshold} (${point.daysNeeded} calendar days)`;
+                            }
+                            if (point.projectedActiveDaysNeeded == null) {
+                                return `No projection for E${point.threshold} yet`;
+                            }
+                            return `Projection: about ${point.projectedActiveDaysNeeded} active days to reach E${point.threshold}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { title: { display: true, text: 'Eddington number (km)' } },
+                y: {
+                    type: 'linear',
+                    position: 'left',
+                    beginAtZero: true,
+                    title: { display: true, text: 'Qualifying days' }
+                },
+                y1: {
+                    type: 'linear',
+                    position: 'right',
+                    beginAtZero: true,
+                    title: { display: true, text: 'Active days needed' },
+                    grid: { drawOnChartArea: false }
+                }
+            }
+        }
+    });
+
+    attachRunEddingtonInfo('run-eddington-distribution-chart', eddington, 'distribution');
+}
+
+export function renderEddingtonProgressionChart(runs) {
+    if (!runs || runs.length === 0) return;
+
+    const eddington = utils.buildEddingtonSeries(runs, run => (run.distance || 0) / 1000, { unitStep: 1 });
+    if (!eddington.achievementSeries.length) return;
+
+    const milestoneLabels = getRunMilestoneLabels();
+    const milestoneData = eddington.achievementSeries
+        .filter(point => milestoneLabels.has(point.threshold))
+        .map(point => ({ x: point.date, y: point.threshold, label: milestoneLabels.get(point.threshold) }));
+
+    createChart('run-eddington-progression-chart', {
+        type: 'line',
+        data: {
+            labels: eddington.achievementSeries.map(point => point.date),
+            datasets: [
+                {
+                    label: 'Eddington reached',
+                    data: eddington.achievementSeries.map(point => point.threshold),
+                    borderColor: '#FC5200',
+                    backgroundColor: 'rgba(252, 82, 0, 0.18)',
+                    pointRadius: 2,
+                    pointHoverRadius: 4,
+                    tension: 0.15,
+                    fill: false
+                },
+                {
+                    label: 'Milestones',
+                    type: 'scatter',
+                    data: milestoneData,
+                    borderColor: '#7c2d12',
+                    backgroundColor: '#7c2d12',
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    pointStyle: 'rectRot',
+                    showLine: false
+                }
+            ]
+        },
+        options: {
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        title(items) {
+                            return items[0]?.label || '';
+                        },
+                        label(context) {
+                            if (context.datasetIndex === 1) {
+                                return `${context.raw.label}. Reached when you had ${context.raw.y} days of at least ${context.raw.y} km.`;
+                            }
+                            return `Reached E${context.raw} on ${context.label}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { title: { display: true, text: 'Achievement date' } },
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: 'Eddington number (km)' }
+                }
+            }
+        }
+    });
+
+    attachRunEddingtonInfo('run-eddington-progression-chart', eddington, 'progression');
 }
 
 

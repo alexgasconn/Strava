@@ -24,6 +24,213 @@ export function rollingMean(arr, windowSize) {
     return result;
 }
 
+function parseLocalDateKey(dateLike) {
+    const datePart = String(dateLike || '').substring(0, 10);
+    const [year, month, day] = datePart.split('-').map(Number);
+    const date = new Date(year, (month || 1) - 1, day || 1);
+    return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function toLocalDateKey(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+export function buildEddingtonSeries(activities, distanceGetter, options = {}) {
+    const unitStep = Number(options.unitStep) > 0 ? Number(options.unitStep) : 1;
+    const projectionCount = Number(options.projectionCount) > 0 ? Number(options.projectionCount) : 10;
+    const recentWindowDays = Number(options.recentWindowDays) > 0 ? Number(options.recentWindowDays) : 90;
+    const dailyTotals = new Map();
+
+    activities.forEach(activity => {
+        if (!activity?.start_date_local) return;
+
+        const date = parseLocalDateKey(activity.start_date_local);
+        if (!date) return;
+
+        const key = toLocalDateKey(date);
+        const distance = Number(distanceGetter(activity)) || 0;
+        dailyTotals.set(key, (dailyTotals.get(key) || 0) + distance);
+    });
+
+    const dailySeries = Array.from(dailyTotals.entries())
+        .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
+        .map(([date, distance]) => ({
+            date,
+            distance: +distance.toFixed(3),
+            thresholdUnits: Math.max(0, Math.floor(distance / unitStep))
+        }));
+
+    const maxThreshold = dailySeries.reduce((maxValue, day) => Math.max(maxValue, day.thresholdUnits), 0);
+    if (!dailySeries.length || maxThreshold <= 0) {
+        return {
+            summary: { current: 0, maxThreshold: 0, activeDays: dailySeries.length },
+            achievementSeries: [],
+            distributionSeries: []
+        };
+    }
+
+    const exceedCounts = new Array(maxThreshold + 1).fill(0);
+    dailySeries.forEach(day => {
+        for (let threshold = 1; threshold <= day.thresholdUnits; threshold++) {
+            exceedCounts[threshold] += 1;
+        }
+    });
+
+    const achievementCounts = new Array(maxThreshold + 1).fill(0);
+    const achievementDates = new Array(maxThreshold + 1).fill(null);
+    const achievementActiveDays = new Array(maxThreshold + 1).fill(null);
+    dailySeries.forEach((day, index) => {
+        for (let threshold = 1; threshold <= day.thresholdUnits; threshold++) {
+            achievementCounts[threshold] += 1;
+            if (!achievementDates[threshold] && achievementCounts[threshold] >= threshold) {
+                achievementDates[threshold] = day.date;
+                achievementActiveDays[threshold] = index + 1;
+            }
+        }
+    });
+
+    const firstDate = parseLocalDateKey(dailySeries[0].date);
+    const lastDate = parseLocalDateKey(dailySeries[dailySeries.length - 1].date);
+    const elapsedCalendarDays = firstDate && lastDate
+        ? Math.max(1, Math.round((lastDate - firstDate) / 86400000) + 1)
+        : dailySeries.length;
+    const recentCutoff = lastDate ? new Date(lastDate) : null;
+    if (recentCutoff) {
+        recentCutoff.setDate(recentCutoff.getDate() - recentWindowDays + 1);
+        recentCutoff.setHours(0, 0, 0, 0);
+    }
+    const recentSeries = recentCutoff
+        ? dailySeries.filter(day => {
+            const date = parseLocalDateKey(day.date);
+            return date && date >= recentCutoff;
+        })
+        : dailySeries;
+    const recentActiveDays = recentSeries.length;
+    const distributionSeries = [];
+    const achievementSeries = [];
+    let current = 0;
+
+    for (let threshold = 1; threshold <= maxThreshold; threshold++) {
+        const achievedDate = achievementDates[threshold];
+        if (achievedDate) {
+            current = threshold;
+            const reachedDate = parseLocalDateKey(achievedDate);
+            const daysNeeded = firstDate && reachedDate
+                ? Math.round((reachedDate - firstDate) / 86400000) + 1
+                : null;
+            const activeDaysNeeded = achievementActiveDays[threshold];
+
+            distributionSeries.push({
+                threshold,
+                qualifyingDays: exceedCounts[threshold],
+                daysNeeded,
+                activeDaysNeeded,
+                projectedActiveDaysNeeded: activeDaysNeeded,
+                isAchieved: true
+            });
+            achievementSeries.push({
+                threshold,
+                date: achievedDate,
+                daysNeeded,
+                activeDaysNeeded
+            });
+            continue;
+        }
+
+        const remainingQualifiers = threshold - exceedCounts[threshold];
+        const recentQualifyingDays = recentSeries.reduce((count, day) => {
+            return count + (day.thresholdUnits >= threshold ? 1 : 0);
+        }, 0);
+        const projectedActiveDaysNeeded = threshold <= current + projectionCount && recentQualifyingDays > 0
+            ? dailySeries.length + Math.ceil(remainingQualifiers * (recentActiveDays / recentQualifyingDays))
+            : null;
+
+        distributionSeries.push({
+            threshold,
+            qualifyingDays: exceedCounts[threshold],
+            daysNeeded: null,
+            activeDaysNeeded: null,
+            projectedActiveDaysNeeded,
+            isAchieved: false
+        });
+    }
+
+    return {
+        summary: {
+            current,
+            maxThreshold,
+            activeDays: dailySeries.length,
+            elapsedCalendarDays,
+            projectionCount,
+            recentWindowDays,
+            recentActiveDays
+        },
+        achievementSeries,
+        distributionSeries
+    };
+}
+
+export function upsertChartInfo(canvasId, options = {}) {
+    const canvas = document.getElementById(canvasId);
+    const container = canvas?.closest('.chart-container');
+    if (!canvas || !container) return;
+
+    const {
+        title = 'How to read this chart',
+        bodyHtml = '',
+        accentColor = '#111'
+    } = options;
+
+    container.style.position = 'relative';
+
+    let button = container.querySelector(`.chart-info-button[data-chart-info-for="${canvasId}"]`);
+    let panel = container.querySelector(`.chart-info-panel[data-chart-info-for="${canvasId}"]`);
+
+    if (!button) {
+        button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'chart-info-button';
+        button.dataset.chartInfoFor = canvasId;
+        button.setAttribute('aria-label', `Explain ${canvasId}`);
+        button.textContent = '?';
+        container.appendChild(button);
+    }
+
+    if (!panel) {
+        panel = document.createElement('div');
+        panel.className = 'chart-info-panel';
+        panel.dataset.chartInfoFor = canvasId;
+        container.appendChild(panel);
+    }
+
+    button.style.setProperty('--chart-info-accent', accentColor);
+    panel.style.setProperty('--chart-info-accent', accentColor);
+    panel.innerHTML = `
+        <div class="chart-info-panel__title">${title}</div>
+        <div class="chart-info-panel__body">${bodyHtml}</div>
+    `;
+
+    if (button.dataset.bound === 'true') return;
+
+    button.addEventListener('click', event => {
+        event.stopPropagation();
+        const isOpen = button.classList.toggle('is-open');
+        panel.classList.toggle('is-open', isOpen);
+    });
+
+    document.addEventListener('click', event => {
+        if (!container.contains(event.target)) {
+            button.classList.remove('is-open');
+            panel.classList.remove('is-open');
+        }
+    });
+
+    button.dataset.bound = 'true';
+}
+
 export function calculateFitness(dailyEffort) {
     function expMovingAvg(arr, lambda) {
         const result = [];

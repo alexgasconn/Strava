@@ -220,6 +220,70 @@ main {
     text-align: left;
 }
 
+.chart-info-button {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 999px;
+    background: var(--chart-info-accent, #111);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.16);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+    z-index: 3;
+}
+
+.chart-info-button:hover,
+.chart-info-button.is-open {
+    transform: translateY(-1px) scale(1.03);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.22);
+}
+
+.chart-info-panel {
+    position: absolute;
+    top: 3.1rem;
+    right: 1rem;
+    width: min(320px, calc(100% - 2rem));
+    padding: 0.85rem 0.95rem;
+    border-radius: 14px;
+    border: 1px solid color-mix(in srgb, var(--chart-info-accent, #111) 35%, #ffffff);
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.14);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-6px);
+    transition: opacity 0.16s ease, transform 0.16s ease;
+    z-index: 3;
+}
+
+.chart-info-panel.is-open {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.chart-info-panel__title {
+    margin-bottom: 0.45rem;
+    color: var(--chart-info-accent, #111);
+    font-size: 0.92rem;
+    font-weight: 700;
+}
+
+.chart-info-panel__body {
+    color: #334155;
+    font-size: 0.84rem;
+    line-height: 1.45;
+}
+
+.chart-info-panel__body strong {
+    color: #0f172a;
+}
+
 .rolling-selector {
     display: flex;
     align-items: center;
