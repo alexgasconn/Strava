@@ -88,6 +88,10 @@ button:focus {
 }
 
 /* --- LAYOUT DE LA APP --- */
+#app-section {
+    position: relative;
+}
+
 #app-section header {
     display: flex;
     justify-content: space-between;
@@ -1373,10 +1377,15 @@ th[data-sort].sort-desc::after {
 }
 
 #header-toggle {
-    display: block;
-    margin: 0 0 0.4rem auto;
-    padding: 2px 10px;
-    font-size: 0.75em;
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    z-index: 10;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.75rem;
     color: #999;
     background: transparent;
     border: 1px solid #ddd;
@@ -1384,6 +1393,10 @@ th[data-sort].sort-desc::after {
     cursor: pointer;
     line-height: 1.6;
     transition: color 0.2s;
+}
+
+html[data-show-header-toggle='off'] #header-toggle {
+    display: none !important;
 }
 
 #header-toggle:hover {

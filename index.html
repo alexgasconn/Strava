@@ -175,7 +175,8 @@
 
         <!-- MAIN APP SECTION -->
         <div id="app-section" class="hidden">
-            <div id="collapsible-header">
+            <button id="header-toggle" title="Show/hide top bar">▼ show</button>
+            <div id="collapsible-header" class="header-hidden">
                 <header>
                     <h1 id="athlete-name"></h1>
                     <nav>
@@ -232,8 +233,6 @@
                 <button class="tab-link" data-tab="ai-chat-tab" aria-controls="ai-chat-tab" aria-label="AI Coach">🤖 AI
                     Coach</button>
             </nav>
-
-            <button id="header-toggle" title="Show/hide top bar">▲ hide</button>
 
             <main>
                 <div id="analysis-tab" class="tab-content">
