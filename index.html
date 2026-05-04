@@ -635,15 +635,15 @@
                         <fieldset style="border:none; padding:0; margin-bottom:1rem;">
                             <legend style="font-weight:600; margin-bottom:0.5rem;">⚖️ Model Weights <small
                                     style="color:#888; font-weight:400;">(auto-normalised to 100%)</small></legend>
-                            <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:0.6rem;">
+                            <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:0.6rem;">
                                 <div
                                     style="background:#f9f9f9; padding:0.6rem 0.8rem; border-radius:8px; border:1px solid #e8e8e8;">
                                     <div
                                         style="display:flex; justify-content:space-between; font-size:0.88em; margin-bottom:0.3rem;">
-                                        <span>📐 Riegel Formula</span><strong id="riegel-weight-val">40%</strong>
+                                        <span>📐 Riegel</span><strong id="riegel-weight-val">30%</strong>
                                     </div>
                                     <input class="model-weight-slider" type="range" id="riegel-weight" min="0" max="100"
-                                        value="40" style="width:100%;">
+                                        value="30" style="width:100%;">
                                     <div style="font-size:0.75em; color:#999; margin-top:0.2rem;">Exponential time
                                         scaling from PBs</div>
                                 </div>
@@ -651,10 +651,10 @@
                                     style="background:#f9f9f9; padding:0.6rem 0.8rem; border-radius:8px; border:1px solid #e8e8e8;">
                                     <div
                                         style="display:flex; justify-content:space-between; font-size:0.88em; margin-bottom:0.3rem;">
-                                        <span>🧠 Personal Curve (ML)</span><strong id="ml-weight-val">25%</strong>
+                                        <span>🧠 ML Curve</span><strong id="ml-weight-val">20%</strong>
                                     </div>
                                     <input class="model-weight-slider" type="range" id="ml-weight" min="0" max="100"
-                                        value="25" style="width:100%;">
+                                        value="20" style="width:100%;">
                                     <div style="font-size:0.75em; color:#999; margin-top:0.2rem;">Quadratic fit on your
                                         full race history</div>
                                 </div>
@@ -673,12 +673,23 @@
                                     style="background:#f9f9f9; padding:0.6rem 0.8rem; border-radius:8px; border:1px solid #e8e8e8;">
                                     <div
                                         style="display:flex; justify-content:space-between; font-size:0.88em; margin-bottom:0.3rem;">
-                                        <span>🫁 VDOT (Daniels)</span><strong id="vdot-weight-val">15%</strong>
+                                        <span>🫁 VDOT</span><strong id="vdot-weight-val">15%</strong>
                                     </div>
                                     <input class="model-weight-slider" type="range" id="vdot-weight" min="0" max="100"
                                         value="15" style="width:100%;">
                                     <div style="font-size:0.75em; color:#999; margin-top:0.2rem;">VO₂max-based race
                                         equivalency tables</div>
+                                </div>
+                                <div
+                                    style="background:#f9f9f9; padding:0.6rem 0.8rem; border-radius:8px; border:1px solid #e8e8e8;">
+                                    <div
+                                        style="display:flex; justify-content:space-between; font-size:0.88em; margin-bottom:0.3rem;">
+                                        <span>🏋️ Readiness</span><strong id="readiness-weight-val">15%</strong>
+                                    </div>
+                                    <input class="model-weight-slider" type="range" id="readiness-weight" min="0" max="100"
+                                        value="15" style="width:100%;">
+                                    <div style="font-size:0.75em; color:#999; margin-top:0.2rem;">Training load &
+                                        preparation assessment</div>
                                 </div>
                             </div>
                         </fieldset>
@@ -763,6 +774,13 @@
                             <div class="chart-wrapper" style="position: relative; height: 360px; width: 100%;">
                                 <canvas id="prediction-history-chart"></canvas>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- TRAINING READINESS -->
+                    <div class="chart-container">
+                        <div id="readiness-section">
+                            <!-- Training readiness will be rendered here -->
                         </div>
                     </div>
 

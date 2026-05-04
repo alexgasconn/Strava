@@ -20,6 +20,72 @@ const HISTORY_DISTANCE_OPTIONS = TARGET_DISTANCES.filter(distance =>
 const HISTORY_COLOR_PALETTE = ['#0B6E4F', '#D35400', '#1F618D', '#B03A2E', '#6C3483', '#117864'];
 
 // =====================================================
+// TRAINING READINESS REFERENCE DATA
+// Based on established training literature for each distance.
+// Each level has: weeklyKm range, longRunKm range, daysPerWeek range
+// =====================================================
+
+const READINESS_REFERENCES = [
+    {
+        name: 'Mile',
+        km: 1.609,
+        levels: [
+            { label: 'Beginner', weeklyKm: [20, 40], longRunKm: [6, 8], daysPerWeek: [3, 4] },
+            { label: 'Intermediate', weeklyKm: [40, 65], longRunKm: [8, 10], daysPerWeek: [4, 5] },
+            { label: 'Advanced', weeklyKm: [65, 130], longRunKm: [10, 14], daysPerWeek: [5, 7] }
+        ],
+        planWeeks: [6, 12],
+        keyFactors: 'Speed sessions, track intervals, lactate tolerance'
+    },
+    {
+        name: '5K',
+        km: 5,
+        levels: [
+            { label: 'Beginner', weeklyKm: [15, 25], longRunKm: [8, 10], daysPerWeek: [3, 4] },
+            { label: 'Intermediate', weeklyKm: [25, 50], longRunKm: [10, 13], daysPerWeek: [4, 5] },
+            { label: 'Advanced', weeklyKm: [50, 80], longRunKm: [13, 16], daysPerWeek: [5, 6] }
+        ],
+        planWeeks: [6, 10],
+        keyFactors: 'Intervals 400-1000m, tempo runs, aerobic base'
+    },
+    {
+        name: '10K',
+        km: 10,
+        levels: [
+            { label: 'Beginner', weeklyKm: [20, 40], longRunKm: [10, 13], daysPerWeek: [3, 4] },
+            { label: 'Intermediate', weeklyKm: [40, 65], longRunKm: [13, 16], daysPerWeek: [4, 5] },
+            { label: 'Advanced', weeklyKm: [65, 96], longRunKm: [16, 19], daysPerWeek: [5, 6] }
+        ],
+        planWeeks: [8, 12],
+        keyFactors: 'Threshold work, 1000m repeats, progressive long runs'
+    },
+    {
+        name: 'Half Marathon',
+        km: 21.097,
+        levels: [
+            { label: 'Beginner', weeklyKm: [20, 30], longRunKm: [13, 16], daysPerWeek: [3, 4] },
+            { label: 'Intermediate', weeklyKm: [30, 50], longRunKm: [16, 18], daysPerWeek: [4, 5] },
+            { label: 'Advanced', weeklyKm: [50, 70], longRunKm: [18, 21], daysPerWeek: [5, 6] }
+        ],
+        planWeeks: [10, 16],
+        keyFactors: 'Progressive long runs (max ~18-20km), tempo at HM pace, volume build'
+    },
+    {
+        name: 'Marathon',
+        km: 42.195,
+        levels: [
+            { label: 'Beginner', weeklyKm: [25, 40], longRunKm: [18, 22], daysPerWeek: [4, 5] },
+            { label: 'Intermediate', weeklyKm: [40, 65], longRunKm: [22, 27], daysPerWeek: [5, 6] },
+            { label: 'Advanced', weeklyKm: [65, 95], longRunKm: [27, 32], daysPerWeek: [5, 7] }
+        ],
+        planWeeks: [12, 20],
+        keyFactors: 'High volume, long runs 26-32km, marathon pace sessions, gradual taper'
+    }
+];
+
+const READINESS_ANALYSIS_WEEKS = 8; // Analyze last 8 weeks of training
+
+// =====================================================
 // MAIN EXPORT - RENDERS THE TAB
 // =====================================================
 
@@ -31,6 +97,9 @@ export function renderPlannerTab(allActivities) {
 
     // Render PB section first
     renderPersonalBestsSection(runs);
+
+    // Render Training Readiness section
+    renderTrainingReadinessSection(runs);
 
     initializePredictionHistoryControls(runs);
 
@@ -183,10 +252,11 @@ function updatePredictions(runs) {
 
     const mood = document.querySelector('input[name="prediction-mood"]:checked')?.value || 'realistic';
     const weights = {
-        riegel: parseFloat(document.getElementById('riegel-weight')?.value ?? 40),
-        ml: parseFloat(document.getElementById('ml-weight')?.value ?? 25),
-        pb: parseFloat(document.getElementById('pb-weight')?.value ?? 30),
-        vdot: parseFloat(document.getElementById('vdot-weight')?.value ?? 20),
+        riegel: parseFloat(document.getElementById('riegel-weight')?.value ?? 30),
+        ml: parseFloat(document.getElementById('ml-weight')?.value ?? 20),
+        pb: parseFloat(document.getElementById('pb-weight')?.value ?? 20),
+        vdot: parseFloat(document.getElementById('vdot-weight')?.value ?? 15),
+        readiness: parseFloat(document.getElementById('readiness-weight')?.value ?? 15),
     };
 
     // Normalize weights so they always sum to 100
@@ -198,7 +268,9 @@ function updatePredictions(runs) {
     const bests = getBestPerformances(runs);
     const model = trainPersonalizedModel(bests);
     const vdot = estimateVDOT(runs);
-    const finalPredictions = calculateAllPredictions(bests, model, vdot, { mood, weights });
+    const trainingData = analyzeRecentTraining(runs);
+    const readinessScores = assessReadiness(trainingData);
+    const finalPredictions = calculateAllPredictions(bests, model, vdot, { mood, weights }, readinessScores);
 
     renderResultsTableAndChart(container, finalPredictions, bests);
     updatePredictionHistory(runs);
@@ -267,13 +339,24 @@ function vdotPredict(vdot, km) {
     return tMin * 60; // return seconds
 }
 
-function calculateAllPredictions(bestPerformances, model, vdot, settings) {
+function calculateAllPredictions(bestPerformances, model, vdot, settings, readinessScores) {
     const moodSettings = {
         optimistic: { start: 0.0, end: 0.40 },
         realistic: { start: 0.25, end: 0.75 },
         conservative: { start: 0.60, end: 1.0 }
     };
     const trim = moodSettings[settings.mood];
+
+    // Max penalty by distance (longer = more affected by under-training)
+    const READINESS_MAX_PENALTY = {
+        1.609: 0.05,   // Mile: max 5% slower if unprepared
+        5: 0.08,       // 5K: max 8%
+        10: 0.12,      // 10K: max 12%
+        15: 0.15,      // 15K: max 15%
+        21.097: 0.18,  // Half: max 18%
+        30: 0.22,      // 30K: max 22%
+        42.195: 0.25   // Marathon: max 25%
+    };
 
     return TARGET_DISTANCES.map(target => {
         let allPredictions = [];
@@ -306,6 +389,22 @@ function calculateAllPredictions(bestPerformances, model, vdot, settings) {
             const vdotTime = vdotPredict(vdot, target.km);
             if (vdotTime && isFinite(vdotTime) && vdotTime > 0) {
                 allPredictions.push({ time: vdotTime, weight: settings.weights.vdot / 100, source: 'VDOT' });
+            }
+        }
+
+        // Training Readiness prediction
+        // Uses the other models' median as baseline, then applies a penalty based on readiness score
+        if (readinessScores && settings.weights.readiness > 0) {
+            const readinessForDist = readinessScores.find(r => Math.abs(r.km - target.km) < 0.5);
+            if (readinessForDist && allPredictions.length > 0) {
+                // Use median of existing predictions as baseline
+                const sortedTimes = allPredictions.map(p => p.time).sort((a, b) => a - b);
+                const medianTime = sortedTimes[Math.floor(sortedTimes.length / 2)];
+                // Penalty: 0% at score=100, maxPenalty% at score=0
+                const maxPenalty = READINESS_MAX_PENALTY[target.km] || 0.15;
+                const penalty = (1 - readinessForDist.score / 100) * maxPenalty;
+                const readinessTime = medianTime * (1 + penalty);
+                allPredictions.push({ time: readinessTime, weight: settings.weights.readiness / 100, source: 'Readiness' });
             }
         }
 
@@ -419,9 +518,10 @@ function renderResultsTableAndChart(container, predictions, bests) {
             </div>
         </div>
         <div class="disclaimer" style="font-size:0.85em; color:#666; margin-top:15px; padding:10px; background:#f5f5f5; border-radius:4px;">
-            <strong>How predictions work:</strong> Combines 4 models — <em>Riegel</em> (exponential scaling from your PBs),
+            <strong>How predictions work:</strong> Combines 5 models — <em>Riegel</em> (exponential scaling from your PBs),
             <em>ML Curve</em> (quadratic fit on your race history), <em>Exact PB</em> (direct times for that distance),
-            and <em>VDOT</em> (Daniels' VO₂max-based formula). Weights are set in the controls above.
+            <em>VDOT</em> (Daniels' VO₂max-based formula), and <em>Training Readiness</em> (adjusts predictions based on
+            your recent training volume, long runs, frequency and consistency). Weights are set in the controls above.
             <strong>Confidence</strong> is higher when models agree and you have more race data.
         </div>
     `;
@@ -652,10 +752,11 @@ function updatePredictionHistory(runs) {
 function readPredictionSettings() {
     const mood = document.querySelector('input[name="prediction-mood"]:checked')?.value || 'realistic';
     const weights = {
-        riegel: parseFloat(document.getElementById('riegel-weight')?.value ?? 40),
-        ml: parseFloat(document.getElementById('ml-weight')?.value ?? 25),
-        pb: parseFloat(document.getElementById('pb-weight')?.value ?? 30),
-        vdot: parseFloat(document.getElementById('vdot-weight')?.value ?? 20)
+        riegel: parseFloat(document.getElementById('riegel-weight')?.value ?? 30),
+        ml: parseFloat(document.getElementById('ml-weight')?.value ?? 20),
+        pb: parseFloat(document.getElementById('pb-weight')?.value ?? 20),
+        vdot: parseFloat(document.getElementById('vdot-weight')?.value ?? 15),
+        readiness: parseFloat(document.getElementById('readiness-weight')?.value ?? 15)
     };
 
     const totalWeight = Object.values(weights).reduce((sum, value) => sum + value, 0);
@@ -708,7 +809,16 @@ function buildPredictionHistorySeries(runs, granularity, settings, selectedDista
         const bests = getBestPerformances(runsUntilBucket);
         const model = trainPersonalizedModel(bests);
         const vdot = estimateVDOT(runsUntilBucket);
-        const predictions = calculateAllPredictions(bests, model, vdot, settings);
+        // Compute readiness at this point in time (last 8 weeks relative to bucket end)
+        const bucketEndDate = new Date(bucket.endDate);
+        const bucketCutoff = new Date(bucketEndDate.getTime() - READINESS_ANALYSIS_WEEKS * 7 * 24 * 60 * 60 * 1000);
+        const runsForReadiness = runsUntilBucket.filter(r => {
+            const d = new Date(r.start_date_local);
+            return d >= bucketCutoff && d <= bucketEndDate;
+        });
+        const bucketTrainingData = runsForReadiness.length > 0 ? analyzeRecentTrainingFromList(runsForReadiness) : null;
+        const bucketReadiness = assessReadiness(bucketTrainingData);
+        const predictions = calculateAllPredictions(bests, model, vdot, settings, bucketReadiness);
         const predictionByDistance = new Map(predictions.map(prediction => [prediction.km, prediction]));
 
         points.push(bucket.label);
@@ -871,4 +981,345 @@ function destroyPredictionHistoryChart() {
         predictionHistoryChartInstance.destroy();
         predictionHistoryChartInstance = null;
     }
+}
+
+// =====================================================
+// TRAINING READINESS MODEL
+// Evaluates how prepared the user is for each distance
+// based on recent training patterns.
+// =====================================================
+
+function analyzeRecentTraining(runs) {
+    const now = new Date();
+    const cutoff = new Date(now.getTime() - READINESS_ANALYSIS_WEEKS * 7 * 24 * 60 * 60 * 1000);
+
+    const recentRuns = runs.filter(r => {
+        const d = new Date(r.start_date_local);
+        return d >= cutoff && d <= now;
+    });
+
+    if (recentRuns.length === 0) return null;
+
+    // Group by week (Monday-start)
+    const weekMap = new Map();
+    recentRuns.forEach(r => {
+        const d = new Date(r.start_date_local);
+        const dayOfWeek = (d.getDay() + 6) % 7; // Monday = 0
+        const monday = new Date(d);
+        monday.setDate(d.getDate() - dayOfWeek);
+        const weekKey = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+
+        if (!weekMap.has(weekKey)) {
+            weekMap.set(weekKey, { totalKm: 0, longestRunKm: 0, runDays: new Set(), runs: [] });
+        }
+        const week = weekMap.get(weekKey);
+        const distKm = (r.distance || 0) / 1000;
+        week.totalKm += distKm;
+        week.longestRunKm = Math.max(week.longestRunKm, distKm);
+        week.runDays.add(d.toISOString().slice(0, 10));
+        week.runs.push(r);
+    });
+
+    const weeks = Array.from(weekMap.values());
+    if (weeks.length === 0) return null;
+
+    // Compute averages and maximums
+    const avgWeeklyKm = weeks.reduce((s, w) => s + w.totalKm, 0) / weeks.length;
+    const maxWeeklyKm = Math.max(...weeks.map(w => w.totalKm));
+    const avgLongRunKm = weeks.reduce((s, w) => s + w.longestRunKm, 0) / weeks.length;
+    const maxLongRunKm = Math.max(...weeks.map(w => w.longestRunKm));
+    const avgDaysPerWeek = weeks.reduce((s, w) => s + w.runDays.size, 0) / weeks.length;
+    const consistency = weeks.filter(w => w.totalKm > 0).length / READINESS_ANALYSIS_WEEKS;
+
+    // Trend: compare last 4 weeks vs prior 4 weeks
+    const sortedWeeks = Array.from(weekMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+    let trend = 0;
+    if (sortedWeeks.length >= 4) {
+        const mid = Math.floor(sortedWeeks.length / 2);
+        const firstHalf = sortedWeeks.slice(0, mid).reduce((s, [, w]) => s + w.totalKm, 0) / mid;
+        const secondHalf = sortedWeeks.slice(mid).reduce((s, [, w]) => s + w.totalKm, 0) / (sortedWeeks.length - mid);
+        trend = firstHalf > 0 ? (secondHalf - firstHalf) / firstHalf : 0;
+    }
+
+    // Count quality sessions (estimate: runs with pace < avg pace * 0.9 OR shorter intense efforts)
+    const allPaces = recentRuns.filter(r => r.distance > 0 && r.moving_time > 0)
+        .map(r => r.moving_time / (r.distance / 1000));
+    const avgPace = allPaces.length > 0 ? allPaces.reduce((s, p) => s + p, 0) / allPaces.length : 0;
+    const qualitySessions = recentRuns.filter(r => {
+        if (!r.distance || !r.moving_time) return false;
+        const pace = r.moving_time / (r.distance / 1000);
+        return pace < avgPace * 0.92; // Faster than 92% of avg = quality
+    }).length;
+    const qualityPerWeek = qualitySessions / Math.max(1, weeks.length);
+
+    return {
+        weeksAnalyzed: weeks.length,
+        totalRuns: recentRuns.length,
+        avgWeeklyKm,
+        maxWeeklyKm,
+        avgLongRunKm,
+        maxLongRunKm,
+        avgDaysPerWeek,
+        consistency,
+        trend,
+        qualityPerWeek
+    };
+}
+
+/**
+ * Same as analyzeRecentTraining but takes an already-filtered list of runs
+ * (used for historical snapshots where "now" isn't the current date).
+ */
+function analyzeRecentTrainingFromList(recentRuns) {
+    if (recentRuns.length === 0) return null;
+
+    const weekMap = new Map();
+    recentRuns.forEach(r => {
+        const d = new Date(r.start_date_local);
+        const dayOfWeek = (d.getDay() + 6) % 7;
+        const monday = new Date(d);
+        monday.setDate(d.getDate() - dayOfWeek);
+        const weekKey = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+
+        if (!weekMap.has(weekKey)) {
+            weekMap.set(weekKey, { totalKm: 0, longestRunKm: 0, runDays: new Set(), runs: [] });
+        }
+        const week = weekMap.get(weekKey);
+        const distKm = (r.distance || 0) / 1000;
+        week.totalKm += distKm;
+        week.longestRunKm = Math.max(week.longestRunKm, distKm);
+        week.runDays.add(d.toISOString().slice(0, 10));
+        week.runs.push(r);
+    });
+
+    const weeks = Array.from(weekMap.values());
+    if (weeks.length === 0) return null;
+
+    const avgWeeklyKm = weeks.reduce((s, w) => s + w.totalKm, 0) / weeks.length;
+    const maxWeeklyKm = Math.max(...weeks.map(w => w.totalKm));
+    const avgLongRunKm = weeks.reduce((s, w) => s + w.longestRunKm, 0) / weeks.length;
+    const maxLongRunKm = Math.max(...weeks.map(w => w.longestRunKm));
+    const avgDaysPerWeek = weeks.reduce((s, w) => s + w.runDays.size, 0) / weeks.length;
+    const consistency = weeks.filter(w => w.totalKm > 0).length / Math.max(1, weeks.length);
+
+    const sortedWeeks = Array.from(weekMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+    let trend = 0;
+    if (sortedWeeks.length >= 4) {
+        const mid = Math.floor(sortedWeeks.length / 2);
+        const firstHalf = sortedWeeks.slice(0, mid).reduce((s, [, w]) => s + w.totalKm, 0) / mid;
+        const secondHalf = sortedWeeks.slice(mid).reduce((s, [, w]) => s + w.totalKm, 0) / (sortedWeeks.length - mid);
+        trend = firstHalf > 0 ? (secondHalf - firstHalf) / firstHalf : 0;
+    }
+
+    const allPaces = recentRuns.filter(r => r.distance > 0 && r.moving_time > 0)
+        .map(r => r.moving_time / (r.distance / 1000));
+    const avgPace = allPaces.length > 0 ? allPaces.reduce((s, p) => s + p, 0) / allPaces.length : 0;
+    const qualitySessions = recentRuns.filter(r => {
+        if (!r.distance || !r.moving_time) return false;
+        const pace = r.moving_time / (r.distance / 1000);
+        return pace < avgPace * 0.92;
+    }).length;
+    const qualityPerWeek = qualitySessions / Math.max(1, weeks.length);
+
+    return {
+        weeksAnalyzed: weeks.length,
+        totalRuns: recentRuns.length,
+        avgWeeklyKm,
+        maxWeeklyKm,
+        avgLongRunKm,
+        maxLongRunKm,
+        avgDaysPerWeek,
+        consistency,
+        trend,
+        qualityPerWeek
+    };
+}
+
+function assessReadiness(trainingData) {
+    if (!trainingData) return READINESS_REFERENCES.map(ref => ({ ...ref, score: 0, level: 'No data', details: [] }));
+
+    return READINESS_REFERENCES.map(ref => {
+        const scores = { volume: 0, longRun: 0, frequency: 0, consistency: 0, trend: 0 };
+        let matchedLevel = 'Insufficient';
+        let levelIndex = -1;
+
+        // Score volume (avg weekly km) against each level
+        for (let i = ref.levels.length - 1; i >= 0; i--) {
+            const lvl = ref.levels[i];
+            if (trainingData.avgWeeklyKm >= lvl.weeklyKm[0]) {
+                levelIndex = i;
+                matchedLevel = lvl.label;
+                // How far into this level's range?
+                const range = lvl.weeklyKm[1] - lvl.weeklyKm[0];
+                const pos = Math.min(1, (trainingData.avgWeeklyKm - lvl.weeklyKm[0]) / (range || 1));
+                scores.volume = ((i + pos) / ref.levels.length) * 100;
+                break;
+            }
+        }
+        if (levelIndex === -1) {
+            // Below beginner threshold
+            const beginner = ref.levels[0];
+            scores.volume = Math.max(0, (trainingData.avgWeeklyKm / beginner.weeklyKm[0]) * 30);
+        }
+
+        // Score long run
+        for (let i = ref.levels.length - 1; i >= 0; i--) {
+            const lvl = ref.levels[i];
+            if (trainingData.maxLongRunKm >= lvl.longRunKm[0]) {
+                const range = lvl.longRunKm[1] - lvl.longRunKm[0];
+                const pos = Math.min(1, (trainingData.maxLongRunKm - lvl.longRunKm[0]) / (range || 1));
+                scores.longRun = ((i + pos) / ref.levels.length) * 100;
+                break;
+            }
+        }
+        if (scores.longRun === 0 && trainingData.maxLongRunKm > 0) {
+            scores.longRun = Math.max(0, (trainingData.maxLongRunKm / ref.levels[0].longRunKm[0]) * 30);
+        }
+
+        // Score frequency
+        for (let i = ref.levels.length - 1; i >= 0; i--) {
+            const lvl = ref.levels[i];
+            if (trainingData.avgDaysPerWeek >= lvl.daysPerWeek[0]) {
+                const range = lvl.daysPerWeek[1] - lvl.daysPerWeek[0];
+                const pos = Math.min(1, (trainingData.avgDaysPerWeek - lvl.daysPerWeek[0]) / (range || 1));
+                scores.frequency = ((i + pos) / ref.levels.length) * 100;
+                break;
+            }
+        }
+        if (scores.frequency === 0 && trainingData.avgDaysPerWeek > 0) {
+            scores.frequency = Math.max(0, (trainingData.avgDaysPerWeek / ref.levels[0].daysPerWeek[0]) * 30);
+        }
+
+        // Consistency score (0-100)
+        scores.consistency = trainingData.consistency * 100;
+
+        // Trend bonus/penalty (-15 to +15)
+        scores.trend = Math.max(-15, Math.min(15, trainingData.trend * 50));
+
+        // Weighted combined score
+        const combined = (
+            scores.volume * 0.35 +
+            scores.longRun * 0.30 +
+            scores.frequency * 0.15 +
+            scores.consistency * 0.10 +
+            scores.trend * 0.10 + 50 * 0.10 // baseline for trend
+        );
+        const finalScore = Math.max(0, Math.min(100, combined));
+
+        // Build detail recommendations
+        const details = [];
+        const targetLevel = levelIndex >= 0 ? ref.levels[levelIndex] : ref.levels[0];
+
+        if (trainingData.avgWeeklyKm < ref.levels[0].weeklyKm[0]) {
+            details.push(`Volume too low: ${trainingData.avgWeeklyKm.toFixed(0)} km/wk vs ${ref.levels[0].weeklyKm[0]}+ km/wk needed`);
+        }
+        if (trainingData.maxLongRunKm < ref.levels[0].longRunKm[0]) {
+            details.push(`Long run short: max ${trainingData.maxLongRunKm.toFixed(1)} km vs ${ref.levels[0].longRunKm[0]}+ km needed`);
+        }
+        if (trainingData.avgDaysPerWeek < ref.levels[0].daysPerWeek[0]) {
+            details.push(`Low frequency: ${trainingData.avgDaysPerWeek.toFixed(1)} days/wk vs ${ref.levels[0].daysPerWeek[0]}+ recommended`);
+        }
+        if (trainingData.consistency < 0.7) {
+            details.push(`Inconsistent: only ${(trainingData.consistency * 100).toFixed(0)}% of weeks active`);
+        }
+        if (trainingData.trend < -0.1) {
+            details.push('Volume declining — consider rebuilding gradually');
+        }
+        if (finalScore >= 70 && trainingData.qualityPerWeek < 1.5) {
+            details.push('Add more quality sessions (tempo/intervals) for race-specific fitness');
+        }
+
+        return {
+            ...ref,
+            score: Math.round(finalScore),
+            level: matchedLevel,
+            levelIndex,
+            scores,
+            details
+        };
+    });
+}
+
+function renderTrainingReadinessSection(runs) {
+    const container = document.getElementById('readiness-section');
+    if (!container) return;
+
+    const trainingData = analyzeRecentTraining(runs);
+    const readiness = assessReadiness(trainingData);
+
+    if (!trainingData) {
+        container.innerHTML = `
+            <h3>📊 Training Readiness</h3>
+            <p style="color:#999;">Not enough recent running data (last ${READINESS_ANALYSIS_WEEKS} weeks) to assess readiness.</p>
+        `;
+        return;
+    }
+
+    // Summary cards
+    const summaryHTML = `
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:0.6rem; margin-bottom:1.2rem;">
+            <div style="background:#f0f9ff; padding:0.7rem; border-radius:8px; text-align:center; border:1px solid #bae6fd;">
+                <div style="font-size:1.4em; font-weight:700; color:#0369a1;">${trainingData.avgWeeklyKm.toFixed(0)}</div>
+                <div style="font-size:0.8em; color:#666;">Avg km/week</div>
+            </div>
+            <div style="background:#f0fdf4; padding:0.7rem; border-radius:8px; text-align:center; border:1px solid #bbf7d0;">
+                <div style="font-size:1.4em; font-weight:700; color:#15803d;">${trainingData.maxLongRunKm.toFixed(1)}</div>
+                <div style="font-size:0.8em; color:#666;">Longest run (km)</div>
+            </div>
+            <div style="background:#fefce8; padding:0.7rem; border-radius:8px; text-align:center; border:1px solid #fde68a;">
+                <div style="font-size:1.4em; font-weight:700; color:#a16207;">${trainingData.avgDaysPerWeek.toFixed(1)}</div>
+                <div style="font-size:0.8em; color:#666;">Days/week</div>
+            </div>
+            <div style="background:#fdf4ff; padding:0.7rem; border-radius:8px; text-align:center; border:1px solid #f0abfc;">
+                <div style="font-size:1.4em; font-weight:700; color:#86198f;">${(trainingData.consistency * 100).toFixed(0)}%</div>
+                <div style="font-size:0.8em; color:#666;">Consistency</div>
+            </div>
+            <div style="background:#${trainingData.trend >= 0 ? 'f0fdf4' : 'fef2f2'}; padding:0.7rem; border-radius:8px; text-align:center; border:1px solid ${trainingData.trend >= 0 ? '#bbf7d0' : '#fecaca'};">
+                <div style="font-size:1.4em; font-weight:700; color:${trainingData.trend >= 0 ? '#15803d' : '#b91c1c'};">${trainingData.trend >= 0 ? '↑' : '↓'} ${Math.abs(trainingData.trend * 100).toFixed(0)}%</div>
+                <div style="font-size:0.8em; color:#666;">Volume trend</div>
+            </div>
+        </div>
+    `;
+
+    // Readiness bars per distance
+    const barsHTML = readiness.map(r => {
+        const barColor = r.score >= 75 ? '#16a34a' : r.score >= 50 ? '#ca8a04' : r.score >= 30 ? '#ea580c' : '#dc2626';
+        const statusEmoji = r.score >= 75 ? '✅' : r.score >= 50 ? '⚠️' : r.score >= 30 ? '🔶' : '❌';
+        const levelBadge = r.level === 'Insufficient'
+            ? '<span style="background:#fee2e2; color:#991b1b; padding:2px 8px; border-radius:12px; font-size:0.78em;">Insufficient base</span>'
+            : `<span style="background:#e0f2fe; color:#075985; padding:2px 8px; border-radius:12px; font-size:0.78em;">${r.level} level</span>`;
+
+        const detailsHTML = r.details.length > 0
+            ? `<details style="margin-top:0.4rem; cursor:pointer;">
+                <summary style="font-size:0.82em; color:#666;">💡 Recommendations</summary>
+                <ul style="margin:0.3rem 0 0 1rem; padding:0; font-size:0.8em; color:#555;">
+                    ${r.details.map(d => `<li>${d}</li>`).join('')}
+                </ul>
+                <div style="font-size:0.78em; color:#888; margin-top:0.3rem; padding-left:1rem;">Plan: ${r.planWeeks[0]}–${r.planWeeks[1]} weeks · Focus: ${r.keyFactors}</div>
+            </details>`
+            : `<div style="font-size:0.78em; color:#888; margin-top:0.3rem;">Plan: ${r.planWeeks[0]}–${r.planWeeks[1]} weeks · Focus: ${r.keyFactors}</div>`;
+
+        return `
+            <div style="margin-bottom:1rem; padding:0.8rem; background:#fafafa; border-radius:8px; border:1px solid #eee;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+                    <div style="font-weight:600;">${statusEmoji} ${r.name}</div>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        ${levelBadge}
+                        <strong style="color:${barColor}; font-size:1.1em;">${r.score}%</strong>
+                    </div>
+                </div>
+                <div style="background:#e5e7eb; border-radius:6px; height:10px; overflow:hidden;">
+                    <div style="background:${barColor}; height:100%; width:${r.score}%; border-radius:6px; transition:width 0.5s ease;"></div>
+                </div>
+                ${detailsHTML}
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = `
+        <h3>📊 Training Readiness</h3>
+        <p style="font-size:0.9em; color:#666; margin-bottom:1rem;">How prepared you are for each distance based on your last ${READINESS_ANALYSIS_WEEKS} weeks of training.</p>
+        ${summaryHTML}
+        ${barsHTML}
+    `;
 }
