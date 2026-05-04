@@ -408,7 +408,7 @@ function renderPoolVsOpenWaterSummary(swims) {
 
 function renderDistanceHistogram(swims) {
 
-    const binSize = 0.25;
+    const binSize = 0.2;
 
     const distances = swims.map(s => s.distance_km);
     if (!distances.length) return;

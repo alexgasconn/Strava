@@ -533,7 +533,7 @@ export function renderPaceHistogram(runs) {
     const minPace = Math.min(...paces);
     const maxPace = Math.max(...paces);
 
-    const binSize = 0.25; // 15 segundos
+    const binSize = 10 / 60; // 10 segundos
     const bins = [];
     for (let p = Math.floor(minPace); p <= Math.ceil(maxPace) + 1; p += binSize) {
         bins.push(+p.toFixed(2));

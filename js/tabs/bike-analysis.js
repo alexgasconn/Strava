@@ -387,7 +387,7 @@ function renderElevationHistogram(rides) {
 
     if (!values.length) return;
 
-    const binSize = 50;
+    const binSize = 25;
     const max = Math.max(...values, 0);
     const bins = new Array(Math.ceil(max / binSize)).fill(0);
 
@@ -682,13 +682,8 @@ function renderActivitiesTable(rides) {
                 ? Math.min(movingTime / elapsedTime, 1)
                 : 1;
 
-            // --- effort (distance + elevation weight) ---
-            const effort = km + 2.5 * (elevation / 100);
-
-            // --- score (normalized speed + ratio) ---
-            const score = speed > 0
-                ? Math.pow(speed / 14.2, 0.3) * Math.pow(ratio, 0.3)
-                : 0;
+            // --- difficulty (distance + elevation weight) ---
+            const difficulty = km + 2.85 * (elevation / 100);
 
             // --- elevation per km ---
             const elevPerKmValue = km > 0
@@ -730,8 +725,7 @@ function renderActivitiesTable(rides) {
                 <td data-value="${elevPerKmValue}">${elevPerKmDisplay}</td>
 
                 <td data-value="${speed}">${speed.toFixed(1)}</td>
-                <td data-value="${effort}">${effort.toFixed(1)}</td>
-                <td data-value="${score}">${score.toFixed(3)}</td>
+                <td data-value="${difficulty}">${difficulty.toFixed(1)}</td>
 
                 <td data-value="${a.average_watts ?? 0}">
                     ${a.average_watts != null ? `${a.average_watts} W` : '-'}
@@ -755,8 +749,7 @@ function renderActivitiesTable(rides) {
                     <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2);">Elev (m)</th>
                     <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2);">Elev/km</th>
                     <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2);">km/h</th>
-                    <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2);">Effort</th>
-                    <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2);">Score</th>
+                    <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2);">Difficulty</th>
                     <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2);">Power</th>
                     <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2);">Ratio</th>
                     <th data-sort="num" style="padding: 12px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.2);">Elapsed</th>
