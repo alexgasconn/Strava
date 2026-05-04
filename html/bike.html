@@ -16,17 +16,42 @@
     <script defer src="/_vercel/insights/script.js"></script>
 </head>
 
-<body>
-    <div class="container">
-        <h1>🚵 Bike Performance Lab</h1>
+<body class="activity-page activity-bike-page">
+    <div class="container activity-shell">
+        <header class="activity-hero">
+            <div class="activity-hero__copy">
+                <span class="activity-hero__eyebrow">Bike activity</span>
+                <h1 id="activity-page-title">Bike Activity</h1>
+                <p id="activity-hero-description">Cleaner ride intelligence with premium summary cards and more readable
+                    performance layers.</p>
+            </div>
+            <div class="activity-hero__meta">
+                <div class="activity-hero__meta-top">
+                    <span class="activity-hero__date" id="activity-hero-date">--</span>
+                    <a id="activity-hero-strava-link" class="activity-hero__link" href="#" target="_blank"
+                        rel="noreferrer">Open in Strava</a>
+                </div>
+                <div class="activity-hero__meta-grid">
+                    <span class="activity-hero__badge" id="activity-hero-type">Type</span>
+                    <span class="activity-hero__meta-item" id="activity-hero-gear">Gear</span>
+                    <span class="activity-hero__meta-item" id="activity-hero-kudos">❤️ 0</span>
+                    <span class="activity-hero__meta-item" id="activity-hero-comments">💬 0</span>
+                </div>
+            </div>
+        </header>
 
         <!-- ======================================
          SECTION 1: OVERVIEW & QUICK STATS
          ====================================== -->
-        <div id="activity-details-row" class="activity-details-row">
-            <div id="activity-info" class="activity-details-col"></div>
-            <div id="activity-stats" class="activity-details-col"></div>
-            <div id="activity-advanced" class="activity-details-col"></div>
+        <div id="activity-details-row" class="activity-details-row activity-overview-grid">
+            <section class="activity-overview-card activity-overview-card--stats">
+                <div class="activity-overview-card__label">Core metrics</div>
+                <div id="activity-stats" class="activity-details-col"></div>
+            </section>
+            <section class="activity-overview-card activity-overview-card--advanced">
+                <div class="activity-overview-card__label">Advanced signals</div>
+                <div id="activity-advanced" class="activity-details-col"></div>
+            </section>
         </div>
 
         <!-- ======================================
@@ -64,7 +89,36 @@
          ====================================== -->
         <div id="activity-map-container" class="data-section">
             <h3>Route Map</h3>
+            <div class="map-toolbar" style="margin-bottom: 0.75rem; flex-wrap: wrap;">
+                <label>Map style:
+                    <select id="activity-map-style">
+                        <option value="osm">OpenStreetMap</option>
+                        <option value="carto-light">Carto Light</option>
+                        <option value="carto-dark">Carto Dark</option>
+                        <option value="open-topo">OpenTopoMap</option>
+                        <option value="esri-sat">Esri Satellite</option>
+                    </select>
+                </label>
+                <label>Color by:
+                    <select id="route-color-mode">
+                        <option value="route">Route</option>
+                        <option value="heartrate">Heart Rate</option>
+                        <option value="cadence">Cadence</option>
+                        <option value="watts">Power</option>
+                        <option value="altitude">Altitude</option>
+                        <option value="speed">Speed</option>
+                        <option value="pace">Pace</option>
+                    </select>
+                </label>
+                <label class="map-toolbar__toggle"><input type="checkbox" id="show-weather-details"> Show weather
+                    details</label>
+            </div>
             <div id="activity-map"></div>
+        </div>
+
+        <div id="weather-analysis-section" class="data-section hidden">
+            <h3>🌦️ Weather Analysis</h3>
+            <div class="weather-analysis__body"></div>
         </div>
 
         <div id="bike-profile-section" class="data-section hidden">
@@ -77,7 +131,7 @@
         </div>
 
         <!-- ======================================
-         SECTION 4: KM SPLITS
+         SECTION 5: KM SPLITS
          ====================================== -->
         <div id="splits-section" class="data-section hidden">
             <h3>📈 Splits per Kilometer</h3>
@@ -88,27 +142,6 @@
                 <div class="chart-container">
                     <canvas id="chart-heartrate"></canvas>
                 </div>
-            </div>
-        </div>
-
-        <!-- ======================================
-         SECTION 4B: SMOOTHING CONTROL
-         ====================================== -->
-        <div class="data-section" style="margin: 20px 0; padding: 15px; background-color: #f5f5f5; border-radius: 8px;">
-            <h3>Stream Smoothing Control</h3>
-            <p style="margin: 0 0 15px 0; font-size: 0.9em; color: #666;">Adjust the smoothing level to reduce noise in
-                stream charts</p>
-            <div style="display: flex; align-items: center; gap: 15px;">
-                <label for="smoothing-slider" style="font-weight: bold; min-width: 100px;">Smoothing Level:</label>
-                <input type="range" id="smoothing-slider" min="0" max="500" value="100" step="10"
-                    style="flex: 1; cursor: pointer; height: 6px;" />
-                <span id="smoothing-value"
-                    style="min-width: 50px; text-align: right; font-weight: bold; color: #FC5200;">100</span>
-            </div>
-            <div style="margin-top: 8px; font-size: 0.85em; color: #888;">
-                <span style="display: inline-block; margin-right: 20px;">🔵 0 = No smoothing (raw data)</span>
-                <span style="display: inline-block; margin-right: 20px;">🟢 100 = Default smoothing</span>
-                <span>🔴 500 = Maximum smoothing</span>
             </div>
         </div>
 
@@ -306,14 +339,6 @@
                     <table id="segments-table" class="df-table"></table>
                 </div>
             </div>
-        </div>
-
-        <div class="data-section" style="margin-top: 16px;">
-            <details>
-                <summary style="cursor: pointer; font-weight: 600;">Custom chart builder</summary>
-                <p style="margin: 10px 0 0 0; color: #666; font-size: 0.9em;">Open this panel only when you need ad-hoc
-                    chart combinations.</p>
-            </details>
         </div>
 
         <!-- Close Button -->

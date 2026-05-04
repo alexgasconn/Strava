@@ -5,6 +5,7 @@
  */
 
 import { formatDate as sharedFormatDate } from '../../shared/utils/index.js';
+import { renderWeatherAnalysis, renderWeatherMapDetails } from '../../shared/utils/weather-analysis.js';
 
 // =====================================================
 // 1. CONFIGURATION
@@ -20,6 +21,29 @@ const CONFIG = {
         watts: 60,
     },
     NUM_SEGMENTS: 40,
+};
+
+const MAP_LAYERS = {
+    osm: {
+        url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        options: { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' },
+    },
+    'carto-light': {
+        url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+        options: { maxZoom: 20, attribution: '&copy; OpenStreetMap contributors &copy; CARTO' },
+    },
+    'carto-dark': {
+        url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+        options: { maxZoom: 20, attribution: '&copy; OpenStreetMap contributors &copy; CARTO' },
+    },
+    'open-topo': {
+        url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+        options: { maxZoom: 17, attribution: 'Map data: &copy; OpenStreetMap contributors, SRTM | Map style: &copy; OpenTopoMap' },
+    },
+    'esri-sat': {
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        options: { maxZoom: 20, attribution: 'Tiles &copy; Esri' },
+    },
 };
 
 // DOM References
@@ -384,29 +408,45 @@ async function fetchActivityStreams(id, authPayload) {
 // =====================================================
 
 function renderActivityInfo(activity) {
-    if (!DOM.info) return;
     const name = activity.name || 'Cycling Activity';
+    const pageTitle = document.getElementById('activity-page-title');
+    if (pageTitle && name) pageTitle.textContent = name;
+    document.title = name ? `${name} | Bike Performance Lab` : 'Bike Performance Lab';
     const description = activity.description || '';
     const date = formatDate(new Date(activity.start_date_local || activity.start_date));
-    const gear = activity.gear?.name || 'N/A';
-    const kudos = activity.kudos_count || 0;
-    const comments = activity.comment_count || 0;
-    let tempStr = 'N/A';
-    if (activity.average_temp !== undefined && activity.average_temp !== null) tempStr = `${activity.average_temp}°C`;
+    const gearId = activity.gear_id || activity.gear?.id || null;
+    const gear = activity.gear?.name || activity.gear_name || (gearId ? `Gear ${gearId}` : null);
+    const kudosValue = Number(activity.kudos_count);
+    const commentsValue = Number(activity.comment_count);
+    const kudos = Number.isFinite(kudosValue) ? kudosValue : null;
+    const comments = Number.isFinite(commentsValue) ? commentsValue : null;
+    const tempStr = activity.average_temp !== undefined && activity.average_temp !== null ? `${activity.average_temp}°C` : null;
+    const stravaUrl = activity.id ? `https://www.strava.com/activities/${activity.id}` : null;
+    const fields = [];
+    const pushField = (label, value) => {
+        if (value === null || value === undefined || value === '' || value === 'N/A' || value === 'Not available' || value === '-' || value === 'null') return;
+        fields.push(`<li><b>${label}:</b> ${value}</li>`);
+    };
 
-    DOM.info.innerHTML = `
-        <h3>Info</h3>
-        <ul>
-            <li><b>Title:</b> ${name}</li>
-            ${description ? `<li><b>Description:</b> ${description}</li>` : ''}
-            <li><b>Date:</b> ${date}</li>
-            <li><b>Type:</b> ${activity.sport_type || activity.type || 'Ride'}</li>
-            <li><b>Gear:</b> ${gear}</li>
-            <li><b>Temperature:</b> ${tempStr}</li>
-            <li><b>Comments:</b> ${comments}</li>
-            <li><b>Kudos:</b> ${kudos}</li>
-        </ul>
-    `;
+    const heroDate = document.getElementById('activity-hero-date');
+    const heroDescription = document.getElementById('activity-hero-description');
+    const heroType = document.getElementById('activity-hero-type');
+    const heroGear = document.getElementById('activity-hero-gear');
+    const heroKudos = document.getElementById('activity-hero-kudos');
+    const heroComments = document.getElementById('activity-hero-comments');
+    const heroLink = document.getElementById('activity-hero-strava-link');
+
+    if (heroDate) heroDate.textContent = date;
+    if (heroDescription) heroDescription.textContent = description || 'No description provided.';
+    if (heroType) heroType.textContent = activity.sport_type || activity.type || 'Ride';
+    if (heroGear) {
+        heroGear.innerHTML = gearId
+            ? `<a href="../html/gear.html?id=${gearId}">${gear || gearId}</a>`
+            : (gear || 'No gear');
+    }
+    if (heroKudos) heroKudos.textContent = `❤️ ${kudos !== null ? kudos : '—'}`;
+    if (heroComments) heroComments.textContent = `💬 ${comments !== null ? comments : '—'}`;
+    if (heroLink && stravaUrl) heroLink.href = stravaUrl;
 }
 
 function renderActivityStats(activity, streams) {
@@ -419,13 +459,13 @@ function renderActivityStats(activity, streams) {
     const elevPerKm = activity.distance > 0
         ? (activity.total_elevation_gain / (activity.distance / 1000)).toFixed(1) + ' m/km'
         : '-';
-    const calories = activity.calories !== undefined ? activity.calories : '-';
-    const hrAvg = activity.average_heartrate ? Math.round(activity.average_heartrate) : '-';
-    const hrMax = activity.max_heartrate ? Math.round(activity.max_heartrate) : '-';
-    const avgWatts = activity.average_watts ? Math.round(activity.average_watts) + ' W' : '-';
-    const maxWatts = activity.max_watts ? Math.round(activity.max_watts) + ' W' : null;
-    const avgCadence = activity.average_cadence ? Math.round(activity.average_cadence) + ' rpm' : '-';
-    const weightedWatts = activity.weighted_average_watts ? Math.round(activity.weighted_average_watts) + ' W' : null;
+    const calories = activity.calories !== undefined && activity.calories !== null ? activity.calories : null;
+    const hrAvg = activity.average_heartrate !== undefined && activity.average_heartrate !== null ? Math.round(activity.average_heartrate) : null;
+    const hrMax = activity.max_heartrate !== undefined && activity.max_heartrate !== null ? Math.round(activity.max_heartrate) : null;
+    const avgWatts = activity.average_watts !== undefined && activity.average_watts !== null ? Math.round(activity.average_watts) + ' W' : null;
+    const maxWatts = activity.max_watts !== undefined && activity.max_watts !== null ? Math.round(activity.max_watts) + ' W' : null;
+    const avgCadence = activity.average_cadence !== undefined && activity.average_cadence !== null ? Math.round(activity.average_cadence) + ' rpm' : null;
+    const weightedWatts = activity.weighted_average_watts !== undefined && activity.weighted_average_watts !== null ? Math.round(activity.weighted_average_watts) + ' W' : null;
 
     let npDisplay = weightedWatts;
     if (!npDisplay && streams?.watts?.data) {
@@ -433,22 +473,30 @@ function renderActivityStats(activity, streams) {
         if (np) npDisplay = np + ' W';
     }
 
+    const fields = [];
+    const pushField = (label, value) => {
+        if (value === null || value === undefined || value === '' || value === 'N/A' || value === 'Not available' || value === '-' || value === 'null') return;
+        fields.push(`<li><b>${label}:</b> ${value}</li>`);
+    };
+
+    pushField('Duration', duration);
+    pushField('Distance', `${distanceKm} km`);
+    pushField('Avg Speed', avgSpeed);
+    pushField('Max Speed', maxSpeed);
+    pushField('Elevation Gain', `${elevation} m`);
+    pushField('Elev/km', elevPerKm);
+    pushField('Calories', calories);
+    pushField('HR Avg', hrAvg ? `${hrAvg} bpm` : null);
+    pushField('HR Max', hrMax ? `${hrMax} bpm` : null);
+    pushField('Avg Power', avgWatts);
+    pushField('Normalized Power', npDisplay);
+    pushField('Max Power', maxWatts);
+    pushField('Avg Cadence', avgCadence);
+
     DOM.stats.innerHTML = `
         <h3>Stats</h3>
         <ul>
-            <li><b>Duration:</b> ${duration}</li>
-            <li><b>Distance:</b> ${distanceKm} km</li>
-            <li><b>Avg Speed:</b> ${avgSpeed}</li>
-            <li><b>Max Speed:</b> ${maxSpeed}</li>
-            <li><b>Elevation Gain:</b> ${elevation} m</li>
-            <li><b>Elev/km:</b> ${elevPerKm}</li>
-            <li><b>Calories:</b> ${calories} kcal</li>
-            <li><b>HR Avg:</b> ${hrAvg} bpm</li>
-            <li><b>HR Max:</b> ${hrMax} bpm</li>
-            <li><b>Avg Power:</b> ${avgWatts}</li>
-            ${npDisplay ? `<li><b>Normalized Power:</b> ${npDisplay}</li>` : ''}
-            ${maxWatts ? `<li><b>Max Power:</b> ${maxWatts}</li>` : ''}
-            <li><b>Avg Cadence:</b> ${avgCadence}</li>
+            ${fields.join('')}
         </ul>
     `;
 }
@@ -458,71 +506,190 @@ function renderAdvancedStats(activity) {
     const kudos = activity.kudos_count || 0;
     const comments = activity.comment_count || 0;
     const photos = activity.photos?.count || 0;
-    const prs = activity.pr_count || 0;
-    const achievements = activity.achievement_count || 0;
-    const sufferScore = activity.suffer_score || '-';
-    const perceived = activity.perceived_exertion || '-';
+    const prs = activity.pr_count !== undefined && activity.pr_count !== null ? activity.pr_count : null;
+    const achievements = activity.achievement_count !== undefined && activity.achievement_count !== null ? activity.achievement_count : null;
+    const sufferScore = activity.suffer_score !== undefined && activity.suffer_score !== null ? activity.suffer_score : null;
+    const perceived = activity.perceived_exertion !== undefined && activity.perceived_exertion !== null ? activity.perceived_exertion : null;
     const hasLaps = activity.laps?.length > 0;
     const hasSegments = activity.segment_efforts?.length > 0;
     const deviceName = activity.device_name || '-';
 
-    let speedVariability = '-';
-    let hrVariability = '-';
-    const streams = activity._streamData;
-    if (streams) {
-        if (streams.distance?.data && streams.time?.data) {
-            const speedStream = [];
-            for (let i = 1; i < streams.distance.data.length; i++) {
-                const dD = streams.distance.data[i] - streams.distance.data[i - 1];
-                const dT = streams.time.data[i] - streams.time.data[i - 1];
-                if (dD > 0 && dT > 0) speedStream.push((dD / dT) * 3.6);
-            }
-            speedVariability = calculateVariability(speedStream, Math.max(1, Math.round(150 * currentSmoothingLevel / 100)));
-        }
-        if (streams.heartrate?.data) {
-            hrVariability = calculateVariability(streams.heartrate.data, Math.max(1, Math.round(150 * currentSmoothingLevel / 100)));
-        }
-    }
+    const lapSource = activity.laps?.length > 1 ? activity.laps : activity.splits_metric;
+    const speedVariability = lapSource?.length > 1
+        ? calculateVariability(lapSource.map(item => item.average_speed ? item.average_speed * 3.6 : null), 0)
+        : '-';
+    const hrVariability = lapSource?.length > 1
+        ? calculateVariability(lapSource.map(item => item.average_heartrate ?? null), 0)
+        : '-';
+    const moveRatio = activity.elapsed_time
+        ? `${((activity.moving_time / activity.elapsed_time) * 100).toFixed(1)}%`
+        : '-';
+
+    const fields = [];
+    const pushField = (label, value) => {
+        if (value === null || value === undefined || value === '' || value === 'N/A' || value === 'Not available' || value === '-' || value === 'null') return;
+        fields.push(`<li><b>${label}:</b> ${value}</li>`);
+    };
+
+    pushField('Device', deviceName);
+    pushField('Suffer Score', sufferScore);
+    pushField('Perceived Effort', perceived);
+    pushField('PRs', prs);
+    pushField('Achievements', achievements);
+    pushField('Kudos', kudos);
+    pushField('Comments', comments);
+    pushField('Photos', photos);
+    pushField('Move Ratio', moveRatio);
+    pushField('Speed CV (Splits)', speedVariability);
+    pushField('HR CV (Splits)', hrVariability);
 
     DOM.advanced.innerHTML = `
         <h3>Advanced</h3>
         <ul>
-            <li><b>Device:</b> ${deviceName}</li>
-            <li><b>Suffer Score:</b> ${sufferScore}</li>
-            <li><b>Perceived Effort:</b> ${perceived}</li>
-            <li><b>PRs:</b> ${prs}</li>
-            <li><b>Achievements:</b> ${achievements}</li>
-            <li><b>Kudos:</b> ${kudos}</li>
-            <li><b>Comments:</b> ${comments}</li>
-            <li><b>Photos:</b> ${photos}</li>
-            <li><b>Speed Variability:</b> ${speedVariability}</li>
-            <li><b>HR Variability:</b> ${hrVariability}</li>
+            ${fields.join('')}
             ${hasLaps ? `<li><b>Laps:</b> ${activity.laps.length}</li>` : ''}
             ${hasSegments ? `<li><b>Segments:</b> ${activity.segment_efforts.length}</li>` : ''}
         </ul>
     `;
 }
 
+function resampleSeries(values, targetLength) {
+    if (!Array.isArray(values) || values.length === 0 || targetLength <= 0) return [];
+    if (targetLength === values.length) return values.slice();
+    if (targetLength === 1) return [values[0]];
+
+    const resampled = [];
+    for (let i = 0; i < targetLength; i++) {
+        const ratio = i / (targetLength - 1);
+        const position = ratio * (values.length - 1);
+        const left = Math.floor(position);
+        const right = Math.ceil(position);
+        const mix = position - left;
+        const leftValue = Number(values[left]);
+        const rightValue = Number(values[right]);
+
+        if (!Number.isFinite(leftValue) && !Number.isFinite(rightValue)) {
+            resampled.push(null);
+        } else if (!Number.isFinite(rightValue) || left === right) {
+            resampled.push(Number.isFinite(leftValue) ? leftValue : rightValue);
+        } else if (!Number.isFinite(leftValue)) {
+            resampled.push(rightValue);
+        } else {
+            resampled.push(leftValue + (rightValue - leftValue) * mix);
+        }
+    }
+    return resampled;
+}
+
+function valueToRouteColor(value, minValue, maxValue) {
+    if (!Number.isFinite(value) || !Number.isFinite(minValue) || !Number.isFinite(maxValue) || maxValue === minValue) {
+        return '#FC5200';
+    }
+    const normalized = Math.max(0, Math.min(1, (value - minValue) / (maxValue - minValue)));
+    const hue = 220 - (normalized * 220);
+    return `hsl(${hue}, 90%, 55%)`;
+}
+
+function getRouteColorSeries(streams, mode, pointCount) {
+    if (!streams || mode === 'route') return null;
+
+    let source = null;
+    if (mode === 'heartrate') source = streams.heartrate?.data;
+    if (mode === 'cadence') source = streams.cadence?.data;
+    if (mode === 'watts') source = streams.watts?.data;
+    if (mode === 'altitude') source = streams.altitude?.data;
+    if (mode === 'speed') source = streams.velocity_smooth?.data?.map(v => v * 3.6) || null;
+    if (mode === 'pace') source = streams.velocity_smooth?.data?.map(v => (v > 0 ? 60 / (v * 3.6) : null)) || null;
+
+    if (!source || !Array.isArray(source) || source.length < 2) return null;
+    return resampleSeries(source, pointCount);
+}
+
 // =====================================================
 // 6. RENDERING — MAP
 // =====================================================
 
-function renderActivityMap(activity) {
+function renderActivityMap(activity, streams) {
     if (!DOM.map) return;
     const polyline = activity.map?.summary_polyline || activity.map?.polyline;
     if (polyline && window.L) {
         const coords = decodePolyline(polyline);
         if (coords.length > 0) {
             DOM.map.innerHTML = '';
+            if (window.activityRouteMap) {
+                window.activityRouteMap.remove();
+                window.activityRouteMap = null;
+            }
             const map = L.map('activity-map').setView(coords[0], 13);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-            const polylineLayer = L.polyline(coords, { color: '#FC5200', weight: 4 }).addTo(map);
-            map.fitBounds(polylineLayer.getBounds());
+            window.activityRouteMap = map;
+            const style = document.getElementById('activity-map-style')?.value || 'osm';
+            const layer = MAP_LAYERS[style] || MAP_LAYERS.osm;
+            L.tileLayer(layer.url, layer.options).addTo(map);
+
+            const routeSelect = document.getElementById('route-color-mode');
+            if (routeSelect) {
+                const modes = [
+                    { value: 'route', label: 'Route' },
+                    ...(streams?.heartrate?.data?.length > 0 ? [{ value: 'heartrate', label: 'Heart Rate' }] : []),
+                    ...(streams?.cadence?.data?.length > 0 ? [{ value: 'cadence', label: 'Cadence' }] : []),
+                    ...(streams?.watts?.data?.length > 0 ? [{ value: 'watts', label: 'Power' }] : []),
+                    ...(streams?.altitude?.data?.length > 0 ? [{ value: 'altitude', label: 'Altitude' }] : []),
+                    ...(streams?.velocity_smooth?.data?.length > 0 ? [{ value: 'speed', label: 'Speed' }, { value: 'pace', label: 'Pace' }] : []),
+                ];
+                const currentValue = routeSelect.value;
+                routeSelect.innerHTML = modes.map(mode => `<option value="${mode.value}">${mode.label}</option>`).join('');
+                routeSelect.value = modes.some(mode => mode.value === currentValue) ? currentValue : 'route';
+            }
+
+            const colorMode = routeSelect?.value || 'route';
+            const routeValues = getRouteColorSeries(streams, colorMode, coords.length);
+
+            if (routeValues) {
+                const finiteValues = routeValues.filter(Number.isFinite);
+                const minValue = Math.min(...finiteValues);
+                const maxValue = Math.max(...finiteValues);
+                const group = L.featureGroup().addTo(map);
+
+                for (let i = 1; i < coords.length; i++) {
+                    const value = routeValues[i] ?? routeValues[i - 1];
+                    const color = valueToRouteColor(value, minValue, maxValue);
+                    L.polyline([coords[i - 1], coords[i]], { color, weight: 4, opacity: 0.9 }).addTo(group);
+                }
+
+                map.fitBounds(group.getBounds());
+            } else {
+                const polylineLayer = L.polyline(coords, { color: '#FC5200', weight: 4 }).addTo(map);
+                map.fitBounds(polylineLayer.getBounds());
+            }
+
+            const mapStyleSelect = document.getElementById('activity-map-style');
+            if (mapStyleSelect && !mapStyleSelect.dataset.bound) {
+                mapStyleSelect.dataset.bound = '1';
+                mapStyleSelect.addEventListener('change', () => renderActivityMap(activity, streams));
+            }
+
+            if (routeSelect && !routeSelect.dataset.bound) {
+                routeSelect.dataset.bound = '1';
+                routeSelect.addEventListener('change', () => renderActivityMap(activity, streams));
+            }
+
+            const weatherToggle = document.getElementById('show-weather-details');
+            if (weatherToggle && !weatherToggle.dataset.bound) {
+                weatherToggle.dataset.bound = '1';
+                weatherToggle.addEventListener('change', () => renderActivityMap(activity, streams));
+            }
+
+            renderWeatherAnalysis(activity, coords);
+            renderWeatherMapDetails(activity, coords, map, weatherToggle?.checked);
         } else {
             DOM.map.innerHTML = '<p>No route data (empty polyline).</p>';
+            renderWeatherAnalysis(activity, []);
+            renderWeatherMapDetails(activity, [], null, false);
         }
     } else {
         DOM.map.innerHTML = '<p>No route data available.</p>';
+        renderWeatherAnalysis(activity, []);
+        renderWeatherMapDetails(activity, [], null, false);
     }
 }
 
@@ -1321,7 +1488,7 @@ async function main() {
         renderActivityInfo(activityData);
         renderActivityStats(activityData, streamData);
         renderAdvancedStats(activityData);
-        renderActivityMap(activityData);
+        renderActivityMap(activityData, streamData);
         renderBikeProfileChart(initialSmoothed, currentSmoothingLevel);
         renderSplitsCharts(activityData);
         renderStreamCharts(initialSmoothed, activityData, currentSmoothingLevel);
@@ -1339,7 +1506,6 @@ async function main() {
         renderBikeClassifier(activityData, streamData);
         syncSideBySideContainers();
 
-        initSmoothingControl();
         initDynamicChartControls();
 
         if (DOM.streamCharts) DOM.streamCharts.style.display = '';

@@ -5,6 +5,7 @@
  */
 
 import { formatDate as sharedFormatDate, formatPace as sharedFormatPace } from '../../shared/utils/index.js';
+import { renderWeatherAnalysis, renderWeatherMapDetails } from '../../shared/utils/weather-analysis.js';
 
 // =====================================================
 // 1. INITIALIZATION & CONFIGURATION
@@ -19,6 +20,29 @@ const CONFIG = {
         cadence: 60,
     },
     NUM_SEGMENTS: 40,
+};
+
+const MAP_LAYERS = {
+    osm: {
+        url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        options: { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' },
+    },
+    'carto-light': {
+        url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+        options: { maxZoom: 20, attribution: '&copy; OpenStreetMap contributors &copy; CARTO' },
+    },
+    'carto-dark': {
+        url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+        options: { maxZoom: 20, attribution: '&copy; OpenStreetMap contributors &copy; CARTO' },
+    },
+    'open-topo': {
+        url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+        options: { maxZoom: 17, attribution: 'Map data: &copy; OpenStreetMap contributors, SRTM | Map style: &copy; OpenTopoMap' },
+    },
+    'esri-sat': {
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        options: { maxZoom: 20, attribution: 'Tiles &copy; Esri' },
+    },
 };
 
 // DOM References
@@ -115,6 +139,28 @@ function getClassificationBasedColors() {
     };
 
     return colorSchemes[primaryType] || chartColors;
+}
+
+function getAvailableRouteColorModes(streams) {
+    const modes = [{ value: 'route', label: 'Route' }];
+    if (streams?.heartrate?.data?.length > 0) modes.push({ value: 'heartrate', label: 'Heart Rate' });
+    if (streams?.cadence?.data?.length > 0) modes.push({ value: 'cadence', label: 'Cadence' });
+    if (streams?.altitude?.data?.length > 0) modes.push({ value: 'altitude', label: 'Altitude' });
+    if (streams?.velocity_smooth?.data?.length > 0) {
+        modes.push({ value: 'speed', label: 'Speed' });
+        modes.push({ value: 'pace', label: 'Pace' });
+    }
+    return modes;
+}
+
+function syncRouteColorSelect(select, streams) {
+    if (!select) return 'route';
+
+    const availableModes = getAvailableRouteColorModes(streams);
+    const currentValue = select.value;
+    select.innerHTML = availableModes.map(mode => `<option value="${mode.value}">${mode.label}</option>`).join('');
+    select.value = availableModes.some(mode => mode.value === currentValue) ? currentValue : 'route';
+    return select.value;
 }
 
 // =====================================================
@@ -754,36 +800,45 @@ async function fetchActivityStreams(activityId, authPayload) {
  * Renders basic activity information (title, date, type, gear, etc.)
  */
 function renderActivityInfo(activity) {
-    if (!DOM.info) return;
 
     const name = activity.name;
+    const pageTitle = document.getElementById('activity-page-title');
+    if (pageTitle && name) pageTitle.textContent = name;
+    document.title = name ? `${name} | Running Performance Studio` : 'Running Performance Studio';
     const description = activity.description || '';
     const date = formatDate(new Date(activity.start_date_local));
     const typeLabels = ['Workout', 'Race', 'Long Run', 'Workout'];
     const activityType = activity.workout_type !== undefined
         ? typeLabels[activity.workout_type] || 'Other'
         : (activity.type || 'Other');
-    const gear = activity.gear?.name || 'N/A';
-    const kudos = activity.kudos_count || 0;
-    const commentCount = activity.comment_count || 0;
-    let tempStr = 'Not available';
-    if (activity.average_temp !== undefined && activity.average_temp !== null) {
-        tempStr = `${activity.average_temp}°C`;
-    }
+    const gearId = activity.gear_id || activity.gear?.id || null;
+    const gear = activity.gear?.name || activity.gear_name || (gearId ? `Gear ${gearId}` : null);
+    const kudosValue = Number(activity.kudos_count);
+    const commentValue = Number(activity.comment_count);
+    const kudos = Number.isFinite(kudosValue) ? kudosValue : null;
+    const commentCount = Number.isFinite(commentValue) ? commentValue : null;
+    const tempStr = activity.average_temp !== undefined && activity.average_temp !== null ? `${activity.average_temp}°C` : null;
+    const stravaUrl = activity.id ? `https://www.strava.com/activities/${activity.id}` : null;
 
-    DOM.info.innerHTML = `
-        <h3>Info</h3>
-        <ul>
-            <li><b>Title:</b> ${name}</li>
-            ${description ? `<li><b>Description:</b> ${description}</li>` : ''}
-            <li><b>Date:</b> ${date}</li>
-            <li><b>Type:</b> ${activityType}</li>
-            <li><b>Gear:</b> ${gear}</li>
-            <li><b>Temperature:</b> ${tempStr}</li>
-            <li><b>Comments:</b> ${commentCount}</li>
-            <li><b>Kudos:</b> ${kudos}</li>
-        </ul>
-    `;
+    const heroDate = document.getElementById('activity-hero-date');
+    const heroDescription = document.getElementById('activity-hero-description');
+    const heroType = document.getElementById('activity-hero-type');
+    const heroGear = document.getElementById('activity-hero-gear');
+    const heroKudos = document.getElementById('activity-hero-kudos');
+    const heroComments = document.getElementById('activity-hero-comments');
+    const heroLink = document.getElementById('activity-hero-strava-link');
+
+    if (heroDate) heroDate.textContent = date;
+    if (heroDescription) heroDescription.textContent = description || 'No description provided.';
+    if (heroType) heroType.textContent = activityType;
+    if (heroGear) {
+        heroGear.innerHTML = gearId
+            ? `<a href="../html/gear.html?id=${gearId}">${gear || gearId}</a>`
+            : (gear || 'No gear');
+    }
+    if (heroKudos) heroKudos.textContent = `❤️ ${kudos !== null ? kudos : '—'}`;
+    if (heroComments) heroComments.textContent = `💬 ${commentCount !== null ? commentCount : '—'}`;
+    if (heroLink && stravaUrl) heroLink.href = stravaUrl;
 }
 
 /**
@@ -794,28 +849,35 @@ function renderActivityStats(activity) {
 
     const distanceKm = (activity.distance / 1000).toFixed(2);
     const duration = formatTime(activity.moving_time);
-    const avgSpeed = activity.average_speed ? (activity.average_speed * 3.6).toFixed(1) + ' km/h' : '-';
+    const pace = formatPace(activity.average_speed);
     const elevation = activity.total_elevation_gain !== undefined ? activity.total_elevation_gain : '-';
     const elevationPerKm = activity.distance > 0
         ? (activity.total_elevation_gain / (activity.distance / 1000)).toFixed(2)
         : '-';
-    const calories = activity.calories !== undefined ? activity.calories : '-';
-    const hrAvg = activity.average_heartrate ? Math.round(activity.average_heartrate) : '-';
-    const hrMax = activity.max_heartrate ? Math.round(activity.max_heartrate) : '-';
-    const avgPower = activity.average_watts ? Math.round(activity.average_watts) : null;
+    const calories = activity.calories !== undefined && activity.calories !== null ? activity.calories : null;
+    const hrAvg = activity.average_heartrate !== undefined && activity.average_heartrate !== null ? Math.round(activity.average_heartrate) : null;
+    const hrMax = activity.max_heartrate !== undefined && activity.max_heartrate !== null ? Math.round(activity.max_heartrate) : null;
+    const avgPower = activity.average_watts !== undefined && activity.average_watts !== null ? Math.round(activity.average_watts) : null;
+    const fields = [];
+    const pushField = (label, value) => {
+        if (value === null || value === undefined || value === '' || value === 'N/A' || value === 'Not available' || value === '-' || value === 'null') return;
+        fields.push(`<li><b>${label}:</b> ${value}</li>`);
+    };
+
+    pushField('Duration', duration);
+    pushField('Distance', `${distanceKm} km`);
+    pushField('Pace', pace !== '-' ? `${pace} /km` : null);
+    pushField('Elevation Gain', `${elevation} m`);
+    pushField('Elevation per Km', `${elevationPerKm} m`);
+    pushField('Calories', calories);
+    pushField('HR Avg', hrAvg ? `${hrAvg} bpm` : null);
+    pushField('HR Max', hrMax ? `${hrMax} bpm` : null);
+    pushField('Avg Power', avgPower ? `${avgPower} W` : null);
 
     DOM.stats.innerHTML = `
         <h3>Stats</h3>
         <ul>
-            <li><b>Duration:</b> ${duration}</li>
-            <li><b>Distance:</b> ${distanceKm} km</li>
-            <li><b>Average Speed:</b> ${avgSpeed}</li>
-            <li><b>Elevation Gain:</b> ${elevation} m</li>
-            <li><b>Elevation per Km:</b> ${elevationPerKm} m</li>
-            <li><b>Calories:</b> ${calories}</li>
-            <li><b>HR Avg:</b> ${hrAvg} bpm</li>
-            <li><b>HR Max:</b> ${hrMax} bpm</li>
-            ${avgPower ? `<li><b>Avg Power:</b> ${avgPower} W</li>` : ''}
+            ${fields.join('')}
         </ul>
     `;
 }
@@ -830,36 +892,90 @@ function renderAdvancedStats(activity) {
         ? (activity.total_elevation_gain / (activity.distance / 1000)).toFixed(2)
         : '-';
     const moveRatio = activity.elapsed_time
-        ? (activity.moving_time / activity.elapsed_time).toFixed(2)
+        ? `${((activity.moving_time / activity.elapsed_time) * 100).toFixed(1)}%`
         : '-';
-    const effort = activity.suffer_score !== undefined
+    const effort = activity.suffer_score !== undefined && activity.suffer_score !== null
         ? activity.suffer_score
-        : (activity.perceived_exertion !== undefined ? activity.perceived_exertion : '-');
+        : (activity.perceived_exertion !== undefined && activity.perceived_exertion !== null ? activity.perceived_exertion : null);
     const vo2max = estimateVO2max(activity);
     const paceVariabilityLaps = activity.pace_variability_laps || '-';
-    const paceVariabilityStream = activity.pace_variability_stream || '-';
     const hrVariabilityLaps = activity.hr_variability_laps || '-';
-    const hrVariabilityStream = activity.hr_variability_stream || '-';
-    const prCount = activity.pr_count !== undefined ? activity.pr_count : '-';
-    const athleteCount = activity.athlete_count !== undefined ? activity.athlete_count : '-';
-    const achievementCount = activity.achievement_count !== undefined ? activity.achievement_count : '-';
+    const prCount = activity.pr_count !== undefined && activity.pr_count !== null ? activity.pr_count : null;
+    const athleteCount = activity.athlete_count !== undefined && activity.athlete_count !== null ? activity.athlete_count : null;
+    const achievementCount = activity.achievement_count !== undefined && activity.achievement_count !== null ? activity.achievement_count : null;
+    const fields = [];
+    const pushField = (label, value) => {
+        if (value === null || value === undefined || value === '' || value === 'N/A' || value === 'Not available' || value === '-' || value === 'null') return;
+        fields.push(`<li><b>${label}:</b> ${value}</li>`);
+    };
+
+    pushField('Elevation per Km', `${elevationPerKm} m`);
+    pushField('Move Ratio', moveRatio);
+    pushField('Effort', effort);
+    pushField('VO₂max (est)', vo2max);
+    pushField('Pace CV (Splits)', paceVariabilityLaps);
+    pushField('HR CV (Splits)', hrVariabilityLaps);
+    pushField('PRs', prCount);
+    pushField('Athlete Count', athleteCount);
+    pushField('Achievements', achievementCount);
 
     DOM.advanced.innerHTML = `
         <h3>Advanced Stats</h3>
         <ul>
-            <li><b>Elevation per Km:</b> ${elevationPerKm} m</li>
-            <li><b>Move Ratio:</b> ${moveRatio}</li>
-            <li><b>Effort:</b> ${effort}</li>
-            <li><b>VO₂max (est):</b> ${vo2max}</li>
-            <li><b>Pace CV (Laps):</b> ${paceVariabilityLaps}</li>
-            <li><b>Pace CV (Stream):</b> ${paceVariabilityStream}</li>
-            <li><b>HR CV (Laps):</b> ${hrVariabilityLaps}</li>
-            <li><b>HR CV (Stream):</b> ${hrVariabilityStream}</li>
-            <li><b>PRs:</b> ${prCount}</li>
-            <li><b>Athlete Count:</b> ${athleteCount}</li>
-            <li><b>Achievements:</b> ${achievementCount}</li>
+            ${fields.join('')}
         </ul>
     `;
+}
+
+function resampleSeries(values, targetLength) {
+    if (!Array.isArray(values) || values.length === 0 || targetLength <= 0) return [];
+    if (targetLength === values.length) return values.slice();
+    if (targetLength === 1) return [values[0]];
+
+    const resampled = [];
+    for (let i = 0; i < targetLength; i++) {
+        const ratio = i / (targetLength - 1);
+        const position = ratio * (values.length - 1);
+        const left = Math.floor(position);
+        const right = Math.ceil(position);
+        const mix = position - left;
+        const leftValue = Number(values[left]);
+        const rightValue = Number(values[right]);
+
+        if (!Number.isFinite(leftValue) && !Number.isFinite(rightValue)) {
+            resampled.push(null);
+        } else if (!Number.isFinite(rightValue) || left === right) {
+            resampled.push(Number.isFinite(leftValue) ? leftValue : rightValue);
+        } else if (!Number.isFinite(leftValue)) {
+            resampled.push(rightValue);
+        } else {
+            resampled.push(leftValue + (rightValue - leftValue) * mix);
+        }
+    }
+    return resampled;
+}
+
+function valueToRouteColor(value, minValue, maxValue) {
+    if (!Number.isFinite(value) || !Number.isFinite(minValue) || !Number.isFinite(maxValue) || maxValue === minValue) {
+        return '#FC5200';
+    }
+    const normalized = Math.max(0, Math.min(1, (value - minValue) / (maxValue - minValue)));
+    const hue = 220 - (normalized * 220);
+    return `hsl(${hue}, 90%, 55%)`;
+}
+
+function getRouteColorSeries(streams, mode, pointCount) {
+    if (!streams || mode === 'route') return null;
+
+    let source = null;
+    if (mode === 'heartrate') source = streams.heartrate?.data;
+    if (mode === 'cadence') source = streams.cadence?.data;
+    if (mode === 'altitude') source = streams.altitude?.data;
+    if (mode === 'speed') source = streams.velocity_smooth?.data?.map(v => v * 3.6) || null;
+    if (mode === 'pace') source = streams.velocity_smooth?.data?.map(v => (v > 0 ? 60 / (v * 3.6) : null)) || null;
+
+    if (!source || !Array.isArray(source) || source.length < 2) return null;
+    return resampleSeries(source, pointCount);
 }
 
 // =====================================================
@@ -869,21 +985,80 @@ function renderAdvancedStats(activity) {
 /**
  * Renders interactive map with route polyline
  */
-function renderActivityMap(activity) {
+function renderActivityMap(activity, streams) {
     if (!DOM.map) return;
 
     if (activity.map?.summary_polyline && window.L) {
         const coords = decodePolyline(activity.map.summary_polyline);
         if (coords.length > 0) {
             DOM.map.innerHTML = '';
+            if (window.activityRouteMap) {
+                window.activityRouteMap.remove();
+                window.activityRouteMap = null;
+            }
             const map = L.map('activity-map').setView(coords[0], 13);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-            L.polyline(coords, { color: '#FC5200', weight: 4 }).addTo(map);
+            window.activityRouteMap = map;
+            const style = document.getElementById('activity-map-style')?.value || 'osm';
+            const layer = MAP_LAYERS[style] || MAP_LAYERS.osm;
+            L.tileLayer(layer.url, layer.options).addTo(map);
+
+            const routeSelect = document.getElementById('route-color-mode');
+            const availableModes = getAvailableRouteColorModes(streams);
+            if (routeSelect) {
+                const currentValue = routeSelect.value;
+                routeSelect.innerHTML = availableModes.map(mode => `<option value="${mode.value}">${mode.label}</option>`).join('');
+                routeSelect.value = availableModes.some(mode => mode.value === currentValue) ? currentValue : 'route';
+            }
+
+            const colorMode = routeSelect?.value || 'route';
+            const routeValues = getRouteColorSeries(streams, colorMode, coords.length);
+
+            if (routeValues) {
+                const finiteValues = routeValues.filter(Number.isFinite);
+                const minValue = Math.min(...finiteValues);
+                const maxValue = Math.max(...finiteValues);
+                const group = L.featureGroup().addTo(map);
+
+                for (let i = 1; i < coords.length; i++) {
+                    const value = routeValues[i] ?? routeValues[i - 1];
+                    const color = valueToRouteColor(value, minValue, maxValue);
+                    L.polyline([coords[i - 1], coords[i]], { color, weight: 4, opacity: 0.9 }).addTo(group);
+                }
+
+                map.fitBounds(group.getBounds());
+            } else {
+                const polyline = L.polyline(coords, { color: '#FC5200', weight: 4 }).addTo(map);
+                map.fitBounds(polyline.getBounds());
+            }
+
+            const mapStyleSelect = document.getElementById('activity-map-style');
+            if (mapStyleSelect && !mapStyleSelect.dataset.bound) {
+                mapStyleSelect.dataset.bound = '1';
+                mapStyleSelect.addEventListener('change', () => renderActivityMap(activity, streams));
+            }
+
+            if (routeSelect && !routeSelect.dataset.bound) {
+                routeSelect.dataset.bound = '1';
+                routeSelect.addEventListener('change', () => renderActivityMap(activity, streams));
+            }
+
+            const weatherToggle = document.getElementById('show-weather-details');
+            if (weatherToggle && !weatherToggle.dataset.bound) {
+                weatherToggle.dataset.bound = '1';
+                weatherToggle.addEventListener('change', () => renderActivityMap(activity, streams));
+            }
+
+            renderWeatherAnalysis(activity, coords);
+            renderWeatherMapDetails(activity, coords, map, weatherToggle?.checked);
         } else {
             DOM.map.innerHTML = '<p>No route data available (empty polyline).</p>';
+            renderWeatherAnalysis(activity, []);
+            renderWeatherMapDetails(activity, [], null, false);
         }
     } else {
         DOM.map.innerHTML = '<p>No route data available or Leaflet not loaded.</p>';
+        renderWeatherAnalysis(activity, []);
+        renderWeatherMapDetails(activity, [], null, false);
     }
 }
 
@@ -1588,7 +1763,7 @@ function renderPaceMinMaxAreaChart(streams, smoothingLevel = 100) {
                 legend: { display: true },
                 tooltip: {
                     callbacks: {
-                        label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)} min/km`
+                        label: context => `${context.dataset.label}: ${sharedFormatPace(context.parsed.y * 60, 1)}`
                     }
                 }
             },
@@ -1597,7 +1772,10 @@ function renderPaceMinMaxAreaChart(streams, smoothingLevel = 100) {
                 y: {
                     reverse: true,
                     beginAtZero: false,
-                    title: { display: true, text: 'Pace (min/km)' }
+                    title: { display: true, text: 'Pace (min/km)' },
+                    ticks: {
+                        callback: value => sharedFormatPace(Number(value) * 60, 1)
+                    }
                 }
             }
         }
@@ -1614,12 +1792,18 @@ function renderClassifierResults(classificationData) {
     // Store classification for chart styling
     currentRunClassification = classificationData;
 
+    const heroType = document.getElementById('activity-hero-type');
+
     const results = classificationData ? classificationData.top : null;
     const confidence = classificationData?.confidence || null;
 
     if (!results || results.length === 0) {
         container.innerHTML = '<p>Could not classify this run.</p>';
         return;
+    }
+
+    if (heroType && results[0]) {
+        heroType.textContent = `${results[0].type} (${results[0].pct}%)`;
     }
 
     const resultsHtml = results.map((result, index) => {
@@ -1696,12 +1880,12 @@ async function main() {
                     paceStream.push(deltaTime / deltaDist);
                 }
             }
-            const smoothingWindowForVariability = Math.max(1, Math.round(150 * (currentSmoothingLevel / 100)));
+            const smoothingWindowForVariability = Math.max(1, Math.round(240 * (currentSmoothingLevel / 100)));
             paceVariabilityStream = calculateVariability(paceStream, smoothingWindowForVariability);
         }
 
         if (streamData && streamData.heartrate) {
-            const smoothingWindowForVariability = Math.max(1, Math.round(150 * (currentSmoothingLevel / 100)));
+            const smoothingWindowForVariability = Math.max(1, Math.round(240 * (currentSmoothingLevel / 100)));
             hrVariabilityStream = calculateVariability(streamData.heartrate.data, smoothingWindowForVariability);
         }
 
@@ -1742,7 +1926,7 @@ async function main() {
         renderActivityInfo(activityData);
         renderActivityStats(activityData);
         renderAdvancedStats(activityData);
-        renderActivityMap(activityData);
+        renderActivityMap(activityData, streamData);
         renderSplitsCharts(activityData);
         renderStreamCharts(initialSmoothedStreams, activityData, currentSmoothingLevel);
         renderBestEfforts(activityData.best_efforts);
@@ -1756,8 +1940,6 @@ async function main() {
         syncSideBySideContainers();
 
         // Initialize smoothing slider control
-        initSmoothingControl();
-
         // Initialize dynamic chart controls
         initDynamicChartControls();
 

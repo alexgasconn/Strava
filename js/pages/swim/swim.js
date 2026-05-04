@@ -5,6 +5,7 @@
  */
 
 import { formatDate as sharedFormatDate } from '../../shared/utils/index.js';
+import { renderWeatherAnalysis, renderWeatherMapDetails } from '../../shared/utils/weather-analysis.js';
 
 // =====================================================
 // 1. INITIALIZATION & CONFIGURATION
@@ -17,6 +18,29 @@ const CONFIG = {
         cadence: 60,
     },
     NUM_SEGMENTS: 40,
+};
+
+const MAP_LAYERS = {
+    osm: {
+        url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        options: { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' },
+    },
+    'carto-light': {
+        url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+        options: { maxZoom: 20, attribution: '&copy; OpenStreetMap contributors &copy; CARTO' },
+    },
+    'carto-dark': {
+        url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+        options: { maxZoom: 20, attribution: '&copy; OpenStreetMap contributors &copy; CARTO' },
+    },
+    'open-topo': {
+        url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+        options: { maxZoom: 17, attribution: 'Map data: &copy; OpenStreetMap contributors, SRTM | Map style: &copy; OpenTopoMap' },
+    },
+    'esri-sat': {
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        options: { maxZoom: 20, attribution: 'Tiles &copy; Esri' },
+    },
 };
 
 const INDOOR_SWIM_DISTANCE_CORRECTION = 20 / 25;
@@ -101,6 +125,150 @@ function formatSwimPace(speedInMps) {
     const min = Math.floor(paceInSecPer100m / 60);
     const sec = Math.round(paceInSecPer100m % 60);
     return `${min}:${sec.toString().padStart(2, '0')}/100m`;
+}
+
+function calculateVariability(data) {
+    return calculateCoefficient(data);
+}
+
+function getAvailableRouteColorModes(streams) {
+    const modes = [{ value: 'route', label: 'Route' }];
+    if (streams?.heartrate?.data?.length > 0) modes.push({ value: 'heartrate', label: 'Heart Rate' });
+    if (streams?.cadence?.data?.length > 0) modes.push({ value: 'cadence', label: 'Cadence' });
+    if (streams?.altitude?.data?.length > 0) modes.push({ value: 'altitude', label: 'Altitude' });
+    if (streams?.velocity_smooth?.data?.length > 0) {
+        modes.push({ value: 'speed', label: 'Speed' });
+        modes.push({ value: 'pace', label: 'Pace' });
+    }
+    return modes;
+}
+
+function syncRouteColorSelect(select, streams) {
+    if (!select) return 'route';
+    const availableModes = getAvailableRouteColorModes(streams);
+    const currentValue = select.value;
+    select.innerHTML = availableModes.map(mode => `<option value="${mode.value}">${mode.label}</option>`).join('');
+    select.value = availableModes.some(mode => mode.value === currentValue) ? currentValue : 'route';
+    return select.value;
+}
+
+function resampleSeries(values, targetLength) {
+    if (!Array.isArray(values) || values.length === 0 || targetLength <= 0) return [];
+    if (targetLength === values.length) return values.slice();
+    if (targetLength === 1) return [values[0]];
+
+    const resampled = [];
+    for (let i = 0; i < targetLength; i++) {
+        const ratio = i / (targetLength - 1);
+        const position = ratio * (values.length - 1);
+        const left = Math.floor(position);
+        const right = Math.ceil(position);
+        const mix = position - left;
+        const leftValue = Number(values[left]);
+        const rightValue = Number(values[right]);
+
+        if (!Number.isFinite(leftValue) && !Number.isFinite(rightValue)) {
+            resampled.push(null);
+        } else if (!Number.isFinite(rightValue) || left === right) {
+            resampled.push(Number.isFinite(leftValue) ? leftValue : rightValue);
+        } else if (!Number.isFinite(leftValue)) {
+            resampled.push(rightValue);
+        } else {
+            resampled.push(leftValue + (rightValue - leftValue) * mix);
+        }
+    }
+    return resampled;
+}
+
+function valueToRouteColor(value, minValue, maxValue) {
+    if (!Number.isFinite(value) || !Number.isFinite(minValue) || !Number.isFinite(maxValue) || maxValue === minValue) {
+        return '#FC5200';
+    }
+    const normalized = Math.max(0, Math.min(1, (value - minValue) / (maxValue - minValue)));
+    const hue = 220 - (normalized * 220);
+    return `hsl(${hue}, 90%, 55%)`;
+}
+
+function renderActivityMap(activity, streams) {
+    const section = document.getElementById('activity-map-container');
+    if (!DOM.map || !section) return;
+
+    const polyline = activity.map?.summary_polyline || activity.map?.polyline;
+    if (!polyline || !window.L) {
+        section.classList.add('hidden');
+        renderWeatherAnalysis(activity, []);
+        return;
+    }
+
+    const coords = decodePolyline(polyline);
+    if (!coords.length) {
+        section.classList.remove('hidden');
+        DOM.map.innerHTML = '<p>No route data available (empty polyline).</p>';
+        renderWeatherAnalysis(activity, []);
+        return;
+    }
+
+    section.classList.remove('hidden');
+    DOM.map.innerHTML = '';
+    if (window.swimActivityMap) {
+        window.swimActivityMap.remove();
+        window.swimActivityMap = null;
+    }
+
+    const map = L.map('activity-map').setView(coords[0], 13);
+    window.swimActivityMap = map;
+    const style = document.getElementById('activity-map-style')?.value || 'osm';
+    const layer = MAP_LAYERS[style] || MAP_LAYERS.osm;
+    L.tileLayer(layer.url, layer.options).addTo(map);
+
+    const routeSelect = document.getElementById('route-color-mode');
+    const availableModes = getAvailableRouteColorModes(streams);
+    if (routeSelect) {
+        const currentValue = routeSelect.value;
+        routeSelect.innerHTML = availableModes.map(mode => `<option value="${mode.value}">${mode.label}</option>`).join('');
+        routeSelect.value = availableModes.some(mode => mode.value === currentValue) ? currentValue : 'route';
+    }
+
+    const colorMode = routeSelect?.value || 'route';
+    const routeValues = getRouteColorSeries(streams, colorMode, coords.length);
+
+    if (routeValues) {
+        const finiteValues = routeValues.filter(Number.isFinite);
+        const minValue = Math.min(...finiteValues);
+        const maxValue = Math.max(...finiteValues);
+        const group = L.featureGroup().addTo(map);
+
+        for (let i = 1; i < coords.length; i++) {
+            const value = routeValues[i] ?? routeValues[i - 1];
+            const color = valueToRouteColor(value, minValue, maxValue);
+            L.polyline([coords[i - 1], coords[i]], { color, weight: 4, opacity: 0.9 }).addTo(group);
+        }
+
+        map.fitBounds(group.getBounds());
+    } else {
+        const polylineLayer = L.polyline(coords, { color: '#FC5200', weight: 4 }).addTo(map);
+        map.fitBounds(polylineLayer.getBounds());
+    }
+
+    const mapStyleSelect = document.getElementById('activity-map-style');
+    if (mapStyleSelect && !mapStyleSelect.dataset.bound) {
+        mapStyleSelect.dataset.bound = '1';
+        mapStyleSelect.addEventListener('change', () => renderActivityMap(activity, streams));
+    }
+
+    if (routeSelect && !routeSelect.dataset.bound) {
+        routeSelect.dataset.bound = '1';
+        routeSelect.addEventListener('change', () => renderActivityMap(activity, streams));
+    }
+
+    const weatherToggle = document.getElementById('show-weather-details');
+    if (weatherToggle && !weatherToggle.dataset.bound) {
+        weatherToggle.dataset.bound = '1';
+        weatherToggle.addEventListener('change', () => renderActivityMap(activity, streams));
+    }
+
+    renderWeatherAnalysis(activity, coords);
+    renderWeatherMapDetails(activity, coords, map, weatherToggle?.checked);
 }
 
 function normalizeText(value) {
@@ -375,34 +543,41 @@ async function fetchActivityStreams(activityId, authPayload) {
  * Renders basic activity information for swimming
  */
 function renderActivityInfo(activity) {
-    if (!DOM.info) return;
 
-    console.log(activity);
     const name = activity.name;
+    const pageTitle = document.getElementById('activity-page-title');
+    if (pageTitle && name) pageTitle.textContent = name;
+    document.title = name ? `${name} | Swim Performance Deck` : 'Swim Performance Deck';
     const description = activity.description || '';
     const date = formatDate(new Date(activity.start_date_local));
     const activityType = 'Swimming';
-    const gear = activity.gear?.name || 'N/A';
-    const kudos = activity.kudos_count || 0;
-    const commentCount = activity.comment_count || 0;
-    let tempStr = 'Not available';
-    if (activity.average_temp !== undefined && activity.average_temp !== null) {
-        tempStr = `${activity.average_temp}°C`;
-    }
+    const gearId = activity.gear_id || activity.gear?.id || null;
+    const gear = activity.gear?.name || activity.gear_name || (gearId ? `Gear ${gearId}` : null);
+    const kudosValue = Number(activity.kudos_count);
+    const commentValue = Number(activity.comment_count);
+    const kudos = Number.isFinite(kudosValue) ? kudosValue : null;
+    const commentCount = Number.isFinite(commentValue) ? commentValue : null;
+    const tempStr = activity.average_temp !== undefined && activity.average_temp !== null ? `${activity.average_temp}°C` : null;
+    const stravaUrl = activity.id ? `https://www.strava.com/activities/${activity.id}` : null;
+    const heroDate = document.getElementById('activity-hero-date');
+    const heroDescription = document.getElementById('activity-hero-description');
+    const heroType = document.getElementById('activity-hero-type');
+    const heroGear = document.getElementById('activity-hero-gear');
+    const heroKudos = document.getElementById('activity-hero-kudos');
+    const heroComments = document.getElementById('activity-hero-comments');
+    const heroLink = document.getElementById('activity-hero-strava-link');
 
-    DOM.info.innerHTML = `
-        <h3>Info</h3>
-        <ul>
-            <li><b>Title:</b> ${name}</li>
-            ${description ? `<li><b>Description:</b> ${description}</li>` : ''}
-            <li><b>Date:</b> ${date}</li>
-            <li><b>Type:</b> ${activityType}</li>
-            <li><b>Gear:</b> ${gear}</li>
-            <li><b>Temperature:</b> ${tempStr}</li>
-            <li><b>Comments:</b> ${commentCount}</li>
-            <li><b>Kudos:</b> ${kudos}</li>
-        </ul>
-    `;
+    if (heroDate) heroDate.textContent = date;
+    if (heroDescription) heroDescription.textContent = description || 'No description provided.';
+    if (heroType) heroType.textContent = activityType;
+    if (heroGear) {
+        heroGear.innerHTML = gearId
+            ? `<a href="../html/gear.html?id=${gearId}">${gear || gearId}</a>`
+            : (gear || 'No gear');
+    }
+    if (heroKudos) heroKudos.textContent = `❤️ ${kudos !== null ? kudos : '—'}`;
+    if (heroComments) heroComments.textContent = `💬 ${commentCount !== null ? commentCount : '—'}`;
+    if (heroLink && stravaUrl) heroLink.href = stravaUrl;
 }
 
 /**
@@ -415,48 +590,72 @@ function renderActivityStats(activity) {
     const distanceM = (activity.distance).toFixed(0);
     const duration = formatTime(activity.moving_time);
     const pace = formatSwimPace(activity.average_speed);
-    const calories = activity.calories !== undefined ? activity.calories : '-';
-    const hrAvg = activity.average_heartrate ? Math.round(activity.average_heartrate) : '-';
-    const hrMax = activity.max_heartrate ? Math.round(activity.max_heartrate) : '-';
-    const totalStrokes = activity.total_strokes || '-';
+    const calories = activity.calories !== undefined && activity.calories !== null ? activity.calories : null;
+    const hrAvg = activity.average_heartrate !== undefined && activity.average_heartrate !== null ? Math.round(activity.average_heartrate) : null;
+    const hrMax = activity.max_heartrate !== undefined && activity.max_heartrate !== null ? Math.round(activity.max_heartrate) : null;
+    const totalStrokes = activity.total_strokes !== undefined && activity.total_strokes !== null ? activity.total_strokes : null;
+    const fields = [];
+    const pushField = (label, value) => {
+        if (value === null || value === undefined || value === '' || value === 'N/A' || value === 'Not available' || value === '-' || value === 'null') return;
+        fields.push(`<li><b>${label}:</b> ${value}</li>`);
+    };
+
+    pushField('Duration', duration);
+    pushField('Distance', `${distanceM} m (${distanceKm} km)`);
+    pushField('Pace', pace);
+    pushField('Total Strokes', totalStrokes);
+    pushField('Avg HR', hrAvg ? `${hrAvg} bpm` : null);
+    pushField('Max HR', hrMax ? `${hrMax} bpm` : null);
+    pushField('Calories', calories);
 
     DOM.stats.innerHTML = `
         <h3>Stats</h3>
         <ul>
-            <li><b>Duration:</b> ${duration}</li>
-            <li><b>Distance:</b> ${distanceM} m (${distanceKm} km)</li>
-            <li><b>Pace:</b> ${pace}</li>
-            <li><b>Total Strokes:</b> ${totalStrokes}</li>
-            <li><b>Avg HR:</b> ${hrAvg} bpm</li>
-            <li><b>Max HR:</b> ${hrMax} bpm</li>
-            <li><b>Calories:</b> ${calories}</li>
+            ${fields.join('')}
         </ul>
     `;
 }
-
-/**
- * Renders advanced swimming metrics
- */
 function renderActivityAdvanced(activity) {
     if (!DOM.advanced) return;
 
     const movingTime = activity.moving_time || 0;
     const elapsedTime = activity.elapsed_time || 0;
     const distance = activity.distance || 0;
-    const avgStrokesPerM = distance > 0
-        ? ((activity.total_strokes || 0) / (distance)).toFixed(2)
+    const totalStrokes = Number(activity.total_strokes);
+    const avgStrokesPerM = distance > 0 && Number.isFinite(totalStrokes) && totalStrokes > 0
+        ? (totalStrokes / distance).toFixed(2)
+        : null;
+    const poolLength = Number(activity.pool_length);
+    const swolCount = activity.swolf_score !== undefined && activity.swolf_score !== null ? activity.swolf_score : null;
+    const lapSource = activity.laps?.length > 1 ? activity.laps : activity.splits_swim;
+    const paceVariability = lapSource?.length > 1
+        ? calculateVariability(lapSource.map(item => item.average_speed ? 100 / item.average_speed : null), 0)
         : '-';
-    const poolLength = activity.pool_length || 'Unknown';
-    const swolCount = activity.swolf_score ? activity.swolf_score : '-';
+    const hrVariability = lapSource?.length > 1
+        ? calculateVariability(lapSource.map(item => item.average_heartrate ?? null), 0)
+        : '-';
+    const moveRatio = activity.elapsed_time
+        ? `${((activity.moving_time / activity.elapsed_time) * 100).toFixed(1)}%`
+        : '-';
+    const fields = [];
+    const pushField = (label, value) => {
+        if (value === null || value === undefined || value === '' || value === 'N/A' || value === 'Not available' || value === '-' || value === 'null') return;
+        fields.push(`<li><b>${label}:</b> ${value}</li>`);
+    };
+
+    pushField('Moving Time', formatTime(movingTime));
+    pushField('Elapsed Time', formatTime(elapsedTime));
+    pushField('Move Ratio', moveRatio);
+    pushField('Pool Length', Number.isFinite(poolLength) && poolLength > 0 ? `${poolLength}m` : null);
+    pushField('SWOLF Score', swolCount);
+    pushField('Strokes per Meter', avgStrokesPerM);
+    pushField('Pace CV (Splits)', paceVariability);
+    pushField('HR CV (Splits)', hrVariability);
 
     DOM.advanced.innerHTML = `
         <h3>Advanced</h3>
         <ul>
-            <li><b>Moving Time:</b> ${formatTime(movingTime)}</li>
-            <li><b>Elapsed Time:</b> ${formatTime(elapsedTime)}</li>
-            <li><b>Pool Length:</b> ${poolLength}m</li>
-            <li><b>SWOLF Score:</b> ${swolCount}</li>
-            <li><b>Strokes per Meter:</b> ${avgStrokesPerM}</li>
+            ${fields.join('')}
         </ul>
     `;
 }
@@ -467,26 +666,23 @@ function renderActivityAdvanced(activity) {
 function renderStrokeBreakdown(activity) {
     const section = document.getElementById('stroke-section');
     if (!section || !activityStrokes || activityStrokes.length === 0) {
-        // Hide section if no strokes available
-        if (section) {
-            section.classList.add('hidden');
-        }
+        if (section) section.classList.add('hidden');
         return;
     }
 
     section.classList.remove('hidden');
 
-    const strokeBreakdown = activityStrokes.map(stroke => {
-        const strokeTypes = {
-            0: 'Unknown',
-            1: 'Freestyle',
-            2: 'Backstroke',
-            3: 'Breaststroke',
-            4: 'Butterfly',
-            5: 'Mixed',
-            6: 'Drill'
-        };
+    const strokeTypes = {
+        0: 'Unknown',
+        1: 'Freestyle',
+        2: 'Backstroke',
+        3: 'Breaststroke',
+        4: 'Butterfly',
+        5: 'Mixed',
+        6: 'Drill'
+    };
 
+    const strokeBreakdown = activityStrokes.map(stroke => {
         const strokeName = strokeTypes[stroke.stroke_type] || 'Unknown';
         const distance = (stroke.distance || 0).toFixed(0);
         const duration = formatTime(stroke.duration || 0);
@@ -560,13 +756,10 @@ function renderLapsChart(laps) {
     section.classList.remove('hidden');
 
     const labels = laps.map((_, i) => `Lap ${i + 1}`);
-    const paces = laps.map(lap => {
-        if (!lap.average_speed || lap.average_speed === 0) return 0;
-        return 100 / lap.average_speed; // pace in seconds per 100m
-    });
-
-    const minPace = Math.min(...paces.filter(p => p > 0));
-    const maxPace = Math.max(...paces.filter(p => p > 0));
+    const paces = laps.map(lap => (lap.average_speed && lap.average_speed > 0) ? 100 / lap.average_speed : 0);
+    const positivePaces = paces.filter(p => p > 0);
+    const minPace = Math.min(...positivePaces);
+    const maxPace = Math.max(...positivePaces);
 
     const colors = paces.map(pace => {
         if (pace === 0) return '#ccc';
@@ -601,10 +794,7 @@ function renderLapsChart(laps) {
                 tooltip: {
                     callbacks: {
                         title: ctx => labels[ctx[0].dataIndex],
-                        label: ctx => {
-                            const lap = laps[ctx.dataIndex];
-                            return `Pace: ${formatSwimPace(lap.average_speed)}`;
-                        },
+                        label: ctx => `Pace: ${formatSwimPace(laps[ctx.dataIndex].average_speed)}`,
                         afterLabel: ctx => {
                             const lap = laps[ctx.dataIndex];
                             return [
@@ -628,52 +818,59 @@ function renderHRZones(activity, zones) {
     const section = document.getElementById('hr-zones-section');
     if (!DOM.hrZonesChart || !section) return;
     if (!lastStreamData || !lastStreamData.heartrate || !lastStreamData.time) {
-        section.style.display = 'none';
+        section.style.display = '';
+        section.innerHTML = `
+            <h3>Heart Rate Distribution</h3>
+            <p class="empty-state">No heart rate stream is available for this swim.</p>
+        `;
         return;
     }
+
     section.style.display = '';
+
+    if (!zones || zones.length === 0) {
+        section.innerHTML = `
+            <h3>Heart Rate Distribution</h3>
+            <p class="empty-state">No heart rate zones are configured for this swim.</p>
+        `;
+        return;
+    }
 
     const heartrateStream = lastStreamData.heartrate;
     const timeStream = lastStreamData.time;
     const timeInZones = calculateTimeInZones(heartrateStream, timeStream, zones);
-
-    const labels = zones.map(z => {
-        const maxLabel = z.max === -1 ? '∞' : z.max;
-        return `${z.min}-${maxLabel} bpm`;
+    const labels = zones.map((zone, index) => {
+        const maxLabel = zone.max === -1 ? '∞' : zone.max;
+        return `Z${index + 1} (${zone.min}-${maxLabel})`;
     });
-    const data = timeInZones.map(t => Math.round(t));
+    const data = timeInZones.map(time => +(time / 60).toFixed(1));
 
     createChart('hr-zones-chart', {
-        type: 'doughnut',
+        type: 'bar',
         data: {
-            labels: labels,
+            labels,
             datasets: [{
-                data: data,
-                backgroundColor: [
-                    'rgba(230, 126, 34, 0.7)',
-                    'rgba(46, 204, 113, 0.7)',
-                    'rgba(52, 152, 219, 0.7)',
-                    'rgba(155, 89, 182, 0.7)',
-                    'rgba(211, 84, 0, 0.7)',
-                ],
-                borderColor: '#fff',
-                borderWidth: 2,
-            }],
+                label: 'Time in Zone (min)',
+                data,
+                backgroundColor: ['#fde0e0', '#fababa', '#fa7a7a', '#f44336', '#b71c1c'].slice(0, zones.length),
+                borderColor: ['#fde0e0', '#fababa', '#fa7a7a', '#f44336', '#b71c1c'].slice(0, zones.length),
+                borderWidth: 2
+            }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: true,
+            maintainAspectRatio: false,
             plugins: {
-                legend: { position: 'right' },
+                legend: { display: false },
                 tooltip: {
                     callbacks: {
-                        label: (ctx) => {
-                            const seconds = ctx.parsed;
-                            const formatted = formatTime(seconds);
-                            return `${formatted}`;
-                        }
+                        label: context => `${context.dataset.label}: ${context.parsed.y} min`
                     }
                 }
+            },
+            scales: {
+                x: { title: { display: true, text: 'HR Zone' } },
+                y: { title: { display: true, text: 'Time (min)' }, beginAtZero: true }
             }
         }
     });
@@ -793,6 +990,7 @@ async function loadActivityPage() {
         renderActivityInfo(activityData);
         renderActivityStats(activityData);
         renderActivityAdvanced(activityData);
+        renderActivityMap(activityData, streams);
         renderStrokeBreakdown(activityData);
         renderLaps(activityData.laps);
         renderLapsChart(activityData.laps);
@@ -801,10 +999,11 @@ async function loadActivityPage() {
         const cachedZones = JSON.parse(localStorage.getItem('strava_zones') || '[]');
         if (cachedZones.length > 0) {
             renderHRZones(activityData, cachedZones);
+        } else {
+            renderHRZones(activityData, []);
         }
 
         renderStreamCharts(streams, activityData);
-        initSmoothingControl();
 
     } catch (error) {
         console.error('Error loading activity page:', error);

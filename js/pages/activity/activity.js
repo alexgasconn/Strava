@@ -7,6 +7,7 @@
 import { formatDate as sharedFormatDate, formatPace as sharedFormatPace } from '../../shared/utils/index.js';
 import { AdvancedActivityAnalyzer } from './advanced-analysis.js';
 import { AnalysisResultsUI } from './analysis-ui-components.js';
+import { renderWeatherAnalysis, renderWeatherMapDetails } from '../../shared/utils/weather-analysis.js';
 
 // =====================================================
 // 1. INITIALIZATION & CONFIGURATION
@@ -34,6 +35,29 @@ const DOM = {
     streamCharts: document.getElementById('stream-charts'),
     runClassifier: document.getElementById('run-classifier-results'),
     hrZonesChart: document.getElementById('hr-zones-chart'),
+};
+
+const MAP_LAYERS = {
+    osm: {
+        url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        options: { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' },
+    },
+    'carto-light': {
+        url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+        options: { maxZoom: 20, attribution: '&copy; OpenStreetMap contributors &copy; CARTO' },
+    },
+    'carto-dark': {
+        url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+        options: { maxZoom: 20, attribution: '&copy; OpenStreetMap contributors &copy; CARTO' },
+    },
+    'open-topo': {
+        url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+        options: { maxZoom: 17, attribution: 'Map data: &copy; OpenStreetMap contributors, SRTM | Map style: &copy; OpenTopoMap' },
+    },
+    'esri-sat': {
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        options: { maxZoom: 20, attribution: 'Tiles &copy; Esri' },
+    },
 };
 
 // Parse activity ID from URL
@@ -277,6 +301,58 @@ function applySmoothingToStreams(streams, smoothingLevel) {
     });
 
     return smoothed;
+}
+
+function resampleSeries(values, targetLength) {
+    if (!Array.isArray(values) || values.length === 0 || targetLength <= 0) return [];
+    if (targetLength === values.length) return values.slice();
+    if (targetLength === 1) return [values[0]];
+
+    const resampled = [];
+    for (let i = 0; i < targetLength; i++) {
+        const ratio = i / (targetLength - 1);
+        const position = ratio * (values.length - 1);
+        const left = Math.floor(position);
+        const right = Math.ceil(position);
+        const mix = position - left;
+        const leftValue = Number(values[left]);
+        const rightValue = Number(values[right]);
+
+        if (!Number.isFinite(leftValue) && !Number.isFinite(rightValue)) {
+            resampled.push(null);
+        } else if (!Number.isFinite(rightValue) || left === right) {
+            resampled.push(Number.isFinite(leftValue) ? leftValue : rightValue);
+        } else if (!Number.isFinite(leftValue)) {
+            resampled.push(rightValue);
+        } else {
+            resampled.push(leftValue + (rightValue - leftValue) * mix);
+        }
+    }
+    return resampled;
+}
+
+function valueToRouteColor(value, minValue, maxValue) {
+    if (!Number.isFinite(value) || !Number.isFinite(minValue) || !Number.isFinite(maxValue) || maxValue === minValue) {
+        return '#FC5200';
+    }
+    const normalized = Math.max(0, Math.min(1, (value - minValue) / (maxValue - minValue)));
+    const hue = 220 - (normalized * 220);
+    return `hsl(${hue}, 90%, 55%)`;
+}
+
+function getRouteColorSeries(streams, mode, pointCount) {
+    if (!streams || mode === 'route') return null;
+
+    let source = null;
+    if (mode === 'heartrate') source = streams.heartrate?.data;
+    if (mode === 'cadence') source = streams.cadence?.data;
+    if (mode === 'altitude') source = streams.altitude?.data;
+    if (mode === 'watts') source = streams.watts?.data;
+    if (mode === 'speed') source = streams.velocity_smooth?.data?.map(v => v * 3.6) || null;
+    if (mode === 'pace') source = streams.velocity_smooth?.data?.map(v => (v > 0 ? 60 / (v * 3.6) : null)) || null;
+
+    if (!source || !Array.isArray(source) || source.length < 2) return null;
+    return resampleSeries(source, pointCount);
 }
 
 /**
@@ -802,21 +878,73 @@ function renderAdvancedStats(activity) {
 /**
  * Renders interactive map with route polyline
  */
-function renderActivityMap(activity) {
+function renderActivityMap(activity, streams) {
     if (!DOM.map) return;
 
     if (activity.map?.summary_polyline && window.L) {
         const coords = decodePolyline(activity.map.summary_polyline);
         if (coords.length > 0) {
             DOM.map.innerHTML = '';
+            if (window.activitySharedMap) {
+                window.activitySharedMap.remove();
+                window.activitySharedMap = null;
+            }
+
+            const style = document.getElementById('activity-map-style')?.value || 'osm';
+            const layer = MAP_LAYERS[style] || MAP_LAYERS.osm;
             const map = L.map('activity-map').setView(coords[0], 13);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-            L.polyline(coords, { color: '#FC5200', weight: 4 }).addTo(map);
+            window.activitySharedMap = map;
+            L.tileLayer(layer.url, layer.options).addTo(map);
+
+            const colorMode = document.getElementById('activity-route-color-mode')?.value || 'route';
+            const routeValues = getRouteColorSeries(streams, colorMode, coords.length);
+
+            if (routeValues) {
+                const finiteValues = routeValues.filter(Number.isFinite);
+                const minValue = Math.min(...finiteValues);
+                const maxValue = Math.max(...finiteValues);
+                const group = L.featureGroup().addTo(map);
+
+                for (let i = 1; i < coords.length; i++) {
+                    const value = routeValues[i] ?? routeValues[i - 1];
+                    const color = valueToRouteColor(value, minValue, maxValue);
+                    L.polyline([coords[i - 1], coords[i]], { color, weight: 4, opacity: 0.9 }).addTo(group);
+                }
+
+                map.fitBounds(group.getBounds());
+            } else {
+                const polyline = L.polyline(coords, { color: '#FC5200', weight: 4 }).addTo(map);
+                map.fitBounds(polyline.getBounds());
+            }
+
+            const mapStyleSelect = document.getElementById('activity-map-style');
+            const routeColorSelect = document.getElementById('activity-route-color-mode');
+            if (mapStyleSelect && !mapStyleSelect.dataset.bound) {
+                mapStyleSelect.dataset.bound = '1';
+                mapStyleSelect.addEventListener('change', () => renderActivityMap(activity, streams));
+            }
+            if (routeColorSelect && !routeColorSelect.dataset.bound) {
+                routeColorSelect.dataset.bound = '1';
+                routeColorSelect.addEventListener('change', () => renderActivityMap(activity, streams));
+            }
+
+            const weatherToggle = document.getElementById('show-weather-details');
+            if (weatherToggle && !weatherToggle.dataset.bound) {
+                weatherToggle.dataset.bound = '1';
+                weatherToggle.addEventListener('change', () => renderActivityMap(activity, streams));
+            }
+
+            renderWeatherAnalysis(activity, coords);
+            renderWeatherMapDetails(activity, coords, map, weatherToggle?.checked);
         } else {
             DOM.map.innerHTML = '<p>No route data available (empty polyline).</p>';
+            renderWeatherAnalysis(activity, []);
+            renderWeatherMapDetails(activity, [], null, false);
         }
     } else {
         DOM.map.innerHTML = '<p>No route data available or Leaflet not loaded.</p>';
+        renderWeatherAnalysis(activity, []);
+        renderWeatherMapDetails(activity, [], null, false);
     }
 }
 
@@ -1231,53 +1359,73 @@ function renderHrZoneDistributionChart(streams) {
     if (!canvas || !streams.heartrate || !streams.time) return;
 
     const zonesDataText = localStorage.getItem('strava_training_zones');
-    if (!zonesDataText) {
-        console.warn('Training zones not found in localStorage.');
-        return;
-    }
-
-    const allZones = JSON.parse(zonesDataText);
+    const allZones = zonesDataText ? JSON.parse(zonesDataText) : null;
     const hrZones = allZones?.heart_rate?.zones?.filter(z => z.max > 0);
 
-    if (!hrZones || hrZones.length === 0) {
-        console.warn('Valid HR zones not found.');
+    if (hrZones && hrZones.length > 0) {
+        const timeInZones = calculateTimeInZones(streams.heartrate, streams.time, hrZones);
+        const labels = hrZones.map((zone, i) => `Z${i + 1} (${zone.min}-${zone.max === -1 ? '∞' : zone.max})`);
+        const data = timeInZones.map(time => +(time / 60).toFixed(1));
+        const gradientColors = ['#fde0e0', '#fababa', '#fa7a7a', '#f44336', '#b71c1c'];
+
+        createChart('hr-zones-chart', {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Time in Zone (min)',
+                    data,
+                    backgroundColor: gradientColors.slice(0, hrZones.length),
+                    borderColor: gradientColors.slice(0, hrZones.length),
+                    borderWidth: 2,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => `${context.dataset.label}: ${context.parsed.y} min`,
+                        }
+                    }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'HR Zone' } },
+                    y: { title: { display: true, text: 'Time (min)' }, beginAtZero: true }
+                }
+            }
+        });
         return;
     }
 
-    const timeInZones = calculateTimeInZones(streams.heartrate, streams.time, hrZones);
-    const labels = hrZones.map((zone, i) => `Z${i + 1} (${zone.min}-${zone.max === -1 ? '∞' : zone.max})`);
-    const data = timeInZones.map(time => +(time / 60).toFixed(1));
-
-    const gradientColors = ['#fde0e0', '#fababa', '#fa7a7a', '#f44336', '#b71c1c'];
+    const labels = streams.distance?.data?.length
+        ? streams.distance.data.map(d => (d / 1000).toFixed(2))
+        : streams.time.data.map(t => formatTime(t));
 
     createChart('hr-zones-chart', {
-        type: 'bar',
+        type: 'line',
         data: {
-            labels: labels,
+            labels,
             datasets: [{
-                label: 'Time in Zone (min)',
-                data: data,
-                backgroundColor: gradientColors.slice(0, hrZones.length),
-                borderColor: gradientColors.slice(0, hrZones.length),
-                borderWidth: 2
+                label: 'Heart Rate (bpm)',
+                data: streams.heartrate.data,
+                borderColor: '#d64b4b',
+                backgroundColor: 'rgba(214, 75, 75, 0.08)',
+                fill: true,
+                pointRadius: 0,
+                borderWidth: 2,
+                tension: 0.2,
             }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: function (context) {
-                            return `${context.dataset.label}: ${context.parsed.y} min`;
-                        }
-                    }
-                }
-            },
+            maintainAspectRatio: true,
+            plugins: { legend: { display: false } },
             scales: {
-                x: { title: { display: true, text: 'HR Zone' } },
-                y: { title: { display: true, text: 'Time (min)' }, beginAtZero: true }
+                x: { title: { display: true, text: streams.distance?.data?.length ? 'Distance (km)' : 'Time' } },
+                y: { title: { display: true, text: 'Heart Rate (bpm)' }, beginAtZero: false }
             }
         }
     });
@@ -1635,7 +1783,7 @@ async function main() {
         renderActivityInfo(activityData);
         renderActivityStats(activityData);
         renderAdvancedStats(activityData);
-        renderActivityMap(activityData);
+        renderActivityMap(activityData, streamData);
         renderSplitsCharts(activityData);
         renderStreamCharts(initialSmoothedStreams, activityData, currentSmoothingLevel);
         renderBestEfforts(activityData.best_efforts);
@@ -1646,9 +1794,6 @@ async function main() {
         renderHrZoneDistributionChart(streamData);
         renderHrMinMaxAreaChart(initialSmoothedStreams, currentSmoothingLevel);
         renderPaceMinMaxAreaChart(initialSmoothedStreams, currentSmoothingLevel);
-
-        // Initialize smoothing slider control
-        initSmoothingControl();
 
         // Initialize dynamic chart controls
         initDynamicChartControls();
