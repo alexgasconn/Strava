@@ -596,59 +596,53 @@ function renderTopSwims(swims) {
     };
 
     el.innerHTML = `
-<div class="top-box">
-<h3>Longest Swims</h3>
-<table class="compact-table" id="swim-top-distance-table">
-<thead>
-<tr>
-<th>#</th>
-<th>Swim</th>
-<th data-sort="num">Distance</th>
-<th data-sort="pace">Pace</th>
-<th data-sort="text">Type</th>
-<th data-sort="text">Pool</th>
-</tr>
-</thead>
-<tbody>
-${topDistance.map((s, i) => `
-<tr>
-<td>${i + 1}</td>
-<td>${activityLink(s)}</td>
-<td data-value="${s.distance_km}">${s.distance_km.toFixed(2)} km</td>
-<td data-value="${s.pace_min100 || 9999}">${formatPace(s.pace_min100)}</td>
-<td>${s.swim_type}</td>
-<td>${poolLengthInt(s.pool_length)}</td>
-</tr>`).join("")}
-</tbody>
-</table>
-</div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin: 2rem 0;">
+            <div class="top-box">
+                <h3>Longest Swims</h3>
+                <table class="compact-table" id="swim-top-distance-table">
+                <thead>
+                <tr>
+                <th>#</th>
+                <th>Swim</th>
+                <th data-sort="num">Distance</th>
+                <th data-sort="pace">Pace</th>
+                </tr>
+                </thead>
+                <tbody>
+                ${topDistance.map((s, i) => `
+                <tr>
+                <td>${i + 1}</td>
+                <td>${activityLink(s)}</td>
+                <td data-value="${s.distance_km}">${s.distance_km.toFixed(2)} km</td>
+                <td data-value="${s.pace_min100 || 9999}">${formatPace(s.pace_min100)}</td>
+                </tr>`).join("")}
+                </tbody>
+                </table>
+            </div>
 
-<div class="top-box">
-<h3>Best Pace</h3>
-<table class="compact-table" id="swim-top-pace-table">
-<thead>
-<tr>
-<th>#</th>
-<th>Swim</th>
-<th data-sort="num">Distance</th>
-<th data-sort="pace">Pace</th>
-<th data-sort="text">Type</th>
-<th data-sort="text">Pool</th>
-</tr>
-</thead>
-<tbody>
-${topPace.map((s, i) => `
-<tr>
-<td>${i + 1}</td>
-<td>${activityLink(s)}</td>
-<td data-value="${s.distance_km}">${s.distance_km.toFixed(2)} km</td>
-<td data-value="${s.pace_min100 || 9999}">${formatPace(s.pace_min100)}</td>
-<td>${s.swim_type}</td>
-<td>${poolLengthInt(s.pool_length)}</td>
-</tr>`).join("")}
-</tbody>
-</table>
-</div>
+            <div class="top-box">
+                <h3>Best Pace</h3>
+                <table class="compact-table" id="swim-top-pace-table">
+                <thead>
+                <tr>
+                <th>#</th>
+                <th>Swim</th>
+                <th data-sort="num">Distance</th>
+                <th data-sort="pace">Pace</th>
+                </tr>
+                </thead>
+                <tbody>
+                ${topPace.map((s, i) => `
+                <tr>
+                <td>${i + 1}</td>
+                <td>${activityLink(s)}</td>
+                <td data-value="${s.distance_km}">${s.distance_km.toFixed(2)} km</td>
+                <td data-value="${s.pace_min100 || 9999}">${formatPace(s.pace_min100)}</td>
+                </tr>`).join("")}
+                </tbody>
+                </table>
+            </div>
+        </div>
 `;
 
     makeSortable(document.getElementById('swim-top-distance-table'));
@@ -998,10 +992,10 @@ export function renderWeeklyDistanceTrendChart(swims, rollingWindowWeeks = 26) {
     const rolling = utils.rollingMean(weeklyKm, rollingWindowWeeks).map(v => +v.toFixed(2));
 
     // Convert weeks to human-readable label
-    const windowLabel = rollingWindowWeeks >= 52 ? '1 year' 
-        : rollingWindowWeeks >= 26 ? '6 months' 
-        : rollingWindowWeeks >= 12 ? '3 months' 
-        : '1 month';
+    const windowLabel = rollingWindowWeeks >= 52 ? '1 year'
+        : rollingWindowWeeks >= 26 ? '6 months'
+            : rollingWindowWeeks >= 12 ? '3 months'
+                : '1 month';
 
     createChart('swim-weekly-distance-trend-chart', {
         type: 'line',
