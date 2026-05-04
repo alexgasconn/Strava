@@ -33,8 +33,10 @@ body {
 }
 
 .container {
-    max-width: 1200px;
-    margin: 0 auto;
+    max-width: 100%;
+    margin: 0;
+    padding: 0 1.5rem;
+    box-sizing: border-box;
 }
 
 /* --- LOGIN Y ELEMENTOS GLOBALES --- */
@@ -6056,4 +6058,105 @@ th {
 
 .bike-type-electric {
     background-color: #7c3aed;
+}
+
+/* =================================================================
+   TAB BACKGROUND IMAGES
+   Place photos in /media/ using the names listed in media/README.md.
+   Adjust --tab-bg-overlay to control how transparent the overlay is
+   (0 = full photo, 1 = no photo visible).
+   ================================================================= */
+
+:root {
+    --tab-bg-overlay: rgba(255, 255, 255, 0.55);
+}
+
+.tab-content {
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+
+html[data-tab-background-images='off'] .tab-content {
+    background-image: none !important;
+    background-color: var(--bg-page);
+}
+
+#dashboard-tab.tab-content {
+    background-image:
+        linear-gradient(var(--tab-bg-overlay), var(--tab-bg-overlay)),
+        url('../media/bg-dashboard.jpg');
+}
+
+#analysis-tab.tab-content {
+    background-image:
+        linear-gradient(var(--tab-bg-overlay), var(--tab-bg-overlay)),
+        url('../media/bg-run.jpg');
+}
+
+#bike-tab.tab-content {
+    background-image:
+        linear-gradient(var(--tab-bg-overlay), var(--tab-bg-overlay)),
+        url('../media/bg-bike.jpg');
+}
+
+#swim-tab.tab-content {
+    background-image:
+        linear-gradient(var(--tab-bg-overlay), var(--tab-bg-overlay)),
+        url('../media/bg-swim.jpg');
+}
+
+#athlete-tab.tab-content {
+    background-image:
+        linear-gradient(var(--tab-bg-overlay), var(--tab-bg-overlay)),
+        url('../media/bg-athlete.jpg');
+}
+
+#planner-tab.tab-content {
+    background-image:
+        linear-gradient(var(--tab-bg-overlay), var(--tab-bg-overlay)),
+        url('../media/bg-planner.jpg');
+}
+
+#gear-tab.tab-content {
+    background-image:
+        linear-gradient(var(--tab-bg-overlay), var(--tab-bg-overlay)),
+        url('../media/bg-gear.jpg');
+}
+
+#activities-tab.tab-content {
+    background-image:
+        linear-gradient(var(--tab-bg-overlay), var(--tab-bg-overlay)),
+        url('../media/bg-activities.jpg');
+}
+
+#calendar-tab.tab-content {
+    background-image:
+        linear-gradient(var(--tab-bg-overlay), var(--tab-bg-overlay)),
+        url('../media/bg-calendar.jpg');
+}
+
+#weather-tab.tab-content {
+    background-image:
+        linear-gradient(var(--tab-bg-overlay), var(--tab-bg-overlay)),
+        url('../media/bg-weather.jpg');
+}
+
+#map-tab.tab-content {
+    background-image:
+        linear-gradient(var(--tab-bg-overlay), var(--tab-bg-overlay)),
+        url('../media/bg-map.jpg');
+}
+
+#wrapped-tab.tab-content {
+    background-image:
+        linear-gradient(var(--tab-bg-overlay), var(--tab-bg-overlay)),
+        url('../media/bg-wrapped.jpg');
+}
+
+#ai-chat-tab.tab-content {
+    background-image:
+        linear-gradient(var(--tab-bg-overlay), var(--tab-bg-overlay)),
+        url('../media/bg-ai-chat.jpg');
 }

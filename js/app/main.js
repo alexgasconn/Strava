@@ -20,6 +20,8 @@ import {
 import { fetchAllActivities, fetchAthleteData, fetchTrainingZones, fetchAllGears, setCachedGears } from '../services/index.js';
 import { preprocessActivities } from '../shared/preprocessing/index.js';
 
+const ENABLE_TAB_BACKGROUND_IMAGES = false; // Set to false to disable all tab background images during development.
+
 document.addEventListener('DOMContentLoaded', () => {
     // --- STATE ---
     let allActivities = [];
@@ -83,6 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const unitSelect = document.getElementById('units');
     const hrMaxInput = document.getElementById('hr-max');
     const ageInput = document.getElementById('age');
+    document.documentElement.dataset.tabBackgroundImages = ENABLE_TAB_BACKGROUND_IMAGES ? 'on' : 'off';
 
     // --- SETTINGS ---
     if (settingsButton && settingsPanel && closeSettings) {
@@ -94,11 +97,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function applyBgImages(enabled) {
+        document.documentElement.style.setProperty(
+            '--tab-bg-overlay',
+            enabled ? 'rgba(255, 255, 255, 0.55)' : 'rgba(255, 255, 255, 1)'
+        );
+    }
+
     function loadSettings() {
         const saved = JSON.parse(localStorage.getItem('dashboard_settings') || '{}');
         if (saved.units && unitSelect) unitSelect.value = saved.units;
         if (saved.hrMax && hrMaxInput) hrMaxInput.value = saved.hrMax;
         if (saved.age && ageInput) ageInput.value = saved.age;
+        applyBgImages(ENABLE_TAB_BACKGROUND_IMAGES);
     }
 
     function saveSettings() {
@@ -108,6 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
             age: ageInput?.value
         };
         localStorage.setItem('dashboard_settings', JSON.stringify(settings));
+        applyBgImages(ENABLE_TAB_BACKGROUND_IMAGES);
     }
 
     loadSettings();
