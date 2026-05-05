@@ -1,6 +1,6 @@
 // js/app/main.js
 import '../shared/utils/speed-insights.js';
-import { redirectToStrava, logout, handleAuth } from './auth.js';
+import { redirectToStrava, logout, handleAuth, loginWithDemo } from './auth.js';
 import { setupDashboard, showLoading, hideLoading, handleError, } from './ui.js';
 import {
     renderRunAnalysisTab,
@@ -56,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- DOM REFERENCES ---
     const loginButton = document.getElementById('login-button');
+    const demoButton = document.getElementById('demo-button');
     const logoutButton = document.getElementById('logout-button');
     const refreshButton = document.getElementById('refresh-button');
 
@@ -599,6 +600,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- EVENT LISTENERS ---
     if (loginButton) loginButton.addEventListener('click', redirectToStrava);
+    if (demoButton) demoButton.addEventListener('click', () => {
+        loginWithDemo(initializeApp);
+    });
     if (logoutButton) logoutButton.addEventListener('click', logout);
     if (refreshButton) refreshButton.addEventListener('click', refreshActivities);
 

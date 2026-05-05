@@ -1,5 +1,6 @@
 // js/auth.js
 import { showLoading, handleError, hideLoading } from './ui.js';
+import { loadDemoData } from '../demo/index.js';
 
 const REDIRECT_URI = window.location.origin + window.location.pathname;
 
@@ -29,13 +30,16 @@ export async function logout() {
     const tokenDataRaw = localStorage.getItem('strava_tokens');
     if (tokenDataRaw) {
         const tokenData = JSON.parse(tokenDataRaw);
-        try {
-            await fetch('https://www.strava.com/oauth/deauthorize', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${tokenData.access_token}` }
-            });
-        } catch (error) {
-            console.warn('Failed to deauthorize token:', error);
+        // Only try deauth if not a demo token
+        if (!tokenData.access_token?.startsWith('demo_')) {
+            try {
+                await fetch('https://www.strava.com/oauth/deauthorize', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${tokenData.access_token}` }
+                });
+            } catch (error) {
+                console.warn('Failed to deauthorize token:', error);
+            }
         }
     }
     localStorage.removeItem('strava_tokens');
@@ -46,6 +50,9 @@ export async function logout() {
     localStorage.removeItem('strava_gears');
     localStorage.removeItem('strava_gears_timestamp');
     localStorage.removeItem('dashboard_filters');
+    // Also clear demo data
+    localStorage.removeItem('strava_demo_mode');
+    localStorage.removeItem('strava_demo_activities');
     window.location.reload();
 }
 
@@ -85,6 +92,26 @@ async function getTokensFromCode(code) {
     } catch (error) {
         handleError('Authentication failed', error);
         throw error;
+    }
+}
+
+export async function loginWithDemo(onAuthenticated) {
+    try {
+        showLoading('Loading demo data with 250 sample activities...');
+        loadDemoData();
+
+        // Fake token for demo mode
+        const demoTokens = {
+            access_token: 'demo_' + Math.random().toString(36),
+            refresh_token: 'demo_refresh_' + Math.random().toString(36),
+            expires_at: Math.floor(Date.now() / 1000) + 21600,
+        };
+
+        await onAuthenticated(demoTokens);
+        hideLoading();
+    } catch (error) {
+        handleError('Demo mode failed', error);
+        hideLoading();
     }
 }
 

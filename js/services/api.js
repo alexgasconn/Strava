@@ -3,6 +3,7 @@
 // ===================================================================
 // CACHE CONFIGURATION
 // ===================================================================
+import { isDemoMode, getDemoActivities } from '../demo/index.js';
 const CACHE_DURATIONS = {
     athlete: 24 * 60 * 60 * 1000,      // 24 hours
     zones: 24 * 60 * 60 * 1000,        // 24 hours
@@ -75,6 +76,12 @@ async function handleApiResponse(response) {
 }
 
 export async function fetchAllActivities() {
+    // If in demo mode, return demo data
+    if (isDemoMode()) {
+        console.log('[Demo] Returning demo activities from localStorage');
+        return getDemoActivities();
+    }
+
     const response = await fetch('/api/strava-activities', {
         headers: {
             Authorization: `Bearer ${getAuthPayload()}`
@@ -132,6 +139,19 @@ export async function fetchAthleteData() {
         return cached;
     }
 
+    // If in demo mode, get from localStorage
+    if (isDemoMode()) {
+        const stored = localStorage.getItem('strava_athlete_data');
+        if (stored) {
+            const athlete = JSON.parse(stored);
+            console.log('[Demo] Athlete data from demo', {
+                id: athlete?.id,
+                name: `${athlete?.firstname || ''} ${athlete?.lastname || ''}`.trim(),
+            });
+            return athlete;
+        }
+    }
+
     const response = await fetch('/api/strava-athlete', {
         headers: { Authorization: `Bearer ${getAuthPayload()}` }
     });
@@ -154,6 +174,16 @@ export async function fetchTrainingZones() {
     const cached = getFromCache(cacheKey, 'zones');
     if (cached) {
         return cached;
+    }
+
+    // If in demo mode, get from localStorage
+    if (isDemoMode()) {
+        const stored = localStorage.getItem('strava_training_zones');
+        if (stored) {
+            const zones = JSON.parse(stored);
+            console.log('[Demo] Training zones from demo');
+            return zones;
+        }
     }
 
     const response = await fetch('/api/strava-zones', {

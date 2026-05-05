@@ -164,7 +164,12 @@
         <div id="login-section">
             <h1>Your Performance, Analyzed!</h1>
             <p>Connect your Strava account to visualize your progress and discover new insights.</p>
-            <button id="login-button" aria-label="Connect with Strava">Connect with Strava</button>
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+                <button id="login-button" aria-label="Connect with Strava" style="flex: 1; min-width: 200px;">Connect
+                    with Strava</button>
+                <button id="demo-button" aria-label="Try demo with 250 sample activities"
+                    style="flex: 1; min-width: 200px; background-color: #888; border-color: #666;">📊 Try Demo</button>
+            </div>
             <div class="privacy-policy" style="margin-top:1em; font-size:0.95em; color:#555;">
                 <strong>Privacy Notice:</strong> Your Strava data is processed instantly each time you load the page.
                 There is <b>no database</b> and nothing is stored—everything runs in your browser and is
