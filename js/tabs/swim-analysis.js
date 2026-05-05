@@ -155,8 +155,7 @@ export function renderSwimAnalysisTab(allActivities, dateFilterFrom, dateFilterT
 
     renderAccumulatedDistanceChart(enriched);
     renderWeeklyDistanceTrendChart(enriched, rollingWindowWeeks);
-    renderEddingtonDistributionChart(enriched);
-    renderEddingtonProgressionChart(enriched);
+    renderEddingtonSection(enriched);
 }
 
 function buildWeeklyDistanceSeries(activities, distanceGetter) {
@@ -1070,14 +1069,24 @@ function attachSwimEddingtonInfo(canvasId, eddington, variant) {
     const current = eddington.summary.current;
     const recentWindow = eddington.summary.recentWindowDays;
     const projectionCount = eddington.summary.projectionCount;
-    const bodyHtml = variant === 'distribution'
-        ? `Current value: <strong>E${current}</strong> in 100 m blocks.<br>
+    let bodyHtml;
+    if (variant === 'weekly') {
+        const multiplier = attachSwimEddingtonInfo._multiplier || 2;
+        bodyHtml = `Current value: <strong>E${current}</strong> weekly (×${multiplier}).<br>
+           E${current} means <strong>${current} different weeks</strong> with at least
+           <strong>${(current * multiplier * 100).toFixed(0)} m</strong> total each week.<br>
+           The dashed line projects the next <strong>${projectionCount}</strong> E values
+           using your last <strong>${recentWindow}</strong> days of activity.`;
+    } else if (variant === 'distribution') {
+        bodyHtml = `Current value: <strong>E${current}</strong> in 100 m blocks.<br>
            Example: E20 means <strong>20 different days</strong> with at least <strong>2000 m</strong> total each day.<br>
            Bars count qualifying days and the solid line shows <strong>active days</strong> needed to reach each E.<br>
-           The dashed continuation projects only the next <strong>${projectionCount}</strong> E values, using your last <strong>${recentWindow}</strong> days of activity.`
-        : `Current value: <strong>E${current}</strong> in 100 m blocks.<br>
+           The dashed continuation projects only the next <strong>${projectionCount}</strong> E values, using your last <strong>${recentWindow}</strong> days of activity.`;
+    } else {
+        bodyHtml = `Current value: <strong>E${current}</strong> in 100 m blocks.<br>
            The 2K marker appears only when E20 is reached, not after a single 2000 m swim.<br>
            Each point is the first date when that exact E value was achieved.`;
+    }
 
     utils.upsertChartInfo(canvasId, {
         title: 'About swim Eddington',
@@ -1157,7 +1166,15 @@ export function renderEddingtonDistributionChart(swims) {
                 }
             },
             scales: {
-                x: { title: { display: true, text: 'Eddington number (100m)' } },
+                x: {
+                    title: { display: true, text: 'Eddington number (100m)' },
+                    ticks: {
+                        callback: (value) => {
+                            const label = eddington.distributionSeries[value]?.threshold;
+                            return label != null ? (label * 100).toFixed(0) : '';
+                        }
+                    }
+                },
                 y: {
                     type: 'linear',
                     position: 'left',
@@ -1245,4 +1262,166 @@ export function renderEddingtonProgressionChart(swims) {
     });
 
     attachSwimEddingtonInfo('swim-eddington-progression-chart', eddington, 'progression');
+}
+
+function _drawSwimEddingtonCharts(swims, mode) {
+    const distId = 'swim-eddington-distribution-chart';
+    const progId = 'swim-eddington-progression-chart';
+    const isWeekly = mode !== 'daily';
+    const multiplier = isWeekly ? parseInt(mode.split('-')[1]) : 1;
+    const unit = isWeekly ? 'weeks' : 'days';
+
+    let eddington;
+    if (isWeekly) {
+        const weekly = utils.aggregateByWeek(swims, s => s.distance_km || 0);
+        const pseudo = weekly.map(w => ({
+            start_date_local: w.start_date_local,
+            distance_km: w.total / multiplier
+        }));
+        eddington = utils.buildEddingtonSeries(pseudo, s => s.distance_km, { unitStep: 0.1 });
+    } else {
+        eddington = utils.buildEddingtonSeries(swims, s => s.distance_km || 0, { unitStep: 0.1 });
+    }
+
+    if (eddington.distributionSeries.length) {
+        createChart(distId, {
+            type: 'bar',
+            data: {
+                labels: eddington.distributionSeries.map(p => String(p.threshold)),
+                datasets: [
+                    {
+                        label: isWeekly ? `Weeks ≥ E×${multiplier}×100m` : 'Days >= E x 100m',
+                        data: eddington.distributionSeries.map(p => p.qualifyingDays),
+                        backgroundColor: 'rgba(86, 181, 248, 0.65)',
+                        borderColor: '#56b5f8',
+                        borderWidth: 1,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: isWeekly ? 'Weeks needed' : 'Days needed',
+                        data: eddington.distributionSeries.map(p => p.activeDaysNeeded),
+                        type: 'line',
+                        borderColor: '#3204d4',
+                        backgroundColor: 'rgba(50, 4, 212, 0.18)',
+                        spanGaps: true, tension: 0.25, pointRadius: 2, pointHoverRadius: 4,
+                        yAxisID: 'y1'
+                    },
+                    {
+                        label: isWeekly ? 'Projected weeks needed' : 'Projected days needed',
+                        data: eddington.distributionSeries.map(p => p.projectedActiveDaysNeeded),
+                        type: 'line',
+                        borderColor: '#3204d4', backgroundColor: 'transparent',
+                        borderDash: [6, 6], spanGaps: true, tension: 0.2,
+                        pointRadius: 0, pointHoverRadius: 4,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            label(context) {
+                                const p = eddington.distributionSeries[context.dataIndex];
+                                if (context.datasetIndex === 0) {
+                                    return isWeekly
+                                        ? `${p.qualifyingDays} weeks with ≥ ${(p.threshold * multiplier * 100).toFixed(0)} m total`
+                                        : `${p.qualifyingDays} days at ${(p.threshold * 100).toFixed(0)} m or more`;
+                                }
+                                if (context.datasetIndex === 1 && p.activeDaysNeeded == null) return `E${p.threshold} not reached yet`;
+                                if (context.datasetIndex === 1) return `${p.activeDaysNeeded} active ${unit} to reach E${p.threshold} (${p.daysNeeded} calendar days)`;
+                                if (p.projectedActiveDaysNeeded == null) return `No projection for E${p.threshold} yet`;
+                                return `Projection: about ${p.projectedActiveDaysNeeded} active ${unit} to reach E${p.threshold}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: { display: true, text: isWeekly ? `Weekly Eddington (×${multiplier}, per 100m)` : 'Eddington number (100m)' },
+                        ticks: {
+                            callback: (value) => {
+                                const label = eddington.distributionSeries[value]?.threshold;
+                                return label != null ? (label * 100).toFixed(0) : '';
+                            }
+                        }
+                    },
+                    y: { type: 'linear', position: 'left', beginAtZero: true, title: { display: true, text: isWeekly ? 'Qualifying weeks' : 'Qualifying days' } },
+                    y1: { type: 'linear', position: 'right', beginAtZero: true, title: { display: true, text: isWeekly ? 'Active weeks needed' : 'Active days needed' }, grid: { drawOnChartArea: false } }
+                }
+            }
+        });
+        attachSwimEddingtonInfo._multiplier = multiplier;
+        attachSwimEddingtonInfo(distId, eddington, isWeekly ? 'weekly' : 'distribution');
+    }
+
+    if (eddington.achievementSeries.length) {
+        const milestoneLabels = isWeekly ? null : getSwimMilestoneLabels();
+        const milestoneData = milestoneLabels
+            ? eddington.achievementSeries.filter(p => milestoneLabels.has(p.threshold)).map(p => ({ x: p.date, y: p.threshold, label: milestoneLabels.get(p.threshold) }))
+            : [];
+        const datasets = [
+            {
+                label: isWeekly ? 'Weekly Eddington reached' : 'Eddington reached',
+                data: eddington.achievementSeries.map(p => p.threshold),
+                borderColor: '#56b5f8',
+                backgroundColor: 'rgba(86, 181, 248, 0.18)',
+                pointRadius: 2, pointHoverRadius: 4, tension: 0.15, fill: false
+            }
+        ];
+        if (!isWeekly && milestoneData.length) {
+            datasets.push({
+                label: 'Milestones', type: 'scatter', data: milestoneData,
+                borderColor: '#3204d4', backgroundColor: '#3204d4',
+                pointRadius: 5, pointHoverRadius: 7, pointStyle: 'rectRot', showLine: false
+            });
+        }
+        createChart(progId, {
+            type: 'line',
+            data: { labels: eddington.achievementSeries.map(p => p.date), datasets },
+            options: {
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            title(items) { return items[0]?.label || ''; },
+                            label(context) {
+                                if (context.datasetIndex === 1) return `${context.raw.label}. Reached when you had ${context.raw.y} days of at least ${(context.raw.y * 100).toFixed(0)} m.`;
+                                const suffix = isWeekly ? ` (≥ ${(context.raw * multiplier * 100).toFixed(0)} m/week)` : '';
+                                return `Reached E${context.raw}${suffix} on ${context.label}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Achievement date' } },
+                    y: { beginAtZero: true, title: { display: true, text: isWeekly ? `Weekly Eddington (×${multiplier})` : 'Eddington number (100m)' } }
+                }
+            }
+        });
+        attachSwimEddingtonInfo._multiplier = multiplier;
+        attachSwimEddingtonInfo(progId, eddington, isWeekly ? 'weekly' : 'progression');
+    }
+}
+
+export function renderEddingtonSection(swims) {
+    const selectorEl = document.getElementById('swim-eddington-mode-selector');
+    function getMode() {
+        return selectorEl?.querySelector('.eddington-mode-btn.active')?.dataset.mode || 'daily';
+    }
+    if (selectorEl) {
+        selectorEl._swims = swims;
+        if (!selectorEl.dataset.bound) {
+            selectorEl.querySelectorAll('.eddington-mode-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    selectorEl.querySelectorAll('.eddington-mode-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    _drawSwimEddingtonCharts(selectorEl._swims, btn.dataset.mode);
+                });
+            });
+            selectorEl.dataset.bound = 'true';
+        }
+    }
+    _drawSwimEddingtonCharts(swims, getMode());
 }

@@ -300,20 +300,34 @@
                             <canvas id="rolling-mean-distance-chart"></canvas>
                         </div>
                         <div class="chart-container">
-                            <h3>Eddington Distribution</h3>
-                            <canvas id="run-eddington-distribution-chart"></canvas>
-                        </div>
-                        <div class="chart-container">
-                            <h3>Eddington Progression</h3>
-                            <canvas id="run-eddington-progression-chart"></canvas>
-                        </div>
-                        <div class="chart-container">
                             <h3>Distance vs Elevation Gain</h3>
                             <canvas id="distance-vs-elevation-chart"></canvas>
                         </div>
                         <div class="chart-container">
                             <h3>Elevation Gain Histogram</h3>
                             <canvas id="elevation-histogram"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="eddington-section">
+                        <div class="eddington-controls">
+                            <span class="eddington-section-title">Eddington</span>
+                            <div class="eddington-mode-selector" id="run-eddington-mode-selector">
+                                <button class="eddington-mode-btn active" data-mode="daily">Daily</button>
+                                <button class="eddington-mode-btn" data-mode="weekly-1">Weekly ×1</button>
+                                <button class="eddington-mode-btn" data-mode="weekly-3">Weekly ×3 ★</button>
+                                <button class="eddington-mode-btn" data-mode="weekly-5">Weekly ×5</button>
+                            </div>
+                        </div>
+                        <div class="chart-row eddington-pair">
+                            <div class="chart-container">
+                                <h3>Eddington Distribution</h3>
+                                <canvas id="run-eddington-distribution-chart"></canvas>
+                            </div>
+                            <div class="chart-container">
+                                <h3>Eddington Progression</h3>
+                                <canvas id="run-eddington-progression-chart"></canvas>
+                            </div>
                         </div>
                     </div>
 
@@ -408,13 +422,27 @@
                             </div>
                             <canvas id="bike-weekly-distance-trend-chart"></canvas>
                         </div>
-                        <div class="chart-container">
-                            <h3>Eddington Distribution</h3>
-                            <canvas id="bike-eddington-distribution-chart"></canvas>
+                    </div>
+
+                    <div class="eddington-section">
+                        <div class="eddington-controls">
+                            <span class="eddington-section-title">Eddington</span>
+                            <div class="eddington-mode-selector" id="bike-eddington-mode-selector">
+                                <button class="eddington-mode-btn active" data-mode="daily">Daily</button>
+                                <button class="eddington-mode-btn" data-mode="weekly-1">Weekly ×1</button>
+                                <button class="eddington-mode-btn" data-mode="weekly-2">Weekly ×2 ★</button>
+                                <button class="eddington-mode-btn" data-mode="weekly-3">Weekly ×3</button>
+                            </div>
                         </div>
-                        <div class="chart-container">
-                            <h3>Eddington Progression</h3>
-                            <canvas id="bike-eddington-progression-chart"></canvas>
+                        <div class="chart-row eddington-pair">
+                            <div class="chart-container">
+                                <h3>Eddington Distribution</h3>
+                                <canvas id="bike-eddington-distribution-chart"></canvas>
+                            </div>
+                            <div class="chart-container">
+                                <h3>Eddington Progression</h3>
+                                <canvas id="bike-eddington-progression-chart"></canvas>
+                            </div>
                         </div>
                     </div>
 
@@ -483,15 +511,30 @@
                             </div>
                             <canvas id="swim-weekly-distance-trend-chart"></canvas>
                         </div>
-                        <div class="chart-container">
-                            <h3>Eddington Distribution</h3>
-                            <canvas id="swim-eddington-distribution-chart"></canvas>
+                    </div>
+
+                    <div class="eddington-section">
+                        <div class="eddington-controls">
+                            <span class="eddington-section-title">Eddington</span>
+                            <div class="eddington-mode-selector" id="swim-eddington-mode-selector">
+                                <button class="eddington-mode-btn active" data-mode="daily">Daily</button>
+                                <button class="eddington-mode-btn" data-mode="weekly-1">Weekly ×1</button>
+                                <button class="eddington-mode-btn" data-mode="weekly-2">Weekly ×2 ★</button>
+                                <button class="eddington-mode-btn" data-mode="weekly-3">Weekly ×3</button>
+                            </div>
                         </div>
-                        <div class="chart-container">
-                            <h3>Eddington Progression</h3>
-                            <canvas id="swim-eddington-progression-chart"></canvas>
+                        <div class="chart-row eddington-pair">
+                            <div class="chart-container">
+                                <h3>Eddington Distribution</h3>
+                                <canvas id="swim-eddington-distribution-chart"></canvas>
+                            </div>
+                            <div class="chart-container">
+                                <h3>Eddington Progression</h3>
+                                <canvas id="swim-eddington-progression-chart"></canvas>
+                            </div>
                         </div>
                     </div>
+
                     <div id="swim-top"></div>
                     <div id="swim-table" style="margin-top:1.5rem;"></div>
                 </div>

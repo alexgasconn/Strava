@@ -231,6 +231,24 @@ export function upsertChartInfo(canvasId, options = {}) {
     button.dataset.bound = 'true';
 }
 
+export function aggregateByWeek(activities, distanceFn) {
+    const map = new Map();
+    for (const a of activities) {
+        const dateLike = a.start_date_local || a.start_date || a.date || '';
+        const datePart = String(dateLike).substring(0, 10);
+        const [year, month, day] = datePart.split('-').map(Number);
+        if (!year) continue;
+        const d = new Date(year, (month || 1) - 1, day || 1);
+        const monday = new Date(d);
+        monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+        const key = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+        map.set(key, (map.get(key) || 0) + distanceFn(a));
+    }
+    return Array.from(map.entries())
+        .map(([date, total]) => ({ start_date_local: date, total }))
+        .sort((a, b) => a.start_date_local.localeCompare(b.start_date_local));
+}
+
 export function calculateFitness(dailyEffort) {
     function expMovingAvg(arr, lambda) {
         const result = [];

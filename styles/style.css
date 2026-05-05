@@ -185,6 +185,67 @@ main {
     margin-bottom: 2.5rem;
 }
 
+.chart-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+@media (max-width: 768px) {
+    .chart-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Eddington section with mode toggle */
+.eddington-section {
+    margin-bottom: 2rem;
+}
+
+.eddington-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+.eddington-section-title {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: #444;
+}
+
+.eddington-mode-selector {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.eddington-mode-btn {
+    padding: 0.3rem 0.8rem;
+    border: 1.5px solid #ccc;
+    border-radius: 20px;
+    background: #fff;
+    color: #555;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.eddington-mode-btn:hover {
+    border-color: #fc4c02;
+    color: #fc4c02;
+}
+
+.eddington-mode-btn.active {
+    background: #fc4c02;
+    border-color: #fc4c02;
+    color: #fff;
+    font-weight: 600;
+}
+
 .full-width {
     grid-column: 1 / -1;
 }

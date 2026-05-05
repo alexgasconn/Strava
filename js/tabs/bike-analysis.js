@@ -83,11 +83,9 @@ export function renderBikeAnalysisTab(allActivities, dateFilterFrom, dateFilterT
 
     renderAccumulatedDistanceChart(rides);
     renderWeeklyDistanceTrendChart(rides, rollingWindowWeeks);
-    renderEddingtonDistributionChart(rides);
-    renderEddingtonProgressionChart(rides);
+    renderEddingtonSection(rides);
 
     renderTopActivities(rides);
-
     renderActivitiesTable(rides);
 
     renderConsistencyChart(rides, dateFilterFrom, dateFilterTo);
@@ -1070,14 +1068,24 @@ function attachBikeEddingtonInfo(canvasId, eddington, variant) {
     const current = eddington.summary.current;
     const recentWindow = eddington.summary.recentWindowDays;
     const projectionCount = eddington.summary.projectionCount;
-    const bodyHtml = variant === 'distribution'
-        ? `Current value: <strong>E${current}</strong>.<br>
+    let bodyHtml;
+    if (variant === 'weekly') {
+        const multiplier = attachBikeEddingtonInfo._multiplier || 2;
+        bodyHtml = `Current value: <strong>E${current}</strong> weekly (×${multiplier}).<br>
+           E${current} means <strong>${current} different weeks</strong> with at least
+           <strong>${current * multiplier} km</strong> total each week.<br>
+           The dashed line projects the next <strong>${projectionCount}</strong> E values
+           using your last <strong>${recentWindow}</strong> days of activity.`;
+    } else if (variant === 'distribution') {
+        bodyHtml = `Current value: <strong>E${current}</strong>.<br>
            A bike Eddington of 75 means <strong>75 different days</strong> with at least <strong>75 km</strong> each.<br>
            The bars count qualifying days; the solid line shows <strong>active days</strong> needed to reach each E.<br>
-           The dashed continuation projects only the next <strong>${projectionCount}</strong> E values, using your last <strong>${recentWindow}</strong> days of activity.`
-        : `Current value: <strong>E${current}</strong>.<br>
+           The dashed continuation projects only the next <strong>${projectionCount}</strong> E values, using your last <strong>${recentWindow}</strong> days of activity.`;
+    } else {
+        bodyHtml = `Current value: <strong>E${current}</strong>.<br>
            The 50K, 75K or 200K markers only appear after reaching E50, E75 or E200.<br>
            A single 200 km ride does <strong>not</strong> create the E200 milestone.`;
+    }
 
     utils.upsertChartInfo(canvasId, {
         title: 'How milestones work',
@@ -1245,4 +1253,158 @@ export function renderEddingtonProgressionChart(rides) {
     });
 
     attachBikeEddingtonInfo('bike-eddington-progression-chart', eddington, 'progression');
+}
+
+function _drawBikeEddingtonCharts(rides, mode) {
+    const distId = 'bike-eddington-distribution-chart';
+    const progId = 'bike-eddington-progression-chart';
+    const isWeekly = mode !== 'daily';
+    const multiplier = isWeekly ? parseInt(mode.split('-')[1]) : 1;
+    const unit = isWeekly ? 'weeks' : 'days';
+
+    let eddington;
+    if (isWeekly) {
+        const weekly = utils.aggregateByWeek(rides, r => (r.distance || 0) / 1000);
+        const pseudo = weekly.map(w => ({
+            start_date_local: w.start_date_local,
+            distance: (w.total / multiplier) * 1000
+        }));
+        eddington = utils.buildEddingtonSeries(pseudo, a => a.distance / 1000, { unitStep: 1 });
+    } else {
+        eddington = utils.buildEddingtonSeries(rides, r => (r.distance || 0) / 1000, { unitStep: 1 });
+    }
+
+    if (eddington.distributionSeries.length) {
+        createChart(distId, {
+            type: 'bar',
+            data: {
+                labels: eddington.distributionSeries.map(p => String(p.threshold)),
+                datasets: [
+                    {
+                        label: isWeekly ? `Weeks ≥ E×${multiplier} km` : 'Days >= E km',
+                        data: eddington.distributionSeries.map(p => p.qualifyingDays),
+                        backgroundColor: 'rgba(46, 125, 50, 0.65)',
+                        borderColor: '#2e7d32',
+                        borderWidth: 1,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: isWeekly ? 'Weeks needed' : 'Days needed',
+                        data: eddington.distributionSeries.map(p => p.activeDaysNeeded),
+                        type: 'line',
+                        borderColor: '#166534',
+                        backgroundColor: 'rgba(22, 101, 52, 0.18)',
+                        spanGaps: true, tension: 0.25, pointRadius: 2, pointHoverRadius: 4,
+                        yAxisID: 'y1'
+                    },
+                    {
+                        label: isWeekly ? 'Projected weeks needed' : 'Projected days needed',
+                        data: eddington.distributionSeries.map(p => p.projectedActiveDaysNeeded),
+                        type: 'line',
+                        borderColor: '#166534', backgroundColor: 'transparent',
+                        borderDash: [6, 6], spanGaps: true, tension: 0.2,
+                        pointRadius: 0, pointHoverRadius: 4,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            label(context) {
+                                const p = eddington.distributionSeries[context.dataIndex];
+                                if (context.datasetIndex === 0) {
+                                    return isWeekly
+                                        ? `${p.qualifyingDays} weeks with ≥ ${(p.threshold * multiplier).toFixed(0)} km total`
+                                        : `${p.qualifyingDays} days at ${p.threshold} km or more`;
+                                }
+                                if (context.datasetIndex === 1 && p.activeDaysNeeded == null) return `E${p.threshold} not reached yet`;
+                                if (context.datasetIndex === 1) return `${p.activeDaysNeeded} active ${unit} to reach E${p.threshold} (${p.daysNeeded} calendar days)`;
+                                if (p.projectedActiveDaysNeeded == null) return `No projection for E${p.threshold} yet`;
+                                return `Projection: about ${p.projectedActiveDaysNeeded} active ${unit} to reach E${p.threshold}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { title: { display: true, text: isWeekly ? `Weekly Eddington (×${multiplier}, km/week)` : 'Eddington number (km)' } },
+                    y: { type: 'linear', position: 'left', beginAtZero: true, title: { display: true, text: isWeekly ? 'Qualifying weeks' : 'Qualifying days' } },
+                    y1: { type: 'linear', position: 'right', beginAtZero: true, title: { display: true, text: isWeekly ? 'Active weeks needed' : 'Active days needed' }, grid: { drawOnChartArea: false } }
+                }
+            }
+        });
+        attachBikeEddingtonInfo._multiplier = multiplier;
+        attachBikeEddingtonInfo(distId, eddington, isWeekly ? 'weekly' : 'distribution');
+    }
+
+    if (eddington.achievementSeries.length) {
+        const milestoneLabels = isWeekly ? null : getBikeMilestoneLabels();
+        const milestoneData = milestoneLabels
+            ? eddington.achievementSeries.filter(p => milestoneLabels.has(p.threshold)).map(p => ({ x: p.date, y: p.threshold, label: milestoneLabels.get(p.threshold) }))
+            : [];
+        const datasets = [
+            {
+                label: isWeekly ? 'Weekly Eddington reached' : 'Eddington reached',
+                data: eddington.achievementSeries.map(p => p.threshold),
+                borderColor: '#2e7d32',
+                backgroundColor: 'rgba(46, 125, 50, 0.18)',
+                pointRadius: 2, pointHoverRadius: 4, tension: 0.15, fill: false
+            }
+        ];
+        if (!isWeekly && milestoneData.length) {
+            datasets.push({
+                label: 'Milestones', type: 'scatter', data: milestoneData,
+                borderColor: '#166534', backgroundColor: '#166534',
+                pointRadius: 5, pointHoverRadius: 7, pointStyle: 'rectRot', showLine: false
+            });
+        }
+        createChart(progId, {
+            type: 'line',
+            data: { labels: eddington.achievementSeries.map(p => p.date), datasets },
+            options: {
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            title(items) { return items[0]?.label || ''; },
+                            label(context) {
+                                if (context.datasetIndex === 1) return `${context.raw.label}. Reached when you had ${context.raw.y} days of at least ${context.raw.y} km.`;
+                                const suffix = isWeekly ? ` (≥ ${(context.raw * multiplier).toFixed(0)} km/week)` : '';
+                                return `Reached E${context.raw}${suffix} on ${context.label}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Achievement date' } },
+                    y: { beginAtZero: true, title: { display: true, text: isWeekly ? `Weekly Eddington (×${multiplier})` : 'Eddington number (km)' } }
+                }
+            }
+        });
+        attachBikeEddingtonInfo._multiplier = multiplier;
+        attachBikeEddingtonInfo(progId, eddington, isWeekly ? 'weekly' : 'progression');
+    }
+}
+
+export function renderEddingtonSection(rides) {
+    const selectorEl = document.getElementById('bike-eddington-mode-selector');
+    function getMode() {
+        return selectorEl?.querySelector('.eddington-mode-btn.active')?.dataset.mode || 'daily';
+    }
+    if (selectorEl) {
+        selectorEl._rides = rides;
+        if (!selectorEl.dataset.bound) {
+            selectorEl.querySelectorAll('.eddington-mode-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    selectorEl.querySelectorAll('.eddington-mode-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    _drawBikeEddingtonCharts(selectorEl._rides, btn.dataset.mode);
+                });
+            });
+            selectorEl.dataset.bound = 'true';
+        }
+    }
+    _drawBikeEddingtonCharts(rides, getMode());
 }
