@@ -37,6 +37,58 @@ function fmtKcal(v, act) {
     return '–';
 }
 
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function prettifyKey(key) {
+    return String(key)
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function fmtGeneric(v) {
+    if (v === null || v === undefined || v === '') return '–';
+    if (typeof v === 'number') return Number.isInteger(v) ? String(v) : v.toFixed(2);
+    if (typeof v === 'boolean') return v ? 'true' : 'false';
+    return escapeHtml(String(v));
+}
+
+function csvEscape(value) {
+    if (value === null || value === undefined) return '';
+    const text = String(value);
+    if (/[,"\n]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
+    return text;
+}
+
+function buildActivitiesCsv(activities, columns) {
+    const headers = columns.map(c => c.label);
+    const rows = activities.map(a => columns.map(col => {
+        const raw = col.csv
+            ? col.csv(a[col.key], a)
+            : String(col.format(a[col.key], a)).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+        return raw === '–' ? '' : raw;
+    }));
+    return [headers, ...rows].map(row => row.map(csvEscape).join(',')).join('\n');
+}
+
+function downloadTextFile(content, filename, mimeType = 'text/plain') {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
 // ─── Sort value extractor ─────────────────────────────────────────────────────
 function sortVal(act, col) {
     if (col === 'start_hour') {
@@ -67,7 +119,8 @@ const COLUMNS = [
             if (!v) return '–';
             const d = new Date(v);
             return utils.formatDate(d);
-        }
+        },
+        csv: (v) => (v || '').slice(0, 10)
     },
     {
         key: 'start_hour', label: 'Hour',
@@ -75,53 +128,89 @@ const COLUMNS = [
             if (!a.start_date_local) return '–';
             const time = a.start_date_local?.split('T')[1]?.slice(0, 5);
             return time || '–';
-                    }
+        },
+        csv: (v, a) => a.start_date_local?.split('T')[1]?.slice(0, 5) || ''
     },
     {
         key: 'type', label: 'Sport',
-        format: (v, a) => { const t = getType(a); return `${sportEmoji(t)} <small>${t}</small>`; }
+        format: (v, a) => { const t = getType(a); return `${sportEmoji(t)} <small>${t}</small>`; },
+        csv: (v, a) => getType(a)
     },
     {
         key: 'name', label: 'Name',
-        format: (v, a) => `<a class="act-name-link" href="html/activity-router.html?id=${a.id}" target="_blank">${v || '—'}</a>`
+        format: (v, a) => `<a class="act-name-link" href="html/activity-router.html?id=${a.id}" target="_blank">${v || '—'}</a>`,
+        csv: (v) => v || ''
     },
     {
         key: 'distance', label: 'Distance',
-        format: v => typeof v === 'number' && v > 0 ? `${(v / 1000).toFixed(2)}<small> km</small>` : '–'
+        format: v => typeof v === 'number' && v > 0 ? `${(v / 1000).toFixed(2)}<small> km</small>` : '–',
+        csv: v => typeof v === 'number' && v > 0 ? (v / 1000).toFixed(3) : ''
     },
     {
         key: 'moving_time', label: 'Duration',
-        format: v => typeof v === 'number' ? utils.formatTime(v) : '–'
+        format: v => typeof v === 'number' ? utils.formatTime(v) : '–',
+        csv: v => typeof v === 'number' ? v : ''
     },
     {
         key: 'pace_speed', label: 'Pace / Speed',
-        format: (v, a) => fmtPaceSpeed(a)
+        format: (v, a) => fmtPaceSpeed(a),
+        csv: (v, a) => fmtPaceSpeed(a).replace(/<[^>]+>/g, '')
     },
     {
         key: 'average_heartrate', label: 'Avg HR',
-        format: v => typeof v === 'number' ? `${Math.round(v)}<small> bpm</small>` : '–'
+        format: v => typeof v === 'number' ? `${Math.round(v)}<small> bpm</small>` : '–',
+        csv: v => typeof v === 'number' ? Math.round(v) : ''
     },
     {
         key: 'max_heartrate', label: 'Max HR',
-        format: v => typeof v === 'number' ? `${Math.round(v)}<small> bpm</small>` : '–'
+        format: v => typeof v === 'number' ? `${Math.round(v)}<small> bpm</small>` : '–',
+        csv: v => typeof v === 'number' ? Math.round(v) : ''
     },
     {
         key: 'total_elevation_gain', label: 'D+',
-        format: v => typeof v === 'number' ? `${v.toFixed(0)}<small> m</small>` : '–'
+        format: v => typeof v === 'number' ? `${v.toFixed(0)}<small> m</small>` : '–',
+        csv: v => typeof v === 'number' ? Math.round(v) : ''
     },
     {
         key: 'average_cadence', label: 'Cadence',
-        format: (v, a) => fmtCadence(v, a)
+        format: (v, a) => fmtCadence(v, a),
+        csv: v => typeof v === 'number' ? Math.round(v) : ''
     },
     {
         key: 'average_watts', label: 'Power',
-        format: v => typeof v === 'number' && v > 0 ? `${Math.round(v)}<small> W</small>` : '–'
+        format: v => typeof v === 'number' && v > 0 ? `${Math.round(v)}<small> W</small>` : '–',
+        csv: v => typeof v === 'number' && v > 0 ? Math.round(v) : ''
     },
     {
         key: 'tss', label: 'TSS',
-        format: v => typeof v === 'number' ? Math.round(v) : '–'
+        format: v => typeof v === 'number' ? Math.round(v) : '–',
+        csv: v => typeof v === 'number' ? Math.round(v) : ''
     },
 ];
+
+function inferExtraColumns(activities) {
+    const baseKeys = new Set(COLUMNS.map(c => c.key));
+    const extraKeys = new Set();
+
+    activities.forEach(a => {
+        Object.entries(a || {}).forEach(([key, value]) => {
+            if (baseKeys.has(key)) return;
+            if (value === null || value === undefined) return;
+            if (Array.isArray(value)) return;
+            if (typeof value === 'object') return;
+            extraKeys.add(key);
+        });
+    });
+
+    return Array.from(extraKeys)
+        .sort((a, b) => a.localeCompare(b))
+        .map(key => ({
+            key,
+            label: prettifyKey(key),
+            format: v => fmtGeneric(v),
+            csv: v => (v == null ? '' : v)
+        }));
+}
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 export function renderActivitiesTab(allActivities) {
@@ -142,14 +231,18 @@ export function renderActivitiesTab(allActivities) {
         tableEl._actState = {
             sortCol: 'start_date_local',
             sortDir: 'desc',
+            visibleActivities: [],
+            selectedCols: COLUMNS.map(c => c.key),
             filters: {
                 type: [], name: '', dateFrom: '', dateTo: '',
                 distMin: '', distMax: '', durMin: '', durMax: '',
-                hrMin: '', hrMax: '', tssMin: '', tssMax: ''
+                hrMin: '', hrMax: '', elevMin: '', elevMax: '',
+                powerMin: '', powerMax: '', tssMin: '', tssMax: ''
             }
         };
     }
     const state = tableEl._actState;
+    const allColumns = [...COLUMNS, ...inferExtraColumns(allActivities)];
 
     // ── Build filter UI once ──────────────────────────────────────────────────
     if (filterEl && !filterEl._built) {
@@ -166,12 +259,16 @@ export function renderActivitiesTab(allActivities) {
         const dists = allActivities.map(a => a.distance).filter(Boolean);
         const durs = allActivities.map(a => a.moving_time).filter(Boolean);
         const hrs = allActivities.map(a => a.average_heartrate).filter(Boolean);
+        const elevations = allActivities.map(a => a.total_elevation_gain).filter(v => typeof v === 'number' && v >= 0);
+        const powers = allActivities.map(a => a.average_watts).filter(v => typeof v === 'number' && v > 0);
         const tssList = allActivities.map(a => a.tss).filter(v => v != null && v >= 0);
 
         const maxDist = dists.length ? Math.ceil(Math.max(...dists) / 1000) : 200;
         const maxDur = durs.length ? Math.ceil(Math.max(...durs) / 60) : 600;
         const maxHR = hrs.length ? Math.ceil(Math.max(...hrs)) : 220;
         const minHR = hrs.length ? Math.floor(Math.min(...hrs)) : 40;
+        const maxElev = elevations.length ? Math.ceil(Math.max(...elevations)) : 3000;
+        const maxPower = powers.length ? Math.ceil(Math.max(...powers)) : 500;
         const maxTSS = tssList.length ? Math.ceil(Math.max(...tssList)) : 300;
 
         filterEl.innerHTML = `
@@ -195,7 +292,10 @@ export function renderActivitiesTab(allActivities) {
                     Date to
                     <input id="flt-date-to" type="text" inputmode="numeric" placeholder="dd/mm/yyyy" title="Format: dd/mm/yyyy">
                 </label>
-                <button id="flt-reset" class="act-reset-btn" title="Clear all filters">✕ Reset</button>
+                <div class="act-filter-actions">
+                    <button id="flt-reset" class="act-reset-btn" title="Clear all filters" type="button">✕ Reset</button>
+                    <button id="act-edit-cols" class="act-edit-btn" type="button">Edit table</button>
+                </div>
             </div>
             <div class="act-filter-row">
                 <label class="act-filter-label">
@@ -223,6 +323,22 @@ export function renderActivitiesTab(allActivities) {
                     </span>
                 </label>
                 <label class="act-filter-label">
+                    D+ (m)
+                    <span class="act-range-pair">
+                        <input id="flt-elev-min" type="number" min="0" max="${maxElev}" placeholder="Min">
+                        <span>–</span>
+                        <input id="flt-elev-max" type="number" min="0" max="${maxElev}" placeholder="Max">
+                    </span>
+                </label>
+                <label class="act-filter-label">
+                    Power (W)
+                    <span class="act-range-pair">
+                        <input id="flt-power-min" type="number" min="0" max="${maxPower}" placeholder="Min">
+                        <span>–</span>
+                        <input id="flt-power-max" type="number" min="0" max="${maxPower}" placeholder="Max">
+                    </span>
+                </label>
+                <label class="act-filter-label">
                     TSS
                     <span class="act-range-pair">
                         <input id="flt-tss-min" type="number" min="0" max="${maxTSS}" placeholder="Min">
@@ -231,11 +347,13 @@ export function renderActivitiesTab(allActivities) {
                     </span>
                 </label>
             </div>
+            <div id="act-col-editor" class="act-col-editor" hidden></div>
         </div>`;
 
         const IDS = ['flt-type', 'flt-name', 'flt-date-from', 'flt-date-to',
             'flt-dist-min', 'flt-dist-max', 'flt-dur-min', 'flt-dur-max',
-            'flt-hr-min', 'flt-hr-max', 'flt-tss-min', 'flt-tss-max'];
+            'flt-hr-min', 'flt-hr-max', 'flt-elev-min', 'flt-elev-max',
+            'flt-power-min', 'flt-power-max', 'flt-tss-min', 'flt-tss-max'];
 
         const typeSelect = document.getElementById('flt-type');
         Array.from(typeSelect.options).forEach(opt => { opt.selected = true; });
@@ -252,6 +370,10 @@ export function renderActivitiesTab(allActivities) {
             f.durMax = document.getElementById('flt-dur-max').value;
             f.hrMin = document.getElementById('flt-hr-min').value;
             f.hrMax = document.getElementById('flt-hr-max').value;
+            f.elevMin = document.getElementById('flt-elev-min').value;
+            f.elevMax = document.getElementById('flt-elev-max').value;
+            f.powerMin = document.getElementById('flt-power-min').value;
+            f.powerMax = document.getElementById('flt-power-max').value;
             f.tssMin = document.getElementById('flt-tss-min').value;
             f.tssMax = document.getElementById('flt-tss-max').value;
             render();
@@ -268,14 +390,66 @@ export function renderActivitiesTab(allActivities) {
             Array.from(typeEl.options).forEach(opt => { opt.selected = true; });
             ['flt-name', 'flt-date-from', 'flt-date-to',
                 'flt-dist-min', 'flt-dist-max', 'flt-dur-min', 'flt-dur-max',
-                'flt-hr-min', 'flt-hr-max', 'flt-tss-min', 'flt-tss-max'
+                'flt-hr-min', 'flt-hr-max', 'flt-elev-min', 'flt-elev-max',
+                'flt-power-min', 'flt-power-max', 'flt-tss-min', 'flt-tss-max'
             ].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
             const f = state.filters;
             Object.keys(f).forEach(k => f[k] = k === 'type' ? types.slice() : '');
             render();
         });
 
+        function ensureValidSelection() {
+            const selected = new Set(state.selectedCols || []);
+            const known = allColumns.filter(c => selected.has(c.key)).map(c => c.key);
+            if (known.length === 0) return [COLUMNS[0].key];
+            return known;
+        }
+
+        function renderColumnEditor() {
+            const panel = document.getElementById('act-col-editor');
+            if (!panel) return;
+            const selected = new Set(ensureValidSelection());
+            panel.innerHTML = `
+                <div class="act-col-editor-grid">
+                    ${allColumns.map(col => `
+                        <label class="act-col-option">
+                            <input type="checkbox" data-col-key="${col.key}" ${selected.has(col.key) ? 'checked' : ''}>
+                            <span>${col.label}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        const editBtn = document.getElementById('act-edit-cols');
+        const panel = document.getElementById('act-col-editor');
+        if (editBtn && panel) {
+            editBtn.addEventListener('click', () => {
+                const isHidden = panel.hasAttribute('hidden');
+                if (isHidden) {
+                    renderColumnEditor();
+                    panel.removeAttribute('hidden');
+                } else {
+                    panel.setAttribute('hidden', 'hidden');
+                }
+            });
+
+            panel.addEventListener('change', (e) => {
+                const input = e.target;
+                if (!(input instanceof HTMLInputElement) || input.type !== 'checkbox') return;
+                const keys = Array.from(panel.querySelectorAll('input[data-col-key]:checked')).map(el => el.dataset.colKey);
+                state.selectedCols = keys.length ? keys : [COLUMNS[0].key];
+                if (!state.selectedCols.includes(state.sortCol)) {
+                    state.sortCol = state.selectedCols[0];
+                    state.sortDir = 'desc';
+                }
+                renderColumnEditor();
+                render();
+            });
+        }
+
         state.filters.type = types.slice();
+        state.selectedCols = COLUMNS.map(c => c.key);
     }
 
     // ── Filter logic ──────────────────────────────────────────────────────────
@@ -296,6 +470,12 @@ export function renderActivitiesTab(allActivities) {
             const hr = a.average_heartrate;
             if (f.hrMin !== '' && (hr == null || hr < +f.hrMin)) return false;
             if (f.hrMax !== '' && (hr == null || hr > +f.hrMax)) return false;
+            const elev = a.total_elevation_gain;
+            if (f.elevMin !== '' && (elev == null || elev < +f.elevMin)) return false;
+            if (f.elevMax !== '' && (elev == null || elev > +f.elevMax)) return false;
+            const power = a.average_watts;
+            if (f.powerMin !== '' && (power == null || power < +f.powerMin)) return false;
+            if (f.powerMax !== '' && (power == null || power > +f.powerMax)) return false;
             const tss = a.tss;
             if (f.tssMin !== '' && (tss == null || tss < +f.tssMin)) return false;
             if (f.tssMax !== '' && (tss == null || tss > +f.tssMax)) return false;
@@ -322,22 +502,29 @@ export function renderActivitiesTab(allActivities) {
     function render() {
         const filtered = applyFilters(allActivities);
         const sorted = applySort(filtered);
+        state.visibleActivities = sorted;
+        const selectedCols = new Set(state.selectedCols && state.selectedCols.length ? state.selectedCols : COLUMNS.map(c => c.key));
+        const visibleColumns = allColumns.filter(c => selectedCols.has(c.key));
+        if (visibleColumns.length === 0) visibleColumns.push(COLUMNS[0]);
+        if (!visibleColumns.some(c => c.key === state.sortCol)) {
+            state.sortCol = visibleColumns[0].key;
+        }
         const { sortCol, sortDir } = state;
 
         const theadHtml = `<thead><tr>
-            ${COLUMNS.map(c => {
+            ${visibleColumns.map(c => {
             const active = sortCol === c.key;
             const arrow = active ? (sortDir === 'desc' ? ' ▼' : ' ▲') : '';
             return `<th class="sortable${active ? ' act-sort-active' : ''}" data-col="${c.key}">${c.label}${arrow}</th>`;
         }).join('')}
         </tr></thead>`;
 
-        const emptyRow = `<tr><td colspan="${COLUMNS.length}" class="act-empty">
+        const emptyRow = `<tr><td colspan="${visibleColumns.length}" class="act-empty">
             No activities match the current filters</td></tr>`;
 
         const tbodyHtml = `<tbody>${sorted.length === 0 ? emptyRow : sorted.map(act => `
             <tr>
-                ${COLUMNS.map(col => `<td>${col.format(act[col.key], act)}</td>`).join('')}
+                ${visibleColumns.map(col => `<td>${col.format(act[col.key], act)}</td>`).join('')}
             </tr>`).join('')}
         </tbody>`;
 
@@ -354,7 +541,23 @@ export function renderActivitiesTab(allActivities) {
         });
 
         // Row counter
-        if (counterEl) counterEl.textContent = `${sorted.length} / ${allActivities.length} activities`;
+        if (counterEl) {
+            counterEl.innerHTML = `
+                <span>${sorted.length} / ${allActivities.length} activities</span>
+                <button id="act-export-csv" class="act-export-btn" type="button">Download CSV</button>
+            `;
+
+            const exportBtn = document.getElementById('act-export-csv');
+            if (exportBtn) {
+                exportBtn.addEventListener('click', () => {
+                    const visible = state.visibleActivities || [];
+                    const csv = buildActivitiesCsv(visible, visibleColumns);
+                    const now = new Date();
+                    const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+                    downloadTextFile(csv, `activities_filtered_${stamp}.csv`, 'text/csv;charset=utf-8;');
+                });
+            }
+        }
     }
 
     render();

@@ -1215,16 +1215,79 @@ main {
     margin-top: auto;
 }
 
+.act-filter-actions {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    margin-top: auto;
+}
+
+.act-edit-btn {
+    padding: .3rem .8rem;
+    font-size: .8rem;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    background: #fff;
+    cursor: pointer;
+    color: var(--text-medium);
+    transition: background .15s, color .15s;
+}
+
+.act-edit-btn:hover {
+    background: #eef0f5;
+}
+
 .act-reset-btn:hover {
     background: var(--strava-orange);
     color: #fff;
     border-color: var(--strava-orange);
 }
 
+.act-col-editor {
+    border-top: 1px dashed var(--border-color);
+    margin-top: .1rem;
+    padding-top: .55rem;
+}
+
+.act-col-editor-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: .28rem .8rem;
+}
+
+.act-col-option {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    font-size: .8rem;
+    color: var(--text-medium);
+}
+
 #act-counter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
     font-size: .82rem;
     color: var(--text-light);
     margin-bottom: .4rem;
+}
+
+.act-export-btn {
+    padding: .32rem .8rem;
+    font-size: .78rem;
+    border: 1px solid var(--strava-orange);
+    border-radius: 5px;
+    background: #fff;
+    color: var(--strava-orange);
+    cursor: pointer;
+    transition: background .15s, color .15s;
+}
+
+.act-export-btn:hover {
+    background: var(--strava-orange);
+    color: #fff;
 }
 
 /* Table enhancements for Activities */
