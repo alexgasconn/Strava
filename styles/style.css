@@ -3612,7 +3612,8 @@ body {
     background: linear-gradient(135deg, #ffffff 0%, #fbfbfb 100%);
     border: 1px solid #ececec;
     border-radius: 12px;
-    flex: 0 0 auto; /* tamaño natural, no crece */
+    flex: 0 0 auto;
+    /* tamaño natural, no crece */
     min-width: 160px;
 }
 
@@ -3681,7 +3682,7 @@ body {
     display: flex;
     align-items: center;
     min-height: 100%;
-    
+
 }
 
 .readiness-timeline-container {
@@ -3870,7 +3871,7 @@ body {
         margin-left: 0;
     }
 
-    #goals-section > div:nth-child(3) {
+    #goals-section>div:nth-child(3) {
         flex-direction: column !important;
         gap: 0.9rem !important;
     }
