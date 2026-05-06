@@ -195,24 +195,24 @@ const SPORT_TSS_MULTIPLIER = {
     // Runs
     Run: 1.07,
     VirtualRun: 1.05,
-    TrailRun: 1.12,
+    TrailRun: 1.15,
     // Cycling
-    Ride: 0.85,
-    VirtualRide: 0.70,
-    GravelRide: 0.88,
-    MountainBikeRide: 0.90,
-    EBikeRide: 0.72,
+    Ride: 0.78,
+    VirtualRide: 0.66,
+    GravelRide: 0.80,
+    MountainBikeRide: 0.85,
+    EBikeRide: 0.71,
     // Water
     Swim: 0.75,
     // Team/field
     Soccer: 1.05,
     // Hiking & walking
-    Hike: 0.95,
+    Hike: 0.93,
     Walk: 0.52,
     // Gym & fitness
-    WeightTraining: 0.72,
+    WeightTraining: 0.73,
     Workout: 0.78,
-    HIIT: 1.20,
+    HIIT: 1.15,
     Crossfit: 1.10,
     Yoga: 0.35,
     // Winter
