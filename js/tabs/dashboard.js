@@ -1018,6 +1018,7 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
 
     // Render heavy charts in next frame to avoid blocking UI
     requestAnimationFrame(() => {
+        renderTrainingReadiness(recentActivities, startDate, endDate);
         renderAcuteLoadChart(recentActivities, startDate, endDate);
         renderTSSBarChart(recentActivities, selectedRangeDays);
         setupTSSUnitSelector();
@@ -1154,6 +1155,587 @@ function getTrendColor(pct) {
     if (pct < -10) return '#e74c3c';
     if (pct < -5) return '#f39c12';
     return '#27ae60';
+}
+
+
+// =================================================================
+// TRAINING READINESS SCORE CALCULATION
+// =================================================================
+
+/**
+ * Normalize a value to 0-1 range given min/max
+ */
+function normalizeToRange(value, min, max) {
+    if (max === min) return 0;
+    return Math.max(0, Math.min(1, (value - min) / (max - min)));
+}
+
+/**
+ * Calculate TSB (freshness) component score
+ * Ideal range: +5 to +20 → high readiness
+ * Negative values → penalize
+ * > +20 → start to decline
+ */
+function getTsbScore(tsbValue) {
+    if (tsbValue >= 5 && tsbValue <= 20) {
+        // Ideal range: full score
+        return 1.0;
+    }
+    if (tsbValue > 20) {
+        // Too fresh might indicate undertraining
+        return Math.max(0.5, 1 - (tsbValue - 20) / 20);
+    }
+    if (tsbValue >= -5) {
+        // Small fatigue, acceptable
+        return 0.8;
+    }
+    if (tsbValue >= -10) {
+        // Moderate fatigue
+        return 0.6;
+    }
+    // Deep fatigue
+    return Math.max(0, (tsbValue + 15) / 10);
+}
+
+/**
+ * Calculate CTL (fitness) component score
+ * Higher CTL = better fitness ceiling, but need historical context
+ */
+function getCtlScore(ctlValue, ctlValues) {
+    if (!ctlValues || ctlValues.length === 0) return 0.5;
+    const ctlPercentile = percentileRank(ctlValues, ctlValue);
+    // Top 30% of personal history = good fitness
+    return Math.min(1, ctlPercentile * 1.5);
+}
+
+/**
+ * Calculate ATL (fatigue) component score
+ * High ATL = fatigue = lower score
+ * Optimal: ATL close to CTL or slightly below
+ */
+function getAtlScore(atlValue, ctlValue) {
+    const ratio = ctlValue > 0 ? atlValue / ctlValue : 0;
+
+    // Optimal: 0.6 - 1.1 (ATL between 60-110% of CTL)
+    if (ratio >= 0.6 && ratio <= 1.1) {
+        return 1.0;
+    }
+    if (ratio < 0.6) {
+        // Very low ATL → very fresh but might be under-training
+        return 0.9;
+    }
+    // High ATL → fatigue
+    // At 1.5× CTL, score = 0.5; at 2× CTL, score = 0
+    return Math.max(0, 1 - (ratio - 1.1) / 0.9);
+}
+
+/**
+ * Calculate load stability (ACWR-like)
+ * Compare 7-day TSS to 28-day average
+ */
+function getLoadStabilityScore(load7d, load28dAvg) {
+    if (load28dAvg === 0) return 0.5;
+
+    const ratio = load7d / (load28dAvg || 1);
+    // Optimal: 0.9 - 1.3 (within 10-30% above base)
+    if (ratio >= 0.9 && ratio <= 1.3) {
+        return 1.0;
+    }
+    if (ratio < 0.9) {
+        // Low load → recovery
+        return 0.85;
+    }
+    // Spike in load (> 1.3)
+    // At 1.5, score = 0.5; at 2.0, score = 0
+    return Math.max(0, 1 - (ratio - 1.3) / 0.7);
+}
+
+/**
+ * Calculate injury risk penalty
+ * 0-1 scale, directly subtracts from readiness
+ */
+function getInjuryPenalty(injuryRisk) {
+    if (injuryRisk == null) return 0;
+    // Normalize to 0-1 if it's 0-100
+    const risk = injuryRisk > 1 ? injuryRisk / 100 : injuryRisk;
+    // Heavy penalty above 0.3
+    return Math.min(1, risk * 1.5);
+}
+
+/**
+ * Calculate overall readiness score for a single activity day
+ */
+function calculateActivityReadiness(activity, allActivities) {
+    if (!activity || !activity.ctl || !activity.atl || !activity.tsb) {
+        return null;
+    }
+
+    const ctlValues = allActivities
+        .map(a => a.ctl)
+        .filter(Number.isFinite);
+
+    // Calculate 7-day and 28-day TSS averages for this activity
+    const activityDate = new Date(activity.start_date_local);
+    const date7dAgo = new Date(activityDate.getTime() - 7 * 24 * 3600 * 1000);
+    const date28dAgo = new Date(activityDate.getTime() - 28 * 24 * 3600 * 1000);
+
+    const last7d = allActivities.filter(a => {
+        const d = new Date(a.start_date_local);
+        return d >= date7dAgo && d <= activityDate;
+    });
+    const last28d = allActivities.filter(a => {
+        const d = new Date(a.start_date_local);
+        return d >= date28dAgo && d <= activityDate;
+    });
+
+    const load7d = last7d.reduce((sum, a) => sum + (a.tss || 0), 0);
+    const load28dAvg = last28d.length > 0 ? last28d.reduce((sum, a) => sum + (a.tss || 0), 0) / last28d.length : 10;
+
+    // Component scores
+    const tsbScore = getTsbScore(activity.tsb);
+    const ctlScore = getCtlScore(activity.ctl, ctlValues);
+    const atlScore = getAtlScore(activity.atl, activity.ctl);
+    const loadStabilityScore = getLoadStabilityScore(load7d, load28dAvg);
+
+    // Weighted sum
+    const readinessBase =
+        0.35 * tsbScore +
+        0.25 * ctlScore +
+        0.20 * (1 - atlScore) +
+        0.20 * loadStabilityScore;
+
+    // Apply injury risk penalty
+    const injuryPenalty = getInjuryPenalty(activity.injuryRisk);
+    const readiness = readinessBase * (1 - injuryPenalty);
+
+    // Scale to 0-100
+    return Math.max(0, Math.min(100, readiness * 100));
+}
+
+/**
+ * Build readiness timeline data
+ */
+function buildReadinessTimeline(activities, rangeStart, rangeEnd) {
+    const sorted = getValidLoadActivities(activities);
+    if (!sorted.length) return { labels: [], readiness: [] };
+
+    // Add readiness to each activity
+    sorted.forEach(activity => {
+        activity.readinessScore = calculateActivityReadiness(activity, sorted);
+    });
+
+    const labels = [];
+    const readinessDaily = [];
+    let cursor = new Date(rangeStart);
+    const endCursor = new Date(rangeEnd);
+
+    cursor.setHours(0, 0, 0, 0);
+    endCursor.setHours(0, 0, 0, 0);
+
+    // For each day in range, find readiness from activity on that day
+    const readinessByDay = new Map();
+    sorted.forEach(activity => {
+        const key = toLocalYMD(new Date(activity.start_date_local));
+        const score = activity.readinessScore;
+        if (score != null) {
+            readinessByDay.set(key, score);
+        }
+    });
+
+    while (cursor <= endCursor) {
+        const key = toLocalYMD(cursor);
+        labels.push(key);
+        readinessDaily.push(readinessByDay.get(key) || null);
+        cursor = addDays(cursor, 1);
+    }
+
+    // Apply 3-day rolling average to smooth
+    const smoothed = applyRollingAverage(readinessDaily, 3);
+
+    return { labels, readiness: smoothed, sorted };
+}
+
+/**
+ * Apply N-day rolling average, ignoring null values
+ */
+function applyRollingAverage(values, window = 3) {
+    return values.map((_, idx) => {
+        const start = Math.max(0, idx - Math.floor(window / 2));
+        const end = Math.min(values.length, idx + Math.ceil(window / 2));
+        const window_vals = values.slice(start, end).filter(v => v != null);
+        if (window_vals.length === 0) return null;
+        return window_vals.reduce((a, b) => a + b) / window_vals.length;
+    });
+}
+
+/**
+ * Get readiness color based on score
+ */
+function getReadinessColor(score) {
+    if (score >= 90) return '#27ae60'; // Green
+    if (score >= 75) return '#2ecc71'; // Light green
+    if (score >= 60) return '#f1c40f'; // Yellow
+    if (score >= 40) return '#f39c12'; // Orange
+    return '#e74c3c'; // Red
+}
+
+/**
+ * Get readiness label
+ */
+function getReadinessLabel(score) {
+    if (score >= 90) return 'Excellent';
+    if (score >= 75) return 'Very Good';
+    if (score >= 60) return 'Good';
+    if (score >= 40) return 'Fair';
+    return 'Poor';
+}
+
+/**
+ * Render readiness gauge chart
+ */
+function renderReadinessGauge(score, activity, allActivities) {
+    const container = document.getElementById('readiness-explainer');
+    if (!container) return;
+
+    const label = getReadinessLabel(score);
+    const color = getReadinessColor(score);
+
+    // Calculate component contributions for display
+    const tsbScore = getTsbScore(activity.tsb);
+    const ctlValues = allActivities.map(a => a.ctl).filter(Number.isFinite);
+    const ctlScore = getCtlScore(activity.ctl, ctlValues);
+    const atlScore = getAtlScore(activity.atl, activity.ctl);
+
+    const activityDate = new Date(activity.start_date_local);
+    const date7dAgo = new Date(activityDate.getTime() - 7 * 24 * 3600 * 1000);
+    const date28dAgo = new Date(activityDate.getTime() - 28 * 24 * 3600 * 1000);
+    const last7d = allActivities.filter(a => {
+        const d = new Date(a.start_date_local);
+        return d >= date7dAgo && d <= activityDate;
+    });
+    const last28d = allActivities.filter(a => {
+        const d = new Date(a.start_date_local);
+        return d >= date28dAgo && d <= activityDate;
+    });
+    const load7d = last7d.reduce((sum, a) => sum + (a.tss || 0), 0);
+    const load28dAvg = last28d.length > 0 ? last28d.reduce((sum, a) => sum + (a.tss || 0), 0) / last28d.length : 10;
+    const loadStabilityScore = getLoadStabilityScore(load7d, load28dAvg);
+
+    // Get current percentiles
+    const ctlPercentile = percentileRank(ctlValues, activity.ctl);
+    const atlPercentile = percentileRank(allActivities.map(a => a.atl).filter(Number.isFinite), activity.atl);
+    const riskPercentile = percentileRank(allActivities.map(a => a.injuryRisk).filter(Number.isFinite), activity.injuryRisk);
+
+    // Insights
+    let insight = '';
+    if (score >= 75) {
+        insight = 'You\'re in excellent shape! Your freshness is optimal and fatigue is well-managed.';
+    } else if (score >= 60) {
+        insight = 'Good readiness. Continue monitoring load balance and recovery.';
+    } else if (score >= 40) {
+        insight = 'Fair readiness. Consider increasing recovery or reducing immediate load.';
+    } else {
+        insight = 'Low readiness. Prioritize rest and easy training to recover.';
+    }
+
+    container.innerHTML = `
+        <div class="readiness-score-display">
+            <div class="readiness-score-value">
+                <span class="score-number">${score.toFixed(0)}</span>
+                <span class="score-unit">/100</span>
+            </div>
+            <div class="readiness-score-label" style="color: ${color};">${label}</div>
+        </div>
+        <div class="readiness-metrics">
+            <div class="readiness-metric-item">
+                <div class="readiness-metric-label">TSB (Freshness)</div>
+                <div class="readiness-metric-value">${activity.tsb.toFixed(1)}</div>
+                <small style="color: #666;">Ideal: +5 to +20</small>
+            </div>
+            <div class="readiness-metric-item">
+                <div class="readiness-metric-label">CTL (Fitness)</div>
+                <div class="readiness-metric-value">${activity.ctl.toFixed(1)}</div>
+                <small style="color: #666;">Percentile: ${(ctlPercentile * 100).toFixed(0)}%</small>
+            </div>
+            <div class="readiness-metric-item">
+                <div class="readiness-metric-label">ATL (Fatigue)</div>
+                <div class="readiness-metric-value">${activity.atl.toFixed(1)}</div>
+                <small style="color: #666;">Ratio: ${(activity.atl / (activity.ctl || 1)).toFixed(2)}x CTL</small>
+            </div>
+            <div class="readiness-metric-item">
+                <div class="readiness-metric-label">Injury Risk</div>
+                <div class="readiness-metric-value">${(activity.injuryRisk || 0).toFixed(3)}</div>
+                <small style="color: #666;">Ideal: &lt; 0.25</small>
+            </div>
+        </div>
+        <div class="readiness-insights" style="border-left-color: ${color}; background: ${color}15;">
+            <strong>Today's Insight:</strong> ${insight}
+        </div>
+    `;
+}
+
+/**
+ * Render readiness timeline chart
+ */
+function renderReadinessTimelineChart(activities, rangeStart, rangeEnd, currentReadiness) {
+    const data = buildReadinessTimeline(activities, rangeStart, rangeEnd);
+    const canvas = document.getElementById('readiness-timeline-chart');
+    if (!canvas) return;
+
+    if (dashboardCharts['readiness-timeline-chart']) {
+        dashboardCharts['readiness-timeline-chart'].destroy();
+    }
+
+    const ctx = canvas.getContext('2d');
+    const config = {
+        type: 'line',
+        data: {
+            labels: data.labels,
+            datasets: [
+                {
+                    label: 'Readiness Score',
+                    data: data.readiness,
+                    borderColor: '#4f46e5',
+                    backgroundColor: 'rgba(79, 70, 229, 0.05)',
+                    borderWidth: 2.5,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: '#4f46e5',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                },
+                {
+                    label: 'Optimal Zone',
+                    data: Array(data.labels.length).fill(75),
+                    borderColor: '#2ecc71',
+                    backgroundColor: 'rgba(46, 204, 113, 0.08)',
+                    borderWidth: 1.5,
+                    fill: false,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    tension: 0,
+                },
+                {
+                    label: 'Caution Zone',
+                    data: Array(data.labels.length).fill(40),
+                    borderColor: '#f39c12',
+                    backgroundColor: 'rgba(243, 156, 18, 0.08)',
+                    borderWidth: 1.5,
+                    fill: false,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    tension: 0,
+                },
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        boxWidth: 12,
+                        padding: 12,
+                        font: { size: 12, weight: '600' },
+                        color: '#444',
+                    },
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: 10,
+                    titleFont: { size: 13, weight: 'bold' },
+                    bodyFont: { size: 12 },
+                    displayColors: true,
+                    callbacks: {
+                        label: function (context) {
+                            if (context.dataset.label === 'Readiness Score') {
+                                const score = context.parsed.y;
+                                return score != null ? `${context.dataset.label}: ${score.toFixed(1)}` : null;
+                            }
+                            return null;
+                        }
+                    }
+                },
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    min: 0,
+                    max: 100,
+                    ticks: {
+                        stepSize: 20,
+                        font: { size: 11 },
+                        color: '#999',
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)',
+                        drawBorder: false,
+                    },
+                },
+                x: {
+                    grid: {
+                        display: false,
+                        drawBorder: false,
+                    },
+                    ticks: {
+                        font: { size: 10 },
+                        color: '#999',
+                        maxRotation: 45,
+                        minRotation: 0,
+                    },
+                },
+            },
+        },
+    };
+
+    dashboardCharts['readiness-timeline-chart'] = new Chart(ctx, config);
+}
+
+/**
+ * Draw a gauge chart using canvas
+ */
+function drawGaugeChart(canvas, score) {
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    const centerX = width / 2;
+    const centerY = height * 0.65;
+    const radius = Math.min(width, height) * 0.35;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, width, height);
+
+    // Define gauge zones: 0-40 red, 40-60 orange, 60-75 yellow, 75-90 light green, 90-100 green
+    const zones = [
+        { start: 0, end: 40, color: '#e74c3c' },
+        { start: 40, end: 60, color: '#f39c12' },
+        { start: 60, end: 75, color: '#f1c40f' },
+        { start: 75, end: 90, color: '#2ecc71' },
+        { start: 90, end: 100, color: '#27ae60' },
+    ];
+
+    const startAngle = Math.PI;
+    const endAngle = 0;
+    const totalAngle = Math.PI;
+
+    // Draw gauge background zones
+    zones.forEach(zone => {
+        const zoneStart = startAngle + (zone.start / 100) * totalAngle;
+        const zoneEnd = startAngle + (zone.end / 100) * totalAngle;
+
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, zoneStart, zoneEnd, false);
+        ctx.strokeStyle = zone.color;
+        ctx.lineWidth = 20;
+        ctx.stroke();
+    });
+
+    // Draw outer ring
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, startAngle, endAngle, false);
+    ctx.strokeStyle = '#e0e0e0';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Draw needle
+    const needleAngle = startAngle + (Math.min(score, 100) / 100) * totalAngle;
+    const needleLength = radius * 0.8;
+    const needleX = centerX + Math.cos(needleAngle) * needleLength;
+    const needleY = centerY + Math.sin(needleAngle) * needleLength;
+
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY);
+    ctx.lineTo(needleX, needleY);
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Draw center circle
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 8, 0, Math.PI * 2);
+    ctx.fillStyle = '#333';
+    ctx.fill();
+
+    // Draw tick marks and labels
+    const ticks = [0, 20, 40, 60, 80, 100];
+    ticks.forEach(tick => {
+        const tickAngle = startAngle + (tick / 100) * totalAngle;
+        const outerX = centerX + Math.cos(tickAngle) * radius;
+        const outerY = centerY + Math.sin(tickAngle) * radius;
+        const innerX = centerX + Math.cos(tickAngle) * (radius - 10);
+        const innerY = centerY + Math.sin(tickAngle) * (radius - 10);
+
+        ctx.beginPath();
+        ctx.moveTo(outerX, outerY);
+        ctx.lineTo(innerX, innerY);
+        ctx.strokeStyle = '#999';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Draw label
+        const labelRadius = radius + 25;
+        const labelX = centerX + Math.cos(tickAngle) * labelRadius;
+        const labelY = centerY + Math.sin(tickAngle) * labelRadius;
+
+        ctx.fillStyle = '#666';
+        ctx.font = 'bold 11px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(tick, labelX, labelY);
+    });
+
+    // Draw score value and label at bottom
+    const readiness = Math.round(score);
+    const label = getReadinessLabel(score);
+    const color = getReadinessColor(score);
+
+    ctx.fillStyle = color;
+    ctx.font = 'bold 32px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(readiness, centerX, centerY + radius + 50);
+
+    ctx.fillStyle = color;
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(label, centerX, centerY + radius + 72);
+}
+
+/**
+ * Main rendering function for Training Readiness
+ */
+function renderTrainingReadiness(allActivities, rangeStart, rangeEnd) {
+    // Get valid activities with all metrics
+    const validActivities = getValidLoadActivities(allActivities);
+    if (!validActivities.length) return;
+
+    // Get the most recent activity with full metrics
+    const latest = validActivities[validActivities.length - 1];
+    if (!latest) return;
+
+    const currentReadiness = calculateActivityReadiness(latest, validActivities);
+    if (currentReadiness == null) return;
+
+    // Draw gauge
+    const canvas = document.getElementById('readiness-gauge-chart');
+    if (canvas) {
+        drawGaugeChart(canvas, currentReadiness);
+    }
+
+    // Render score display with detailed metrics
+    renderReadinessGauge(currentReadiness, latest, validActivities);
+
+    // Render timeline
+    renderReadinessTimelineChart(allActivities, rangeStart, rangeEnd, currentReadiness);
 }
 
 
