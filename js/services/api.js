@@ -3,7 +3,7 @@
 // ===================================================================
 // CACHE CONFIGURATION
 // ===================================================================
-import { isDemoMode, getDemoActivities } from '../demo/index.js';
+import { isDemoMode, getDemoActivities, getDemoGears } from '../demo/index.js';
 const CACHE_DURATIONS = {
     athlete: 24 * 60 * 60 * 1000,      // 24 hours
     zones: 24 * 60 * 60 * 1000,        // 24 hours
@@ -78,7 +78,6 @@ async function handleApiResponse(response) {
 export async function fetchAllActivities() {
     // If in demo mode, return demo data
     if (isDemoMode()) {
-        console.log('[Demo] Returning demo activities from localStorage');
         return getDemoActivities();
     }
 
@@ -131,11 +130,13 @@ export async function fetchAthleteData() {
     const cacheKey = 'strava_athlete_data';
     const cached = getFromCache(cacheKey, 'athlete');
     if (cached) {
-        console.log('[Athlete] cached profile', {
-            id: cached?.id,
-            name: `${cached?.firstname || ''} ${cached?.lastname || ''}`.trim(),
-            username: cached?.username || null,
-        });
+        if (!isDemoMode()) {
+            console.log('[Athlete] cached profile', {
+                id: cached?.id,
+                name: `${cached?.firstname || ''} ${cached?.lastname || ''}`.trim(),
+                username: cached?.username || null,
+            });
+        }
         return cached;
     }
 
@@ -143,12 +144,7 @@ export async function fetchAthleteData() {
     if (isDemoMode()) {
         const stored = localStorage.getItem('strava_athlete_data');
         if (stored) {
-            const athlete = JSON.parse(stored);
-            console.log('[Demo] Athlete data from demo', {
-                id: athlete?.id,
-                name: `${athlete?.firstname || ''} ${athlete?.lastname || ''}`.trim(),
-            });
-            return athlete;
+            return JSON.parse(stored);
         }
     }
 
@@ -180,9 +176,7 @@ export async function fetchTrainingZones() {
     if (isDemoMode()) {
         const stored = localStorage.getItem('strava_training_zones');
         if (stored) {
-            const zones = JSON.parse(stored);
-            console.log('[Demo] Training zones from demo');
-            return zones;
+            return JSON.parse(stored);
         }
     }
 
@@ -197,6 +191,10 @@ export async function fetchTrainingZones() {
 }
 
 export async function fetchAllGears(athlete) {
+    if (isDemoMode()) {
+        return getDemoGears(athlete);
+    }
+
     const rawGearIds = [...(athlete.shoes || []), ...(athlete.bikes || [])];
     const gearIds = rawGearIds.map(g => {
         if (typeof g === 'string') return g;

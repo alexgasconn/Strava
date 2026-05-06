@@ -254,7 +254,6 @@ async function renderGearSection(runs, filter = 'all', showRetired = false) {
         listContainer.innerHTML = '<p class="empty-state">No gear loaded yet.</p>';
         return;
     }
-    console.log('All gears:', allGears);
 
     const processedGears = allGears.map(gear => {
         const g = { ...gear };

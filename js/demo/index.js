@@ -24,22 +24,23 @@ export function setDemoMode(enabled) {
  * Load demo data into localStorage (mimics Strava API responses)
  */
 export function loadDemoData() {
-    console.log('[Demo] Generating 250 activities...');
-
     // Generate all demo data
     const activities = generateDemoData();
     const athlete = generateDemoAthlete();
     const zones = generateDemoZones();
+    const gears = [...(athlete?.shoes || []), ...(athlete?.bikes || [])];
 
     // Store in localStorage (same structure as real API)
     localStorage.setItem('strava_demo_activities', JSON.stringify(activities));
     localStorage.setItem('strava_athlete_data', JSON.stringify(athlete));
     localStorage.setItem('strava_training_zones', JSON.stringify(zones));
+    localStorage.setItem('strava_gears', JSON.stringify(gears));
 
     // Set timestamps to appear fresh
     const now = Date.now();
     localStorage.setItem('strava_athlete_data_timestamp', String(now));
     localStorage.setItem('strava_training_zones_timestamp', String(now));
+    localStorage.setItem('strava_gears_timestamp', String(now));
 
     // Set demo token (fake but valid structure)
     const demoTokens = {
@@ -52,13 +53,7 @@ export function loadDemoData() {
     // Enable demo mode
     setDemoMode(true);
 
-    console.log('[Demo] Data loaded! ', {
-        activities: activities.length,
-        athlete: athlete.firstname,
-        zones: zones.heartrate?.length,
-    });
-
-    return { activities, athlete, zones };
+    return { activities, athlete, zones, gears };
 }
 
 /**
@@ -70,9 +65,10 @@ export function clearDemoData() {
     localStorage.removeItem('strava_tokens');
     localStorage.removeItem('strava_athlete_data');
     localStorage.removeItem('strava_training_zones');
+    localStorage.removeItem('strava_gears');
     localStorage.removeItem('strava_athlete_data_timestamp');
     localStorage.removeItem('strava_training_zones_timestamp');
-    console.log('[Demo] Data cleared');
+    localStorage.removeItem('strava_gears_timestamp');
 }
 
 /**
@@ -82,10 +78,25 @@ export function clearDemoData() {
 export function getDemoActivities() {
     const stored = localStorage.getItem('strava_demo_activities');
     if (!stored) {
-        console.warn('[Demo] No activities found in storage');
         return [];
     }
     return JSON.parse(stored);
+}
+
+export function getDemoGears(athlete = null) {
+    const cached = localStorage.getItem('strava_gears');
+    if (cached) {
+        try {
+            return JSON.parse(cached);
+        } catch (_e) {
+            // ignore malformed cache and fallback
+        }
+    }
+
+    const srcAthlete = athlete || JSON.parse(localStorage.getItem('strava_athlete_data') || 'null');
+    if (!srcAthlete) return [];
+
+    return [...(srcAthlete.shoes || []), ...(srcAthlete.bikes || [])];
 }
 
 /**
@@ -94,9 +105,5 @@ export function getDemoActivities() {
  */
 export function setupDemoModeInterceptor() {
     // This is called from main.js after auth.js to setup demo mode if enabled
-    if (isDemoMode()) {
-        console.log('[Demo] Demo mode active, API calls will use demo data');
-        return true;
-    }
-    return false;
+    return isDemoMode();
 }

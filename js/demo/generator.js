@@ -22,6 +22,97 @@ const ACTIVITY_TYPES = [
     { type: 'Walk', sport: 'Walk', ratio: 0.05, distRange: [2, 15], speedRange: [3, 5] },
 ];
 
+// Centralized statistical profiles (easy to tweak per sport)
+const ACTIVITY_STAT_MODELS = {
+    Run: {
+        distanceKm: { mean: 11, stdDev: 4, min: 3, max: 30 },
+        speedKmh: { mean: 12.4, stdDev: 1.4, min: 9, max: 18 },
+        elevationMeters: { mean: 120, stdDev: 90, min: 0, max: 700 },
+        avgHr: { mean: 151, stdDev: 8, min: 128, max: 175 },
+        maxHr: { mean: 182, stdDev: 6, min: 165, max: 198 },
+    },
+    WeightTraining: {
+        distanceKm: { mean: 0, stdDev: 0, min: 0, max: 0 },
+        speedKmh: { mean: 0, stdDev: 0, min: 0, max: 0 },
+        durationMin: { mean: 62, stdDev: 18, min: 25, max: 130 },
+        avgHr: { mean: 122, stdDev: 10, min: 95, max: 145 },
+        maxHr: { mean: 161, stdDev: 10, min: 130, max: 190 },
+        avgWatts: { mean: 0, stdDev: 0, min: 0, max: 0 },
+        weightedWatts: { mean: 0, stdDev: 0, min: 0, max: 0 },
+        maxWatts: { mean: 0, stdDev: 0, min: 0, max: 0 },
+    },
+    Swim: {
+        distanceKm: { mean: 2.4, stdDev: 0.95, min: 1, max: 5 },
+        // 1:50-2:30 per 100m => approx 3.27-2.40 km/h
+        speedKmh: { mean: 2.85, stdDev: 0.2, min: 2.4, max: 3.27 },
+        avgHr: { mean: 143, stdDev: 9, min: 118, max: 170 },
+        maxHr: { mean: 173, stdDev: 8, min: 150, max: 196 },
+    },
+    Ride: {
+        distanceKm: { mean: 58, stdDev: 22, min: 15, max: 140 },
+        speedKmh: { mean: 27, stdDev: 3.5, min: 17, max: 42 },
+        elevationMeters: { mean: 620, stdDev: 280, min: 90, max: 2200 },
+        avgHr: { mean: 142, stdDev: 10, min: 110, max: 172 },
+        maxHr: { mean: 176, stdDev: 8, min: 150, max: 198 },
+        avgWatts: { mean: 230, stdDev: 45, min: 120, max: 380 },
+        weightedWatts: { mean: 248, stdDev: 45, min: 130, max: 420 },
+        maxWatts: { mean: 640, stdDev: 110, min: 300, max: 1100 },
+    },
+    MountainBikeRide: {
+        distanceKm: { mean: 33, stdDev: 14, min: 8, max: 95 },
+        speedKmh: { mean: 18, stdDev: 3.2, min: 10, max: 30 },
+        elevationMeters: { mean: 710, stdDev: 340, min: 120, max: 2400 },
+        avgHr: { mean: 149, stdDev: 10, min: 118, max: 178 },
+        maxHr: { mean: 184, stdDev: 8, min: 155, max: 199 },
+        avgWatts: { mean: 215, stdDev: 42, min: 110, max: 360 },
+        weightedWatts: { mean: 233, stdDev: 42, min: 120, max: 390 },
+        maxWatts: { mean: 610, stdDev: 100, min: 290, max: 980 },
+    },
+    Hike: {
+        distanceKm: { mean: 14, stdDev: 6, min: 4, max: 35 },
+        speedKmh: { mean: 4.7, stdDev: 0.9, min: 2.6, max: 7.5 },
+        elevationMeters: { mean: 420, stdDev: 230, min: 20, max: 1700 },
+        avgHr: { mean: 127, stdDev: 10, min: 95, max: 158 },
+        maxHr: { mean: 162, stdDev: 9, min: 132, max: 190 },
+    },
+    TrailRun: {
+        distanceKm: { mean: 13, stdDev: 5.5, min: 5, max: 35 },
+        speedKmh: { mean: 10.2, stdDev: 1.7, min: 6.5, max: 16 },
+        elevationMeters: { mean: 520, stdDev: 280, min: 60, max: 1800 },
+        avgHr: { mean: 152, stdDev: 8, min: 126, max: 178 },
+        maxHr: { mean: 186, stdDev: 7, min: 160, max: 199 },
+    },
+    Padel: {
+        distanceKm: { mean: 1.2, stdDev: 0.3, min: 0.5, max: 2.5 },
+        speedKmh: { mean: 1.8, stdDev: 0.4, min: 0.8, max: 3.4 },
+        durationMin: { mean: 82, stdDev: 18, min: 40, max: 150 },
+        avgHr: { mean: 132, stdDev: 10, min: 100, max: 165 },
+        maxHr: { mean: 170, stdDev: 10, min: 136, max: 197 },
+    },
+    Soccer: {
+        distanceKm: { mean: 4, stdDev: 1.5, min: 2.5, max: 6 },
+        speedKmh: { mean: 9.8, stdDev: 1.6, min: 6, max: 14.5 },
+        durationMin: { mean: 78, stdDev: 15, min: 40, max: 120 },
+        avgHr: { mean: 147, stdDev: 9, min: 120, max: 175 },
+        maxHr: { mean: 186, stdDev: 8, min: 158, max: 199 },
+    },
+    AlpineSki: {
+        distanceKm: { mean: 27, stdDev: 13, min: 8, max: 75 },
+        durationMin: { mean: 300, stdDev: 100, min: 150, max: 450 },
+        speedKmh: { mean: 31, stdDev: 5, min: 18, max: 52 },
+        elevationMeters: { mean: 1050, stdDev: 420, min: 160, max: 2600 },
+        avgHr: { mean: 136, stdDev: 10, min: 104, max: 168 },
+        maxHr: { mean: 171, stdDev: 8, min: 144, max: 197 },
+    },
+    Walk: {
+        distanceKm: { mean: 7.2, stdDev: 2.8, min: 2, max: 18 },
+        speedKmh: { mean: 4.7, stdDev: 0.6, min: 3, max: 6.8 },
+        elevationMeters: { mean: 80, stdDev: 60, min: 0, max: 350 },
+        avgHr: { mean: 108, stdDev: 10, min: 82, max: 145 },
+        maxHr: { mean: 138, stdDev: 10, min: 100, max: 178 },
+    },
+};
+
 const GEAR_LIST = [
     { id: 'shoe_1', name: 'Nike Vaporfly', type: 'Shoes', brand: 'Nike' },
     { id: 'shoe_2', name: 'ASICS Gel Kayano', type: 'Shoes', brand: 'ASICS' },
@@ -53,6 +144,27 @@ function randomBetween(min, max) {
 
 function randomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+}
+
+function sampleNormal(mean, stdDev) {
+    // Box-Muller transform
+    let u = 0;
+    let v = 0;
+    while (u === 0) u = Math.random();
+    while (v === 0) v = Math.random();
+    return mean + stdDev * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+function sampleStat(statDef, fallbackMin, fallbackMax) {
+    if (!statDef) {
+        return randomBetween(fallbackMin, fallbackMax);
+    }
+    const sampled = sampleNormal(statDef.mean, statDef.stdDev);
+    return clamp(sampled, statDef.min, statDef.max);
 }
 
 function getRandomCity() {
@@ -124,31 +236,55 @@ function generateWeatherData(dateObj) {
     };
 }
 
-function generateDistanceKm(activityConfig) {
+function generateDistanceKm(activityConfig, statModel) {
+    const baseDistance = sampleStat(
+        statModel?.distanceKm,
+        activityConfig.distRange[0],
+        activityConfig.distRange[1]
+    );
+
+    // Si no es natación → devolver tal cual
     if (activityConfig.type !== 'Swim') {
-        return randomBetween(activityConfig.distRange[0], activityConfig.distRange[1]);
+        return baseDistance;
     }
 
-    const mostlyPoolDistance = Math.random() < 0.97;
-    if (!mostlyPoolDistance) {
-        return randomBetween(activityConfig.distRange[0], activityConfig.distRange[1]);
+    // 10% → distancia random sin ajustar
+    const randomSwim = Math.random() < 0.10;
+    if (randomSwim) {
+        return baseDistance;
     }
 
-    const poolLengthMeters = SWIM_POOL_LENGTHS_METERS[randomInt(0, SWIM_POOL_LENGTHS_METERS.length - 1)];
-    const minMeters = Math.ceil((activityConfig.distRange[0] * 1000) / poolLengthMeters);
-    const maxMeters = Math.floor((activityConfig.distRange[1] * 1000) / poolLengthMeters);
-    const lapCount = randomInt(minMeters, maxMeters);
-    return (lapCount * poolLengthMeters) / 1000;
+    // 90% → piscina realista
+    const poolLength = SWIM_POOL_LENGTHS_METERS[
+        randomInt(0, SWIM_POOL_LENGTHS_METERS.length - 1)
+    ];
+
+    const baseMeters = Math.round(baseDistance * 1000);
+
+    // Redondear al múltiplo más cercano del largo de piscina
+    const finalMeters = Math.max(
+        poolLength,
+        Math.round(baseMeters / poolLength) * poolLength
+    );
+
+    return finalMeters / 1000;
 }
 
-function generateElevationGain(activityType) {
-    if (['Ride', 'MountainBikeRide', 'AlpineSki'].includes(activityType)) {
-        return randomInt(100, 1500);
+
+function generateElevationGain(activityType, statModel) {
+    if (statModel?.elevationMeters) {
+        return Math.round(sampleStat(statModel.elevationMeters, 0, 1000));
     }
-    if (['Run', 'TrailRun', 'Hike', 'Walk'].includes(activityType)) {
-        return randomInt(0, 500);
-    }
+    if (['Ride', 'MountainBikeRide', 'AlpineSki'].includes(activityType)) return randomInt(100, 1500);
+    if (['Run', 'TrailRun', 'Hike', 'Walk'].includes(activityType)) return randomInt(0, 500);
     return 0;
+}
+
+function generateMovingTimeSeconds(activityType, distanceKm, speedKmh, statModel) {
+    if (statModel?.durationMin && ['WeightTraining', 'Padel', 'Soccer'].includes(activityType)) {
+        return Math.round(sampleStat(statModel.durationMin, 30, 120) * 60);
+    }
+    return Math.round((distanceKm / Math.max(0.3, speedKmh)) * 3600);
 }
 
 function formatActivityName(activityType, distanceKm) {
@@ -213,10 +349,11 @@ export function generateDemoData() {
         }
 
         const actConfig = ACTIVITY_TYPES.find(a => a.type === actType);
-        const distance = generateDistanceKm(actConfig);
-        const speed = randomBetween(actConfig.speedRange[0], actConfig.speedRange[1]);
-        const movingTime = Math.round((distance / speed) * 3600);
-        const elevation = generateElevationGain(actType);
+        const statModel = ACTIVITY_STAT_MODELS[actType] || null;
+        const distance = generateDistanceKm(actConfig, statModel);
+        const speed = sampleStat(statModel?.speedKmh, actConfig.speedRange[0], actConfig.speedRange[1]);
+        const movingTime = generateMovingTimeSeconds(actType, distance, speed, statModel);
+        const elevation = generateElevationGain(actType, statModel);
 
         const gear = getRandomGear(actType);
         const city = getRandomCity();
@@ -255,8 +392,8 @@ export function generateDemoData() {
             end_latlng: [city.lat + randomBetween(-0.1, 0.1), city.lng + randomBetween(-0.1, 0.1)],
             average_speed: speed / 3.6, // m/s
             max_speed: (speed * 1.3) / 3.6,
-            average_heartrate: randomInt(130, 160),
-            max_heartrate: randomInt(175, 195),
+            average_heartrate: Math.round(sampleStat(statModel?.avgHr, 130, 160)),
+            max_heartrate: Math.round(sampleStat(statModel?.maxHr, 175, 195)),
             average_cadence: randomInt(170, 185),
             average_temp: weather.temperature,
             gear_id: gear?.id || null,
@@ -291,13 +428,16 @@ export function generateDemoData() {
             } : null,
             from_accepted_tag: false,
             upload_id: null,
-            average_watts: ['Ride', 'MountainBikeRide'].includes(actType) ? randomBetween(150, 350) :
-                actType === 'WeightTraining' ? randomBetween(100, 250) : null,
-            weighted_average_watts: ['Ride', 'MountainBikeRide'].includes(actType) ? randomBetween(160, 360) :
-                actType === 'WeightTraining' ? randomBetween(110, 260) : null,
+            average_watts: ['Ride', 'MountainBikeRide', 'WeightTraining'].includes(actType)
+                ? Math.round(sampleStat(statModel?.avgWatts, 120, 340))
+                : null,
+            weighted_average_watts: ['Ride', 'MountainBikeRide', 'WeightTraining'].includes(actType)
+                ? Math.round(sampleStat(statModel?.weightedWatts, 130, 360))
+                : null,
             device_watts: ['Ride', 'MountainBikeRide', 'WeightTraining'].includes(actType) ? Math.random() > 0.5 : false,
-            max_watts: ['Ride', 'MountainBikeRide'].includes(actType) ? randomBetween(400, 800) :
-                actType === 'WeightTraining' ? randomBetween(300, 500) : null,
+            max_watts: ['Ride', 'MountainBikeRide', 'WeightTraining'].includes(actType)
+                ? Math.round(sampleStat(statModel?.maxWatts, 280, 900))
+                : null,
             calories: Math.round(movingTime * 8 + Math.random() * 200),
             has_kudos: Math.random() > 0.7,
             kudos_count: randomInt(0, 20),

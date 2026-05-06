@@ -111,6 +111,11 @@ function numericSafe(v) {
 const WEATHER_REQUEST_TIMEOUT_MS = 4000; // abort individual request after 4 s
 const WEATHER_TOTAL_TIMEOUT_MS = 12000;  // stop fetching weather after 12 s total
 
+function isDemoModeFromStorage() {
+    if (typeof localStorage === 'undefined') return false;
+    return localStorage.getItem('strava_demo_mode') === 'true';
+}
+
 async function getWeatherForRun(run) {
     if (!run.start_latlng || run.start_latlng.length < 2) {
         return null;
@@ -342,6 +347,23 @@ function computeVO2max(activity, maxHr = MAX_HR_DEFAULT) {
 async function groupByDay(activities) {
     const daily = {};
     const runs = activities.filter(a => a.type === 'Run' && a.start_latlng);
+
+    // Demo data already includes synthetic weather fields and should avoid network/weather logs.
+    if (isDemoModeFromStorage()) {
+        activities.forEach(a => {
+            const date = a.start_date_local?.split('T')[0];
+            if (!date) return;
+
+            computeVO2max(a);
+
+            if (!daily[date]) {
+                daily[date] = { tss: 0, count: 0 };
+            }
+            daily[date].tss += a.tss;
+            daily[date].count += 1;
+        });
+        return daily;
+    }
 
     // Fetch weather in batches with a hard total-time cap
     const batches = 5;
