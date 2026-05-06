@@ -11,14 +11,14 @@ let dashboardRenderContext = {
 
 const RANGE_OPTIONS = [
     { label: 'This Week', type: 'week' },
-    { label: 'All Time', type: 'alltime' },
     { label: 'Last 7 Days', type: 'last7' },
     { label: 'This Month', type: 'month' },
     { label: 'Last 30 Days', type: 'last30' },
     { label: 'Last 3 Months', type: 'last3m' },
     { label: 'Last 6 Months', type: 'last6m' },
     { label: 'This Year', type: 'year' },
-    { label: 'Last 365 Days', type: 'last365' }
+    { label: 'Last 365 Days', type: 'last365' },
+    { label: 'All Time', type: 'alltime' }
 ];
 
 function toLocalYMD(date) {
@@ -438,15 +438,23 @@ function buildRollingSevenDayLoad(activities, rangeStart, rangeEnd) {
         metricsByDay.set(key, existing);
     });
 
+    const fullStart = new Date(sorted[0].start_date_local || new Date());
+    const today = new Date();
+    const visibleStart = new Date(rangeStart);
+    const visibleEnd = new Date(rangeEnd);
+
+    fullStart.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    visibleStart.setHours(0, 0, 0, 0);
+    visibleEnd.setHours(0, 0, 0, 0);
+
     const labels = [];
     const ctlDaily = [];
     const atlDaily = [];
     const tsbDaily = [];
     const riskDaily = [];
     const load7d = [];
-    const visibleStart = new Date(rangeStart);
-    const endCursor = new Date(rangeEnd);
-    const fullStart = new Date(sorted[0].start_date_local || rangeStart);
+
     let cursor = new Date(fullStart);
     let lastCtl = sorted[0].ctl || 0;
     let lastAtl = sorted[0].atl || 0;
@@ -455,12 +463,8 @@ function buildRollingSevenDayLoad(activities, rangeStart, rangeEnd) {
     let rollingTssSum = 0;
     const rollingTssWindow = [];
 
-    visibleStart.setHours(0, 0, 0, 0);
-    fullStart.setHours(0, 0, 0, 0);
-    cursor.setHours(0, 0, 0, 0);
-    endCursor.setHours(0, 0, 0, 0);
-
-    while (cursor <= endCursor) {
+    // Calculate from day 0 to TODAY, regardless of visible range
+    while (cursor <= today) {
         const key = toLocalYMD(cursor);
         const entry = metricsByDay.get(key);
         const dayTss = tssByDay.get(key) || 0;
@@ -478,19 +482,22 @@ function buildRollingSevenDayLoad(activities, rangeStart, rangeEnd) {
             lastRisk = entry.riskSum / entry.count;
         }
 
-        if (cursor >= visibleStart) {
-            labels.push(key);
-            ctlDaily.push(+lastCtl.toFixed(1));
-            atlDaily.push(+lastAtl.toFixed(1));
-            tsbDaily.push(+(toDisplayTsb(lastTsb)).toFixed(1));
-            riskDaily.push(+lastRisk.toFixed(3));
-            load7d.push(+rollingTssSum.toFixed(1));
-        }
+        // Always push to arrays so we have full history
+        labels.push(key);
+        ctlDaily.push(+lastCtl.toFixed(1));
+        atlDaily.push(+lastAtl.toFixed(1));
+        tsbDaily.push(+(toDisplayTsb(lastTsb)).toFixed(1));
+        riskDaily.push(+lastRisk.toFixed(3));
+        load7d.push(+rollingTssSum.toFixed(1));
 
         cursor = addDays(cursor, 1);
     }
 
-    return { labels, load7d, ctlDaily, atlDaily, tsbDaily, riskDaily, sorted };
+    // Return full series and visible range info
+    return {
+        labels, load7d, ctlDaily, atlDaily, tsbDaily, riskDaily, sorted,
+        fullStart, today, visibleStart, visibleEnd
+    };
 }
 
 function getPercentileValue(values, percentile) {
@@ -1286,6 +1293,7 @@ function smoothReadinessSeries(values, window = 5, maxDailyDelta = 8) {
 /**
  * Build a daily readiness series from existing PMC/load series.
  * This keeps readiness coherent with the Training Load & Performance section.
+ * ALWAYS calculates from day 0 to today, regardless of display filter.
  */
 function buildTrainingReadinessSeries(activities, rangeStart, rangeEnd) {
     const series = buildRollingSevenDayLoad(activities, rangeStart, rangeEnd);
@@ -1313,13 +1321,14 @@ function buildTrainingReadinessSeries(activities, rangeStart, rangeEnd) {
         const bandScore = getReadinessBandScore(load7d, band);
         const loadStabilityScore = normalize01(acwrScore * 0.65 + bandScore * 0.35);
 
+        // Readiness is based on: TSB (35%), CTL (25%), ATL inverted (20%), Load Stability (20%)
+        // NO injury penalty - injury risk is reference only
         const base01 =
             0.35 * tsbScore +
             0.25 * ctlScore +
             0.20 * (1 - atlFatigueScore) +
             0.20 * loadStabilityScore;
 
-        const injuryPenalty = getReadinessInjuryPenalty(injury);
         const final01 = normalize01(base01);
 
         const tsbPts = 35 * tsbScore;
@@ -1335,7 +1344,7 @@ function buildTrainingReadinessSeries(activities, rangeStart, rangeEnd) {
             ctl: { value: ctl, score: ctlScore, points: ctlPts },
             atl: { value: atl, delta: atl - ctl, fatigueScore: atlFatigueScore, points: atlPts },
             load: { value: load7d, acwrScore, bandScore, score: loadStabilityScore, points: loadPts },
-            injury: { value: injury, penalty: injuryPenalty, penaltyPoints: injuryPenaltyPts },
+            injury: { value: injury, penalty: 0, penaltyPoints: injuryPenaltyPts },
             basePoints: basePts,
             readiness: final01 * 100
         });
@@ -1356,7 +1365,11 @@ function buildTrainingReadinessSeries(activities, rangeStart, rangeEnd) {
         ctlDaily: series.ctlDaily,
         atlDaily: series.atlDaily,
         tsbDaily: series.tsbDaily,
-        riskDaily: series.riskDaily
+        riskDaily: series.riskDaily,
+        fullStart: series.fullStart,
+        today: series.today,
+        visibleStart: series.visibleStart,
+        visibleEnd: series.visibleEnd
     };
 }
 
@@ -1461,14 +1474,25 @@ function renderReadinessTimelineChart(data) {
     }
 
     const ctx = canvas.getContext('2d');
+
+    // Filter data for visible range only
+    const visibleIndices = data.labels.map((label, i) => {
+        const date = new Date(`${label}T00:00:00`);
+        return date >= data.visibleStart && date <= data.visibleEnd ? i : -1;
+    }).filter(i => i !== -1);
+
+    const visibleLabels = data.labels.filter((_, i) => visibleIndices.includes(i));
+    const visibleReadiness = data.readiness.filter((_, i) => visibleIndices.includes(i));
+    const visibleBreakdown = data.breakdown.filter((_, i) => visibleIndices.includes(i));
+
     const config = {
         type: 'line',
         data: {
-            labels: data.labels,
+            labels: visibleLabels,
             datasets: [
                 {
                     label: 'Readiness Score',
-                    data: data.readiness,
+                    data: visibleReadiness,
                     borderColor: '#4f46e5',
                     backgroundColor: 'rgba(79, 70, 229, 0.05)',
                     borderWidth: 2.5,
@@ -1482,7 +1506,7 @@ function renderReadinessTimelineChart(data) {
                 },
                 {
                     label: 'Optimal Zone',
-                    data: Array(data.labels.length).fill(75),
+                    data: Array(visibleLabels.length).fill(75),
                     borderColor: '#2ecc71',
                     backgroundColor: 'rgba(46, 204, 113, 0.08)',
                     borderWidth: 1.5,
@@ -1493,7 +1517,7 @@ function renderReadinessTimelineChart(data) {
                 },
                 {
                     label: 'Caution Zone',
-                    data: Array(data.labels.length).fill(40),
+                    data: Array(visibleLabels.length).fill(40),
                     borderColor: '#f39c12',
                     backgroundColor: 'rgba(243, 156, 18, 0.08)',
                     borderWidth: 1.5,
@@ -1504,7 +1528,7 @@ function renderReadinessTimelineChart(data) {
                 },
                 {
                     label: 'Danger Zone',
-                    data: Array(data.labels.length).fill(25),
+                    data: Array(visibleLabels.length).fill(25),
                     borderColor: '#e74c3c',
                     backgroundColor: 'rgba(231, 76, 60, 0.08)',
                     borderWidth: 1.5,
@@ -1551,7 +1575,7 @@ function renderReadinessTimelineChart(data) {
                             const item = items && items[0];
                             if (!item || item.dataset.label !== 'Readiness Score') return [];
                             const index = item.dataIndex;
-                            const parts = data.breakdown[index];
+                            const parts = visibleBreakdown[index];
                             if (!parts) return [];
 
                             return [
@@ -1712,11 +1736,13 @@ function drawGaugeChart(canvas, score) {
 
 /**
  * Main rendering function for Training Readiness
+ * Shows TODAY's readiness value, with timeline filtered to visible range
  */
 function renderTrainingReadiness(allActivities, rangeStart, rangeEnd) {
     const readinessData = buildTrainingReadinessSeries(allActivities, rangeStart, rangeEnd);
     if (!readinessData) return;
 
+    // ALWAYS show today's readiness (last index)
     const lastIndex = readinessData.labels.length - 1;
     const currentReadiness = readinessData.readiness[lastIndex] ?? readinessData.readinessRaw[lastIndex] ?? 0;
 
@@ -1726,10 +1752,10 @@ function renderTrainingReadiness(allActivities, rangeStart, rangeEnd) {
         drawGaugeChart(canvas, currentReadiness);
     }
 
-    // Render score display with detailed metrics
+    // Render score display with today's metrics
     renderReadinessGauge(currentReadiness, readinessData);
 
-    // Render timeline
+    // Render timeline with visible range filter applied at display time
     renderReadinessTimelineChart(readinessData);
 }
 
@@ -1758,18 +1784,31 @@ function renderAcuteLoadChart(activities, rangeStart, rangeEnd) {
     }
 
     const profile = getPmcProfile(series.sorted);
-    const labels = series.labels.map(label => {
+
+    // Filter series data for visible range ONLY AT DISPLAY TIME
+    const visibleIndices = series.labels.map((label, i) => {
         const date = new Date(`${label}T00:00:00`);
-        return `${date.getMonth() + 1}/${date.getDate()}`;
-    });
-    const load7d = series.load7d;
-    const ctl7dBase = series.ctlDaily.map(value => +(value * 7).toFixed(1));
-    const idealBand = series.ctlDaily.map(value => getAcuteLoadBand(profile, value, acuteLoadBandMode));
+        return date >= rangeStart && date <= rangeEnd ? i : -1;
+    }).filter(i => i !== -1);
+
+    const labels = series.labels
+        .filter((_, i) => visibleIndices.includes(i))
+        .map(label => {
+            const date = new Date(`${label}T00:00:00`);
+            return `${date.getMonth() + 1}/${date.getDate()}`;
+        });
+
+    const load7d = series.load7d.filter((_, i) => visibleIndices.includes(i));
+    const ctl7dBase = series.ctlDaily.filter((_, i) => visibleIndices.includes(i)).map(value => +(value * 7).toFixed(1));
+    const tsbData = series.tsbDaily.filter((_, i) => visibleIndices.includes(i));
+    const ctlForBand = series.ctlDaily.filter((_, i) => visibleIndices.includes(i));
+    const idealBand = ctlForBand.map(value => getAcuteLoadBand(profile, value, acuteLoadBandMode));
     const bandLower = idealBand.map(band => band.lower);
     const bandUpper = idealBand.map(band => band.upper);
-    const tsbData = series.tsbDaily;
-    const lastBand = idealBand[idealBand.length - 1];
-    const lastLoad = load7d[load7d.length - 1] || 0;
+
+    // ALWAYS use TODAY's values for display
+    const lastBand = getAcuteLoadBand(profile, series.ctlDaily[series.ctlDaily.length - 1], acuteLoadBandMode);
+    const lastLoad = series.load7d[series.load7d.length - 1] || 0;
     const lastCtl = series.ctlDaily[series.ctlDaily.length - 1] || 0;
     const lastAtl = series.atlDaily[series.atlDaily.length - 1] || 0;
     const lastTsb = series.tsbDaily[series.tsbDaily.length - 1] || 0;
@@ -2049,6 +2088,11 @@ function renderTSSBarChart(activities, rangeType) {
  * Helper function to get TSS/Activities/Hours data grouped by period
  */
 function getTSSBarChartData(activities, rangeType, startDate, endDate, unit) {
+    // For All Time, use quarterly aggregation
+    if (rangeType === 'alltime') {
+        return getTSSBarChartDataQuarterly(activities, unit);
+    }
+
     const isDaily = rangeType === 'week' || rangeType === 'last7' || rangeType === 'month' || rangeType === 'last30';
     const isWeekly = rangeType === 'last3m' || rangeType === 'last6m';
     const isMonthly = rangeType === 'year' || rangeType === 'last365';
@@ -2155,6 +2199,93 @@ function getTSSBarChartData(activities, rangeType, startDate, endDate, unit) {
             return `${new Date(y, m - 1).toLocaleString('default', { month: 'short' })} ${y.slice(2)}`;
         }
         return key;
+    });
+
+    let formatFn = v => Math.round(v);
+    if (unit === 'hours') {
+        formatFn = v => v.toFixed(1);
+    }
+
+    const datasets = sports
+        .map(sport => ({
+            label: sport,
+            data: sortedKeys.map(k => formatFn(grouped[k][sport] || 0)),
+            backgroundColor: sportColors[sport],
+            borderColor: '#fff',
+            borderWidth: 1,
+            borderRadius: 3
+        }))
+        .filter(dataset => dataset.data.some(value => value > 0));
+
+    let yAxisTitle = 'TSS';
+    if (unit === 'activities') {
+        yAxisTitle = 'Activities';
+    } else if (unit === 'hours') {
+        yAxisTitle = 'Hours';
+    }
+
+    return { labels, datasets, yAxisTitle };
+}
+
+/**
+ * Get TSS bar chart data with QUARTERLY aggregation for All Time range
+ */
+function getTSSBarChartDataQuarterly(activities, unit) {
+    const sports = ['Run', 'Ride', 'Swim', 'Gym'];
+    const sportColors = {
+        Run: '#ff7f50',
+        Ride: '#20b2aa',
+        Swim: '#1e90ff',
+        Gym: '#9370db',
+        Other: '#95a5a6'
+    };
+
+    const grouped = {};
+
+    // Group by quarter: "2023-Q1", "2023-Q2", etc.
+    if (activities && activities.length > 0) {
+        for (const a of activities) {
+            if (!a.start_date_local) continue;
+            const date = new Date(a.start_date_local);
+            if (isNaN(date)) continue;
+
+            const year = date.getFullYear();
+            const quarter = Math.floor(date.getMonth() / 3) + 1;
+            const key = `${year}-Q${quarter}`;
+
+            if (!grouped[key]) {
+                grouped[key] = {
+                    total: 0,
+                    Run: 0,
+                    Ride: 0,
+                    Swim: 0,
+                    Gym: 0,
+                    Other: 0
+                };
+            }
+
+            const sport = getSportKey(a.type || '');
+            let value = 0;
+
+            if (unit === 'tss') {
+                value = a.tss ?? (a.suffer_score ? a.suffer_score * 1.05 : 0);
+            } else if (unit === 'activities') {
+                value = 1;
+            } else if (unit === 'hours') {
+                value = (a.moving_time || 0) / 3600;
+            }
+
+            grouped[key].total += value;
+            grouped[key][sport] = (grouped[key][sport] || 0) + value;
+        }
+    }
+
+    const sortedKeys = Object.keys(grouped).sort();
+
+    const labels = sortedKeys.map(key => {
+        // Format: "2023 Q1", "2023 Q2", etc.
+        const [year, quarter] = key.split('-');
+        return `${year} ${quarter}`;
     });
 
     let formatFn = v => Math.round(v);

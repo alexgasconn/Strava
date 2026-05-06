@@ -193,17 +193,17 @@ async function getWeatherForRun(run) {
 //
 const SPORT_TSS_MULTIPLIER = {
     // Runs
-    Run: 1.08,
+    Run: 1.07,
     VirtualRun: 1.05,
     TrailRun: 1.12,
     // Cycling
-    Ride: 0.90,
-    VirtualRide: 0.88,
-    GravelRide: 0.92,
-    MountainBikeRide: 0.92,
+    Ride: 0.85,
+    VirtualRide: 0.70,
+    GravelRide: 0.88,
+    MountainBikeRide: 0.90,
     EBikeRide: 0.72,
     // Water
-    Swim: 0.65,
+    Swim: 0.75,
     // Team/field
     Soccer: 1.05,
     // Hiking & walking
