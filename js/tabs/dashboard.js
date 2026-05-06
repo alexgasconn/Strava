@@ -1427,6 +1427,7 @@ function renderReadinessGauge(score, readinessData) {
     }
 
     container.innerHTML = `
+    <div class="readiness-top">
         <div class="readiness-score-display">
             <div class="readiness-score-value">
                 <span class="score-number">${score.toFixed(0)}</span>
@@ -1434,32 +1435,35 @@ function renderReadinessGauge(score, readinessData) {
             </div>
             <div class="readiness-score-label" style="color: ${color};">${label}</div>
         </div>
-        <div class="readiness-metrics">
-            <div class="readiness-metric-item">
-                <div class="readiness-metric-label">TSB (Freshness)</div>
-                <div class="readiness-metric-value">${tsb.toFixed(1)}</div>
-                <small style="color: #666;">${tsbStatus.label} · +${parts.tsb.points.toFixed(1)} pts</small>
-            </div>
-            <div class="readiness-metric-item">
-                <div class="readiness-metric-label">CTL (Fitness)</div>
-                <div class="readiness-metric-value">${ctl.toFixed(1)}</div>
-                <small style="color: #666;">${ctlStatus.label} · +${parts.ctl.points.toFixed(1)} pts</small>
-            </div>
-            <div class="readiness-metric-item">
-                <div class="readiness-metric-label">ATL (Fatigue)</div>
-                <div class="readiness-metric-value">${atl.toFixed(1)}</div>
-                <small style="color: #666;">${atlStatus.label} · +${parts.atl.points.toFixed(1)} pts</small>
-            </div>
-            <div class="readiness-metric-item">
-                <div class="readiness-metric-label">Injury Risk</div>
-                <div class="readiness-metric-value">${risk.toFixed(3)}</div>
-                <small style="color: #666;">Reference only · not used in score</small>
-            </div>
-        </div>
+
         <div class="readiness-insights" style="border-left-color: ${color}; background: ${color}15;">
             <strong>Today's Insight:</strong> ${insight}
         </div>
-    `;
+    </div>
+
+    <div class="readiness-metrics">
+        <div class="readiness-metric-item">
+            <div class="readiness-metric-label">TSB (Freshness)</div>
+            <div class="readiness-metric-value">${tsb.toFixed(1)}</div>
+            <small style="color: #666;">${tsbStatus.label} · +${parts.tsb.points.toFixed(1)} pts</small>
+        </div>
+        <div class="readiness-metric-item">
+            <div class="readiness-metric-label">CTL (Fitness)</div>
+            <div class="readiness-metric-value">${ctl.toFixed(1)}</div>
+            <small style="color: #666;">${ctlStatus.label} · +${parts.ctl.points.toFixed(1)} pts</small>
+        </div>
+        <div class="readiness-metric-item">
+            <div class="readiness-metric-label">ATL (Fatigue)</div>
+            <div class="readiness-metric-value">${atl.toFixed(1)}</div>
+            <small style="color: #666;">${atlStatus.label} · +${parts.atl.points.toFixed(1)} pts</small>
+        </div>
+        <div class="readiness-metric-item">
+            <div class="readiness-metric-label">Injury Risk</div>
+            <div class="readiness-metric-value">${risk.toFixed(3)}</div>
+            <small style="color: #666;">Reference only · not used in score</small>
+        </div>
+    </div>
+`;
 }
 
 /**
@@ -1484,6 +1488,24 @@ function renderReadinessTimelineChart(data) {
     const visibleLabels = data.labels.filter((_, i) => visibleIndices.includes(i));
     const visibleReadiness = data.readiness.filter((_, i) => visibleIndices.includes(i));
     const visibleBreakdown = data.breakdown.filter((_, i) => visibleIndices.includes(i));
+
+    const readinessValues = visibleReadiness.filter(Number.isFinite);
+    const minReadiness = readinessValues.length ? Math.min(...readinessValues) : 0;
+    const maxReadiness = readinessValues.length ? Math.max(...readinessValues) : 100;
+    const spread = Math.max(8, maxReadiness - minReadiness);
+    const padding = Math.max(6, spread * 0.35);
+
+    let yMin = Math.max(0, Math.floor((minReadiness - padding) / 5) * 5);
+    let yMax = Math.min(100, Math.ceil((maxReadiness + padding) / 5) * 5);
+
+    // Keep enough vertical room to avoid a visually flat line when values are tightly clustered.
+    if (yMax - yMin < 20) {
+        const center = (yMin + yMax) / 2;
+        yMin = Math.max(0, Math.floor((center - 10) / 5) * 5);
+        yMax = Math.min(100, Math.ceil((center + 10) / 5) * 5);
+    }
+
+    const yStep = yMax - yMin <= 30 ? 5 : 10;
 
     const config = {
         type: 'line',
@@ -1541,7 +1563,7 @@ function renderReadinessTimelineChart(data) {
         },
         options: {
             responsive: true,
-            maintainAspectRatio: true,
+            maintainAspectRatio: false,
             interaction: {
                 mode: 'index',
                 intersect: false,
@@ -1592,10 +1614,10 @@ function renderReadinessTimelineChart(data) {
             scales: {
                 y: {
                     type: 'linear',
-                    min: 0,
-                    max: 100,
+                    min: yMin,
+                    max: yMax,
                     ticks: {
-                        stepSize: 20,
+                        stepSize: yStep,
                         font: { size: 11 },
                         color: '#999',
                     },
