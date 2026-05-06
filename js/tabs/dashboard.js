@@ -11,6 +11,7 @@ let dashboardRenderContext = {
 
 const RANGE_OPTIONS = [
     { label: 'This Week', type: 'week' },
+    { label: 'All Time', type: 'alltime' },
     { label: 'Last 7 Days', type: 'last7' },
     { label: 'This Month', type: 'month' },
     { label: 'Last 30 Days', type: 'last30' },
@@ -76,6 +77,16 @@ function getRangeStartDate(rangeType) {
             const diffToMonday = currentDay === 0 ? -6 : 1 - currentDay;
             startDate = new Date(now);
             startDate.setDate(now.getDate() + diffToMonday);
+            startDate.setHours(0, 0, 0, 0);
+            break;
+        }
+        case 'alltime': {
+            const earliestActivity = (dashboardRenderContext.allActivities || [])
+                .filter(activity => activity?.start_date_local)
+                .sort((a, b) => new Date(a.start_date_local || 0) - new Date(b.start_date_local || 0))[0];
+            startDate = earliestActivity
+                ? new Date(earliestActivity.start_date_local)
+                : new Date(now);
             startDate.setHours(0, 0, 0, 0);
             break;
         }
@@ -412,10 +423,6 @@ function buildRollingSevenDayLoad(activities, rangeStart, rangeEnd) {
 
     const tssByDay = new Map();
     const metricsByDay = new Map();
-    let ctlSeed = sorted[0].ctl || 0;
-    let atlSeed = sorted[0].atl || 0;
-    let tsbSeed = sorted[0].tsb || 0;
-    let riskSeed = sorted[0].injuryRisk || 0;
 
     sorted.forEach(activity => {
         const date = new Date(activity.start_date_local);
@@ -429,34 +436,40 @@ function buildRollingSevenDayLoad(activities, rangeStart, rangeEnd) {
         existing.riskSum += activity.injuryRisk || 0;
         existing.count += 1;
         metricsByDay.set(key, existing);
-
-        if (date <= rangeStart) {
-            if (Number.isFinite(activity.ctl)) ctlSeed = activity.ctl;
-            if (Number.isFinite(activity.atl)) atlSeed = activity.atl;
-            if (Number.isFinite(activity.tsb)) tsbSeed = activity.tsb;
-            if (Number.isFinite(activity.injuryRisk)) riskSeed = activity.injuryRisk;
-        }
     });
 
     const labels = [];
-    const dailyTss = [];
     const ctlDaily = [];
     const atlDaily = [];
     const tsbDaily = [];
     const riskDaily = [];
-    let cursor = new Date(rangeStart);
-    let lastCtl = ctlSeed;
-    let lastAtl = atlSeed;
-    let lastTsb = tsbSeed;
-    let lastRisk = riskSeed;
+    const load7d = [];
+    const visibleStart = new Date(rangeStart);
     const endCursor = new Date(rangeEnd);
+    const fullStart = new Date(sorted[0].start_date_local || rangeStart);
+    let cursor = new Date(fullStart);
+    let lastCtl = sorted[0].ctl || 0;
+    let lastAtl = sorted[0].atl || 0;
+    let lastTsb = sorted[0].tsb || 0;
+    let lastRisk = sorted[0].injuryRisk || 0;
+    let rollingTssSum = 0;
+    const rollingTssWindow = [];
 
+    visibleStart.setHours(0, 0, 0, 0);
+    fullStart.setHours(0, 0, 0, 0);
     cursor.setHours(0, 0, 0, 0);
     endCursor.setHours(0, 0, 0, 0);
 
     while (cursor <= endCursor) {
         const key = toLocalYMD(cursor);
         const entry = metricsByDay.get(key);
+        const dayTss = tssByDay.get(key) || 0;
+
+        rollingTssWindow.push(dayTss);
+        rollingTssSum += dayTss;
+        if (rollingTssWindow.length > 7) {
+            rollingTssSum -= rollingTssWindow.shift();
+        }
 
         if (entry && entry.count) {
             lastCtl = entry.ctlSum / entry.count;
@@ -465,22 +478,17 @@ function buildRollingSevenDayLoad(activities, rangeStart, rangeEnd) {
             lastRisk = entry.riskSum / entry.count;
         }
 
-        labels.push(key);
-        dailyTss.push(tssByDay.get(key) || 0);
-        ctlDaily.push(+lastCtl.toFixed(1));
-        atlDaily.push(+lastAtl.toFixed(1));
-        tsbDaily.push(+(toDisplayTsb(lastTsb)).toFixed(1));
-        riskDaily.push(+lastRisk.toFixed(3));
+        if (cursor >= visibleStart) {
+            labels.push(key);
+            ctlDaily.push(+lastCtl.toFixed(1));
+            atlDaily.push(+lastAtl.toFixed(1));
+            tsbDaily.push(+(toDisplayTsb(lastTsb)).toFixed(1));
+            riskDaily.push(+lastRisk.toFixed(3));
+            load7d.push(+rollingTssSum.toFixed(1));
+        }
+
         cursor = addDays(cursor, 1);
     }
-
-    const load7d = dailyTss.map((_, index) => {
-        let sum = 0;
-        for (let offset = Math.max(0, index - 6); offset <= index; offset += 1) {
-            sum += dailyTss[offset];
-        }
-        return +sum.toFixed(1);
-    });
 
     return { labels, load7d, ctlDaily, atlDaily, tsbDaily, riskDaily, sorted };
 }
@@ -678,11 +686,11 @@ function buildTsbBands(profile) {
     ];
 }
 
-function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, currentStatus, currentLoad, currentCtl, currentAtl, currentTsb, currentRisk) {
+function renderAcuteLoadExplanation(visibleActivities, historyActivities, profile, currentBand, currentStatus, currentLoad, currentCtl, currentAtl, currentTsb, currentRisk) {
     const container = document.getElementById('acute-load-explainer');
     if (!container) return;
 
-    if (!sortedActivities.length) {
+    if (!historyActivities.length) {
         container.innerHTML = '';
         return;
     }
@@ -695,22 +703,22 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
             ? `${(currentBand.lower - currentLoad).toFixed(1)} below the band`
             : `${Math.min(deltaToTop, deltaToBottom).toFixed(1)} from edge`;
 
-    const ctlStatus = getCtlStatus(currentCtl, sortedActivities, profile);
+    const ctlStatus = getCtlStatus(currentCtl, historyActivities, profile);
     const atlStatus = getAtlStatus(currentAtl, currentCtl);
     const tsbStatus = getTsbStatus(currentTsb, profile);
     const context = {
         profile,
-        ctlPercentile: percentileRank(sortedActivities.map(a => a.ctl), currentCtl),
-        atlPercentile: percentileRank(sortedActivities.map(a => a.atl), currentAtl),
-        riskPercentile: percentileRank(sortedActivities.map(a => a.injuryRisk), currentRisk)
+        ctlPercentile: percentileRank(historyActivities.map(a => a.ctl), currentCtl),
+        atlPercentile: percentileRank(historyActivities.map(a => a.atl), currentAtl),
+        riskPercentile: percentileRank(historyActivities.map(a => a.injuryRisk), currentRisk)
     };
 
     // Total load in range
-    const totalLoad = sortedActivities.reduce((s, a) => s + (a.tss || 0), 0).toFixed(0);
+    const totalLoad = visibleActivities.reduce((s, a) => s + (a.tss || 0), 0).toFixed(0);
 
     // Weekly delta (last 14 days)
     const now = new Date();
-    const recent14 = sortedActivities.filter(a => (now - new Date(a.start_date_local)) / 86400000 <= 14);
+    const recent14 = historyActivities.filter(a => (now - new Date(a.start_date_local)) / 86400000 <= 14);
     const week1Load = recent14.filter(a => (now - new Date(a.start_date_local)) / 86400000 <= 7).reduce((s, a) => s + (a.tss || 0), 0);
     const week2Load = recent14.filter(a => (now - new Date(a.start_date_local)) / 86400000 > 7).reduce((s, a) => s + (a.tss || 0), 0);
     const weekDeltaPct = week2Load > 0 ? ((week1Load - week2Load) / week2Load) * 100 : 0;
@@ -719,7 +727,7 @@ function renderAcuteLoadExplanation(sortedActivities, profile, currentBand, curr
 
     // Ideal ranges
     const th = profile.thresholds;
-    const ctlValues = sortedActivities.map(a => a.ctl).filter(Number.isFinite);
+    const ctlValues = historyActivities.map(a => a.ctl).filter(Number.isFinite);
     const ctlMax = Math.max(...ctlValues);
     const ctlIdealLow = (ctlMax * 0.6).toFixed(1);
     const ctlIdealHigh = ctlMax.toFixed(1);
@@ -1018,8 +1026,8 @@ function renderDashboardContent(allActivities, dateFilterFrom, dateFilterTo) {
 
     // Render heavy charts in next frame to avoid blocking UI
     requestAnimationFrame(() => {
-        renderTrainingReadiness(recentActivities, startDate, endDate);
-        renderAcuteLoadChart(recentActivities, startDate, endDate);
+        renderTrainingReadiness(allActivities, startDate, endDate);
+        renderAcuteLoadChart(allActivities, startDate, endDate);
         renderTSSBarChart(recentActivities, selectedRangeDays);
         setupTSSUnitSelector();
         renderGoalsSectionAdvanced(allActivities);
@@ -1235,17 +1243,11 @@ function getReadinessBandScore(load7d, band) {
 }
 
 /**
- * Injury penalty is intentionally moderated because this metric can be noisy.
- * It still penalizes high-risk periods but avoids dominating the final score.
+ * Injury risk is kept as contextual information only.
+ * It no longer affects the readiness score.
  */
 function getReadinessInjuryPenalty(injuryRisk) {
-    if (!Number.isFinite(injuryRisk)) return 0;
-    const normalizedRisk = injuryRisk > 1 ? injuryRisk / 100 : injuryRisk;
-    const risk = normalize01(normalizedRisk);
-    const adjustedRisk = risk <= 0.25
-        ? risk * 0.45
-        : 0.1125 + (risk - 0.25) * 0.85;
-    return normalize01(Math.min(0.32, adjustedRisk * 0.45));
+    return 0;
 }
 
 /**
@@ -1318,14 +1320,14 @@ function buildTrainingReadinessSeries(activities, rangeStart, rangeEnd) {
             0.20 * loadStabilityScore;
 
         const injuryPenalty = getReadinessInjuryPenalty(injury);
-        const final01 = normalize01(base01 * (1 - injuryPenalty));
+        const final01 = normalize01(base01);
 
         const tsbPts = 35 * tsbScore;
         const ctlPts = 25 * ctlScore;
         const atlPts = 20 * (1 - atlFatigueScore);
         const loadPts = 20 * loadStabilityScore;
         const basePts = tsbPts + ctlPts + atlPts + loadPts;
-        const injuryPenaltyPts = basePts * injuryPenalty;
+        const injuryPenaltyPts = 0;
 
         readinessRaw.push(final01 * 100);
         breakdown.push({
@@ -1438,7 +1440,7 @@ function renderReadinessGauge(score, readinessData) {
             <div class="readiness-metric-item">
                 <div class="readiness-metric-label">Injury Risk</div>
                 <div class="readiness-metric-value">${risk.toFixed(3)}</div>
-                <small style="color: #666;">-${parts.injury.penaltyPoints.toFixed(1)} pts (moderated)</small>
+                <small style="color: #666;">Reference only · not used in score</small>
             </div>
         </div>
         <div class="readiness-insights" style="border-left-color: ${color}; background: ${color}15;">
@@ -1557,7 +1559,7 @@ function renderReadinessTimelineChart(data) {
                                 `CTL contribution: +${parts.ctl.points.toFixed(1)} pts`,
                                 `ATL contribution: +${parts.atl.points.toFixed(1)} pts`,
                                 `Load contribution: +${parts.load.points.toFixed(1)} pts`,
-                                `Injury penalty: -${parts.injury.penaltyPoints.toFixed(1)} pts`
+                                `Injury risk: ref only (${parts.injury.value.toFixed(3)})`
                             ];
                         }
                     }
@@ -1777,8 +1779,12 @@ function renderAcuteLoadChart(activities, rangeStart, rangeEnd) {
     const minTsb = Math.min(...tsbData, -10);
     const maxTsb = Math.max(...tsbData, 10);
     const tsbPadding = Math.max(6, Math.ceil((maxTsb - minTsb) * 0.12));
+    const visibleActivities = series.sorted.filter(activity => {
+        const date = new Date(activity.start_date_local);
+        return date >= rangeStart && date <= rangeEnd;
+    });
 
-    renderAcuteLoadExplanation(series.sorted, profile, lastBand, lastStatus, lastLoad, lastCtl, lastAtl, lastTsb, lastRisk);
+    renderAcuteLoadExplanation(visibleActivities, series.sorted, profile, lastBand, lastStatus, lastLoad, lastCtl, lastAtl, lastTsb, lastRisk);
 
     dashboardCharts['acute-load-chart'] = new Chart(ctx, {
         type: 'line',
