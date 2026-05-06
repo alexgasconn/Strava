@@ -1163,220 +1163,210 @@ function getTrendColor(pct) {
 // =================================================================
 
 /**
- * Normalize a value to 0-1 range given min/max
+ * Clamp any numeric value to [0, 1]
  */
-function normalizeToRange(value, min, max) {
-    if (max === min) return 0;
-    return Math.max(0, Math.min(1, (value - min) / (max - min)));
+function normalize01(value) {
+    return Math.max(0, Math.min(1, value));
 }
 
 /**
- * Calculate TSB (freshness) component score
- * Ideal range: +5 to +20 → high readiness
- * Negative values → penalize
- * > +20 → start to decline
+ * TSB score aligned with the same freshness language used in Training Load & Performance.
  */
-function getTsbScore(tsbValue) {
-    if (tsbValue >= 5 && tsbValue <= 20) {
-        // Ideal range: full score
-        return 1.0;
-    }
-    if (tsbValue > 20) {
-        // Too fresh might indicate undertraining
-        return Math.max(0.5, 1 - (tsbValue - 20) / 20);
-    }
-    if (tsbValue >= -5) {
-        // Small fatigue, acceptable
-        return 0.8;
-    }
-    if (tsbValue >= -10) {
-        // Moderate fatigue
-        return 0.6;
-    }
-    // Deep fatigue
-    return Math.max(0, (tsbValue + 15) / 10);
+function getReadinessTsbScore(tsbValue, profile) {
+    const t = profile.thresholds;
+    if (tsbValue >= 15) return 1.0;
+    if (tsbValue >= 5) return 0.92;
+    if (tsbValue >= -5) return 0.74;
+    if (tsbValue >= t.fatigue) return 0.56;
+    if (tsbValue >= t.deepFatigue) return 0.36;
+    return 0.16;
 }
 
 /**
- * Calculate CTL (fitness) component score
- * Higher CTL = better fitness ceiling, but need historical context
+ * CTL score using personal percentile context.
  */
-function getCtlScore(ctlValue, ctlValues) {
+function getReadinessCtlScore(ctlValue, ctlValues) {
     if (!ctlValues || ctlValues.length === 0) return 0.5;
     const ctlPercentile = percentileRank(ctlValues, ctlValue);
-    // Top 30% of personal history = good fitness
-    return Math.min(1, ctlPercentile * 1.5);
+    return normalize01(0.25 + ctlPercentile * 0.9);
 }
 
 /**
- * Calculate ATL (fatigue) component score
- * High ATL = fatigue = lower score
- * Optimal: ATL close to CTL or slightly below
+ * ATL fatigue score (high = more fatigue) aligned with ATL-CTL interpretation.
  */
-function getAtlScore(atlValue, ctlValue) {
-    const ratio = ctlValue > 0 ? atlValue / ctlValue : 0;
-
-    // Optimal: 0.6 - 1.1 (ATL between 60-110% of CTL)
-    if (ratio >= 0.6 && ratio <= 1.1) {
-        return 1.0;
-    }
-    if (ratio < 0.6) {
-        // Very low ATL → very fresh but might be under-training
-        return 0.9;
-    }
-    // High ATL → fatigue
-    // At 1.5× CTL, score = 0.5; at 2× CTL, score = 0
-    return Math.max(0, 1 - (ratio - 1.1) / 0.9);
+function getReadinessAtlFatigueScore(atlValue, ctlValue) {
+    const delta = (atlValue || 0) - (ctlValue || 0);
+    if (delta <= -6) return 0.22;
+    if (delta <= 4) return 0.34;
+    if (delta <= 12) return 0.56;
+    if (delta <= 22) return 0.80;
+    return 1.0;
 }
 
 /**
- * Calculate load stability (ACWR-like)
- * Compare 7-day TSS to 28-day average
+ * ACWR-like load stability score from rolling 7d load vs 28d baseline.
  */
-function getLoadStabilityScore(load7d, load28dAvg) {
-    if (load28dAvg === 0) return 0.5;
+function getReadinessLoadStabilityScore(load7dSeries, index) {
+    const load7d = load7dSeries[index] || 0;
+    const start = Math.max(0, index - 27);
+    const window = load7dSeries.slice(start, index + 1).filter(Number.isFinite);
+    const baseline = window.length ? window.reduce((sum, value) => sum + value, 0) / window.length : load7d;
+    if (!Number.isFinite(baseline) || baseline <= 0) return 0.65;
 
-    const ratio = load7d / (load28dAvg || 1);
-    // Optimal: 0.9 - 1.3 (within 10-30% above base)
-    if (ratio >= 0.9 && ratio <= 1.3) {
-        return 1.0;
-    }
-    if (ratio < 0.9) {
-        // Low load → recovery
-        return 0.85;
-    }
-    // Spike in load (> 1.3)
-    // At 1.5, score = 0.5; at 2.0, score = 0
-    return Math.max(0, 1 - (ratio - 1.3) / 0.7);
+    const ratio = load7d / baseline;
+    if (ratio >= 0.9 && ratio <= 1.3) return 1.0;
+    if (ratio < 0.9) return Math.max(0.58, 0.88 - (0.9 - ratio) * 0.6);
+    if (ratio > 1.4) return Math.max(0.0, 0.72 - (ratio - 1.4) * 0.9);
+    return 0.82;
 }
 
 /**
- * Calculate injury risk penalty
- * 0-1 scale, directly subtracts from readiness
+ * Band-consistency score using the same acute load band logic.
  */
-function getInjuryPenalty(injuryRisk) {
-    if (injuryRisk == null) return 0;
-    // Normalize to 0-1 if it's 0-100
-    const risk = injuryRisk > 1 ? injuryRisk / 100 : injuryRisk;
-    // Heavy penalty above 0.3
-    return Math.min(1, risk * 1.5);
+function getReadinessBandScore(load7d, band) {
+    const width = Math.max(1, band.upper - band.lower);
+    if (load7d >= band.lower && load7d <= band.upper) return 1.0;
+    if (load7d < band.lower) {
+        const gap = band.lower - load7d;
+        return Math.max(0.28, 1 - gap / (width * 0.95 + 12));
+    }
+    const gap = load7d - band.upper;
+    return Math.max(0.0, 1 - gap / (width * 0.7 + 10));
 }
 
 /**
- * Calculate overall readiness score for a single activity day
+ * Injury penalty is intentionally moderated because this metric can be noisy.
+ * It still penalizes high-risk periods but avoids dominating the final score.
  */
-function calculateActivityReadiness(activity, allActivities) {
-    if (!activity || !activity.ctl || !activity.atl || !activity.tsb) {
+function getReadinessInjuryPenalty(injuryRisk) {
+    if (!Number.isFinite(injuryRisk)) return 0;
+    const normalizedRisk = injuryRisk > 1 ? injuryRisk / 100 : injuryRisk;
+    const risk = normalize01(normalizedRisk);
+    const adjustedRisk = risk <= 0.25
+        ? risk * 0.45
+        : 0.1125 + (risk - 0.25) * 0.85;
+    return normalize01(Math.min(0.32, adjustedRisk * 0.45));
+}
+
+/**
+ * Smooth readiness to prevent abrupt day-to-day spikes.
+ */
+function smoothReadinessSeries(values, window = 5, maxDailyDelta = 8) {
+    const averaged = values.map((_, idx) => {
+        const start = Math.max(0, idx - Math.floor(window / 2));
+        const end = Math.min(values.length, idx + Math.ceil(window / 2));
+        const section = values.slice(start, end).filter(Number.isFinite);
+        if (!section.length) return null;
+        return section.reduce((sum, value) => sum + value, 0) / section.length;
+    });
+
+    const smoothed = [];
+    for (let i = 0; i < averaged.length; i++) {
+        const current = averaged[i];
+        if (!Number.isFinite(current)) {
+            smoothed.push(null);
+            continue;
+        }
+
+        if (smoothed.length === 0 || !Number.isFinite(smoothed[smoothed.length - 1])) {
+            smoothed.push(current);
+            continue;
+        }
+
+        const prev = smoothed[smoothed.length - 1];
+        const delta = Math.max(-maxDailyDelta, Math.min(maxDailyDelta, current - prev));
+        smoothed.push(prev + delta);
+    }
+
+    return smoothed;
+}
+
+/**
+ * Build a daily readiness series from existing PMC/load series.
+ * This keeps readiness coherent with the Training Load & Performance section.
+ */
+function buildTrainingReadinessSeries(activities, rangeStart, rangeEnd) {
+    const series = buildRollingSevenDayLoad(activities, rangeStart, rangeEnd);
+    if (!series || !series.sorted.length || !series.labels.length) {
         return null;
     }
 
-    const ctlValues = allActivities
-        .map(a => a.ctl)
-        .filter(Number.isFinite);
+    const profile = getPmcProfile(series.sorted);
+    const ctlValues = series.ctlDaily.filter(Number.isFinite);
+    const readinessRaw = [];
+    const breakdown = [];
 
-    // Calculate 7-day and 28-day TSS averages for this activity
-    const activityDate = new Date(activity.start_date_local);
-    const date7dAgo = new Date(activityDate.getTime() - 7 * 24 * 3600 * 1000);
-    const date28dAgo = new Date(activityDate.getTime() - 28 * 24 * 3600 * 1000);
+    for (let i = 0; i < series.labels.length; i++) {
+        const ctl = series.ctlDaily[i] || 0;
+        const atl = series.atlDaily[i] || 0;
+        const tsb = series.tsbDaily[i] || 0;
+        const injury = series.riskDaily[i] || 0;
+        const load7d = series.load7d[i] || 0;
+        const band = getAcuteLoadBand(profile, ctl, acuteLoadBandMode);
 
-    const last7d = allActivities.filter(a => {
-        const d = new Date(a.start_date_local);
-        return d >= date7dAgo && d <= activityDate;
-    });
-    const last28d = allActivities.filter(a => {
-        const d = new Date(a.start_date_local);
-        return d >= date28dAgo && d <= activityDate;
-    });
+        const tsbScore = getReadinessTsbScore(tsb, profile);
+        const ctlScore = getReadinessCtlScore(ctl, ctlValues);
+        const atlFatigueScore = getReadinessAtlFatigueScore(atl, ctl);
+        const acwrScore = getReadinessLoadStabilityScore(series.load7d, i);
+        const bandScore = getReadinessBandScore(load7d, band);
+        const loadStabilityScore = normalize01(acwrScore * 0.65 + bandScore * 0.35);
 
-    const load7d = last7d.reduce((sum, a) => sum + (a.tss || 0), 0);
-    const load28dAvg = last28d.length > 0 ? last28d.reduce((sum, a) => sum + (a.tss || 0), 0) / last28d.length : 10;
+        const base01 =
+            0.35 * tsbScore +
+            0.25 * ctlScore +
+            0.20 * (1 - atlFatigueScore) +
+            0.20 * loadStabilityScore;
 
-    // Component scores
-    const tsbScore = getTsbScore(activity.tsb);
-    const ctlScore = getCtlScore(activity.ctl, ctlValues);
-    const atlScore = getAtlScore(activity.atl, activity.ctl);
-    const loadStabilityScore = getLoadStabilityScore(load7d, load28dAvg);
+        const injuryPenalty = getReadinessInjuryPenalty(injury);
+        const final01 = normalize01(base01 * (1 - injuryPenalty));
 
-    // Weighted sum
-    const readinessBase =
-        0.35 * tsbScore +
-        0.25 * ctlScore +
-        0.20 * (1 - atlScore) +
-        0.20 * loadStabilityScore;
+        const tsbPts = 35 * tsbScore;
+        const ctlPts = 25 * ctlScore;
+        const atlPts = 20 * (1 - atlFatigueScore);
+        const loadPts = 20 * loadStabilityScore;
+        const basePts = tsbPts + ctlPts + atlPts + loadPts;
+        const injuryPenaltyPts = basePts * injuryPenalty;
 
-    // Apply injury risk penalty
-    const injuryPenalty = getInjuryPenalty(activity.injuryRisk);
-    const readiness = readinessBase * (1 - injuryPenalty);
-
-    // Scale to 0-100
-    return Math.max(0, Math.min(100, readiness * 100));
-}
-
-/**
- * Build readiness timeline data
- */
-function buildReadinessTimeline(activities, rangeStart, rangeEnd) {
-    const sorted = getValidLoadActivities(activities);
-    if (!sorted.length) return { labels: [], readiness: [] };
-
-    // Add readiness to each activity
-    sorted.forEach(activity => {
-        activity.readinessScore = calculateActivityReadiness(activity, sorted);
-    });
-
-    const labels = [];
-    const readinessDaily = [];
-    let cursor = new Date(rangeStart);
-    const endCursor = new Date(rangeEnd);
-
-    cursor.setHours(0, 0, 0, 0);
-    endCursor.setHours(0, 0, 0, 0);
-
-    // For each day in range, find readiness from activity on that day
-    const readinessByDay = new Map();
-    sorted.forEach(activity => {
-        const key = toLocalYMD(new Date(activity.start_date_local));
-        const score = activity.readinessScore;
-        if (score != null) {
-            readinessByDay.set(key, score);
-        }
-    });
-
-    while (cursor <= endCursor) {
-        const key = toLocalYMD(cursor);
-        labels.push(key);
-        readinessDaily.push(readinessByDay.get(key) || null);
-        cursor = addDays(cursor, 1);
+        readinessRaw.push(final01 * 100);
+        breakdown.push({
+            tsb: { value: tsb, score: tsbScore, points: tsbPts },
+            ctl: { value: ctl, score: ctlScore, points: ctlPts },
+            atl: { value: atl, delta: atl - ctl, fatigueScore: atlFatigueScore, points: atlPts },
+            load: { value: load7d, acwrScore, bandScore, score: loadStabilityScore, points: loadPts },
+            injury: { value: injury, penalty: injuryPenalty, penaltyPoints: injuryPenaltyPts },
+            basePoints: basePts,
+            readiness: final01 * 100
+        });
     }
 
-    // Apply 3-day rolling average to smooth
-    const smoothed = applyRollingAverage(readinessDaily, 3);
-
-    return { labels, readiness: smoothed, sorted };
-}
-
-/**
- * Apply N-day rolling average, ignoring null values
- */
-function applyRollingAverage(values, window = 3) {
-    return values.map((_, idx) => {
-        const start = Math.max(0, idx - Math.floor(window / 2));
-        const end = Math.min(values.length, idx + Math.ceil(window / 2));
-        const window_vals = values.slice(start, end).filter(v => v != null);
-        if (window_vals.length === 0) return null;
-        return window_vals.reduce((a, b) => a + b) / window_vals.length;
+    const readiness = smoothReadinessSeries(readinessRaw, 5, 8).map(value => {
+        if (!Number.isFinite(value)) return null;
+        return normalize01(value / 100) * 100;
     });
+
+    return {
+        labels: series.labels,
+        readiness,
+        readinessRaw,
+        breakdown,
+        profile,
+        sortedActivities: series.sorted,
+        ctlDaily: series.ctlDaily,
+        atlDaily: series.atlDaily,
+        tsbDaily: series.tsbDaily,
+        riskDaily: series.riskDaily
+    };
 }
 
 /**
  * Get readiness color based on score
  */
 function getReadinessColor(score) {
-    if (score >= 90) return '#27ae60'; // Green
-    if (score >= 75) return '#2ecc71'; // Light green
-    if (score >= 60) return '#f1c40f'; // Yellow
-    if (score >= 40) return '#f39c12'; // Orange
-    return '#e74c3c'; // Red
+    if (score >= 90) return '#27ae60';
+    if (score >= 75) return '#2ecc71';
+    if (score >= 60) return '#f1c40f';
+    if (score >= 40) return '#f39c12';
+    return '#e74c3c';
 }
 
 /**
@@ -1391,51 +1381,34 @@ function getReadinessLabel(score) {
 }
 
 /**
- * Render readiness gauge chart
+ * Render readiness card next to gauge.
  */
-function renderReadinessGauge(score, activity, allActivities) {
+function renderReadinessGauge(score, readinessData) {
     const container = document.getElementById('readiness-explainer');
     if (!container) return;
 
+    const lastIndex = readinessData.labels.length - 1;
+    const ctl = readinessData.ctlDaily[lastIndex] || 0;
+    const atl = readinessData.atlDaily[lastIndex] || 0;
+    const tsb = readinessData.tsbDaily[lastIndex] || 0;
+    const risk = readinessData.riskDaily[lastIndex] || 0;
+    const parts = readinessData.breakdown[lastIndex];
+
     const label = getReadinessLabel(score);
     const color = getReadinessColor(score);
+    const ctlStatus = getCtlStatus(ctl, readinessData.sortedActivities, readinessData.profile);
+    const atlStatus = getAtlStatus(atl, ctl);
+    const tsbStatus = getTsbStatus(tsb, readinessData.profile);
 
-    // Calculate component contributions for display
-    const tsbScore = getTsbScore(activity.tsb);
-    const ctlValues = allActivities.map(a => a.ctl).filter(Number.isFinite);
-    const ctlScore = getCtlScore(activity.ctl, ctlValues);
-    const atlScore = getAtlScore(activity.atl, activity.ctl);
-
-    const activityDate = new Date(activity.start_date_local);
-    const date7dAgo = new Date(activityDate.getTime() - 7 * 24 * 3600 * 1000);
-    const date28dAgo = new Date(activityDate.getTime() - 28 * 24 * 3600 * 1000);
-    const last7d = allActivities.filter(a => {
-        const d = new Date(a.start_date_local);
-        return d >= date7dAgo && d <= activityDate;
-    });
-    const last28d = allActivities.filter(a => {
-        const d = new Date(a.start_date_local);
-        return d >= date28dAgo && d <= activityDate;
-    });
-    const load7d = last7d.reduce((sum, a) => sum + (a.tss || 0), 0);
-    const load28dAvg = last28d.length > 0 ? last28d.reduce((sum, a) => sum + (a.tss || 0), 0) / last28d.length : 10;
-    const loadStabilityScore = getLoadStabilityScore(load7d, load28dAvg);
-
-    // Get current percentiles
-    const ctlPercentile = percentileRank(ctlValues, activity.ctl);
-    const atlPercentile = percentileRank(allActivities.map(a => a.atl).filter(Number.isFinite), activity.atl);
-    const riskPercentile = percentileRank(allActivities.map(a => a.injuryRisk).filter(Number.isFinite), activity.injuryRisk);
-
-    // Insights
     let insight = '';
     if (score >= 75) {
-        insight = 'You\'re in excellent shape! Your freshness is optimal and fatigue is well-managed.';
+        insight = 'High readiness: positive freshness and controlled fatigue with stable load.';
     } else if (score >= 60) {
-        insight = 'Good readiness. Continue monitoring load balance and recovery.';
+        insight = 'Moderate-high readiness: good balance, but keep load progression smooth.';
     } else if (score >= 40) {
-        insight = 'Fair readiness. Consider increasing recovery or reducing immediate load.';
+        insight = 'Low-moderate readiness: fatigue/load balance is limiting quality right now.';
     } else {
-        insight = 'Low readiness. Prioritize rest and easy training to recover.';
+        insight = 'Low readiness: high fatigue and/or unstable load suggest a recovery focus.';
     }
 
     container.innerHTML = `
@@ -1449,23 +1422,23 @@ function renderReadinessGauge(score, activity, allActivities) {
         <div class="readiness-metrics">
             <div class="readiness-metric-item">
                 <div class="readiness-metric-label">TSB (Freshness)</div>
-                <div class="readiness-metric-value">${activity.tsb.toFixed(1)}</div>
-                <small style="color: #666;">Ideal: +5 to +20</small>
+                <div class="readiness-metric-value">${tsb.toFixed(1)}</div>
+                <small style="color: #666;">${tsbStatus.label} · +${parts.tsb.points.toFixed(1)} pts</small>
             </div>
             <div class="readiness-metric-item">
                 <div class="readiness-metric-label">CTL (Fitness)</div>
-                <div class="readiness-metric-value">${activity.ctl.toFixed(1)}</div>
-                <small style="color: #666;">Percentile: ${(ctlPercentile * 100).toFixed(0)}%</small>
+                <div class="readiness-metric-value">${ctl.toFixed(1)}</div>
+                <small style="color: #666;">${ctlStatus.label} · +${parts.ctl.points.toFixed(1)} pts</small>
             </div>
             <div class="readiness-metric-item">
                 <div class="readiness-metric-label">ATL (Fatigue)</div>
-                <div class="readiness-metric-value">${activity.atl.toFixed(1)}</div>
-                <small style="color: #666;">Ratio: ${(activity.atl / (activity.ctl || 1)).toFixed(2)}x CTL</small>
+                <div class="readiness-metric-value">${atl.toFixed(1)}</div>
+                <small style="color: #666;">${atlStatus.label} · +${parts.atl.points.toFixed(1)} pts</small>
             </div>
             <div class="readiness-metric-item">
                 <div class="readiness-metric-label">Injury Risk</div>
-                <div class="readiness-metric-value">${(activity.injuryRisk || 0).toFixed(3)}</div>
-                <small style="color: #666;">Ideal: &lt; 0.25</small>
+                <div class="readiness-metric-value">${risk.toFixed(3)}</div>
+                <small style="color: #666;">-${parts.injury.penaltyPoints.toFixed(1)} pts (moderated)</small>
             </div>
         </div>
         <div class="readiness-insights" style="border-left-color: ${color}; background: ${color}15;">
@@ -1477,8 +1450,7 @@ function renderReadinessGauge(score, activity, allActivities) {
 /**
  * Render readiness timeline chart
  */
-function renderReadinessTimelineChart(activities, rangeStart, rangeEnd, currentReadiness) {
-    const data = buildReadinessTimeline(activities, rangeStart, rangeEnd);
+function renderReadinessTimelineChart(data) {
     const canvas = document.getElementById('readiness-timeline-chart');
     if (!canvas) return;
 
@@ -1528,6 +1500,17 @@ function renderReadinessTimelineChart(activities, rangeStart, rangeEnd, currentR
                     pointRadius: 0,
                     tension: 0,
                 },
+                {
+                    label: 'Danger Zone',
+                    data: Array(data.labels.length).fill(25),
+                    borderColor: '#e74c3c',
+                    backgroundColor: 'rgba(231, 76, 60, 0.08)',
+                    borderWidth: 1.5,
+                    fill: false,
+                    borderDash: [8, 6],
+                    pointRadius: 0,
+                    tension: 0,
+                },
             ]
         },
         options: {
@@ -1561,6 +1544,21 @@ function renderReadinessTimelineChart(activities, rangeStart, rangeEnd, currentR
                                 return score != null ? `${context.dataset.label}: ${score.toFixed(1)}` : null;
                             }
                             return null;
+                        },
+                        afterBody: function (items) {
+                            const item = items && items[0];
+                            if (!item || item.dataset.label !== 'Readiness Score') return [];
+                            const index = item.dataIndex;
+                            const parts = data.breakdown[index];
+                            if (!parts) return [];
+
+                            return [
+                                `TSB contribution: +${parts.tsb.points.toFixed(1)} pts`,
+                                `CTL contribution: +${parts.ctl.points.toFixed(1)} pts`,
+                                `ATL contribution: +${parts.atl.points.toFixed(1)} pts`,
+                                `Load contribution: +${parts.load.points.toFixed(1)} pts`,
+                                `Injury penalty: -${parts.injury.penaltyPoints.toFixed(1)} pts`
+                            ];
                         }
                     }
                 },
@@ -1714,16 +1712,11 @@ function drawGaugeChart(canvas, score) {
  * Main rendering function for Training Readiness
  */
 function renderTrainingReadiness(allActivities, rangeStart, rangeEnd) {
-    // Get valid activities with all metrics
-    const validActivities = getValidLoadActivities(allActivities);
-    if (!validActivities.length) return;
+    const readinessData = buildTrainingReadinessSeries(allActivities, rangeStart, rangeEnd);
+    if (!readinessData) return;
 
-    // Get the most recent activity with full metrics
-    const latest = validActivities[validActivities.length - 1];
-    if (!latest) return;
-
-    const currentReadiness = calculateActivityReadiness(latest, validActivities);
-    if (currentReadiness == null) return;
+    const lastIndex = readinessData.labels.length - 1;
+    const currentReadiness = readinessData.readiness[lastIndex] ?? readinessData.readinessRaw[lastIndex] ?? 0;
 
     // Draw gauge
     const canvas = document.getElementById('readiness-gauge-chart');
@@ -1732,10 +1725,10 @@ function renderTrainingReadiness(allActivities, rangeStart, rangeEnd) {
     }
 
     // Render score display with detailed metrics
-    renderReadinessGauge(currentReadiness, latest, validActivities);
+    renderReadinessGauge(currentReadiness, readinessData);
 
     // Render timeline
-    renderReadinessTimelineChart(allActivities, rangeStart, rangeEnd, currentReadiness);
+    renderReadinessTimelineChart(readinessData);
 }
 
 
